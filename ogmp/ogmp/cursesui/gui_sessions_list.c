@@ -52,6 +52,7 @@ int window_sessions_list_print(gui_t* gui, int wid)
 	/* Window Title */
 	attrset(COLOR_PAIR(4));
 	snprintf(buf, 250, "%199.199s", " ");
+
 	mvaddnstr(gui->y0, gui->x0, buf, (x-gui->x0));
 
 	snprintf(buf, x-gui->x0, "All Calls of '%s'<%s>", user_profile->fullname, user_profile->regname);
@@ -135,7 +136,7 @@ void window_sessions_list_draw_commands(gui_t* gui)
 	int x,y;
 	char *sessions_list_commands[] = 
 	{
-		"^C",  "Close" ,
+		"N",  "New" ,
 		"A",  "Answer",
 		"C",  "Hangup" ,
 		"D",  "Decline",
@@ -202,10 +203,10 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 			calllist_line = busylines[--n];
 			break;
 		}
-		case 3:  /* Ctrl-C */
+		case 'n':  /* Ctrl-C */
 		{
-			gui_hide_window(gui);
-
+			gui_show_window(gui, GUI_NEWCALL, GUI_SESSION);
+            
 			break;
 		}
 		case 'c':
@@ -285,6 +286,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 			if (i==0) jcall_remove(ca);
 			eXosip_unlock();
 */
+
 			gui->gui_print(gui, gui->parent);
 			break;
 		}
@@ -439,7 +441,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 			return -1;
     }
 
-	gui->gui_print(gui, gui->parent);
+    gui_update(gui);
 
 	return 0;
 }

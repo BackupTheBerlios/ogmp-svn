@@ -33,6 +33,7 @@
 
 char newcall_inputs[3][LINE_MAX];
 
+
 editline_t *newcall_edit[3];
 int cursor_newcall = 0;
 
@@ -61,6 +62,7 @@ int window_new_call_print(gui_t* gui, int wid)
 		x = gui->x1;
 
 	/* Window Title */
+
 	snprintf(buf, 250, "%199.199s", " ");
 
 	attrset(COLOR_PAIR(4));
@@ -224,15 +226,19 @@ int window_new_call_run_command(gui_t* gui, int c)
 		{
 			/* if (_josua_start_subscribe(cfg.identity, to, route) != 0) beep(); */
 			break;
-		}
+		}   
 		default:
 		{
 			if(editline_append(newcall_edit[cursor_newcall], (char*)&c, 1) == 0)
+            {
 				beep();
 	
-			return -1;
+                return -1;
+            }
 		}
 	}
+
+    gui_update(gui);
 
 	return 0;
 }

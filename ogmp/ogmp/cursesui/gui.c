@@ -17,7 +17,7 @@
  * License along with dpkg; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-
+ 
 #include "gui_address_book_browse.h"
 #include "gui_address_book_newentry.h"
 #include "gui_icon.h"
@@ -392,6 +392,7 @@ int gui_next_view(ogmp_curses_t* ocui)
 
 int gui_previous_view(ogmp_curses_t* ocui)
 
+
 {
 	int i = 0;
 
@@ -612,6 +613,7 @@ int gui_activate_window(gui_t* gui, int wid)
 {
 	ogmp_curses_t* ocui = gui->topui;
 
+
 	ocui->active_gui->on_off = GUI_OFF;
 
 	ocui->active_gui = ocui->gui_windows[wid];
@@ -661,6 +663,7 @@ gui_update(gui_t* gui)
 
     return UA_FAIL;
 }
+
 
 int
 gui_show(ui_t* ui)

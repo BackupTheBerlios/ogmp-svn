@@ -33,6 +33,7 @@
 #define NEWID_REGSEC	4
 
 
+
 char newid_fullname[128];
 char newid_bookloc[128];
 char newid_registary[128];
