@@ -545,6 +545,7 @@ int sipua_save_user_file(user_t* user, FILE* f, char* tok, int tsz)
 		if(prof->book_location)
 			fwrite(prof->book_location, 1, strlen(prof->book_location), f);
 
+
 	
 		fwrite("\n", 1, 1, f);
 
@@ -1081,13 +1082,19 @@ int user_done(user_t* u)
 
 user_t* user_new(char* uid, int sz)
 {
-	user_t* u = xmalloc(sizeof(user_t));
+	user_t* u;
+    
+    printf("user_new: 1");
+    
+	u = xmalloc(sizeof(user_t));
 	if(u)
 	{
 		memset(u, 0, sizeof(user_t));
-
+        
 		u->uid = xstr_nclone(uid, sz);
 	}
+    else
+        printf("user_new: MALLOC ERROR!!");
 
 	return u;
 }

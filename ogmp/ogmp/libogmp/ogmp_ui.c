@@ -19,40 +19,7 @@
 #include "ogmp.h"
 
 #include <stdarg.h>
-/*
-extern ogmp_ui_t* global_ui = NULL;
-extern ui_t ui_share;
 
-int ogmp_print_log(char *fmt, ...)
-{
-	int ret;
-    int loglen;
-    char* logbuf;
-    
-    va_list ap;
-    
-	va_start (ap, fmt);
-
-    if(global_ui == NULL)
-    {
-        ret = vprintf(fmt, ap);
-        
-        va_end(ap);
-
-        return ret;
-    }
-
-    loglen = global_ui->logbuf(global_ui, &logbuf);
-
-    vsnprintf(logbuf, loglen, fmt, ap);
-
-	va_end(ap);
-
-    ret = global_ui->print_log(global_ui, logbuf);
-
-	return ret;
-}
-*/
 int ogmp_done_ui(void* gen)
 {
     ui_t* ui = (ui_t*)gen;
@@ -65,7 +32,8 @@ int ogmp_done_ui(void* gen)
     return UA_OK;
 }
 
-ui_t* client_new_ui(module_catalog_t* mod_cata, char* type)
+ui_t*
+client_new_ui(ogmp_client_t *client, module_catalog_t* mod_cata, char* type)
 {
     ui_t* ui = NULL;
     
@@ -95,7 +63,6 @@ ui_t* client_new_ui(module_catalog_t* mod_cata, char* type)
     if(!found)
         return NULL;
 
-	//ui_share.print_log = ogmp_print_log;
     global_set_ui(ui);
     
     return ui;

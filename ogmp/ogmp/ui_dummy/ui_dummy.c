@@ -21,7 +21,11 @@
 #include <timedia/os.h>
 #include <timedia/ui.h>
 #include <timedia/xmalloc.h>
+
 #include "ogmp.h"
+
+#define LOG_LEN 256
+char ogui_log_buf[LOG_LEN];
 
 int ogui_done(ui_t* ui)
 {
@@ -33,7 +37,11 @@ int ogui_done(ui_t* ui)
 int ogui_match_type(ui_t* ui, char *type)
 {
 	if(strcmp(type, "dummyui")==0)
+	{
+		printf("ogui_match_type: Dummy ui\n");
+
 		return 1;
+	}
 
 	return 0;
 }
@@ -50,20 +58,20 @@ int ogui_beep(ui_t* ui)
 
 int ogui_logbuf(ui_t* ui, char **buf)
 {
-	*buf = NULL;
+   *buf = ogui_log_buf;
 
-	return 0;
+   return LOG_LEN;
 }
 
 /* return actual line number output */
 int ogui_print_log(ui_t* ui, char *buf)
 {
 	printf("%s\n", buf);
-	
+
 	return 0;
 }
 
-int ogui_set_sipua(ui_t* ui, sipua_t* sipua)
+int ogui_set_sipua(ogmp_ui_t* ui, sipua_t* sipua)
 {
 	return UA_OK;
 }
@@ -73,7 +81,10 @@ module_interface_t* ogmp_new_ui()
 	ogmp_ui_t* ogui = xmalloc(sizeof(ogmp_ui_t));
 
 	if(!ogui)
+	{
+		printf("ogmp_new_ui: No memory\n");
 		return NULL;
+	}
     
 	memset(ogui, 0, sizeof(ogmp_ui_t));
     

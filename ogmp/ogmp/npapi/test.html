@@ -14,12 +14,17 @@
 	 alert(result);
   }
 
-  function regist_return(result)
+  function regist_return(result, reason)
   {
 	 document.formname.status.value=result;
 	 alert(result);
   }
 
+  function load_user_return(result)
+  {
+	 document.formname.status.value=result;
+	 alert(result);
+  }
 </script>
 
 </HEAD>
@@ -89,6 +94,8 @@ document.sipua.bye(lineno);
 <form name="formname">
 <input type="text" name="status" value="idle">
 <input type="button" value="get ip" onclick='get_ip(sipua)'>
+<input type="button" value="load_user" onclick='document.sipua.load_user("hling", "hling".length)'>
+<input type="button" value="register" onclick='document.sipua.regist("Heming Ling", "Heming Ling".length, "rosella.timedia.org", "heming@timedia.org", 1800)'>
 </form>
 
 </center>

@@ -29,7 +29,7 @@ extern ogmp_ui_t* global_ui;
 #define CLIE_DEBUG
 
 #ifdef CLIE_LOG
- #define clie_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
+ #define clie_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define clie_log(fmtargs)
 #endif
@@ -217,7 +217,10 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			if(!user_prof->thread_register)
 				user_prof->thread_register = xthr_new(client_register_loop, user_prof, XTHREAD_NONEFLAGS);
 
-            client->ogui->ui.beep(&client->ogui->ui);
+            if(client->on_register)
+                client->on_register(client->user_on_register, SIPUA_STATUS_REG_OK, user_prof->reg_reason_phrase);
+                
+            //client->ogui->ui.beep(&client->ogui->ui);
 
 			break;
 		}
@@ -246,6 +249,9 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			/* registering transaction completed */
 			client->reg_profile = NULL;
+
+            if(client->on_register)
+                client->on_register(client->user_on_register, SIPUA_STATUS_REG_FAIL, user_prof->reg_reason_phrase);
 
 			break;
 		}
@@ -969,6 +975,58 @@ int client_answer(sipua_t *sipua, sipua_set_t* call, int reply, media_source_t* 
 	return UA_OK;
 }
 
+/***********************************
+ *  Set Callbacks for SIPUA        *
+ ***********************************/
+int client_set_register_callback (sipua_t *sipua, int(*callback)(void*callback_user,int result,char*reason), void* callback_user)
+{
+    ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+    client->on_register = callback;
+    client->user_on_register = callback_user;
+    return UA_OK;
+}
+
+int client_set_newcall_callback (sipua_t *sipua, int(*callback)(void*callback_user,int lineno,char *caller,char *subject,char *info), void* callback_user)
+{
+    ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+    client->on_newcall = callback;
+    client->user_on_newcall = callback_user;
+    return UA_OK;
+}
+
+int client_set_conversation_start_callback (sipua_t *sipua, int(*callback)(void *callback_user, int lineno), void* callback_user)
+{
+    ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+    client->on_conversation_start = callback;
+    client->user_on_conversation_start = callback_user;
+    return UA_OK;
+}
+
+int client_set_conversation_end_callback (sipua_t *sipua, int(*callback)(void *callback_user, int lineno), void* callback_user)
+{
+    ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+    client->on_conversation_end = callback;
+    client->user_on_conversation_end = callback_user;
+    return UA_OK;
+}
+
+int client_set_bye_callback (sipua_t *sipua, int (*callback)(void *callback_user, int lineno, char *caller, char *reason), void* callback_user)
+{
+    ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+    client->on_bye = callback;
+    client->user_on_bye = callback_user;
+    return UA_OK;
+}
+/************************************
+ *  End of set Callbacks for SIPUA  *
+ ************************************/
+ 
+
 sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, int bandwidth)
 {
 	int nmod;
@@ -976,20 +1034,19 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
 
 	ogmp_client_t *client=NULL;
 
-
-	sipua_t* sipua;
+    sipua_t* sipua;
 
 	client = xmalloc(sizeof(ogmp_client_t));
 	memset(client, 0, sizeof(ogmp_client_t));
 
-	client->ogui = (ogmp_ui_t*)client_new_ui(mod_cata, uitype);
+	client->ogui = (ogmp_ui_t*)client_new_ui(client, mod_cata, uitype);
     if(client->ogui == NULL)
     {
-        clie_log (("client_new: No cursesui module found!\n"));
+        clie_log (("client_new: No ui module found!\n"));
         xfree(client);
 
         return NULL;
-    }
+    }    
     
 	sipua = (sipua_t*)client;
 
@@ -1005,7 +1062,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
 	client->format_handlers = xlist_new();
 
 	nmod = catalog_create_modules (mod_cata, "format", client->format_handlers);
-	clie_log (("client_new: %d format module found\n", nmod));
+	printf("client_new: %d format module found\n", nmod);
 
 	/* set sip client */
 	client->valid = 0;
@@ -1016,12 +1073,11 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
 	
 	client->format_handlers = xlist_new();
 
+    nformat = catalog_create_modules (mod_cata, "format", client->format_handlers);
 
-	nformat = catalog_create_modules (mod_cata, "format", client->format_handlers);
-	clie_log (("client_new_sipua: %d format module found\n", nformat));
+    //clie_log (("client_new_sipua: %d format module found\n", nformat));
 
-
-	client->lines_lock = xthr_new_lock();
+    client->lines_lock = xthr_new_lock();
 
 	/* set media ports, need to seperate to configure module */
 	client->mediatypes[0] = xstr_clone("audio");
@@ -1080,8 +1136,16 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
 
     sipua->bye = sipua_bye;
     sipua->set_call_source = client_set_call_source;
-
-    clie_log(("client_new: client ready\n\n"));
+    
+    /* Set Callbacks */
+    
+    sipua->set_register_callback = client_set_register_callback;
+    sipua->set_newcall_callback = client_set_newcall_callback;
+    sipua->set_conversation_start_callback = client_set_conversation_start_callback;
+    sipua->set_conversation_end_callback = client_set_conversation_end_callback;
+    sipua->set_bye_callback = client_set_bye_callback;
+    
+    clie_log(("client_new: sipua ready!\n\n"));
 
 	return sipua;
 }
@@ -1124,7 +1188,7 @@ sipua_uas_t* client_new_uas(module_catalog_t* mod_cata, char* type)
                 xlist_remove_item(uases, uas);
                 found = 1;
                 break;
-            }
+            }   
 
             uas = xlist_next(uases, &lu);
         }

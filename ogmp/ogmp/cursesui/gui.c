@@ -153,6 +153,7 @@ void curseson()
 
 void cursesoff()
 
+
 {
 	if (cursesareon) 
 	{
@@ -750,11 +751,11 @@ gui_show(ui_t* ui)
 	xfree(ocui);
 	
 	return UA_OK;
-}
+}    
 
-int gui_set_sipua(ui_t* ui, sipua_t* sipua)
+int gui_set_sipua(ogmp_ui_t* ogui, sipua_t* sipua)
 {
-	ogmp_curses_t *ocui = (ogmp_curses_t*)ui;
+	ogmp_curses_t *ocui = (ogmp_curses_t*)ogui;
 
 	ocui->gui_windows[TOPGUI] = window_topline_new(ocui);
 	ocui->gui_windows[ICONGUI] = window_icon_new(ocui);

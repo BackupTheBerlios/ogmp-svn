@@ -121,8 +121,12 @@ class nsPluginInstance:public nsPluginInstanceBase
     void answer(PRInt32 lineno);
     void bye(PRInt32 lineno);
     
-	int callback_on_register(void *user_on_register, int result, char *reason);
-    
+	static int callback_on_register (void *user_on_register, int result, char *reason);
+    static int callback_on_newcall (void *user_on_newcall, int lineno, char *caller, char *subject, char *info);
+    static int callback_on_conversation_start (void *user_on_conversation_start, int lineno);
+    static int callback_on_conversation_end (void *user_on_conversation_end, int lineno);
+	static int callback_on_bye (void *user_on_bye, int lineno, char *caller, char *reason);
+
     // we need to provide implementation of this method as it will be
     // used by Mozilla to retrive the scriptable peer
     // and couple of other things on Unix

@@ -294,6 +294,8 @@ struct sipua_s
 
 	/* switch current call session */
 
+
+
  	sipua_set_t* (*pick)(sipua_t* sipua, int line);
  	int (*hold)(sipua_t* sipua);
 
@@ -325,6 +327,13 @@ struct sipua_s
 
 	int (*bye)(sipua_t *ua, sipua_set_t* set);
 	char* (*set_call_source)(sipua_t *sipua, sipua_set_t* set, media_source_t* source);
+
+    /* Set callbacks */
+    int (*set_register_callback)(sipua_t *sipua, int(*callback)(void*callback_user,int result,char*reason), void* callback_user);
+    int (*set_newcall_callback)(sipua_t *sipua, int(*callback)(void*callback_user,int lineno,char *caller,char *subject,char *info), void* callback_user);
+    int (*set_conversation_start_callback)(sipua_t *sipua, int(*callback)(void *callback_user, int lineno), void* callback_user);
+    int (*set_conversation_end_callback)(sipua_t *sipua, int(*callback)(void *callback_user, int lineno), void* callback_user);
+    int (*set_bye_callback)(sipua_t *sipua, int (*callback)(void *callback_user, int lineno, char *caller, char *reason), void* callback_user);
 };
 
 sipua_t* sipua_new(sipua_uas_t *uas, void* event_lisener, int(*lisen)(void*,sipua_event_t*), int bandwidth, media_control_t* control);

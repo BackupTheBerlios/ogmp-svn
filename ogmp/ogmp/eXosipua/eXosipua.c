@@ -621,7 +621,7 @@ int uas_address(sipua_uas_t* sipuas, char* *nettype, char* *addrtype, char* *net
 {
 	sipua_uas_t* uas = (sipua_uas_t*)sipuas;
 
-	*nettype = uas->nettype;
+    *nettype = uas->nettype;
 	*addrtype = uas->addrtype;
 	*netaddr = uas->netaddr;
 
@@ -631,6 +631,7 @@ int uas_address(sipua_uas_t* sipuas, char* *nettype, char* *addrtype, char* *net
 int uas_set_lisener(sipua_uas_t* sipuas, void* lisener, int(*notify_event)(void*, sipua_event_t*))
 {
 	sipua_uas_t* uas = (sipua_uas_t*)sipuas;
+
 
 	uas->lisener = lisener;
 

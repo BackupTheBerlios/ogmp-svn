@@ -100,7 +100,7 @@ int sipua_locate_user(sipua_t* sipua, user_t* user)
 	if(user->userloc)
 		xfree(user->userloc);
 
-	user->userloc = p = xmalloc(ub+nb+2);
+    user->userloc = p = xmalloc(ub+nb+2);
 
 	strcpy(p, user->uid);
 	p += ub;
@@ -384,6 +384,7 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 		int media_bw;
 
 		char mediatype[16];
+
 
 		int j = 0;
 	

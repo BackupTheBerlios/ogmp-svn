@@ -304,6 +304,7 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 	rtpcapset->subject = xstr_clone(sdp_message_s_name_get(sdp));
 	rtpcapset->info = xstr_clone(sdp_message_i_info_get(sdp, -1));
 
+
 	addr = sdp_message_c_addr_get (sdp, -1, 0);
 
 	if(0==strcmp(rtpcapset->nettype, "IN") && 0==strcmp(rtpcapset->addrtype, "IP4"))
@@ -320,6 +321,7 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 	{
 		char *p = rtpcapset->cname;
 		char *username;
+
 
 		username = sdp_message_o_username_get(sdp);
 		if(username)
@@ -444,10 +446,6 @@ rtpcap_set_t* rtp_capable_from_format(media_format_t *format,
 									  user_profile_t* user_prof)
 {
 	/* Retrieve capable from media format */
-	char *rtpmap = NULL;
-
-	int rtpmapno = 0;
-
 	char tmp[64] = "";
 
 	media_stream_t* strm;

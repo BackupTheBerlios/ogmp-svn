@@ -333,31 +333,82 @@ void nsPluginInstance::get_ip()
 	NPN_GetURL(mInstance, javascript, NULL);
 }
 
-extern "C"
-{
-int callback_on_register(void *user_on_register, int result, char *reason)
+int nsPluginInstance::callback_on_register(void *user_on_register, int result, char *reason)
 {
     char javascript[512];
-    NPP mInstance = (NPP)user_on_register;
     
-    sprintf(javascript, "javascript:regist_return('%d', %s);", result, reason);
+    nsPluginInstance *plugin = static_cast<nsPluginInstance*>(user_on_register);
+    
+    sprintf(javascript, "javascript:regist_return(%d, %s);", result, reason);
 
-	NPN_GetURL(mInstance, javascript, NULL);
+	NPN_GetURL(plugin->mInstance, javascript, NULL);
 
     return NPERR_NO_ERROR;
 }
+
+int nsPluginInstance::callback_on_newcall(void *user_on_newcall, int lineno, char *caller, char *subject, char *info)
+{
+    char javascript[512];
+
+    nsPluginInstance *plugin = static_cast<nsPluginInstance*>(user_on_newcall);
+
+    sprintf(javascript, "javascript:regist_return(%d, %s, %s, %s);", lineno, caller, subject, info);
+
+	NPN_GetURL(plugin->mInstance, javascript, NULL);
+
+    return NPERR_NO_ERROR;
+}
+
+int nsPluginInstance::callback_on_conversation_start(void *user_on_newcall, int lineno)
+{
+    char javascript[512];
+
+    nsPluginInstance *plugin = static_cast<nsPluginInstance*>(user_on_newcall);
+
+    sprintf(javascript, "javascript:regist_return(%d);", lineno);
+
+	NPN_GetURL(plugin->mInstance, javascript, NULL);
+
+    return NPERR_NO_ERROR;
+}
+
+int nsPluginInstance::callback_on_conversation_end(void *user_on_newcall, int lineno)
+{
+    char javascript[512];
+
+    nsPluginInstance *plugin = static_cast<nsPluginInstance*>(user_on_newcall);
+
+    sprintf(javascript, "javascript:regist_return(%d);", lineno);
+
+	NPN_GetURL(plugin->mInstance, javascript, NULL);
+
+    return NPERR_NO_ERROR;
+}
+
+int nsPluginInstance::callback_on_bye(void *user_on_newcall, int lineno, char *caller, char *reason)
+{
+    char javascript[512];
+
+    nsPluginInstance *plugin = static_cast<nsPluginInstance*>(user_on_newcall);
+
+    sprintf(javascript, "javascript:regist_return(%d, %s, %s);", lineno, caller, reason);
+
+	NPN_GetURL(plugin->mInstance, javascript, NULL);
+
+    return NPERR_NO_ERROR;
 }
 
 NPError nsPluginInstance::sipua_init()
 {
-    int sip_port = 5060;
+    int sip_port = 5070;
     
     this->sipua = NULL;
     this->uas = NULL;
+    this->user = NULL;
     this->mod_cata = NULL;
 
-    clie_log (("main: sip port is %d\n", sip_port));
-    clie_log (("main: modules in dir:'%s'\n", MOD_DIR));
+    clie_log (("plugin.sipua_init: sip port is %d\n", sip_port));
+    clie_log (("plugin.sipua_init: modules in dir:'%s'\n", MOD_DIR));
 
     mod_cata = catalog_new( "mediaformat" );
 
@@ -372,7 +423,7 @@ NPError nsPluginInstance::sipua_init()
 
 	if(this->uas->init(this->uas, sip_port, "IN", "IP4", NULL, NULL) < UA_OK)
     {
-		clie_log (("main: fail to initialize sipua server!\n"));
+		clie_log (("plugin.sipua_init: fail to initialize sipua server!\n"));
 		return NPERR_MODULE_LOAD_FAILED_ERROR;
     }
     
@@ -380,11 +431,15 @@ NPError nsPluginInstance::sipua_init()
 
 	if(!this->sipua)
 	{
-        clie_log(("main: fail to create sipua!\n"));
+        clie_log(("plugin.sipua_init: fail to create sipua!\n"));
         return NPERR_MODULE_LOAD_FAILED_ERROR;
 	}
 
-    this->sipua->set_callback(this->sipua, SIPUA_CALLBACK_ON_REGISTER, callback_on_register, this->mInstance);
+    this->sipua->set_register_callback(this->sipua, nsPluginInstance::callback_on_register, this);
+    this->sipua->set_newcall_callback(this->sipua, nsPluginInstance::callback_on_newcall, this);
+    this->sipua->set_conversation_start_callback(this->sipua, nsPluginInstance::callback_on_conversation_start, this);
+    this->sipua->set_conversation_end_callback(this->sipua, nsPluginInstance::callback_on_conversation_end, this);
+    this->sipua->set_bye_callback(this->sipua, nsPluginInstance::callback_on_bye, this);
     
 	client_start(this->sipua);
 
@@ -405,8 +460,12 @@ void nsPluginInstance::load_user(const char *uid, PRInt32 uidsz)
     }
 
     /* locate user when plugin initialized */
+	clie_log (("nsPluginInstance::load_user: user_uid[%s]\n", this->user->uid));
+
     this->sipua->locate_user(this->sipua, this->user);
     
+	clie_log (("nsPluginInstance::load_user: userloc[%s]\n", this->user->userloc));
+
     sprintf(javascript_callback, "javascript:load_user_return(0);");
     NPN_GetURL(mInstance, javascript_callback, NULL);
 }
@@ -419,6 +478,12 @@ void nsPluginInstance::regist(const char *fullname, PRInt32 fnsz, const char *ho
     char sip_user[256];
 
     user_profile_t* prof;
+
+    if(!this->user)
+    {
+        clie_log (("nsPluginInstance::regist: Must load user first!\n"));
+        return;
+    }
     
     sprintf(sip_router, "sip:%s", home_router);
     sprintf(sip_user, "sip:%s", user_at_domain);
@@ -431,7 +496,13 @@ void nsPluginInstance::regist(const char *fullname, PRInt32 fnsz, const char *ho
         return;
     }
 
+	clie_log (("nsPluginInstance::regist: user@%x\n", (int)this->user));
+	clie_log (("nsPluginInstance::regist: userloc@%x\n", (int)this->user->userloc));
+	clie_log (("nsPluginInstance::regist: userloc[%s]\n", this->user->userloc));
+
     this->sipua->regist(this->sipua, prof, this->user->userloc);
+
+	clie_log (("nsPluginInstance::regist: 3\n"));
 
     sprintf(javascript_callback, "javascript:regist_return(%d);", SIPUA_STATUS_REG_DOING);
     NPN_GetURL(mInstance, javascript_callback, NULL);

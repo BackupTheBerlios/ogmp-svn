@@ -68,17 +68,8 @@ typedef struct ogmp_ui_s ogmp_ui_t;
 struct ogmp_ui_s
 {
 	struct ui_s ui;
-	/*
-	int (*done)(ogmp_ui_t *ui);
-	int (*match_type)(ogmp_ui_t *ui, char* type);
     
-	int (*show)(ogmp_ui_t *ui);
-    
-    int (*logbuf)(ogmp_ui_t *ui, char** buf);
-    int (*print_log)(ogmp_ui_t *ui, char* buf);
-    int (*beep)(ogmp_ui_t *ui);
-    */
-    int (*set_sipua)(ui_t *ui, sipua_t* sipua);
+    int (*set_sipua)(ogmp_ui_t *ogui, sipua_t* sipua);
 
 	ogmp_command_t*(*wait_command)(ogmp_ui_t *ui);
 };
@@ -92,6 +83,15 @@ struct ogmp_command_s
 /**
  * OGMP Client
  */
+enum sipua_callback_type
+{
+    SIPUA_CALLBACK_ON_REGISTER=1,
+    SIPUA_CALLBACK_ON_NEWCALL,
+    SIPUA_CALLBACK_ON_CONVERSATION_START,
+    SIPUA_CALLBACK_ON_CONVERSATION_END,
+    SIPUA_CALLBACK_ON_BYE,
+};
+
 struct ogmp_client_s
 {
 	sipua_t sipua;
@@ -150,6 +150,22 @@ struct ogmp_client_s
 
 	int nring;
 	xthr_lock_t *nring_lock;
+    
+	/* callbacks */
+	int (*on_register)(void *user_on_register, int result, char *reason);
+    void *user_on_register;
+
+	int (*on_newcall)(void *user_on_newcall, int lineno, char *caller, char *subject, char *info);
+    void *user_on_newcall;
+
+    int (*on_conversation_start)(void *user_on_conversation_start, int lineno);
+    void *user_on_conversation_start;
+
+    int (*on_conversation_end)(void *user_on_conversation_end, int lineno);
+    void *user_on_conversation_end;
+
+	int (*on_bye)(void *user_on_bye, int lineno, char *caller, char *reason);
+    void *user_on_bye;
 };
 
 struct ogmp_source_s
@@ -180,7 +196,11 @@ struct netcast_parameter_s
 
 extern DECLSPEC
 ui_t* 
-client_new_ui(module_catalog_t* mod_cata, char* type);
+client_new_ui(ogmp_client_t *client, module_catalog_t* mod_cata, char* type);
+
+extern DECLSPEC
+int
+client_init_ui(ogmp_client_t *client, ui_t *ui);
 
 extern DECLSPEC
 int 
