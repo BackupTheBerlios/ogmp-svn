@@ -66,11 +66,6 @@ int rtp_done_format(media_format_t * mf)
       rtp_done_stream((rtp_stream_t*)cur);
       xfree(cur);
       
-
-
-
-
-
       cur = next;
    }
 
@@ -286,13 +281,14 @@ int rtp_stream_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
 {
    rtp_stream_t *rtpstrm = (rtp_stream_t*)gen;
 
+
    if(strcmp(rtpstrm->source_cname, cn) != 0)
    {
 	   rtp_log(("rtp_stream_on_member_update: Stream Receiver[%s] discovered\n", cn));
 	   return MP_OK;
    }
 
-   rtp_log(("rtp_stream_on_member_update: source[%s] connected\n", cn));
+   rtp_debug(("rtp_stream_on_member_update: source[%s] connected, pause\n\n\n", cn));
    
    return MP_OK;
 }
@@ -507,6 +503,7 @@ int rtp_nstream (media_format_t * mf)
 
 const char* rtp_stream_mime (media_format_t * mf, int strmno)
 {
+
    media_stream_t * ms = rtp_find_stream(mf, strmno);
 
    if(!ms)  return "";
@@ -701,7 +698,6 @@ module_interface_t * media_new_format()
       return NULL;
    }
 
-
    memset(rtp, 0, sizeof(struct rtp_format_s));
 
    rtp->open_capables = rtp_open_capables;
@@ -725,6 +721,7 @@ module_interface_t * media_new_format()
    mf->find_fourcc = rtp_find_fourcc;
 
    mf->set_control = rtp_set_control;
+
 
    mf->set_player = rtp_set_player;
 
@@ -764,6 +761,7 @@ extern DECLSPEC module_loadin_t mediaformat =
    000001,         /* Plugin version */
    000001,         /* Minimum version of lib API supportted by the module */
    000001,         /* Maximum version of lib API supportted by the module */
+
 
    media_new_format   /* Module initializer */
 };

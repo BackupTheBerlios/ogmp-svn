@@ -45,6 +45,7 @@ int done_stream_handler(void *gen)
    handler->done(handler);
 
 
+
    return MP_OK;
 }
 
@@ -207,11 +208,12 @@ media_player_t* ogm_new_stream_player(media_format_t *mf, int strmno, media_cont
 	while (cur != NULL)
 	{
 		ogm_stream_t* ogm_strm = (ogm_stream_t*)cur;
+      
 		if (ogm_strm->serial == strmno)
 		{
 			cur->player = ctrl->find_player(ctrl, mode, cur->media_info->mime, cur->media_info->fourcc, mode_param);
 
-            if(!cur->player)
+         if(!cur->player)
 			{
 				ogm_debug(("ogm_new_mime_player: stream can't be played\n"));
 				cur->playable = -1;
@@ -365,7 +367,7 @@ int ogm_set_fourcc_player (media_format_t * mf, media_player_t * player, const c
    }
 
    ogm_log(("ogm_set_fourcc_player: stream [%c%c%c%c] not exist\n"
-                  , fourcc[0], fourcc[1], fourcc[2], fourcc[3]));
+            , fourcc[0], fourcc[1], fourcc[2], fourcc[3]));
 
    return MP_FAIL;
 }
@@ -581,6 +583,7 @@ int ogm_open(media_format_t *mf, char *fname, media_control_t *ctrl)
       {
          ogg_stream_state *sstate = xmalloc(sizeof(ogg_stream_state));
          if(!sstate)
+
          {
             ogm_log(("ogm_open_file: No memery for stream allocation\n"));
             return MP_EMEM;
@@ -973,6 +976,7 @@ int ogm_demux_next (media_format_t *mf, int stream_end)
          while (ogg_stream_packetout(ogm_strm->instate, dual_pack[recv]) == 1)
 		 {
 
+
             n_pack++;
 
             ret = demux_ogm_process_packet(ogm, ogm_strm, &(ogm->page), dual_pack[send], page_granul, 0, stream_end);
@@ -1072,6 +1076,7 @@ int ogm_players(media_format_t * mf, char *play_type, media_player_t* players[],
 	}
 
 	ogm_log (("ogm_players: %d '%s' players in ogm format\n", n, play_type));
+
 
 
 	return n;

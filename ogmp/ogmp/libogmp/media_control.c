@@ -70,6 +70,8 @@ typedef struct control_impl_s
    rtime_t period_us;
 
    rtime_t prev_period_start;
+
+
    rtime_t prev_period_us;
 
    module_catalog_t *catalog;
@@ -188,7 +190,7 @@ int cont_add_device (media_control_t *cont, char *name, control_setting_call_t *
    while (dev)
    {
       if (dev->match_type(dev, name))
-	  {
+	   {
          cont_log(("cont_add_device: found '%s' device\n", name));
 
          xlist_remove_item(devs, dev);
@@ -342,7 +344,7 @@ media_player_t * cont_find_player (media_control_t *cont, char *mode, char *mime
    control_impl_t *impl = (control_impl_t *)cont;
    
    cont_log(("cont_find_player: need '%s' module \n", mode));
-
+   
    num = catalog_create_modules(impl->catalog, mode, players);
    if (num <= 0)
    {

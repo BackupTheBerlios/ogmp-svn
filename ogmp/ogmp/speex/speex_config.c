@@ -55,44 +55,6 @@ int speex_info_setting(speex_info_t *spxinfo, speex_setting_t *spxset)
 		spxinfo->audioinfo.info.bps = spxset->rtp_setting.media_bps;
 	}
 
-#if 0
-	{
-		void *enc_state = NULL;
-		int clockrate = spxset->sample_rate;
-		int spxbps = spxset->mode;
-
-		if(clockrate <= 8000)
-		{
-			/* NarrowBand */
-			enc_state = speex_encoder_init(&speex_nb_mode);
-			speex_encoder_ctl(enc_state, SPEEX_SET_MODE, &spxset->mode);
-			speex_mode_query(&speex_nb_mode, SPEEX_SUBMODE_BITRATE, &spxbps);
-		}
-		else if(clockrate <= 16000)
-		{
-			/* WideBand */
-			enc_state = speex_encoder_init(&speex_wb_mode);
-			speex_encoder_ctl(enc_state, SPEEX_SET_MODE, &spxset->mode);
-			speex_mode_query(&speex_wb_mode, SPEEX_SUBMODE_BITRATE, &spxbps);
-		}
-		else if(clockrate <= 32000)
-		{
-			/* UltraBand */
-			enc_state = speex_encoder_init(&speex_uwb_mode);
-			speex_encoder_ctl(enc_state, SPEEX_SET_MODE, &spxset->mode);
-			speex_mode_query(&speex_uwb_mode, SPEEX_SUBMODE_BITRATE, &spxbps);
-		}
-		else
-		{
-			spxbps = 0;
-		}
-
-		spxinfo->audioinfo.info.bps = spxbps;
-
-		speex_encoder_destroy(enc_state);
-	}
-#endif
-
 	spxinfo->audioinfo.info.sample_rate = spxset->sample_rate;
 	spxinfo->audioinfo.channels = spxset->channels;
 

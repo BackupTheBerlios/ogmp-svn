@@ -132,9 +132,9 @@ struct sipua_set_s
     char* from;  /* name@domain, for outgoing call, from = NULL */
 
 	int status;  /* line status */
-/*
+   /*
 	xlist_t *mediaset;
-*/
+   */
 	media_format_t* rtp_format;
 	int bandwidth;
 
@@ -156,6 +156,8 @@ struct sipua_event_s
 	char* from;
 
 	int type;
+
+
 	void* content;
 };
 
@@ -232,6 +234,7 @@ struct sipua_uas_s
 
 	int (*set_listener)(sipua_uas_t* uas, void* listener, int(*event_notify)(void*, sipua_event_t*));
 
+
 	int (*add_coding)(sipua_uas_t* uas, int pt, int rtp_portno, int rtcp_portno, char* mime, int clockrate, int param);
 	
 	int (*clear_coding)(sipua_uas_t* uas);
@@ -257,6 +260,7 @@ struct sipua_s
 	sipua_set_t* incall;  /* The call in conversation */
 	
 	user_profile_t* user_profile;
+   config_t* config;
 
 	int (*done)(sipua_t *ua);
 

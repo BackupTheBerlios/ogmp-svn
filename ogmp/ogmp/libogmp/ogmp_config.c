@@ -24,7 +24,7 @@ rtp_profile_set_t profile_list =
 	{"audio/vorbis", 97, 0, 0, 256*1024, 128*1024}
 	*/
 	1,
-    {{"audio/speex", 8000, 1, PAYLOADTYPE_DYNA}}
+   {{"audio/speex", 8000, 1, PAYLOADTYPE_DYNA}}
 };
 
 /* ui to config rtp module */
@@ -60,7 +60,7 @@ sipua_setting_t src_setting =
 	3005,		/* default rtcp portno */
 	
 	1,
-    {{"audio/speex", 8000, 1, PAYLOADTYPE_DYNA}}
+   {{"audio/speex", 8000, 1, PAYLOADTYPE_DYNA}}
 };
 
 sipua_setting_t clie_setting = 
@@ -71,7 +71,7 @@ sipua_setting_t clie_setting =
 	4005,		/* default rtcp portno */
 
 	1,
-    {{"audio/speex", 8000, 1, PAYLOADTYPE_DYNA}}
+   {{"audio/speex", 8000, 1, PAYLOADTYPE_DYNA}}
 };
 
 sipua_setting_t* source_setting(media_control_t *control)
@@ -83,3 +83,14 @@ sipua_setting_t* client_setting(sipua_t* sipua)
 {
 	return &clie_setting;
 }
+
+config_t* client_load_config(sipua_t *sipua, char* confile)
+{
+   if(sipua->config)
+      conf_done(sipua->config);
+
+   sipua->config = conf_new(confile);
+
+   return sipua->config;
+}
+

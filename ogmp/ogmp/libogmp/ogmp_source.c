@@ -220,25 +220,25 @@ media_source_t* source_open(char* name, media_control_t* control, char *mode, vo
    
 	module_catalog_t * mod_cata = NULL;
 
-    int support = 0;
+   int support = 0;
     
-    if(0 == strcmp(mode, "playback"))
-        support = 1;
-    if(0 == strcmp(mode, "netcast"))
-        support = 1;
+   if(0 == strcmp(mode, "playback"))
+      support = 1;
+   if(0 == strcmp(mode, "netcast"))
+      support = 1;
         
-    if(!support)
-    {
-        src_debug(("source_open: mode not support!\n"));
-        return NULL;
-    }
+   if(!support)
+   {
+      src_debug(("source_open: mode not support!\n"));
+      return NULL;
+   }
     
 	source = xmalloc(sizeof(ogmp_source_t));
 	if(!source)
-    {
-        src_debug(("source_open: no memory!\n"));
-		return NULL;
-    }
+   {
+      src_debug(("source_open: no memory!\n"));
+	   return NULL;
+   }
 
 	memset(source, 0, sizeof(ogmp_source_t));
 
@@ -292,7 +292,7 @@ media_source_t* source_open(char* name, media_control_t* control, char *mode, vo
 	msrc->start = source_start;
 	msrc->stop = source_stop;
 
-    if(0 == strcmp(mode, "playback"))
+   if(0 == strcmp(mode, "playback"))
 	{
 		if(0 == format->new_all_player(format, source->control, "playback", mode_param))
 		{
@@ -301,7 +301,7 @@ media_source_t* source_open(char* name, media_control_t* control, char *mode, vo
 			return NULL;
 		}
 	}
-    else if(0 == strcmp(mode, "netcast"))
+   else if(0 == strcmp(mode, "netcast"))
 	{
 		netcast_parameter_t *np = (netcast_parameter_t*)mode_param;
 		
@@ -314,22 +314,25 @@ media_source_t* source_open(char* name, media_control_t* control, char *mode, vo
 			return NULL;
 		}
 
-        /* In "netcast" mode */
-        tsrc = (transmit_source_t*)source;
+      /* In "netcast" mode */
+      tsrc = (transmit_source_t*)source;
     
-        tsrc->add_destinate = source_add_destinate;
-        tsrc->remove_destinate = source_remove_destinate;
+      tsrc->add_destinate = source_add_destinate;
+      tsrc->remove_destinate = source_remove_destinate;
 
-        /* collect the players of the file */
-        nplayer = format->players(format, "netcast", source->players, MAX_NCAP);
-        src_log(("source_setup: '%s' opened by %d players\n", name, nplayer));
+      /* collect the players of the file */
+      nplayer = format->players(format, "netcast", source->players, MAX_NCAP);
+      src_log(("source_setup: '%s' opened by %d players\n", name, nplayer));
 
-        for(i=0; i<nplayer; i++)
-            source->players[i]->set_callback(source->players[i], CALLBACK_PLAYER_READY, source_cb_on_player_ready, source);
-    }
+      for(i=0; i<nplayer; i++)
+      {
+         src_log(("source_setup: source_cb_on_player_ready@%x\n", (int)source_cb_on_player_ready));
+         source->players[i]->set_callback(source->players[i], CALLBACK_PLAYER_READY, source_cb_on_player_ready, source);
+      }
+   }
     
-    source->lock = xthr_new_lock();
-    source->wait_request = xthr_new_cond(XTHREAD_NONEFLAGS);
+   source->lock = xthr_new_lock();
+   source->wait_request = xthr_new_cond(XTHREAD_NONEFLAGS);
 
-    return msrc;
+   return msrc;
 }

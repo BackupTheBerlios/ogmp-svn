@@ -171,6 +171,13 @@ const char* spxs_play_type(media_player_t * mp)
 }
 
 char* spxs_media_type(media_player_t * mp)
+
+
+
+
+
+
+
 {
    return global_const.media_type;
 }
@@ -259,8 +266,10 @@ int spxs_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
 {
    speex_sender_t *vs = (speex_sender_t*)gen;
 
-   spxs_debug(("spxs_on_member_update: dest[%s] connected\n", cn));
-   
+   spxs_debug(("spxs_on_member_update: dest[%s] connected\n\n\n", cn));
+   spxs_debug(("spxs_on_member_update: pause(1)\n\n\n"));
+   getchar();
+
    if(vs->callback_on_ready)
 	   vs->callback_on_ready(vs->callback_on_ready_user, (media_player_t*)vs);
 
@@ -278,6 +287,7 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 	rtpcap_descript_t *rtpcap;
 
 	media_device_t *dev = NULL;
+
 	dev_rtp_t * dev_rtp = NULL;
 	rtp_setting_t *rtpset = NULL;
 	speex_setting_t *spxset = NULL;
@@ -292,6 +302,9 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 	if(!rtpcap)
 	{
 		spxs_debug(("spxs_set_device: No speex capable found\n"));
+	   spxs_log(("spxs_set_device: pause(1)\n"));
+      getchar();
+
 		return MP_FAIL;
 	}
 
@@ -299,6 +312,9 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 	if(!dev)
 	{
 		spxs_debug(("spxs_set_device: No rtp device found\n"));
+	   spxs_log(("spxs_set_device: pause(2)\n"));
+      getchar();
+
 		return MP_FAIL;
 	}
 
@@ -311,6 +327,9 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 	if(!setting)
 	{
 		spxs_debug(("spxs_set_device: Can't set rtp device properly\n"));
+	   spxs_log(("spxs_set_device: pause(3)\n"));
+      getchar();
+
 		return MP_FAIL;
 	}
 
@@ -344,6 +363,9 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 
 	ss->rtp_media->set_parameter(ss->rtp_media, "ptime_max", (void*)spxset->ptime_max);
 	ss->rtp_media->set_parameter(ss->rtp_media, "penh", (void*)spxset->penh);
+
+   spxs_debug(("spxs_set_device: rtp_session@%x\n", (int)ss->rtp_session));
+   spxs_debug(("spxs_set_device: spxs_on_member_update@%x\n\n\n", (int)spxs_on_member_update));
 
 	session_set_callback(ss->rtp_session, CALLBACK_SESSION_MEMBER_UPDATE, spxs_on_member_update, ss);
 
@@ -437,6 +459,7 @@ int spxs_receive_next (media_receiver_t *recvr, media_frame_t* spxf, int64 sampl
    rtpf = (rtp_frame_t *)output->new_frame(output, mf->bytes, mf->raw);
 
    rtpf->frame.eos = (last_packet == MP_EOS);
+
    rtpf->frame.eots = last_packet;
 
    /* Now samplestamp is 64 bits, for maximum media stamp possible
@@ -486,7 +509,6 @@ module_interface_t * media_new_sender()
    if(!sender)
    {
       spxs_debug(("speex.new_sender: No memory to allocate\n"));
-
       return NULL;
    }
 

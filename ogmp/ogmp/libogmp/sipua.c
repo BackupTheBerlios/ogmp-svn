@@ -537,15 +537,15 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_set_t* call, int bw_budget, media_con
  
 	rtpcap_sdp_t sdp_info;
 
-    int pt;   
+   int pt;   
 
 	char tmp[16];
 	char tmp2[16];
 
 	module_catalog_t *cata = control->modules(control);
     
-    media_format_t *format = source->format;
-    media_stream_t *strm;
+   media_format_t *format = source->format;
+   media_stream_t *strm;
 
 	sipua->uas->address(sipua->uas, &nettype, &addrtype, &netaddr);
 
@@ -598,12 +598,11 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_set_t* call, int bw_budget, media_con
 		int rtp_portno = 0;
 		int rtcp_portno = 0;
 
-        media_stream_t *strm = call->rtp_format->find_mime(call->rtp_format, strm->media_info->mime);
-        if(!strm)
+      media_stream_t *strm = call->rtp_format->find_mime(call->rtp_format, strm->media_info->mime);
+      if(!strm)
         {
             int j;
             
-
             pt = sipua_book_pt(pt_pool);
             if(pt<0)
             {

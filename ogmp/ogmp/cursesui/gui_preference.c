@@ -203,7 +203,7 @@ int window_preference_run_command(gui_t* gui, int c)
 
 	k = 0;
 	switch (c)
-    {
+   {
 		case KEY_DC:
 		{
 			editline_remove_char(default_source_edit[cursor_default_source]);
@@ -257,15 +257,15 @@ int window_preference_run_command(gui_t* gui, int c)
 				default_source_inputs[DEFAULT_SOURCE_SUBJ][0] &&
 				default_source_inputs[DEFAULT_SOURCE_INFO][0])
 			{
-                char* name = default_source_inputs[DEFAULT_SOURCE_FILE];
-                char* subj = default_source_inputs[DEFAULT_SOURCE_SUBJ];
-                char* info = default_source_inputs[DEFAULT_SOURCE_INFO];
+            char* name = default_source_inputs[DEFAULT_SOURCE_FILE];
+            char* subj = default_source_inputs[DEFAULT_SOURCE_SUBJ];
+            char* info = default_source_inputs[DEFAULT_SOURCE_INFO];
 
-                if(ocui->sipua->set_background_source(ocui->sipua, name, subj, info)==NULL)
-                {
+            if(ocui->sipua->set_background_source(ocui->sipua, name, subj, info)==NULL)
+            {
 					beep();
 					break;
-				}
+			   }
 			}
 
 			break;
@@ -325,12 +325,12 @@ int window_preference_run_command(gui_t* gui, int c)
 		default:
 		{
 			if(editline_append(default_source_edit[cursor_default_source], (char*)&c, 1) == 0)
-            {
+         {
 				beep();
-                return -1;
-            }
+            return -1;
+         }
 		}
-    }
+   }
 
 	if (gui->on_off==GUI_ON)
 		gui->gui_print(gui, gui->parent);

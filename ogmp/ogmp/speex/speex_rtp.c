@@ -111,6 +111,9 @@ struct spxrtp_handler_s
    int rtcp_portno;
 };
 
+
+
+
 struct spxrtp_media_s
 {
    struct xrtp_media_s rtp_media;
@@ -145,6 +148,7 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 
    uint32 rtpts_payload;
    uint32 rtpts_arrival;
+
    uint32 rtpts_toplay;
    uint32 rtpts_playing;
    uint32 rtpts_sync;
@@ -179,6 +183,7 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
    }
 
    if(sender && sender->valid && !connect_match(rtp->connect, sender->rtp_connect))
+
    {
       /* this could be true if sender behind the firewall */
 	  spxrtp_debug(("audio/speex.vrtp_rtp_in: put NAT in mind\n"));
@@ -380,6 +385,8 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 		mf->bytes = rtp_packet_dump_payload(rtp, &payload);
 		mf->raw = payload;
 
+
+
 		/* convert rtp timestamp to granulepos */
 		mf->samplestamp = session_member_samples(sender, rtpts_payload);
 			
@@ -430,6 +437,7 @@ int spxrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp)
 int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 {
 	uint32 src_sender = 0;
+
 
 	uint8 frac_lost = 0;
 	uint32 total_lost = 0, full_seqno, jitter = 0;
@@ -560,6 +568,7 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 				if(explayer)
 					explayer->done(explayer);
 
+
 				sender->media_playable = 1;
 			}
 		}
@@ -673,6 +682,7 @@ profile_class_t * rtp_speex_module(profile_handler_t * handler)
 int rtp_speex_set_master(profile_handler_t *handler, void *master)
 {
    spxrtp_handler_t *h = (spxrtp_handler_t *)handler;
+
    h->master = master;
 
    return XRTP_OK;
@@ -818,7 +828,16 @@ void* rtp_speex_info(xrtp_media_t* media, void* rtp_cap)
     printf("rtp_speex_info: penh[%d]\n", spxinfo->penh);
 
     return spxinfo;
-}              
+}
+
+int rtp_speex_done_info(xrtp_media_t* media, void* mediainfo)
+{
+	speex_info_t* spxinfo = (speex_info_t*)mediainfo;
+
+   xfree(spxinfo);
+
+   return XRTP_OK;
+}             
 
 int rtp_speex_sdp(xrtp_media_t* media, void* sdp_info)
 {
@@ -831,6 +850,7 @@ int rtp_speex_sdp(xrtp_media_t* media, void* sdp_info)
 	speex_info_t *spxinfo;
 
 	rtpcap_descript_t *rtpcap;
+
 
 	rtpcap_sdp_t *sdp = (rtpcap_sdp_t*)sdp_info;
 
@@ -995,6 +1015,7 @@ int rtp_speex_send_loop(void *gen)
 	rtp_frame_t *rtpf = NULL;
 
 	int eos=0, eots=0;
+
 
 	int first_loop= 1;
 	int first_group = 1;
@@ -1344,8 +1365,10 @@ xrtp_media_t* rtp_speex(profile_handler_t *handler, int clockrate, int coding_pa
       
 		media->set_parameter = rtp_speex_set_parameter;
 		media->parameter = rtp_speex_parameter;
-
+  
 		media->info = rtp_speex_info;
+      media->done_info = rtp_speex_done_info;
+      
 		media->sdp = rtp_speex_sdp;
 		media->new_sdp = rtp_speex_new_sdp;
 
@@ -1409,6 +1432,7 @@ int spxrtp_type(profile_class_t * clazz)
 }
 
 char * spxrtp_description(profile_class_t * clazz)
+
 {
    return spxrtp_desc;
 }

@@ -41,6 +41,11 @@ extern ogmp_ui_t* global_ui;
 #endif
 
 #define SIPUA_MAX_RING 6
+
+
+
+
+
 #define MAX_CALL_BANDWIDTH  5000  /* in Bytes */
 
 /****************************************************************************************/
@@ -165,6 +170,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		case(SIPUA_EVENT_UNREGISTRATION_SUCCEEDED):
 		{
 			sipua_reg_event_t *reg_e = (sipua_reg_event_t*)e;
+
 			user_profile_t* user_prof = client->reg_profile;
 
             if(user_prof == NULL)
@@ -200,6 +206,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 
             client->reg_profile = NULL;
+
+
 
 			/* Should be exact expire seconds returned by registrary*/
 			user_prof->seconds_left = reg_e->seconds_expires;
@@ -304,6 +312,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			}
 
 			call_e->event.call_info = call;
+
 
 			call->cid = call_e->cid;
 
@@ -587,8 +596,8 @@ int sipua_done(sipua_t *sipua)
 		sipua_done_sip_session(ua->sipua.incall);
 
 	xthr_done_lock(ua->lines_lock);
-    xthr_done_lock(ua->nring_lock);
-    conf_done(ua->conf);
+   xthr_done_lock(ua->nring_lock);
+   conf_done(ua->conf);
 
 	xfree(ua);
 
@@ -601,7 +610,7 @@ int sipua_match_call(void* tar, void* pat)
 	sipua_set_t *set = (sipua_set_t*)tar;
 	sipua_setid_t *id = (sipua_setid_t*)pat;
 
-	if(	!strcmp(set->setid.id, id->id) && 
+	if(!strcmp(set->setid.id, id->id) && 
 		!strcmp(set->setid.username, id->username) && 
 		!strcmp(set->setid.nettype, id->nettype) && 
 		!strcmp(set->setid.addrtype, id->addrtype) && 
@@ -658,7 +667,7 @@ char* client_set_call_source(sipua_t* sipua, sipua_set_t* call, media_source_t* 
 {
 	sipua_setting_t *setting;
 	ogmp_client_t* clie = (ogmp_client_t*)sipua;
-    char *sdp;
+   char *sdp;
 
 	setting = sipua->setting(sipua);
 
@@ -666,16 +675,17 @@ char* client_set_call_source(sipua_t* sipua, sipua_set_t* call, media_source_t* 
                        clie->default_rtp_ports, clie->default_rtcp_ports,
                        clie->nmedia, source, clie->pt);
  
-    if(sdp)
+   if(sdp)
 	{
 		call->renew_body = sdp;
 	}
 
-    return sdp;
+   return sdp;
 }
 
 int client_set_profile(sipua_t* sipua, user_profile_t* prof)
 {
+
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
 	client->sipua.user_profile = prof;
@@ -864,6 +874,7 @@ int client_attach_source(sipua_t* sipua, sipua_set_t* call, transmit_source_t* t
 	char *cname = call->rtpcapset->cname;
 	/*
 	where are you?
+
 	int bw_budget = clie->control->book_bandwidth(clie->control, MAX_CALL_BANDWIDTH);
 	*/
 	rtpcap_descript_t *rtpcap = xlist_first(call->rtpcapset->rtpcaps, &lu);
@@ -1061,6 +1072,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
 
 	client->control = new_media_control();
 
+
 	client->nring_lock = xthr_new_lock();
 
 	/* Initialise */
@@ -1144,8 +1156,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
     sipua->bye = sipua_bye;
     sipua->set_call_source = client_set_call_source;
     
-    /* Set Callbacks */
-    
+    /* Set Callbacks */    
     sipua->set_register_callback = client_set_register_callback;
     sipua->set_newcall_callback = client_set_newcall_callback;
     sipua->set_conversation_start_callback = client_set_conversation_start_callback;

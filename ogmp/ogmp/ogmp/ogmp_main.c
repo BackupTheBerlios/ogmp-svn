@@ -44,17 +44,17 @@ int main(int argc, char** argv)
 	catalog_scan_modules ( mod_cata, OGMP_VERSION, MOD_DIR );
 
 	uas = client_new_uas(mod_cata, "eXosipua");
-    if(!uas)
-        printf("main: fail to create sipua server!\n");
+   if(!uas)
+      printf("main: fail to create sipua server!\n");
 
 	if(uas && uas->init(uas, sip_port, "IN", "IP4", NULL, NULL) >= UA_OK)
 	{
 		sipua = client_new("cursesui", uas, mod_cata, 64*1024);
 
-        if(sipua)
-            client_start(sipua);
-        else
-            printf("main: fail to create sipua!\n");
+      if(sipua)
+         client_start(sipua);
+      else
+         printf("main: fail to create sipua!\n");
 	}
 
 	return 0;

@@ -113,15 +113,15 @@ int jua_process_event(eXosipua_t *jua)
 		}
 		else if (je->type==EXOSIP_CALL_PROCEEDING)
 		{
-            /*
+         /*
             snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
-					je->cid, je->did, je->status_code,
-					je->reason_phrase, je->remote_uri);
+		      je->cid, je->did, je->status_code,
+		      je->reason_phrase, je->remote_uri);
                     
-			printf("%s\n", buf);
-            */
+			   printf("%s\n", buf);
+         */
 
-            jcall_proceeding(jua, je);
+         jcall_proceeding(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_RINGING)
 		{
@@ -966,6 +966,7 @@ module_interface_t* sipua_new_server()
 	uas->done = uas_done;
     
 	uas->start = uas_start;
+
 	uas->shutdown = uas_shutdown;
 
 	uas->address = uas_address;

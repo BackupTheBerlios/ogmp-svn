@@ -234,4 +234,10 @@ extern DECLSPEC
 sipua_uas_t*
 client_new_uas(module_catalog_t* mod_cata, char* type);
 
+/******************
+ * Ogmp Configure *
+ ******************/
+extern DECLSPEC
+config_t* client_load_config(sipua_t *sipua, char* confile);
+
 #endif

@@ -215,9 +215,6 @@ int sipua_next_memo (sipua_phonebook_t* book, FILE* f, sipua_contact_t* c)
 
 	c->nbytes = strtol(start, &end, 10);
 
-
-
-
 	start = end;
 	if(strncmp(start, "]=", 2) != 0)
 	{
@@ -690,6 +687,7 @@ int sipua_verify_user_file(FILE* f, char* uid, char* tok, int tsz, char *buf, in
 
 		if(tsz != sz)
 		{
+
 			return 0;
 		}
 
@@ -792,6 +790,7 @@ user_t* sipua_load_user_file(FILE* f, char* uid, char* tok, int tsz)
 		xfree(user);
 		return NULL;
 	}
+
 
 	user->uid = xstr_clone(uid);
 
@@ -947,6 +946,7 @@ int user_done_profile(void* gen)
 	
 	if(prof->reg_server)
 		xfree(prof->reg_server);
+
 	
 	if(prof->book_location) xfree(prof->book_location);
 
