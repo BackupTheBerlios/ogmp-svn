@@ -710,12 +710,14 @@ session_delete_cname(xrtp_session_t * ses, char *cname, int cnlen);
 /**
  * Move member from one rtp session to other session.
  */
+extern DECLSPEC
 member_state_t *
 session_move_member_by_cname(xrtp_session_t *from_session, xrtp_session_t *to_session, char *cname);
 
 /**
  * Move all members except session owner from one rtp session to other session.
  */
+extern DECLSPEC
 int
 session_move_all_guests(xrtp_session_t *ses, xrtp_session_t *to_ses);
 
