@@ -336,7 +336,7 @@ int spxp_done_device(void *gen)
    return MP_OK;
 }
 
-int spxp_set_device(media_player_t * mp, media_control_t *cont, module_catalog_t *cata)
+int spxp_set_device(media_player_t* mp, media_control_t* cont, module_catalog_t* cata, void* extra)
 {
    control_setting_t *setting = NULL;
 

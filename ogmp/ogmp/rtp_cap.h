@@ -29,6 +29,7 @@
 
 #define DEFAULT_PORTNO 0
 #define SDP_VERSION "0"
+#define PAYLOADTYPE_DYNA -1
 
 typedef struct rtp_coding_s rtp_coding_t;
 struct rtp_coding_s
@@ -37,6 +38,7 @@ struct rtp_coding_s
 
 	int clockrate;
 	int param;
+	int pt;  /* <0 means dyna */
 };
 
 typedef struct rtp_profile_setting_s rtp_profile_setting_t;
@@ -44,9 +46,10 @@ struct rtp_profile_setting_s
 {
 	int rtp_portno;
 	int rtcp_portno;
-
-	int bandwidth;
+	int media_bps;
+	/*
 	int rtp_bandwidth;
+	*/
 };
 
 typedef struct rtp_profile_set_s rtp_profile_set_t;
@@ -84,8 +87,13 @@ struct rtpcap_descript_s
 	uint16 rtp_portno;
 	uint16 rtcp_portno;
 
+	int local_rtp_portno;
+	int local_rtcp_portno;
+
 	int clockrate;
 	int coding_param;
+
+	int enable;
 
 	sdp_message_t *sdp_message;
 };

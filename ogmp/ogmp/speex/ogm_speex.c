@@ -90,14 +90,13 @@ int speex_open_header(ogg_packet *op, speex_info_t *spxinfo)
 
    /* only in svn recently */
    spxinfo->spxmode = speex_lib_get_mode(header->mode);
-
-/* in released version
+   /* in released version
 #ifdef DISABLE_GLOBAL_POINTERS
    spxinfo->mode = speex_mode_new(header->mode);
 #else
    spxinfo->mode = speex_mode_list[header->mode];
 #endif
-*/
+	*/
    if (spxinfo->spxmode->bitstream_version < header->mode_bitstream_version)
    {
       ogm_speex_log(("speex_open_header: Cannot decode newer version speex source\n"));
@@ -110,6 +109,7 @@ int speex_open_header(ogg_packet *op, speex_info_t *spxinfo)
       return MP_FAIL;
    }
 
+   /* clockrate */
    ainfo->info.sample_rate = header->rate;
 
    if(!header->frames_per_packet)
@@ -216,7 +216,7 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
             ogm_speex_log(("ogm_open_speex: bitstream version[%d]\n", spxinfo->bitstream_version));
 
             ogm_speex_log(("ogm_open_speex: channels[%d]\n", spxinfo->audioinfo.channels));
-            ogm_speex_log(("ogm_open_speex: rate[%ld]\n", spxinfo->audioinfo.info.sample_rate));
+            ogm_speex_log(("ogm_open_speex: clockrate[%ld]\n", spxinfo->audioinfo.info.sample_rate));
             ogm_speex_log(("ogm_open_speex: bitrate[%ld]\n", spxinfo->bitrate_now));
             ogm_speex_log(("ogm_open_speex: samples/frame[%d]; frames/packet[%d]\n", spxinfo->nsample_per_frame, spxinfo->nframe_per_packet));
             ogm_speex_log(("ogm_open_speex: headers[%d]\n", spxinfo->nheader));

@@ -70,6 +70,7 @@ struct user_profile_s
 	char* registrar;
 
 	char* cname;	/* username@netaddr */
+	char* netaddr;
 
 	char* book_location;
 

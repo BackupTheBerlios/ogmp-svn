@@ -467,8 +467,6 @@ int jua_loop(void *gen)
 {
 	eXosipua_t *jua = (eXosipua_t *)gen;
 
-	//rtime_t ms_remain;
-
 	jua->run = 1;
 
 	while(1)
@@ -477,8 +475,6 @@ int jua_loop(void *gen)
 			break;
 
 		jua_process_event(jua);
-
-		//time_msec_sleep(jua->clock, JUA_INTERVAL_MSEC, &ms_remain);
 	}
 
 	return UA_OK;
@@ -664,7 +660,7 @@ int uas_unregist(sipua_uas_t *sipuas, char *userloc, char *registrar, char *id)
 	return UA_OK;
 }
 
-int uas_call(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_body, int sdp_bytes)
+int uas_invite(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_body, int sdp_bytes)
 {
 	eXosipua_t *jua = (eXosipua_t*)sipuas;
 	osip_message_t *invite;
@@ -674,7 +670,6 @@ int uas_call(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_bo
 	int ret;
 
 	char *current_id = call_info->user_prof->regname;
-
 	/*
 	OSIP_TRACE (osip_trace(__FILE__, __LINE__, OSIP_INFO2, NULL, "To: |%s|\n", to));
 	*/
@@ -698,8 +693,6 @@ int uas_call(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_bo
 	if (eXosip_build_initial_invite(&invite, to, current_id, proxy, call_info->subject) != 0)
 		return UA_FAIL;
 
-	jua_log(("uas_call: 4\n"));
-
 	/* sdp content of the call */
 	sprintf(sdp_size,"%i", sdp_bytes);
 
@@ -716,16 +709,41 @@ int uas_call(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_bo
 	return ret;
 }
 
-int sipuas_hangup(sipua_t *sipua, int i)
+int uas_accept(sipua_uas_t* uas, int lineno)
 {
-	eXosipua_t *jua = (eXosipua_t*)sipua;
+	eXosipua_t *jua = (eXosipua_t*)uas;
 	
-	jcall_t *call = &jua->jcalls[i];
-
-	if(call && eXosip_terminate_call(call->cid, call->did) == 0)
-		jcall_remove(jua, call);
-
+	jua->ncall++;
+	
 	return UA_OK;
+}
+
+int uas_answer(sipua_uas_t* uas, sipua_set_t* call, int reply, char* reply_type, char* reply_body)
+{
+	eXosipua_t *jua = (eXosipua_t*)uas;
+	
+	if(reply_body)
+	{
+		if(eXosip_answer_call_with_body(call->did, reply, reply_type, reply_body) == 0)
+			return UA_OK;
+	}
+	else
+	{
+		if(eXosip_answer_call(call->did, reply, NULL) == 0)
+			return UA_OK;
+	}
+
+	return UA_FAIL;
+}
+
+int uas_bye(sipua_uas_t* uas, sipua_set_t* call)
+{
+	eXosipua_t *jua = (eXosipua_t*)uas;
+	
+	if(eXosip_terminate_call(call->cid, call->did) == 0)
+		return UA_OK;
+
+	return UA_FAIL;
 }
 
 sipua_uas_t* sipua_uas(int sip_port, char* nettype, char* addrtype, char* firewall, char* proxy)
@@ -782,7 +800,11 @@ sipua_uas_t* sipua_uas(int sip_port, char* nettype, char* addrtype, char* firewa
 	uas->regist = uas_regist;
 	uas->unregist = uas_unregist;
 
-	uas->call = uas_call;
+	uas->accept = uas_accept;
+
+	uas->invite = uas_invite;
+	uas->answer = uas_answer;
+	uas->bye = uas_bye;
 
 	/* detect local address */
 	eXosip_guess_ip_for_via(ip_family, uas->netaddr, 63);

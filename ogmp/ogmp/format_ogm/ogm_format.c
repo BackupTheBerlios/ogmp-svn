@@ -367,6 +367,26 @@ int ogm_set_handlers ( ogm_format_t *ogm, module_catalog_t * cata )
    return MP_OK;
 }
 
+int ogm_support_type (media_format_t *mf, char *type, char *subtype)
+{
+	if(!strcmp(type, "mime") && !strcmp(type, "application/ogg"))
+		return 1;
+
+	if(!strcmp(type, "ext"))
+	{
+		if(!strcmp(type, "ogg"))
+			return 1;
+
+		if(!strcmp(type, "ogm"))
+			return 1;
+
+		if(!strcmp(type, "spx"))
+			return 1;
+	}
+
+	return 0;
+}
+
 int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_stream_state *sstate, ogg_packet *packet, void* extra)
 {
    //stream_header sth;
@@ -393,7 +413,7 @@ int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_strea
    return MP_OK;
 }
 
-int ogm_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *conf, char *mode, void* extra)
+int ogm_open(media_format_t *mf, char *fname, media_control_t *ctrl, config_t *conf, char *mode, void* extra)
 {
    int sno = 0;
    int end = 0;   
@@ -492,13 +512,6 @@ int ogm_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *
    }
 
    return  MP_OK;
-}
-
-int ogm_open_capables(media_format_t *mf, char *src_cn, int src_cnlen, capable_descript_t *caps[], int ncap, media_control_t *ctrl, config_t *conf, char *mode, capable_descript_t *opened_caps[])
-{
-	ogm_log(("ogm_open_capables: Can not open capables to media file\n"));
-
-	return 0;
 }
 
 static int64 get_pts (ogm_stream_t *ogm_strm, int64 granulepos)
@@ -618,8 +631,8 @@ int ogm_seek_millisecond (media_format_t *mf, int millis) {
       ogm_log (("ogm_seek_millisecond: seek to Second[%d] called\n", millis));
       ogm_log (("ogm_seek_millisecond: current is Second[%d]\n", current_sec));
 
-      if (current_sec > start_sec) {
-
+      if (current_sec > start_sec) 
+	  {
          /*seek between beginning and current_pos*/
 
          /*fixme - sometimes we seek backwards and during
@@ -627,9 +640,9 @@ int ogm_seek_millisecond (media_format_t *mf, int millis) {
           */
 
          start_pos = start_sec * current_pos / current_sec ;
-
-      } else {
-
+      } 
+	  else
+	  {
          /*seek between current_pos and end*/
          start_pos = current_pos + ((start_sec - current_sec) *
                   mf->file_bytes - current_pos ) /
@@ -638,9 +651,9 @@ int ogm_seek_millisecond (media_format_t *mf, int millis) {
 
       ogm_log (("ogm_seek_millisecond: current_pos is%ld\n", current_pos));
       ogm_log (("ogm_seek_millisecond: new_pos is %ld\n", start_pos));
-
-   } else {
-
+   }
+   else
+   {
       /*seek using avg_bitrate*/
       start_pos = start_sec * mf->avg_bitrate/8;
    }
@@ -1004,11 +1017,11 @@ module_interface_t * media_new_format()
    /* release a format */
    mf->done = ogm_done_format;
 
+   mf->support_type = ogm_support_type;
+
    /* Open/Close a media source */
    mf->open = ogm_open;
    mf->close = ogm_close;
-
-   mf->open_capables = ogm_open_capables;
 
    /* Stream management */
    mf->add_stream = ogm_add_stream;

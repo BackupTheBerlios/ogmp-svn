@@ -323,7 +323,7 @@ int vrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 
    rtp_media = (xrtp_media_t*)vh->vorbis_media;
 
-   rate = rtp_media->rate(rtp_media);
+   rate = rtp_media->clockrate;
    rtpts_arrival = rtpts_playing - (uint32)((us_playing - us_arrival)/1000000.0 * rate);
 
    rtpts_toplay = session_member_mapto_local_time(sender, rtpts_payload, rtpts_arrival, JITTER_ADJUSTMENT_LEVEL);
@@ -372,7 +372,7 @@ int vrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 		   sender->media_playable = 1;
 
 		   ctrl = (media_control_t*)session_media_control(vh->session);
-		   player = ctrl->find_player(ctrl, "playback", VORBIS_MIME, "");
+		   player = ctrl->find_player(ctrl, "playback", VORBIS_MIME, "", NULL);
 
 		   ret = player->open_stream(player, (media_info_t*)vinfo);
 		   if( ret < MP_OK)
@@ -602,7 +602,7 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
       return XRTP_CONSUMED;
    }
 
-   rate = profile->vorbis_media->rtp_media.rate(&profile->vorbis_media->rtp_media);
+   rate = profile->vorbis_media->rtp_media.clockrate;
 
    if(!sender->valid)
    {
@@ -991,7 +991,7 @@ int rtp_vorbis_set_rate(xrtp_media_t * media, int rate){
    return XRTP_OK;
 }
 
-int rtp_vorbis_rate(xrtp_media_t * media){
+int rtp_vorbis_clockrate(xrtp_media_t * media){
 
    return media->clockrate;
 }
@@ -1570,7 +1570,7 @@ xrtp_media_t * rtp_vorbis(profile_handler_t *handler)
 	  media->set_callback = rtp_media_set_callback;
 
       media->set_rate = rtp_vorbis_set_rate;
-      media->rate = rtp_vorbis_rate;
+      media->clockrate = rtp_vorbis_clockrate;
       
       media->sign = rtp_vorbis_sign;
       media->post = rtp_vorbis_post;
@@ -1600,24 +1600,24 @@ char * vrtp_description(profile_class_t * clazz){
    return vrtp_desc;
 }
 
-int vrtp_capacity(profile_class_t * clazz){
-
+int vrtp_capacity(profile_class_t * clazz)
+{
    return XRTP_CAP_NONE;
 }
 
-int vrtp_handler_number(profile_class_t *clazz){
-
+int vrtp_handler_number(profile_class_t *clazz)
+{
    return num_handler;
 }
 
-int vrtp_done(profile_class_t * clazz){
-
+int vrtp_done(profile_class_t * clazz)
+{
    xfree(clazz);
    return XRTP_OK;
 }
 
-profile_handler_t * vrtp_new_handler(profile_class_t * clazz, xrtp_session_t * ses){
-
+profile_handler_t * vrtp_new_handler(profile_class_t * clazz, xrtp_session_t * ses)
+{
    vrtp_handler_t * vh;
    profile_handler_t * h;
 
@@ -1653,14 +1653,13 @@ profile_handler_t * vrtp_new_handler(profile_class_t * clazz, xrtp_session_t * s
    h->rtcp_out = vrtp_rtcp_out;
    h->rtcp_size = vrtp_rtcp_size;
 
-
    ++num_handler;
 
    return h;
 }
 
-int vrtp_done_handler(profile_handler_t * h){
-
+int vrtp_done_handler(profile_handler_t * h)
+{
    xfree(h);
 
    num_handler--;

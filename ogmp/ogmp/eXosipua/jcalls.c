@@ -19,6 +19,8 @@
  */
 
 #include <stdlib.h>
+
+#include <timedia/xmalloc.h>
 #include "eXosipua.h"
 #include "../rtp_cap.h"
 
@@ -87,54 +89,33 @@ jcall_t *jcall_find_call(eXosipua_t *jua, int pos)
 
 int jcall_new(eXosipua_t *jua, eXosip_event_t *je)
 {
-	jcall_t *ca;
+	/*event back to sipuac */
+	sipua_call_event_t call_e;
 
-	int k;
+	if(jua->ncall == MAX_SIPUA_LINES-1)
+	{
+		/* All lines are busy */
+		eXosip_answer_call(je->did, 486, 0);
+		return 0;
+	}
 
-	/* event back to sipuac */
-	sipua_event_t sip_e;
-	sip_e.call_info = (sipua_set_t*)je->external_reference;
-	sip_e.type = SIPUA_EVENT_NEW_CALL;
+	call_e.event.type = SIPUA_EVENT_NEW_CALL;
+	call_e.event.content = je->sdp_body;
 
-	for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
+	call_e.cid = je->cid;
+	call_e.did = je->did;
+	call_e.subject = je->subject;
+	call_e.textinfo = je->textinfo;
+	call_e.req_uri = je->req_uri;
+	call_e.local_uri = je->local_uri;
+	call_e.remote_uri = je->remote_uri;
+
+	if (je->reason_phrase[0]!='\0')
     {
-		if (jua->jcalls[k].state == NOT_USED)
-			break;
+		call_e.reason_phrase = je->reason_phrase;
+		call_e.status_code = je->status_code;
     }
-  
-	if (k==MAX_NUMBER_OF_CALLS)
-		return -1;
-
-	sip_e.lineno = k;
-
-	ca = &(jua->jcalls[k]);
-	memset(&(jua->jcalls[k]), 0, sizeof(jcall_t));
-
-	ca->cid = je->cid;
-	ca->did = je->did;
-
-	if (ca->did<1 && ca->cid<1)
-    {
-		exit(0);
-		return -1; /* not enough information for this event?? */
-    }
-
-	osip_strncpy(ca->textinfo,   je->textinfo, 255);
-	osip_strncpy(ca->req_uri,    je->req_uri, 255);
-	//osip_strncpy(ca->local_uri,  je->local_uri, 255);
-	osip_strncpy(ca->remote_uri, je->remote_uri, 255);
-	osip_strncpy(ca->subject,    je->subject, 255);
-
-#if 0
-	if (ca->remote_sdp_audio_ip[0]=='\0')
-    {
-		osip_strncpy(ca->remote_sdp_audio_ip, je->remote_sdp_audio_ip, 49);
-		ca->remote_sdp_audio_port = je->remote_sdp_audio_port;
-		ca->payload = je->payload;
-		osip_strncpy(ca->payload_name, je->payload_name, 49);
-    }
-#endif
-
+/*
 #if defined(XRTP_SUPPORT)
 	{
 		sdp_message_t *sdp;
@@ -148,22 +129,13 @@ int jcall_new(eXosipua_t *jua, eXosip_event_t *je)
 				ca->callin_info = NULL;
 			}
 
-			/* Retrieve capable from the sdp message */
 			ca->callin_info = rtp_capable_from_sdp(sdp);
 		}
 	}
 #endif
-
-	if (je->reason_phrase[0]!='\0')
-    {
-		osip_strncpy(ca->reason_phrase, je->reason_phrase, 49);
-		ca->status_code = je->status_code;
-    }
-
-	ca->state = je->type;
-
+*/
 	/* event notification */
-	jua->sipuas.notify_event(jua->sipuas.lisener, &sip_e);
+	jua->sipuas.notify_event(jua->sipuas.lisener, &call_e.event);
 
 	return 0;
 }

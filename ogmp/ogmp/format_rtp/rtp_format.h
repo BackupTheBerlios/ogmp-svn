@@ -47,6 +47,8 @@ struct rtp_format_s
 {
    struct  media_format_s  format;
 
+   int (*open_capables) (media_format_t *mf, char *src_cname, rtpcap_set_t *rtpcapset, media_control_t *ctrl, config_t *conf, char *mode, capable_descript_t* opened_caps[]);
+
    dev_rtp_t *rtp_in;
    int millisec;
 };

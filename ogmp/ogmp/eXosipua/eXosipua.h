@@ -215,6 +215,8 @@ struct eXosipua_s
 
 	jinsubscription_t jinsubscriptions[MAX_NUMBER_OF_INSUBSCRIPTIONS];
 
+	int ncall;
+
 	int run;
 	xthread_t *thread;
 

@@ -1,4 +1,4 @@
-/*
+/**
  * josua - Jack's open sip User Agent
  *
  * Copyright (C) 2002,2003   Aymeric Moizard <jack@atosc.org>
@@ -39,13 +39,21 @@ gui_t gui_window_sessions_list =
 	NULL
 };
 
-int cursor_sessions_list = 0;
+int calllist_line = 0;
 
 int window_sessions_list_print(gui_t* gui, int wid)
 {
-	int k, pos;
 	int y,x;
 	char buf[250];
+
+	sipua_set_t* call;
+
+	int nbusy, line, n, view;
+	int busylines[MAX_SIPUA_LINES];
+	int max;
+
+	ogmp_curses_t* ocui = gui->topui;
+	user_profile_t* user_profile = ocui->sipua->profile(ocui->sipua);
 
 	if(gui->topui->gui_windows[EXTRAGUI])
 		josua_clear_box_and_commands(gui->topui->gui_windows[EXTRAGUI]);
@@ -55,45 +63,87 @@ int window_sessions_list_print(gui_t* gui, int wid)
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
 
 	getmaxyx(stdscr,y,x);
-	attrset(A_NORMAL);
-	attrset(COLOR_PAIR(1));
+	max = y + gui->y1 - gui->y0 - 1;
 
-	if (gui_window_sessions_list.x1==-999)
-    {}
-	else x = gui_window_sessions_list.x1;
+	attrset(A_NORMAL);
+
+	/* Window Title */
+	attrset(COLOR_PAIR(4));
+	snprintf(buf, 250, "%199.199s", " ");
+	mvaddnstr(gui->y0, gui->x0, buf, (x-gui->x0));
+
+	snprintf(buf, x-gui->x0, "All Calls of '%s'<%s>", user_profile->fullname, user_profile->regname);
+	mvaddstr(gui->y0, gui->x0+1, buf);
 
 	attrset(COLOR_PAIR(0));
-#if 0
-	pos=1;
-	for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
+	snprintf(buf, 250, "%199.199s", " ");
+	mvaddnstr(gui->y0+1, gui->x0, buf, (x-gui->x0));
+	mvaddnstr(gui->y0+2, gui->x0, buf, (x-gui->x0));
+	mvaddnstr(gui->y0+3, gui->x0, buf, (x-gui->x0));
+
+	/* Window Body */
+	ocui->sipua->lock_lines(ocui->sipua);
+
+	nbusy = ocui->sipua->busylines(ocui->sipua, busylines, MAX_SIPUA_LINES);
+	if(nbusy == 0)
+	{
+		attrset(COLOR_PAIR(1));
+
+		snprintf(buf, x - gui->x0, "No call available !");
+		mvaddstr(gui->y0+2, gui->x0+1, buf);
+
+		gui->gui_draw_commands(gui);
+		return 0;
+	}
+
+	n = 0;
+	while(busylines[n] != calllist_line) n++;
+
+	if(n > max/2)
+		view = n - max/2;
+	else
+		view = 0;
+	
+	for(line = view; line < nbusy; line++)
     {
-		if (jcalls[k].state != NOT_USED)
+#if 0
+		snprintf(buf, 199, "%c%c %i//%i %i %s with: %s %199.199s",
+					(cursor_sessions_list==pos-1) ? '-' : ' ',
+					(cursor_sessions_list==pos-1) ? '>' : ' ',
+					jcalls[k].cid,
+					jcalls[k].did,
+					jcalls[k].status_code,
+					jcalls[k].reason_phrase,
+					jcalls[k].remote_uri, " ");
+#endif
+		call = ocui->sipua->line(ocui->sipua, busylines[line]);
+
+		if(line==calllist_line)
 		{
-			snprintf(buf, 199, "%c%c %i//%i %i %s with: %s %199.199s",
-				(cursor_sessions_list==pos-1) ? '-' : ' ',
-				(cursor_sessions_list==pos-1) ? '>' : ' ',
-				jcalls[k].cid,
-				jcalls[k].did,
-				jcalls[k].status_code,
-				jcalls[k].reason_phrase,
-				jcalls[k].remote_uri, " ");
-
-			attrset(COLOR_PAIR(5));
-			attrset((pos-1==cursor_sessions_list) ? A_REVERSE : A_NORMAL);
-
-			mvaddnstr(gui_window_sessions_list.y0+pos-1,
-					gui_window_sessions_list.x0,
-					buf,
-					x-gui_window_sessions_list.x0-1);
-	  
-			pos++;
+			snprintf(buf, x - gui->x0, " %c%c %d. %s - [%s]%-80.80s",
+					'-', '>', line, call->setid.id, call->subject, " ");
+      
+			attrset(COLOR_PAIR(10));
+		}
+		else
+		{
+			snprintf(buf, x - gui->x0, " %c%c %d. %s - [%s]%-80.80s",
+					' ', ' ', line, call->setid.id, call->subject, " ");
+      
+			attrset(COLOR_PAIR(1));
 		}
 
-		if (pos>y+gui_window_sessions_list.y1-gui_window_sessions_list.y0+1)
-			break; /* do not print next one */
-	}
-#endif
-	window_sessions_list_draw_commands(gui);
+		mvaddnstr(gui->y0+1+n, gui->x0, buf, x-gui->x0);
+
+		if (n == max)
+			break;
+
+		n++;
+    }
+  
+	ocui->sipua->unlock_lines(ocui->sipua);
+
+	gui->gui_draw_commands(gui);
   
 	return 0;
 }
@@ -103,16 +153,15 @@ void window_sessions_list_draw_commands(gui_t* gui)
 	int x,y;
 	char *sessions_list_commands[] = 
 	{
-		"<-",  "PrevWindow",
-		"->",  "NextWindow",
-		"c",  "Close" ,
-		"a",  "Answer",
-		"m",  "Mute"  ,
-		"u",  "UnMute",
-		"d",  "Decline",
-		"r",  "Reject",
-		"b",  "AppearBusy",
-		"o",  "SendOptions",
+		"^C",  "Close" ,
+		"A",  "Answer",
+		"C",  "Hangup" ,
+		"D",  "Decline",
+		"R",  "Reject",
+		"B",  "Busy",
+		"H",  "Hold"  ,
+		"U",  "Unhold",
+		"O",  "SendOptions",
 		"digit",  "SendInfo",
 		NULL
 	};
@@ -124,140 +173,288 @@ void window_sessions_list_draw_commands(gui_t* gui)
 
 int window_sessions_list_run_command(gui_t* gui, int c)
 {
-  /*jcall_t *ca;*/
-  int i;
-  int max;
-  int y,x;
-  curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
+	int busylines[MAX_SIPUA_LINES];
+	int nbusy;
 
-  getmaxyx(stdscr,y,x);
+	ogmp_curses_t* ocui = gui->topui;
 
-  if (gui_window_sessions_list.x1==-999)
-    {}
-  else x = gui_window_sessions_list.x1;
+	ocui->sipua->lock_lines(ocui->sipua);
+	nbusy = ocui->sipua->busylines(ocui->sipua, busylines, MAX_SIPUA_LINES);
+	ocui->sipua->unlock_lines(ocui->sipua);
 
-  if (gui_window_sessions_list.y1<0)
-    max = y + gui_window_sessions_list.y1 - gui_window_sessions_list.y0+2;
-  else
-    max = gui_window_sessions_list.y1 - gui_window_sessions_list.y0+2;
+	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
+	/*
+	i = jcall_get_number_of_pending_calls();
+	if (i<max) 
+		max=i;
+	*/
+	switch (c)
+    {
+		sipua_set_t* call;
+
+		case KEY_DOWN:
+		{
+			int n = 0;
+			while(busylines[n] != calllist_line) n++;
+
+			if(n+1==nbusy)
+			{
+				beep();
+				break;
+			}
+
+			calllist_line = busylines[++n];
+			break;
+		}
+		case KEY_UP:
+		{
+			int n = 0;
+			while(busylines[n] != calllist_line) n++;
+
+			if(n==0)
+			{
+				beep();
+				break;
+			}
+
+			calllist_line = busylines[--n];
+			break;
+		}
+		case 3:  /* Ctrl-C */
+		{
+			gui_hide_window(gui);
+
+			break;
+		}
+		case 'c':
+		{
+			int n = 0;
+
+			call = ocui->sipua->session(ocui->sipua);
+
+			ocui->sipua->bye(ocui->sipua, call);
+			
+			while(busylines[n] != calllist_line) 
+				n++;
+
+			if(n > 0)
+				calllist_line = busylines[--n];
+			else
+			{
+				if(nbusy > 1)
+					calllist_line = busylines[++n];
+				else
+					calllist_line = -1;
+			}
 /*
-  i = jcall_get_number_of_pending_calls();
-  if (i<max) max=i;
+			eXosip_lock();
+			i = eXosip_terminate_call(ca->cid, ca->did);
+			if (i==0) jcall_remove(ca);
+			eXosip_unlock();
 */
-  if (max==0)
-    {
-      beep();
-      return -1;
-    }
-  
-  switch (c)
-    {
-    case KEY_DOWN:
-      cursor_sessions_list++;
-      cursor_sessions_list %= max;
-      break;
-    case KEY_UP:
-      cursor_sessions_list += max-1;
-      cursor_sessions_list %= max;
-      break;
-#if 0	
-    case 'a':
-      ca = jcall_find_call(cursor_sessions_list);
-      if (ca==NULL) { beep(); break; }
-      eXosip_lock();
-      eXosip_answer_call(ca->did, 200, 0);
-      eXosip_unlock();
-      break;
-    case 'r':
-      ca = jcall_find_call(cursor_sessions_list);
-      if (ca==NULL) { beep(); break; }
-      eXosip_lock();
-      i = eXosip_answer_call(ca->did, 480, 0);
-      if (i==0)
-	jcall_remove(ca);
-      eXosip_unlock();
-      window_sessions_list_print();
-      break;
-    case 'd':
-      ca = jcall_find_call(cursor_sessions_list);
-      if (ca==NULL) { beep(); break; }
-      eXosip_lock();
-      i = eXosip_answer_call(ca->did, 603, 0);
-      if (i==0)
-	jcall_remove(ca);
-      eXosip_unlock();
-      window_sessions_list_print();
-      break;
-    case 'b':
-      ca = jcall_find_call(cursor_sessions_list);
-      if (ca==NULL) { beep(); break; }
-      eXosip_lock();
-      i = eXosip_answer_call(ca->did, 486, 0);
-      if (i==0)
-	jcall_remove(ca);
-      eXosip_unlock();
-      window_sessions_list_print();
-      break;
-    case 'c':
-      ca = jcall_find_call(cursor_sessions_list);
-      if (ca==NULL) { beep(); break; }
-      eXosip_lock();
-      i = eXosip_terminate_call(ca->cid, ca->did);
-      if (i==0)
-	jcall_remove(ca);
-      eXosip_unlock();
-      window_sessions_list_print();
-      break;
-    case 'm':
-      ca = jcall_find_call(cursor_sessions_list);
-      if (ca==NULL) { beep(); break; }
-      eXosip_lock();
-      eXosip_on_hold_call(ca->did);
-      eXosip_unlock();
-      break;
-    case 'u':
-      ca = jcall_find_call(cursor_sessions_list);
-      if (ca==NULL) { beep(); break; }
-      eXosip_lock();
-      eXosip_off_hold_call(ca->did);
-      eXosip_unlock();
-      break;
-    case 'o':
-      ca = jcall_find_call(cursor_sessions_list);
-      if (ca==NULL) { beep(); break; }
-      eXosip_lock();
-      eXosip_options_call(ca->did);
-      eXosip_unlock();
-      break;
+			gui->gui_print(gui, gui->parent);
+			break;
+		}
+		case 'a':
+		{
+			call = ocui->sipua->pick(ocui->sipua, calllist_line);
+			if (!call) 
+			{ 
+				beep(); 
+				break; 
+			}
 
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9':
-    case '#':
-    case '*':
-	{
-      char dtmf_body[1000];
+			ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_ANSWER);
+/*
+			eXosip_lock();
+			eXosip_answer_call(ca->did, 200, 0);
+			eXosip_unlock();
+*/
+			break;
+		}
+		case 'r':
+		{
+			int n = 0;
 
-      ca = jcall_find_call(cursor_sessions_list);
-      if (ca==NULL) { beep(); break; }
+			call = ocui->sipua->pick(ocui->sipua, calllist_line);
+			if (!call) 
+			{ 
+				beep(); 
+				break; 
+			}
 
-      snprintf(dtmf_body, 999, "Signal=%c\r\nDuration=250\r\n", c);
-      eXosip_lock();
-      eXosip_info_call(ca->did, "application/dtmf-relay", dtmf_body);
-      eXosip_unlock();
-      break;
-	}
-#endif
-    default:
-      beep();
-      return -1;
+			ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_REJECT);
+
+			while(busylines[n] != calllist_line) 
+				n++;
+
+			if(n > 0)
+				calllist_line = busylines[--n];
+			else
+			{
+				if(nbusy > 1)
+					calllist_line = busylines[++n];
+				else
+					calllist_line = -1;
+			}
+/*
+			eXosip_lock();
+			i = eXosip_answer_call(ca->did, 480, 0);
+			if (i==0) jcall_remove(ca);
+			eXosip_unlock();
+*/
+			gui->gui_print(gui, gui->parent);
+			break;
+		}
+		case 'd':
+		{
+			int n = 0;
+
+			call = ocui->sipua->pick(ocui->sipua, calllist_line);
+			if (!call) 
+			{ 
+				beep(); 
+				break; 
+			}
+
+			ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_DECLINE);
+			
+			while(busylines[n] != calllist_line) 
+				n++;
+
+			if(n > 0)
+				calllist_line = busylines[--n];
+			else
+			{
+				if(nbusy > 1)
+					calllist_line = busylines[++n];
+				else
+					calllist_line = -1;
+			}
+/*
+			eXosip_lock();
+			i = eXosip_answer_call(ca->did, 603, 0);
+			if (i==0) jcall_remove(ca);
+			eXosip_unlock();
+*/
+			gui->gui_print(gui, gui->parent);
+			break;
+		}
+		case 'b':
+		{
+			int n = 0;
+
+			call = ocui->sipua->pick(ocui->sipua, calllist_line);
+			if (!call) 
+			{ 
+				beep(); 
+				break; 
+			}
+
+			ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_BUSY);
+			
+			while(busylines[n] != calllist_line) 
+				n++;
+
+			if(n > 0)
+				calllist_line = busylines[--n];
+			else
+			{
+				if(nbusy > 1)
+					calllist_line = busylines[++n];
+				else
+					calllist_line = -1;
+			}
+/*
+			eXosip_lock();
+			i = eXosip_answer_call(ca->did, 486, 0);
+			if (i==0) jcall_remove(ca);
+			eXosip_unlock();
+*/
+			gui->gui_print(gui, gui->parent);
+			break;
+		}
+		case 'h':
+		{
+			call = ocui->sipua->session(ocui->sipua);
+
+			calllist_line = ocui->sipua->hold(ocui->sipua, call);
+/*
+			eXosip_lock();
+			eXosip_on_hold_call(ca->did);
+			eXosip_unlock();
+*/
+			break;
+		}
+		case 'u':
+		{
+			call = ocui->sipua->pick(ocui->sipua, calllist_line);
+			if (!call) 
+			{ 
+				beep(); 
+				break; 
+			}
+
+			ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_ANSWER);
+/*
+			eXosip_lock();
+			eXosip_off_hold_call(ca->did);
+			eXosip_unlock();
+*/
+			break;
+		}
+		case 'o':
+		{
+			call = ocui->sipua->pick(ocui->sipua, calllist_line);
+			if (!call) 
+			{ 
+				beep(); 
+				break; 
+			}
+
+			ocui->sipua->options_call(ocui->sipua, call);
+/*
+			eXosip_lock();
+			eXosip_options_call(ca->did);
+			eXosip_unlock();
+*/
+			break;
+		}
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+		case '#':
+		case '*':
+		{
+			char dtmf_body[1000];
+
+			call = ocui->sipua->pick(ocui->sipua, calllist_line);
+			if (!call) 
+			{ 
+				beep(); 
+				break; 
+			}
+
+			snprintf(dtmf_body, 999, "Signal=%c\r\nDuration=250\r\n", c);
+
+			ocui->sipua->info_call(ocui->sipua, call, "application/dtmf-relay", dtmf_body);
+/*
+			eXosip_lock();
+			eXosip_info_call(ca->did, "application/dtmf-relay", dtmf_body);
+			eXosip_unlock();
+*/
+			break;
+		}
+		default:
+			beep();
+			return -1;
     }
 
 	gui->gui_print(gui, gui->parent);

@@ -16,7 +16,6 @@
  ***************************************************************************/
  
 #include "speex_codec.h"
-
 /*
 */
 #define SPEEX_CODEC_LOG
@@ -123,6 +122,7 @@ media_frame_t* spxc_decode(speex_info_t *spxinfo, ogg_packet *op, media_pipe_t *
 	return auf;
 }
 
+#if 0
 ogg_packet* spxc_encode(speex_info_t* spxinfo, media_frame_t* auf, media_pipe_t* input)
 {
 	ogg_packet* ogg;
@@ -179,5 +179,6 @@ ogg_packet* spxc_encode(speex_info_t* spxinfo, media_frame_t* auf, media_pipe_t*
 
 	return ogg;
 }
+#endif
 
 

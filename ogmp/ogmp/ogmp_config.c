@@ -57,8 +57,8 @@ ogmp_setting_t serv_setting =
 	"IP4",		/* addrtype */
 	3004,		/* default rtp portno */
 	3005,		/* default rtcp portno */
-
-	1, {"audio/speex", 8000, 1}
+	
+	1, {"audio/speex", 8000, 1, PAYLOADTYPE_DYNA}
 };
 
 ogmp_setting_t clie_setting = 
@@ -68,7 +68,7 @@ ogmp_setting_t clie_setting =
 	4004,		/* default rtp portno */
 	4005,		/* default rtcp portno */
 
-	1, {"audio/speex", 8000, 1}
+	1, {"audio/speex", 8000, 1, PAYLOADTYPE_DYNA}
 };
 
 ogmp_setting_t* server_setting(media_control_t *control)

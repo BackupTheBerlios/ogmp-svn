@@ -144,7 +144,7 @@ int spxs_open_stream (media_player_t *mp, media_info_t *media_info)
    ai.info.sample_bits = 16;
    ai.info.sample_rate = spxinfo->audioinfo.info.sample_rate;
    ai.channels = spxinfo->audioinfo.channels;
-   
+         
    ss->rtp_media->set_coding(ss->rtp_media, ai.info.sample_rate, ai.channels);
 
    ss->rtp_media->set_parameter(ss->rtp_media, "nframe_per_packet", (void*)spxinfo->nframe_per_packet);
@@ -365,7 +365,6 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
    speex_sender_t *ss = (speex_sender_t*)mp;
 
    int total_bw;
-   int rtp_bw;
 
    spxs_log(("spxs_set_device: need rtp device\n"));
    rtpcap = rtp_get_capable(rtpcapset, global_const.mime_type);
@@ -394,25 +393,23 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 
    spxset = speex_setting(cont);
 
-   total_bw = spxset->rtp_setting.bandwidth;
-   rtp_bw = spxset->rtp_setting.rtp_bandwidth;
+   total_bw = cont->book_bandwidth(cont, 0);
    
-   ss->cname = xstr_clone(user->cname);
-   ss->cnlen = strlen(user->cname)+1;
-
    ss->profile_no = rtpcap->profile_no;
    ss->ipaddr = xstr_clone(user->netaddr);
 
    ss->rtp_port = rtpcap->rtp_portno;
    ss->rtcp_port = rtpcap->rtcp_portno;
 
+   ss->cname = xstr_clone(user->cname);
+   ss->cnlen = strlen(user->cname)+1;
+
    ss->rtp_session = dev_rtp->rtp_session(dev_rtp, cata, cont,
 								ss->cname, ss->cnlen,
-
-								ss->ipaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno,
+								user->netaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno,
 								rtpcap->profile_no, rtpcap->profile_mime,
-
-								total_bw, rtp_bw);
+								rtpcap->clockrate, rtpcap->coding_param,
+								total_bw);
 
    ss->rtp_media = session_media(ss->rtp_session);
 

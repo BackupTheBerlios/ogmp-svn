@@ -25,7 +25,7 @@
 #define RTPCAP_DEBUG
 
 #ifdef RTPCAP_LOG
- #define rtpcap_log(fmtargs)  do{log_printf fmtargs;}while(0)
+ #define rtpcap_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define rtpcap_log(fmtargs)
 #endif
@@ -67,7 +67,7 @@ int rtp_descript_match(capable_descript_t *me, capable_descript_t *oth)
 	rtpcap_descript_t *rtpoth;
 	rtpcap_descript_t *rtpme = (rtpcap_descript_t*)me;
 
-   rtpcap_log(("rtp_descript_match: %s\n", rtpme->profile_mime));
+	rtpcap_log(("rtp_descript_match: %s\n", rtpme->profile_mime));
 
 	rtpoth = (rtpcap_descript_t*)oth;
 
@@ -81,6 +81,8 @@ rtpcap_descript_t* rtp_capable_descript(int payload_no, char *ip, uint media_por
 	rtpcap = xmalloc(sizeof(rtpcap_descript_t));
 	if(!rtpcap)
 	{
+		rtpcap_log(("rtp_capable_descript: No memory\n"));
+
 		return NULL;
 	}
 	memset(rtpcap, 0, sizeof(rtpcap_descript_t));

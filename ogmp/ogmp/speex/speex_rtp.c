@@ -47,7 +47,7 @@
 #define MAX_PACKET_BUNDLE 32
 
 #define JITTER_ADJUSTMENT_LEVEL 3
-
+#define SPX_SAMPLING_INSTANCE 160
 #define SPEEX_MIME "audio/speex"
 
 char speex_mime[] = "audio/speex";
@@ -774,6 +774,67 @@ int rtp_speex_sdp(xrtp_media_t* media, void* sdp_info)
 	return XRTP_OK;
 }
 
+int rtp_speex_new_sdp(xrtp_media_t *media, char* netaddr, int* rtp_portno, int* rtcp_portno, int pt, int clockrate, int coding_param, int bw_budget, void* control, void* sdp_info)
+{
+	int ptime_max = 0;
+	int penh = 0;
+
+	speex_setting_t *spxset;
+	speex_info_t *spxinfo;
+	media_control_t* mctrl = (media_control_t*)control;
+
+	int ret, bw;
+
+	rtpcap_descript_t *rtpcap;
+
+	rtpcap_sdp_t *sdp = (rtpcap_sdp_t*)sdp_info;
+
+	spxset = speex_setting(mctrl);
+
+	/* override default port */
+	if(spxset->rtp_setting.rtp_portno > 0)
+		*rtp_portno = spxset->rtp_setting.rtp_portno;
+
+	if(*rtp_portno <= 0)
+		return 0;
+
+	if(spxset->rtp_setting.rtcp_portno > 0)
+		*rtcp_portno = spxset->rtp_setting.rtcp_portno;
+
+	if(*rtcp_portno <= 0)
+		return 0;
+
+	spxinfo = xmalloc(sizeof(speex_info_t));
+	if(!spxinfo)
+	{
+		return 0;
+	}
+		
+	speex_info_setting(spxinfo, spxset);
+
+	if(spxinfo->audioinfo.info.bps > bw_budget)
+	{
+		xfree(spxinfo);
+		return 0;
+	}
+
+	bw = (int)((2 * (spxinfo->audioinfo.info.bps / OS_BYTE_BITS)) / 0.95);
+
+	rtpcap = rtp_capable_descript(pt, netaddr, *rtp_portno, *rtcp_portno, speex_mime, clockrate, coding_param, sdp->sdp_message);
+
+	ret = speex_info_to_sdp((media_info_t*)spxinfo, rtpcap, sdp->sdp_message, sdp->sdp_media_pos);
+
+	rtpcap->descript.done(&rtpcap->descript);
+	xfree(spxinfo);
+
+	if(ret < MP_OK)
+	   return 0;
+	   
+	sdp->sdp_media_pos++;
+
+	return bw;
+}
+
 /**
  * Get the media clockrate when the stream is opened
  */
@@ -1103,91 +1164,124 @@ int rtp_speex_sync(void *play, uint32 stamp, uint32 hi_ntp, uint32 lo_ntp)
 	return XRTP_OK;
 }
 
-xrtp_media_t* rtp_speex(profile_handler_t* handler)
+xrtp_media_t* rtp_speex(profile_handler_t *handler, int clockrate, int coding_param)
 {
-   media_control_t *mc;
-   spxrtp_handler_t * profile;
-   xrtp_media_t * media;
+	media_control_t *mc;
+	spxrtp_handler_t *profile;
 
-   speex_setting_t *spxset;
+	speex_setting_t *spxset;
+	speex_info_t *spxinfo;
+	xrtp_media_t* media = NULL;
 
-   spxrtp_log(("audio/speex.rtp_speex: create media handler\n"));
+	spxrtp_log(("audio/speex.rtp_speex: create media handler\n"));
 
-   profile = (spxrtp_handler_t *)handler;
+	profile = (spxrtp_handler_t *)handler;
 
-   if(profile->speex_media)
-	   return (xrtp_media_t*)profile->speex_media;
+	if(profile->speex_media)
+		return (xrtp_media_t*)profile->speex_media;
 
-   mc = session_media_control(profile->session);
+	if(profile->session)
+	{
+		mc = session_media_control(profile->session);
 
-   spxset = speex_setting(session_media_control(profile->session));
+		spxset = speex_setting(session_media_control(profile->session));
 
-   profile->rtp_portno = spxset->rtp_setting.rtp_portno;
-   profile->rtcp_portno = spxset->rtp_setting.rtcp_portno;
+		profile->rtp_portno = spxset->rtp_setting.rtp_portno;
+		profile->rtcp_portno = spxset->rtp_setting.rtcp_portno;
 
-   profile->speex_media = (spxrtp_media_t *)xmalloc(sizeof(struct spxrtp_media_s));
-   if(profile->speex_media)
-   {
-	  memset(profile->speex_media, 0, sizeof(struct spxrtp_media_s));
+		spxinfo = (speex_info_t*)xmalloc(sizeof(speex_info_t));
+		if(!spxinfo)
+		{
+			spxrtp_log(("audio/speex.rtp_speex: NO memory\n"));
+			return NULL;
+		}
 
-	  profile->packets = xlist_new();
-	  if(!profile->packets)
-	  {
-		  spxrtp_debug(("audio/speex.rtp_speex: no input buffer created\n"));
-		  xfree(profile->speex_media);
-		  profile->speex_media = NULL;
+		memset(spxinfo, 0, sizeof(speex_info_t));
+	}
+
+	profile->speex_media = (spxrtp_media_t *)xmalloc(sizeof(struct spxrtp_media_s));
+	if(!profile->speex_media)
+	{
+		xfree(spxinfo);
+	}
+	else
+	{
+		memset(profile->speex_media, 0, sizeof(struct spxrtp_media_s));
+
+		profile->speex_media->speex_profile = profile;
+      
+		media = ((xrtp_media_t*)(profile->speex_media));
+
+		media->clockrate = clockrate;
+
+		media->coding_parameter = coding_param;
+
+		media->sampling_instance = SPX_SAMPLING_INSTANCE;
+
+		media->session = profile->session;
+
+		media->match_mime = rtp_speex_match_mime;
+		media->done = rtp_speex_done;
+      
+		media->set_parameter = rtp_speex_set_parameter;
+		media->parameter = rtp_speex_parameter;
+
+		media->info = rtp_speex_info;
+		media->sdp = rtp_speex_sdp;
+		media->new_sdp = rtp_speex_new_sdp;
+
+		media->set_callback = rtp_media_set_callback;
+
+		media->set_coding = rtp_speex_set_coding;
+		media->coding = rtp_speex_coding;
+      
+		media->sign = rtp_speex_sign;
+		media->post = rtp_speex_post;
+		media->play = rtp_speex_play;
+		media->sync = rtp_speex_sync;
+
+		if(profile->session)
+		{
+			speex_info_setting(spxinfo, spxset);
+
+			media->bps = spxinfo->audioinfo.info.bps;
+
+			profile->packets = xlist_new();
+			if(!profile->packets)
+			{
+				spxrtp_debug(("audio/speex.rtp_speex: no input buffer created\n"));
+
+				xfree(profile->speex_media);
+				profile->speex_media = NULL;
 		
-		  return NULL;
-	  }
+				return NULL;
+			}
 	   
-	  profile->thread = xthr_new(rtp_speex_send_loop, profile, XTHREAD_NONEFLAGS); 
-	  if(!profile->thread)
-	  {
-		  xlist_done(profile->packets, NULL);
-		  xfree(profile->speex_media);
-		  profile->speex_media = NULL;
+			profile->thread = xthr_new(rtp_speex_send_loop, profile, XTHREAD_NONEFLAGS); 
+			if(!profile->thread)
+			{
+				xlist_done(profile->packets, NULL);
+				xfree(profile->speex_media);
+				profile->speex_media = NULL;
 
-		  return NULL;
-	  }
+				return NULL;
+			}
 
-      profile->speex_media->speex_profile = profile;
-      
-      media = ((xrtp_media_t*)(profile->speex_media));
+			session_issue_mediainfo(profile->session, spxinfo, 1);
+		}
+	}
 
-      media->clockrate = 0;
-      media->sampling_instance = 0;
+	spxrtp_log(("audio/speex.rtp_speex: media handler created\n"));
 
-      media->session = profile->session;
-
-      media->match_mime = rtp_speex_match_mime;
-      media->done = rtp_speex_done;
-      
-      media->set_parameter = rtp_speex_set_parameter;
-      media->parameter = rtp_speex_parameter;
-
-      media->info = rtp_speex_info;
-	  media->sdp = rtp_speex_sdp;
-
-	  media->set_callback = rtp_media_set_callback;
-
-      media->set_coding = rtp_speex_set_coding;
-      media->coding = rtp_speex_coding;
-      
-      media->sign = rtp_speex_sign;
-      media->post = rtp_speex_post;
-	  media->play = rtp_speex_play;
-	  media->sync = rtp_speex_sync;
-
-      spxrtp_log(("audio/speex.rtp_speex: media handler created\n"));
-   }
-
-   return media;
+	return media;
 }
 
 int spxrtp_match_id(profile_class_t * clazz, char *id)
 {
    spxrtp_log(("audio/speex.spxrtp_match_id: i am '%s' handler\n", speex_mime));
-   return strncmp(speex_mime, id, strlen(speex_mime)) == 0;
+
+   //return strncmp(speex_mime, id, strlen(speex_mime)) == 0;
+   return strcmp(speex_mime, id) == 0;
 }
 
 int spxrtp_type(profile_class_t * clazz)

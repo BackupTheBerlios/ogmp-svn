@@ -87,6 +87,15 @@ struct media_control_s
    module_catalog_t* (*modules)(media_control_t *cont);
 
    int (*match_type)(media_control_t * cont, char *type);
+
+   /* return the rest bw */
+   int (*set_bandwidth_budget)(media_control_t * cont, int bw);
+   int (*book_bandwidth)(media_control_t * cont, int bw);
+   int (*release_bandwidth)(media_control_t * cont, int bw);
+   int (*reset_bandwidth)(media_control_t * cont);
+
+   /* media ports management */
+   int (*media_ports)(media_control_t* cont, char* mediatype, int* rtp_portno, int* rtcp_portno);
 };
 
 module_interface_t* new_media_control ();
@@ -132,12 +141,12 @@ struct media_format_s
    /* release a format */
    int (*done) (media_format_t * mf);
 
+   int (*support_type) (media_format_t *mf, char *type, char *subtype);
+
    /* Open/Close a media source */
    int (*open) (media_format_t *mf, char * fname, media_control_t *ctrl, config_t *conf, char *mode, void* extra);
    int (*close) (media_format_t * mf);
    
-   int (*open_capables) (media_format_t *mf, char *src_cname, xlist_t *rtpcaps, media_control_t *ctrl, config_t *conf, char *mode, capable_descript_t* opened_caps[]);
-
    /* Stream management */
    int (*add_stream) (media_format_t * mf, media_stream_t *strm, int strmno, unsigned char type);
    media_stream_t* (*find_stream) (media_format_t * mf, int strmno);
@@ -175,9 +184,10 @@ struct media_format_s
 typedef struct media_info_s media_info_t;
 struct media_info_s
 {
-   int sample_rate;
-   int sample_bits;
-   int sample_byteorder;
+	int sample_rate;
+	int sample_bits;
+	int sample_byteorder;
+	int bps;
 };
 
 typedef struct audio_info_s audio_info_t;

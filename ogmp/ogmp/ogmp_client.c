@@ -70,17 +70,20 @@ struct ogmp_client_s
 	uint16 default_rtp_portno;
 	uint16 default_rtcp_portno;
 
-	int total_bandwidth;
-	int conference_bandwidth;
-
 	sipua_action_t* action;
 
 	int pt[MAX_PAYLOAD_TYPE];
-	
-	xlist_t* calls;
+
+	sipua_set_t* lines[MAX_SIPUA_LINES];
+	xthr_lock_t* lines_lock;
 
 	void* lisener;
 	int (*notify_event)(void* listener, sipua_event_t* e);
+
+	int nmedia;
+	char* mediatypes[MAX_SIPUA_MEDIA];
+	int default_rtp_ports[MAX_SIPUA_MEDIA];
+	int default_rtcp_ports[MAX_SIPUA_MEDIA];
 };
 
 int client_done_format_handler(void *gen)
@@ -110,14 +113,19 @@ int client_setup(ogmp_client_t *client, char *mode, rtpcap_set_t *rtpcapset)
 	while (format)
 	{
 		/* open media source */
-		client->ncap = format->open_capables(format, cname, rtpcapset->rtpcaps, client->control, client->conf, mode, client->caps);
-		if(client->ncap > 0)
+		if(format->support_type(format, "mime", "application/sdp"))
 		{
-			client->control->set_format (client->control, "rtp", format);
-			client->rtp_format = format;
-			client->valid = 1;
+			rtp_format_t* rtpfmt = (rtp_format_t*)format;
 
-			break;
+			client->ncap = rtpfmt->open_capables(format, cname, rtpcapset, client->control, client->conf, mode, client->caps);
+			if(client->ncap > 0)
+			{
+				client->control->set_format (client->control, "rtp", format);
+				client->rtp_format = format;
+				client->valid = 1;
+
+				break;
+			}
 		}
       
 		format = (media_format_t*) xlist_next(client->format_handlers, &u);
@@ -351,6 +359,10 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 		case(SIPUA_EVENT_NEW_CALL):
 		{
+			int i;
+			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
+			sipua_set_t *call;
+
 			rtp_coding_t *codings;
 			int ncoding=0;
 
@@ -358,10 +370,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			rtpcap_set_t* rtpcapset;
 			rtpcap_descript_t* rtpcap;
-			sipua_set_t* call_info;
 
 			xlist_user_t u;
-			int bw_call;
 
 			sdp_message_t *sdp_message;
 			char* sdp_body = (char*)e->content;
@@ -386,30 +396,42 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				strncpy(codings[ncoding].mime, rtpcap->profile_mime, MAX_MIME_BYTES);
 				codings[ncoding].clockrate = rtpcap->clockrate;
 				codings[ncoding].param = rtpcap->coding_param;
+				codings[ncoding].pt = rtpcap->profile_no;
 			
 				rtpcap = xlist_next(rtpcapset->rtpcaps, &u);
 				ncoding++;
 			}
 
-			call_info = ua->sipua.create_call(&ua->sipua, ua->user_prof, rtpcapset->callid, 
-							rtpcapset->subject, rtpcapset->sbytes, 
-							rtpcapset->info, rtpcapset->ibytes,
-							ua->default_rtp_portno, ua->default_rtcp_portno, 
-							ua->total_bandwidth, &bw_call,
-							ua->control, codings, ncoding, ua->pt);
-
-			if(!call_info)
+			/* now to negotiate call, which will generate call structure with sdp message for reply
+			 * still no rtp session created !
+			 */
+			call = sipua_negotiate_call(&ua->sipua, ua->user_prof, rtpcapset,
+							ua->mediatypes, ua->default_rtp_ports, 
+							ua->default_rtcp_ports, ua->nmedia,
+							ua->control);
+			
+			if(!call)
 			{
-				/* Unable receive the call, miss it */
+				/* Fail to receive the call, miss it */
 				break;
 			}
 
-			ua->total_bandwidth -= bw_call;
+			call_info->cid = call_e->cid;
+			call_info->did = call_e->did;
+			call_info->rtpcapset = rtpcapset;
 
-			sipua->uas->set_call(sipua->uas, lineno, call_info);
+			for(i=0; i<MAX_SIPUA_LINES; i++)
+			{
+				if(ua->lines[i] == NULL)
+				{
+					ua->lines[i] = call;
+					sipua->uas->accept(sipua->uas, lineno);
+
+					break;
+				}
+			}
 
 			sdp_message_free(sdp_message);
-			xfree(codings);
 
 			break;
 		}
@@ -461,22 +483,42 @@ int sipua_done_sip_session(void* gen)
 
 int client_done_call(sipua_t* sipua, sipua_set_t* set)
 {
+	int i;
 	ogmp_client_t *ua = (ogmp_client_t*)sipua;
 
-	xlist_remove_item(ua->calls, set);
+	if(ua->call != set)
+		for(i=0; i<MAX_SIPUA_LINES; i++)
+			if(ua->lines[i] == set)
+			{
+				ua->lines[i] = NULL;
+				break;
+			}
+	else
+	{
+		ua->call = NULL;
+	}
+
+	ua->control->release_bandwidth(ua->control, set->bandwidth);
 
 	return sipua_done_sip_session(set);
 }
 
 int sipua_done(sipua_t *sipua)
 {
+	int i;
 	ogmp_client_t *ua = (ogmp_client_t*)sipua;
 
 	sipua->uas->shutdown(sipua->uas);
 
-	xfree(ua->action);
+	for(i=0; i<MAX_SIPUA_LINES; i++)
+		if(ua->lines[i])
+			sipua_done_sip_session(ua->lines[i]);
 
-	xlist_done(ua->calls, sipua_done_sip_session);
+	if(ua->call)
+		sipua_done_sip_session(ua->call);
+
+	xfree(ua->action);
+	xthr_done_lock(ua->lines_lock);
 
 	xfree(ua);
 
@@ -504,24 +546,64 @@ int sipua_match_call(void* tar, void* pat)
 
 sipua_set_t* client_find_call(sipua_t* sipua, char* id, char* username, char* nettype, char* addrtype, char* netaddr)
 {
+	int i;
 	ogmp_client_t *ua = (ogmp_client_t*)sipua;
 
-	sipua_setid_t setid;
-	xlist_user_t u;
+	for(i=0; i<MAX_SIPUA_LINES; i++)
+	{
+		sipua_set_t* set = ua->lines[i];
 
-	setid.id = id;
-	setid.username = username;
-	setid.nettype = nettype;
-	setid.addrtype = addrtype;
-	setid.netaddr = netaddr;
+		if(set && !strcmp(set->setid.id, id) && 
+			!strcmp(set->setid.username, username) && 
+			!strcmp(set->setid.nettype, nettype) && 
+			!strcmp(set->setid.addrtype, addrtype) && 
+			!strcmp(set->setid.netaddr, netaddr))
+			break;
+	}
 
-	return (sipua_set_t*)xlist_find(ua->calls, &setid, sipua_match_call, &u);
+	return ua->lines[i];
+}
+
+sipua_set_t* client_new_call(sipua_t* sipua, char* subject, int sbytes, char *desc, int dbytes)
+{
+	int i;
+
+	ogmp_setting_t *setting;
+	ogmp_client_t* clie = (ogmp_client_t*)sipua;
+	sipua_set_t* call;
+	int bw_budget = clie->control->book_bandwidth(clie->control, 0);
+
+	setting = client_setting(clie->control);
+
+	call = sipua_new_call(sipua, clie->user_prof, NULL, subject, sbytes, desc, dbytes,
+						clie->mediatypes, clie->default_rtp_ports, clie->default_rtcp_ports, clie->nmedia,
+						clie->control, bw_budget, setting->codings, setting->ncoding, clie->pt);
+	if(!call)
+	{
+		clie_log(("client_new_call: no call created\n"));
+		return NULL;
+	}
+
+	for(i=0; i<MAX_SIPUA_LINES; i++)
+	{
+		if(!clie->lines[i])
+		{
+			clie->lines[i] = call;
+			break;
+		}
+	}
+
+	clie_log(("client_new_call: new call on line %d\n", i));
+	
+	return call;
 }
 
 int client_set_profile(sipua_t* sipua, user_profile_t* prof)
 {
+	char *nettype, *addrtype;
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
+	sipua->uas->address(sipua->uas, &nettype, &addrtype, &prof->netaddr);
 	client->user_prof = prof;
 
 	return UA_OK;
@@ -584,33 +666,133 @@ int client_unregist(sipua_t *sipua, user_profile_t *user)
 	return ret;
 }
 
-sipua_set_t* client_new_call(sipua_t* sipua, char* subject, int sbytes, char *desc, int dbytes)
+/* lines management */
+int client_lock_lines(sipua_t* sipua)
 {
-	ogmp_setting_t *setting;
-	ogmp_client_t* clie = (ogmp_client_t*)sipua;
-	sipua_set_t* call;
+	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
-	int bw_conf;
+	xthr_lock(client->lines_lock);
 
-	if(clie->total_bandwidth <= 0)
+	return UA_OK;
+}
+
+int client_unlock_lines(sipua_t* sipua)
+{
+	ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+	xthr_unlock(client->lines_lock);
+
+	return UA_OK;
+}
+
+int client_lines(sipua_t* sipua, int *nbusy)
+{
+	int i;
+	ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+	for(i=0; i<MAX_SIPUA_LINES; i++)
+		if(client->lines[i])
+			*nbusy++;
+
+	return MAX_SIPUA_LINES;
+}
+
+int client_busylines(sipua_t* sipua, int *busylines, int nlines)
+{
+	int i;
+	int n=0;
+	ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+	for(i=0; i<MAX_SIPUA_LINES; i++)
+		if(client->lines[i])
+			busylines[n++] = i;
+
+	return n;
+}
+
+/* current call session */
+sipua_set_t* client_session(sipua_t* sipua)
+{
+	ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+	return client->call;
+}
+
+sipua_set_t* client_line(sipua_t* sipua, int line)
+{
+	ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+	return client->lines[line];
+}
+
+/* switch current call session */
+sipua_set_t* client_pick(sipua_t* sipua, int line)
+{
+	ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+	if(client->call)
 		return NULL;
 
-	setting = client_setting(clie->control);
+	client->call = client->lines[line];
+	client->lines[line] = NULL;
 
-	call = sipua_create_call(sipua, clie->user_prof, NULL,
-						subject, sbytes, desc, dbytes,
-						clie->default_rtp_portno, clie->default_rtcp_portno, 
-						clie->total_bandwidth, &bw_conf, clie->control, 
-						setting->codings, setting->ncoding, clie->pt);
+	/* FIXME: Howto transfer call from waiting session */
 
-	if(!call)
-		return NULL;
+	return client->call;
+}
 
-	clie->total_bandwidth -= bw_conf;
+int client_hold(sipua_t* sipua, sipua_set_t* call)
+{
+	int i;
+	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
-	xlist_addto_first(clie->calls, call);
+	if(!client->call)
+		return -1;
+
+	for(i=0; i<MAX_SIPUA_LINES; i++)
+		if(!client->lines[i])
+			break;
+
+	client->lines[i] = call;
+
+	/* FIXME: Howto transfer call to waiting session */
+
+	return i;
+}
 	
-	return call;
+int client_answer(sipua_t *sipua, sipua_set_t* call, int reply)
+{
+	ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+	switch(reply)
+	{
+		case SIPUA_STATUS_ANSWER:
+		{
+			/* establish rtp sessions */
+			int ret;
+
+			/* Now create rtp sessions of the call */
+			ret = sipua_establish_call(sipua, call, call->rtpcapset, 
+							client->control, client->pt);
+
+			if(ret < UA_OK)
+				return ret;
+
+			/* Anser the call */
+			sipua_answer(&client->sipua, call, reply);
+
+			xfree(call->reply_body);
+			call->reply_body = NULL;
+			
+			break;
+		}
+
+		default:
+			/* Anser the call */
+			sipua_answer(&client->sipua, call, reply);
+	}
+
+	return UA_OK;
 }
 
 sipua_t* client_new_sipua(sipua_uas_t* uas, int bandwidth)
@@ -654,8 +836,16 @@ sipua_t* client_new_sipua(sipua_uas_t* uas, int bandwidth)
 	client->control->config(client->control, client->conf, mod_cata);
 	client->control->add_device(client->control, "rtp", client_config_rtp, client->conf);
 
-	//client->lisener = client;
-	//client->notify_event = client_sipua_event;
+	client->lines_lock = xthr_new_lock();
+
+	/* set media ports, need to seperate to configure module */
+	client->mediatypes[0] = xstr_clone("audio");
+	client->default_rtp_ports[0] = 3500;
+	client->default_rtcp_ports[0] = 3501;
+	client->nmedia = 1;
+
+	client->control->set_bandwidth_budget(client->control, bandwidth);
+
 	uas->set_listener(uas, client, client_sipua_event);
 
 	sipua->uas = uas;
@@ -674,12 +864,31 @@ sipua_t* client_new_sipua(sipua_uas_t* uas, int bandwidth)
 	sipua->create_call = sipua_create_call;
 	sipua->done_call = client_done_call;
 
+ 	/* lines management */
+ 	sipua->lock_lines = client_lock_lines;
+ 	sipua->unlock_lines = client_unlock_lines;
+
+	sipua->lines = client_lines;
+ 	sipua->busylines = client_busylines;
+ 	/* current call session */
+	sipua->session = client_session;
+ 	sipua->line = client_line;
+
+	/* switch current call session */
+ 	sipua->pick = client_pick;
+ 	sipua->hold = client_hold;
+	
 	sipua->add = sipua_add;
 	sipua->remove = sipua_remove;
 
-	sipua->invite = sipua_invite;
+	sipua->call = sipua_call;
+	sipua->answer = sipua_answer;
+
+	sipua->options_call = sipua_options_call;
+	sipua->info_call = sipua_info_call;
+
 	sipua->bye = sipua_bye;
-	sipua->reinvite = sipua_reinvite;
+	sipua->recall = sipua_recall;
    
 	clie_log(("client_new: client ready\n\n"));
 

@@ -22,6 +22,7 @@
 #include <timedia/timer.h>
 #include <timedia/xmalloc.h>
 #include <timedia/xstring.h>
+#include <timedia/xthread.h>
 #include <timedia/list.h>
 
 #define MEDIA_CONTROL_LOG
@@ -77,6 +78,10 @@ typedef struct control_impl_s
    xlist_t *devices;
 
    xlist_t *setting_calls;
+
+   int bandwidth;
+   int bandwidth_budget;
+   xthr_lock_t* bandwidth_lock;
    
 } control_impl_t;
 
@@ -107,6 +112,8 @@ int cont_done (media_control_t * cont)
    xlist_done(impl->devices, cont_done_device);
 
    xlist_done(impl->setting_calls, cont_done_setting);
+
+   xthr_done_lock(impl->bandwidth_lock);
 
    return MP_OK;
 }
@@ -370,39 +377,6 @@ int cont_seek_millisec (media_control_t * cont, int msec)
    
    return impl->format->seek_millisecond(impl->format, msec);
 }
-           
-/*
-int cont_demux_next (media_control_t * cont, int strm_end)
-{
-   rtime_t period_us = 0, real_period = 0, sleep_us = 0;
-   rtime_t demux_start, demux_us;
-
-   control_impl_t *impl = (control_impl_t *)cont;
-
-   demux_start = time_usec_now(impl->clock);
-   if(impl->started)
-   {
-	   real_period = time_usec_spent(impl->clock, impl->prev_period_start);
-	   impl->prev_period_start = demux_start;
-   }
-
-   period_us = impl->format->demux_next(impl->format, strm_end);
-
-   if(period_us <= 0) return period_us; // errno < 0 
-   
-   cont_log(("cont_demux_next: %dus period, real period %dus\n", period_us, real_period));
-   
-   demux_us = time_usec_spent(impl->clock, demux_start);
-   
-   sleep_us = period_us - demux_us;
-
-   time_usec_sleep(impl->clock, sleep_us, NULL);
-   
-   impl->started = 1;
-
-   return MP_OK;
-}
-*/
 
 int cont_demux_next (media_control_t * cont, int strm_end)
 {
@@ -451,6 +425,66 @@ module_catalog_t* cont_modules(media_control_t *cont)
 	return ((control_impl_t*)cont)->catalog;
 }
 
+int cont_book_bandwidth(media_control_t * cont, int bw)
+{
+	control_impl_t *impl = (control_impl_t *)cont;
+
+	xthr_lock(impl->bandwidth_lock);
+	if(impl->bandwidth_budget < bw)
+	{
+		xthr_unlock(impl->bandwidth_lock);
+		return -1;
+	}
+
+	xthr_unlock(impl->bandwidth_lock);
+	return impl->bandwidth -= bw;
+}
+
+int cont_release_bandwidth(media_control_t * cont, int bw)
+{
+	control_impl_t *impl = (control_impl_t *)cont;
+
+	if(bw < 0) bw = 0;
+
+	xthr_lock(impl->bandwidth_lock);
+	if(impl->bandwidth + bw > impl->bandwidth_budget)
+	{
+		xthr_unlock(impl->bandwidth_lock);
+		return impl->bandwidth = impl->bandwidth_budget;
+	}
+
+	xthr_unlock(impl->bandwidth_lock);
+	return impl->bandwidth += bw;
+}
+
+int cont_set_bandwidth_budget(media_control_t * cont, int budget)
+{
+	control_impl_t *impl = (control_impl_t *)cont;
+
+	if(budget < 0) budget = 0;
+	
+	xthr_lock(impl->bandwidth_lock);
+
+	impl->bandwidth = impl->bandwidth_budget = budget;
+
+	xthr_unlock(impl->bandwidth_lock);
+
+	return impl->bandwidth;
+}
+
+int cont_reset_bandwidth(media_control_t * cont)
+{
+	control_impl_t *impl = (control_impl_t *)cont;
+
+	xthr_lock(impl->bandwidth_lock);
+
+	impl->bandwidth = impl->bandwidth_budget;
+
+	xthr_unlock(impl->bandwidth_lock);
+
+	return impl->bandwidth;
+}
+
 module_interface_t* new_media_control ()
 {
    media_control_t * cont;
@@ -486,6 +520,8 @@ module_interface_t* new_media_control ()
       return NULL;
    }
 
+   impl->bandwidth_lock = xthr_new_lock();
+
    cont = (media_control_t *)impl;
 
    cont->done = cont_done;
@@ -503,6 +539,11 @@ module_interface_t* new_media_control ()
 
    cont->config = cont_config;
    cont->modules = cont_modules;
+
+   cont->set_bandwidth_budget = cont_set_bandwidth_budget;
+   cont->book_bandwidth = cont_book_bandwidth;
+   cont->release_bandwidth = cont_release_bandwidth;
+   cont->reset_bandwidth = cont_reset_bandwidth;
 
    return cont;
 }

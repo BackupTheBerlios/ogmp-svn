@@ -256,10 +256,18 @@ int rtp_set_fourcc_player (media_format_t * mf, media_player_t * player, const c
    return MP_FAIL;
 }
 
+int rtp_support_type (media_format_t *mf, char *type, char *subtype)
+{
+	if(!strcmp(type, "mime") && !strcmp(type, "application/sdp"))
+		return 1;
+
+	return 0;
+}
+
 /**
  * There is no operate on file, all data from from net
  */
-int rtp_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *conf, char *mode, void* extra)
+int rtp_open (media_format_t *mf, char * fname, media_control_t *ctrl, config_t *conf, char *mode, void* extra)
 {
 	return MP_NOP;
 }
@@ -341,12 +349,19 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 
 	total_bw = 0;
 	rtp_bw = 0;
-
+	/*
+	refer this code fragment:
+	rtp_session = rtpdev->rtp_session(rtpdev, cata, control,
+									user_prof->cname, strlen(user_prof->cname)+1,
+									netaddr, (uint16)default_rtp_portno, (uint16)default_rtcp_portno,
+									(uint8)pt, codings[i].mime, codings[i].clockrate, codings[i].param,
+									bw_budget);
+	*/
 	strm->session = rtp_format->rtp_in->rtp_session(rtp_format->rtp_in, cata, ctrl,
-													user->cname, strlen(user->cname)+1,
-													user->ipaddr, rset->default_rtp_portno, rset->default_rtcp_portno,
-													rtpcap->profile_no, rtpcap->profile_mime,
-													total_bw, rtp_bw);
+									user->cname, strlen(user->cname)+1,
+									user->netaddr, rset->default_rtp_portno, rset->default_rtcp_portno,
+									rtpcap->profile_no, rtpcap->profile_mime, rtpcap->clockrate, rtpcap->coding_param,
+									total_bw);
 
 	if(!strm->session)
 	{
@@ -359,7 +374,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 	rtpcap->profile_no = session_payload_type(strm->session);
 
 	/* the stream rtp capable */
-	strm->rtp_cap = rtp_capable_descript(rtpcap->profile_no, rset->ipaddr, 
+	strm->rtp_cap = rtp_capable_descript(rtpcap->profile_no, user->netaddr, 
 										rtp_portno, rtcp_portno, 
 										rtpcap->profile_mime, rtpcap->clockrate, 
 										rtpcap->coding_param, NULL);
@@ -392,7 +407,7 @@ capable_descript_t* rtp_stream_capable(rtp_stream_t *strm)
 /**
  * return how many stream opened
  */
-int rtp_open_capables(media_format_t *mf, char *src_cn, xlist_t *rtpcaps, media_control_t *ctrl, config_t *conf, char *mode)
+int rtp_open_capables(media_format_t *mf, char *src_cn, rtpcap_set_t *rtpcapset, media_control_t *ctrl, config_t *conf, char *mode, capable_descript_t* opened_caps[])
 {
    int c=0, sno=0;
    rtp_stream_t *strm;
@@ -402,7 +417,7 @@ int rtp_open_capables(media_format_t *mf, char *src_cn, xlist_t *rtpcaps, media_
 
    rtp_format_t *rtp = (rtp_format_t *)mf;
 
-   rtp_log(("rtp_open_capables: open %d capables\n", xlist_size(rtpcaps)));
+   rtp_log(("rtp_open_capables: open %d capables\n", xlist_size(rtpcapset->rtpcaps)));
 
    if(strlen(mode) >= MAX_MODEBYTES)
    {
@@ -415,15 +430,15 @@ int rtp_open_capables(media_format_t *mf, char *src_cn, xlist_t *rtpcaps, media_
 
    rtp->rtp_in = (dev_rtp_t*)ctrl->find_device(ctrl, "rtp");
 
-   rtpcap = xlist_first(rtpcaps, &u);
+   rtpcap = xlist_first(rtpcapset->rtpcaps, &u);
    while(rtpcap)
    {
-	   strm = rtp_open_stream(rtp, sno++, src_cn, strlen(src_cn)+1, rtpcap, ctrl, mode);
+	   strm = rtp_open_stream(rtp, sno++, src_cn, strlen(src_cn)+1, rtpcap, ctrl, mode, rtpcapset);
 	   
 	   if(strm)
-		   supported_caps[c++] = rtp_stream_capable(strm);
+		   opened_caps[c++] = rtp_stream_capable(strm);
    
-	   rtpcap = xlist_next(rtpcaps, &u);
+	   rtpcap = xlist_next(rtpcapset->rtpcaps, &u);
    }
 
    return  c;
@@ -546,15 +561,18 @@ module_interface_t * media_new_format()
 
    memset(rtp, 0, sizeof(struct rtp_format_s));
 
+   rtp->open_capables = rtp_open_capables;
+
    mf = (media_format_t *)rtp;
 
    /* release a format */
    mf->done = rtp_done_format;
 
+   mf->support_type = rtp_support_type;
+
    /* Open/Close a media source */
    mf->open = rtp_open;
    mf->close = rtp_close;
-   mf->open_capables = rtp_open_capables;
 
    /* Stream management */
    mf->add_stream = rtp_add_stream;

@@ -27,14 +27,13 @@
 #define SPX_FRAME_MSEC 20
 
 typedef struct speex_info_s speex_info_t;
+typedef struct speex_setting_s speex_setting_t;
 
 struct speex_info_s
 {
 	struct audio_info_s audioinfo;
    
 	SpeexBits bits;
-
-	//SpeexHeader *header;
 
 	SpeexStereoState stereo;
 
@@ -162,14 +161,20 @@ struct speex_info_s
 int speex_info_to_sdp(media_info_t *info, rtpcap_descript_t *rtpcap, sdp_message_t *sdp, int pos);
 int speex_info_from_sdp(media_info_t *info, int rtpmap_no, sdp_message_t *sdp, int pos);
 
-typedef struct speex_setting_s
+struct speex_setting_s
 {
 	rtp_profile_setting_t rtp_setting;
 
+	int sample_rate; 
+	int mode; 
+	int ptime_max;
 	int cng;
 	int penh;
-	int ptime_max;
+	int vbr; 
+	int abr; 
+	int cbr;
 
-} speex_setting_t;
+};
 
 speex_setting_t* speex_setting(media_control_t *control);
+int speex_info_setting(speex_info_t *spxinfo, speex_setting_t *spxset);

@@ -207,6 +207,18 @@ int window_new_call_run_command(gui_t* gui, int c)
 
 			break;
 		}
+		case 1: /* Ctrl-A */
+		{
+			/* if (_josua_start_call(cfg.identity, to, subject, route) != 0) beep(); */
+			sipua_set_t* call = ocui->sipua->new_call(ocui->sipua, newcall_inputs[NEWCALL_SUBJ], strlen(newcall_inputs[NEWCALL_SUBJ]), newcall_inputs[NEWCALL_MSG], strlen(newcall_inputs[NEWCALL_MSG]));
+			
+			if(call)
+				ocui->sipua->call(ocui->sipua, call, newcall_inputs[NEWCALL_TO]);
+
+			gui_activate_window(gui, GUI_SESSION);
+
+			break;
+		}
 		case 3:  /* Ctrl-C */
 		{
 			gui_hide_window(gui);
@@ -219,18 +231,6 @@ int window_new_call_run_command(gui_t* gui, int c)
 	
 			break;
 		}
-		case 1: /* Ctrl-A */
-		{
-			/* if (_josua_start_call(cfg.identity, to, subject, route) != 0) beep(); */
-			
-			sipua_set_t* call = ocui->sipua->new_call(ocui->sipua, newcall_inputs[NEWCALL_SUBJ], strlen(newcall_inputs[NEWCALL_SUBJ]), newcall_inputs[NEWCALL_MSG], strlen(newcall_inputs[NEWCALL_MSG]));
-			
-			if(call)
-				ocui->sipua->invite(ocui->sipua, call, newcall_inputs[NEWCALL_TO]);
-
-			break;
-		}
-#if 0
 		case 15: /* Ctrl-O */
 		{
 			/* if (_josua_start_options(cfg.identity, to, route) != 0) beep(); */
@@ -241,7 +241,6 @@ int window_new_call_run_command(gui_t* gui, int c)
 			/* if (_josua_start_subscribe(cfg.identity, to, route) != 0) beep(); */
 			break;
 		}
-#endif
 		default:
 		{
 			if(editline_append(newcall_edit[cursor_newcall], &((char)c), 1) == 0)
