@@ -60,12 +60,13 @@
 #define SIPUA_EVENT_SERVERFAILURE				-4
 #define SIPUA_EVENT_GLOBALFAILURE				-5
 
-#define SIPUA_STATUS_UNKNOWN					-1
-#define SIPUA_STATUS_NORMAL						0
-#define SIPUA_STATUS_REG_OK						1
-#define SIPUA_STATUS_REG_FAIL					2
-#define SIPUA_STATUS_REG_DOING					3
-#define SIPUA_STATUS_UNREG_DOING				4
+#define SIPUA_STATUS_UNKNOWN				-1
+#define SIPUA_STATUS_NORMAL					0
+#define SIPUA_STATUS_REG_OK					1
+#define SIPUA_STATUS_REG_FAIL				2
+#define SIPUA_STATUS_UNREG_FAIL				3
+#define SIPUA_STATUS_REG_DOING				4
+#define SIPUA_STATUS_UNREG_DOING			5
 
 #define SIPUA_STATUS_RINGING	180
 #define SIPUA_STATUS_ANSWER		200
@@ -293,6 +294,7 @@ struct sipua_s
  	sipua_set_t* (*line)(sipua_t* sipua, int line);
 
 	/* switch current call session */
+
 
 
 

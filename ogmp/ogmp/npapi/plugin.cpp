@@ -339,16 +339,16 @@ int nsPluginInstance::callback_on_register(void *user_on_register, int result, c
     
     nsPluginInstance *plugin = static_cast<nsPluginInstance*>(user_on_register);
     
-    if(result == SIPUA_EVENT_REGISTRATION_SUCCEEDED)
+    if(result == SIPUA_STATUS_REG_OK)
         sprintf(javascript, "javascript:regist_return('reg_ok', '%s');", reason);
         
-    if(result == SIPUA_EVENT_UNREGISTRATION_SUCCEEDED)
+    if(result == SIPUA_STATUS_NORMAL)
         sprintf(javascript, "javascript:regist_return('unreg_ok', '%s');", reason);
         
-    if(result == SIPUA_EVENT_REGISTRATION_FAILURE)
+    if(result == SIPUA_STATUS_REG_FAIL)
         sprintf(javascript, "javascript:regist_return('reg_fail', '%s');", reason);
         
-    if(result == SIPUA_EVENT_UNREGISTRATION_FAILURE)
+    if(result == SIPUA_STATUS_UNREG_FAIL)
         sprintf(javascript, "javascript:regist_return('unreg_fail', '%s');", reason);
 
     NPN_GetURL(plugin->mInstance, javascript, "_top");

@@ -218,7 +218,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				user_prof->thread_register = xthr_new(client_register_loop, user_prof, XTHREAD_NONEFLAGS);
 
             if(client->on_register)
-                client->on_register(client->user_on_register, SIPUA_STATUS_REG_OK, user_prof->reg_reason_phrase);
+                client->on_register(client->user_on_register, user_prof->reg_status, user_prof->reg_reason_phrase);
                 
             //client->ogui->ui.beep(&client->ogui->ui);
 
@@ -240,7 +240,11 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			clie_log(("client_sipua_event: %s\n", buf));
 
-			user_prof->reg_status = SIPUA_STATUS_REG_FAIL;
+            if(user_prof->reg_status == SIPUA_STATUS_REG_DOING)
+                user_prof->reg_status = SIPUA_STATUS_REG_FAIL;
+                
+			if(user_prof->reg_status == SIPUA_STATUS_UNREG_DOING)
+                user_prof->reg_status = SIPUA_STATUS_UNREG_FAIL;
 
 			if(user_prof->reg_reason_phrase) 
 				xfree(user_prof->reg_reason_phrase);
@@ -251,7 +255,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			client->reg_profile = NULL;
 
             if(client->on_register)
-                client->on_register(client->user_on_register, SIPUA_STATUS_REG_FAIL, user_prof->reg_reason_phrase);
+                client->on_register(client->user_on_register, user_prof->reg_status, user_prof->reg_reason_phrase);
 
 			break;
 		}
