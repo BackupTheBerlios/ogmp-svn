@@ -356,9 +356,9 @@ source_associate(media_source_t* msrc, media_format_t* rtp_fmt, char* cname)
    
    for(i=0; i<osrc->nstream; i++)
    {
-      player = osrc->players[i];
-      
       media_stream_t *strm = rtp_fmt->first;
+      
+      player = osrc->players[i];
       
       while(strm)
       {
@@ -406,9 +406,9 @@ int source_associate_guests(media_source_t* msrc, media_format_t* rtp_fmt)
 
    for(i=0; i<osrc->nstream; i++)
    {
-      player = osrc->players[i];
-
       media_stream_t *strm = rtp_fmt->first;
+
+      player = osrc->players[i];
 
       while(strm)
       {

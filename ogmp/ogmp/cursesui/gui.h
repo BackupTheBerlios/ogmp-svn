@@ -43,6 +43,11 @@
 #undef MOUSE_MOVED
 #endif
  
+#include <osip2/osip_mt.h>
+
+#include <eXosip/eXosip.h>
+#include <eXosip/eXosip_cfg.h>
+
 #ifdef HAVE_NCURSES
 #include <term.h>
 #include <ncurses.h>
@@ -53,11 +58,6 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-
-#include <osip2/osip_mt.h>
-
-#include <eXosip/eXosip.h>
-#include <eXosip/eXosip_cfg.h>
 
 typedef struct ogmp_curses_s ogmp_curses_t;
 
