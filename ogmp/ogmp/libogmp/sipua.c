@@ -261,17 +261,9 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 
 	sdp_message_to_str (sdp_info.sdp_message, &set->sdp_body);
 
-	/*
-	printf("sipua_new_call: \n");
-	printf("\n-------Initiate SDP--------\n");
-	printf("Callid[%s]\n", set->setid.id);
-	printf("-----------------------------\n");
-	printf("%s\n", set->sdp_body);
-	printf("-----------------------------\n");
-	getchar();
-	*/
-
-	sdp_message_free(sdp_info.sdp_message);
+	/* if free here, posix dore dump ??? win32 ok !!!
+    sdp_message_free(sdp_info.sdp_message);
+    */
 
 	return set;
 }

@@ -262,6 +262,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			call->from = xstr_nclone(p, q-p);
             
+
 			for(i=0; i<MAX_SIPUA_LINES; i++)
 			{
 				if(client->lines[i] == NULL)
@@ -437,6 +438,7 @@ int client_done_call(sipua_t* sipua, sipua_set_t* set)
 	if(ua->sipua.incall != set)
     {
 		for(i=0; i<MAX_SIPUA_LINES; i++)
+
         {
 			if(ua->lines[i] == set)
 			{
