@@ -14,7 +14,7 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-
+ 
 #include "format_rtp/rtp_format.h"
 #include "ogmp.h"
 
@@ -69,8 +69,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 	sipua_t *sipua = (sipua_t*)lisener;
 
 	ogmp_client_t *client = (ogmp_client_t*)lisener;
-
-	sipua_set_t *call_info = e->call_info;
 
 	switch(e->type)
 	{
@@ -211,6 +209,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 					sipua->uas->accept(sipua->uas, lineno);
 
 					client->ogui->ui.beep(&client->ogui->ui);
+                    sipua_answer(&client->sipua, call, SIPUA_STATUS_RINGING);
 
 					break;
 				}
@@ -245,6 +244,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			printf("client_sipua_event: SIPUA_EVENT_ANSWERED\n");
 
 			sdp_message_init(&sdp_message);
+
 
 			if (sdp_message_parse(sdp_message, sdp_body) != 0)
 			{
@@ -664,9 +664,6 @@ int client_answer(sipua_t *sipua, sipua_set_t* call, int reply)
 			bw = sipua_establish_call(sipua, call, "playback", call->rtpcapset, 
 							client->format_handlers, client->control, client->pt);
 
-			if(client->backgroud_source)
-				client_attach_source(sipua, call, (transmit_source_t*)client->backgroud_source);
-
 			if(bw < 0)
 			{
 				sipua_answer(&client->sipua, call, SIPUA_STATUS_REJECT);
@@ -677,6 +674,9 @@ int client_answer(sipua_t *sipua, sipua_set_t* call, int reply)
 			/* Anser the call */
 			sipua_answer(&client->sipua, call, reply);
 
+			if(client->backgroud_source)
+				client_attach_source(sipua, call, (transmit_source_t*)client->backgroud_source);
+
 			xfree(call->reply_body);
 			call->reply_body = NULL;
 			
@@ -684,8 +684,10 @@ int client_answer(sipua_t *sipua, sipua_set_t* call, int reply)
 		}
 
 		default:
+        {
 			/* Anser the call */
 			sipua_answer(&client->sipua, call, reply);
+        }
 	}
 
 	return UA_OK;

@@ -65,10 +65,11 @@
 #define SIPUA_STATUS_REG_DOING					3
 #define SIPUA_STATUS_UNREG_DOING				4
 
+#define SIPUA_STATUS_RINGING	180
 #define SIPUA_STATUS_ANSWER		200
 #define SIPUA_STATUS_REJECT		480
-#define SIPUA_STATUS_DECLINE	603
 #define SIPUA_STATUS_BUSY		486
+#define SIPUA_STATUS_DECLINE	603
 
 #include "phonebook.h"
 
@@ -235,6 +236,7 @@ struct sipua_s
 
 	char* (*userloc)(sipua_t* sipua, char* uid);
 	int (*locate_user)(sipua_t* sipua, user_t* user);
+
 
 	int (*set_profile)(sipua_t* sipua, user_profile_t* prof);
 	user_profile_t* (*profile)(sipua_t* sipua);
