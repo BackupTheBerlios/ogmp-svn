@@ -135,11 +135,25 @@ int connect_match(session_connect_t * conn1, session_connect_t * conn2)
             conn1->remote_addr.sin_port == conn2->remote_addr.sin_port;
 }
 
-int connect_from_teleport(session_connect_t * conn, xrtp_teleport_t * tport)
+int connect_match_teleport(session_connect_t * conn, xrtp_teleport_t * tport)
 {
 	 return conn->remote_addr.sin_family == AF_INET &&
             conn->remote_addr.sin_addr.s_addr == tport->addr &&
-             conn->remote_addr.sin_port == tport->portno;
+            conn->remote_addr.sin_port == tport->portno;
+}
+
+xrtp_teleport_t* connect_new_teleport(session_connect_t * conn)
+{
+     xrtp_teleport_t * tp = xmalloc(sizeof(struct xrtp_teleport_s));
+     if(tp)
+	 {
+        tp->addr = conn->remote_addr.sin_addr.s_addr;
+        tp->portno = conn->remote_addr.sin_port;
+     
+		udp_log(("teleport_new: new remote port is ip[%u]:%u\n", tp->addr, ntohs(tp->portno)));
+     }
+
+     return tp;
 }
 
 int connect_receive(session_connect_t * conn, char **r_buff, int *header_bytes, rtime_t *ms, rtime_t *us, rtime_t *ns)
@@ -452,8 +466,8 @@ int port_incoming(xrtp_port_t * port)
      return XRTP_OK;
 }
 
-xrtp_teleport_t * teleport_new(char * addr_str, uint16 pno){
-
+xrtp_teleport_t * teleport_new(char * addr_str, uint16 pno)
+{
      xrtp_teleport_t * tp = xmalloc(sizeof(struct xrtp_teleport_s));
      if(tp)
 	 {

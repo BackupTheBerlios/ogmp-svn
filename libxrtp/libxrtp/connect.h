@@ -47,7 +47,11 @@ connect_match(session_connect_t * conn1, session_connect_t * conn2);
 
 extern DECLSPEC
 int 
-connect_from_teleport(session_connect_t * conn1, xrtp_teleport_t * tport);
+connect_match_teleport(session_connect_t * conn1, xrtp_teleport_t * tport);
+
+extern DECLSPEC
+xrtp_teleport_t*
+connect_new_teleport(session_connect_t * conn);
 
 int connect_receive(session_connect_t * conn, char **r_buff, int *header_bytes, rtime_t *ms, rtime_t *us, rtime_t *ns);
 
@@ -86,7 +90,8 @@ int port_poll(xrtp_port_t * port, rtime_t timeout_usec);
   
 int port_incoming(xrtp_port_t * port);
   
-extern DECLSPEC xrtp_teleport_t*
+extern DECLSPEC 
+xrtp_teleport_t*
 teleport_new(char * addr, uint16 portno);
 
 extern DECLSPEC int

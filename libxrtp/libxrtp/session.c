@@ -221,6 +221,11 @@ int session_done_member(void *gen)
     
     if(mem->cname)
 		xfree(mem->cname);
+
+	if(mem->rtp_port)
+		teleport_done(mem->rtp_port);
+	if(mem->rtcp_port)
+		teleport_done(mem->rtcp_port);
     
     xfree(mem);
 
@@ -1160,8 +1165,13 @@ int session_member_set_connects(member_state_t * mem, session_connect_t *rtp_con
     }
 
     mem->rtp_connect = rtp_conn;
-
     mem->rtcp_connect = rtcp_conn;
+
+	if(!mem->rtp_port)
+		mem->rtp_port = connect_new_teleport(rtp_conn);
+
+	if(!mem->rtcp_port)
+		mem->rtcp_port = connect_new_teleport(rtcp_conn);
 
     return XRTP_OK;
 }
@@ -1803,17 +1813,16 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 		   if(rtcp_conn) 
 			   connect_done(rtcp_conn);
 
-           session_debug(("session_update_member_by_rtcp: Member[%d] is not available\n", ssrc));
+           session_debug(("session_update_member_by_rtcp: Member[%d] can not created\n", ssrc));
 
            return NULL;
         }
 
         session_debug(("session_update_member_by_rtcp: new member ssrc[%u] created\n", ssrc));
     }
-	else
+
 	{
         /* Free as member has connects already, Can't be validated yet */
-
         if(!mem->valid && cname_len == 0)
 		{
 			if(rtp_conn) 
@@ -1830,13 +1839,13 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 		{
 			/* member is expect to change ssrc in the future */
 			mem->in_collision = 1;
-            session_log(("session_update_member_by_rtcp: [%s] collise session[%s]\n", mem->cname, ses->self->cname));
+            session_debug(("session_update_member_by_rtcp: [%s] collise session[%s]\n", cname, ses->self->cname));
 		}
-		else if(!connect_from_teleport(rtcp_conn, mem->rtcp_port))
+		else if(mem->rtcp_port && !connect_match_teleport(rtcp_conn, mem->rtcp_port))
 		{
 			/* third party collision detect*/
 			mem->in_collision = 1;
-            session_log(("session_update_member_by_rtcp: mem[%s] collise with [%s]\n", mem->cname, cname));
+            session_debug(("session_update_member_by_rtcp: mem[%u] collise with [%s]\n", mem->ssrc, cname));
 		}
 		else if(mem->in_collision == 1)
 		{
@@ -1844,7 +1853,7 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 			
 			mem->ssrc = ssrc;
 
-            session_debug(("session_update_member_by_rtcp: mem[%s] ssrc[%u], collision solved\n", mem->cname, ssrc));
+            session_debug(("session_update_member_by_rtcp: cname[%s] ssrc[%u], collision solved\n", cname, ssrc));
 		}
 
 		mem->in_collision = 0;
@@ -1860,6 +1869,8 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 				connect_done(rtcp_conn);
 
 			/* callback when the member is valid */
+			session_debug(("session_update_member_by_rtcp: ses->$callbacks.member_update@%x\n", ses->$callbacks.member_update));
+		
 			if(ses->$callbacks.member_update)
 				ses->$callbacks.member_update(ses->$callbacks.member_update_user, ssrc, cname, cname_len);
 
@@ -1888,7 +1899,7 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 			return mem;
 		}
                 
-        if(mem->rtcp_port && !connect_from_teleport(rtcp_conn, mem->rtcp_port))
+        if(mem->rtcp_port && !connect_match_teleport(rtcp_conn, mem->rtcp_port))
 		{
 			/* WARNING: Someone else tempt to break in */
 			if(rtp_conn) 
@@ -1922,7 +1933,7 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 
         session_debug(("session_update_member_by_rtcp: [%s],ssrc[%u]\n", cname, ssrc));
 
-        if(ses->join_to_rtcp_port && connect_from_teleport(rtcp_conn, ses->join_to_rtcp_port))
+        if(ses->join_to_rtcp_port && connect_match_teleport(rtcp_conn, ses->join_to_rtcp_port))
 		{
             session_log(("session_update_member_by_rtcp: [%s:%d] join succeed\n", teleport_name(ses->join_to_rtcp_port), teleport_portno(ses->join_to_rtcp_port)));
             /* participant joined, clear the join desire */
@@ -1931,13 +1942,15 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
             teleport_done(ses->join_to_rtcp_port);
             ses->join_to_rtcp_port = NULL;
         }
+
+        session_debug(("session_update_member_by_rtcp: Member[%u][%s] validated\n", mem->ssrc, mem->cname));
+		session_debug(("session_update_member_by_rtcp: Session[%s], %d members\n", ses->self->cname, ses->n_member));
             
 		/* callback when the member is valid */
+		session_debug(("session_update_member_by_rtcp: ses->$callbacks.member_update@%x(2)\n", ses->$callbacks.member_update));
+		
 		if(ses->$callbacks.member_update)
-			ses->$callbacks.member_update(ses->$callbacks.member_update_user, ssrc, cname, cname_len);
-
-        session_log(("session_update_member_by_rtcp: Member[%s] validated\n", mem->cname));
-		session_log(("session_update_member_by_rtcp: Session[%s], %d members\n", ses->self->cname, ses->n_member));
+			ses->$callbacks.member_update(ses->$callbacks.member_update_user, mem->ssrc, mem->cname, mem->cname_len);
 
 		/* issue media info to members */
 		session_issue_mediainfo(ses, ses->self->mediainfo, ses->self->minfo_signum);
