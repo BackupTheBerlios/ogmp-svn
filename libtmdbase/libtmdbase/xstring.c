@@ -32,7 +32,7 @@
 	 if(!str)
 		 return NULL;
 		
-	 new_str = (char *)xmalloc(sizeof(char) * strlen(str));
+	 new_str = (char *)xmalloc(sizeof(char) * (strlen(str)+1));
 
      strcpy(new_str, str);
 
