@@ -270,7 +270,7 @@ int pa_set_media_info(media_device_t *dev, media_info_t *info){
    return MP_OK;
 }
 
-int pa_start (media_device_t * dev){
+int pa_start (media_device_t * dev, media_control_t *ctrl){
 
 	pa_log(("pa_start: pa_set_media_info() to start portaudio\n"));
 	return MP_OK;

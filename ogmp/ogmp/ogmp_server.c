@@ -40,9 +40,8 @@ int server_loop(void * gen)
       
       if (!server->demuxing)
       {
-         serv_log (("\nogmplyer: waiting for demux request\n"));
+         serv_log (("\nserver_loop: waiting for demux request\n"));
          xthr_cond_wait(server->wait_request, server->lock);
-         server->demuxing = 1;
          serv_log (("\nserver_loop: start demux...\n\n"));
       }
 
@@ -61,12 +60,13 @@ int server_loop(void * gen)
          break;
       }
       
+      server->demuxing = 1;
       {/*unlock*/ xthr_unlock(server->lock);}
    }
    
-   server->demuxing = 0;
    {/*unlock*/ xthr_unlock(server->lock);}
 
+   server->demuxing = 0;
    serv_log (("\n(ogmplyer: server stopped\n"));
    
    return MP_OK;
@@ -74,8 +74,6 @@ int server_loop(void * gen)
 
 int server_start (ogmp_server_t *server)
 {
-   serv_log (("server_start: server starts ...\n"));
-
    if (!server->valid)
    {
       serv_log (("server_loop: server is not available\n"));
@@ -84,6 +82,8 @@ int server_start (ogmp_server_t *server)
    
    if (!server->demuxing)
    {
+	  serv_log (("server_start: server starts ...\n"));
+      server->demuxing = 1;
       xthr_cond_signal(server->wait_request);
    }
    

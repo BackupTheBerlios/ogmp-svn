@@ -58,13 +58,13 @@ struct vorbis_sender_s
 {
    struct media_transmit_s sender;
 
+   /*int (*callback_on_ready) (void *user, media_player_t *player);*/
    void *callback_on_ready_user;
-   int (*callback_on_ready) (void *user, media_player_t *player);
+   int (*callback_on_ready)();
 
-
-
+   /*int (*stop_media) (void *user);*/
    void *stop_media_user;
-   int (*stop_media) (void *user);
+   int (*stop_media)();
 
    vorbis_info_t  *vorbis_info;
    int vorbis_info_signum;

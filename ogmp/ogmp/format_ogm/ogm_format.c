@@ -941,6 +941,8 @@ int ogm_players(media_format_t * mf, char *type, media_player_t* players[], int 
 
   while (cur != NULL)
   {
+	ogm_log (("ogm_players: %s player\n", cur->player->play_type(cur->player)));
+
     if(strcmp(cur->player->play_type(cur->player), type) == 0)
 	{
 		/* playtype match */
@@ -950,7 +952,7 @@ int ogm_players(media_format_t * mf, char *type, media_player_t* players[], int 
     cur = cur->next;
   }
 
-  ogm_log (("ogm_players: %d players in ogm format\n", n));
+  ogm_log (("ogm_players: %d '%s' players in ogm format\n", n, type));
 
   return n;
 }
