@@ -19,6 +19,7 @@
 #include "vorbis_info.h"
 
 #include <timedia/xthread.h>
+#include <ogg/ogg.h>
  
 #include <stdlib.h>
 #include <stdio.h>
@@ -43,6 +44,10 @@
 #define MAX_BUNDLE_PACKET_BYTES 256
 #define MAX_PACKET_BUNDLE 32
 
+#define JITTER_ADJUSTMENT_LEVEL 3
+
+#define VORBIS_MIME "audio/vorbis"
+
 const char vorbis_mime[] = "audio/vorbis";
 
 char vrtp_desc[] = "Vorbis Profile for RTP";
@@ -56,20 +61,17 @@ profile_class_t * vrtp;
 typedef struct vrtp_handler_s vrtp_handler_t;
 typedef struct vrtp_media_s vrtp_media_t;
 
-struct vrtp_handler_s{
-
+struct vrtp_handler_s
+{
    struct profile_handler_s profile;
 
    void * master;
 
-   vrtp_media_t * vorbis_media;
-
+   vrtp_media_t *vorbis_media;
    xrtp_session_t * session;
 
    uint rtp_size;
    uint rtcp_size;
-
-   uint32 seqno_next_unit;
 
    int new_group;
    rtp_frame_t *group_first_frame;
@@ -80,6 +82,8 @@ struct vrtp_handler_s{
    buffer_t *payload_buf; /* include paylaod head */
    uint32 usec_payload_timestamp; /* of current payload, frome randem value */
    uint32 usec_group_timestamp;
+
+   uint32 timestamp_send;
 
    /* thread attribute */
    xthread_t *thread;
@@ -94,48 +98,115 @@ struct vrtp_handler_s{
    xthr_cond_t *pending;
 };
 
-struct vrtp_media_s{
-
+struct vrtp_media_s
+{
    struct xrtp_media_s rtp_media;
 
    vrtp_handler_t * vorbis_profile;
-
-   //uint32 dolen;
-   //media_data_t * data_out;
 };
+
+/**
+ * Parse rtp packet payload
+ *
+ * Several packets in same timestamp are bundled together according to rtp-profile-vorbis
+ *
+ * RFC3550 indicate: 
+ * Applications transmitting stored data rather than data sampled in real time typically 
+ * use a virtual presentation timeline derived from wallclock time to determine when the 
+ * next frame or other unit of each medium in the stored data should be presented.
+ * 
+ * So, the timestamp is the usec frome the randem value when the stream start.
+ *
+ * Timestamp initial value is random, generate timestamp CAN NOT relay on stamp in the 
+ * media storage, MUST generate on the fly according to the media clock that increase in 
+ * a linear and monotonic fashion (except wrap-around); 
+ *
+ * The whole rtp packet maxmum size limited to MTU size, typically 1500 bytes include RTP 
+ * and Payload header; Normal vorbis packet in average 800 bytes, but header packets are 
+ * 4-12k, maximum header block is 64k;
+ * 
+ * Vorbis payload header:
+ * [C|F|R=0|# of packets]+[(len of vorbis)|NULL]+[ vorbis data ]
+ * [1|1| 1 |<----5----->]+[<--------8--------->]+[<-len--byte->] bits
+ * c=1: the first packet is a continued fragment;
+ * f=1: have a completed packet or the last fragment;
+ * r=0: reserved as '0'
+ *
+ * For single complete vorbis, no len byte: 
+ *  {rtp header}{[(C=0)|(F=1)|(0)|(1)]+[  vorbis  ]}
+ *
+ * For fragment, no len byte: 
+ *  {rtp header}{[(C=1)|(F=?)|(0)|(0)]+[ fragment ]}
+ *
+ * For multi-packet: 
+ *  {rtp header}{[(C=0)|(F=1)|(0)|n=(2...32)]+[len#1][vorbis#1]+[len#2][vorbis#2]+...+[len#n][vorbis#n]} 
+ *
+ * NOTE: 
+ * Only complete packet no more than 256 bytes can be bundled together, 
+ * so a Fragment or a Packet larger than 256 bytes must in a rtp packet by itself.
+ *
+ * If all packet on hold could be bundle into a payload, create payload ready to send
+ * if not, put on hold.
+ *
+ * Param:
+ * last - the last packet of the same samplestamp, all packet on hold will be send.
+ **/
+int vorbis_rtp_is_continue(uint8 h)
+{
+	return h & 0x80; /* '10000000' */
+}
+int vorbis_rtp_is_complete(uint8 h)
+{
+	return h & 0x40;  /* '01000000' */
+}
+int vorbis_rtp_counter(uint8 h)
+{
+	return h & 0x1F;  /* '00011111' */
+}
 
 /**
  * Handle inward rtp packet
  */
-int vrtp_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
-
-   vrtp_handler_t *vh = (vrtp_handler_t *)handler;
+int vrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
+{
+   vrtp_handler_t *vh = (vrtp_handler_t *)h;
    
    vrtp_media_t *vmedia = vh->vorbis_media;
    xrtp_media_t *rtpmedia = (xrtp_media_t*)vmedia;
 
-   uint16 seqno, src, rtpts;
+   uint16 seqno, src;
+
+   uint32 rtpts_payload;
+   uint32 rtpts_arrival;
+   uint32 rtpts_toplay;
+   uint32 rtpts_playing;
+   uint32 rtpts_sync;
    
    member_state_t * sender = NULL;
    session_connect_t *rtp_conn = NULL;
    session_connect_t *rtcp_conn = NULL;
 
-   char *media_data;
-   int media_dlen;
-   xrtp_hrtime_t later = 0;
+   rtime_t ms_arrival,us_arrival,ns_arrival;
+   rtime_t ms_playing, us_playing, ns_playing;
+   rtime_t ms_sync, us_sync, ns_sync;
+   rtime_t us_since_sync;
+
+   xrtp_media_t *rtp_media;
+
+   uint32 rate;
 
    rtp_unpack(rtp);
 
    seqno = rtp_packet_seqno(rtp);
    src = rtp_packet_ssrc(rtp);
-   rtpts = rtp_packet_timestamp(rtp);
 
-   vrtp_log(("audio/vorbis.vrtp_rtp_in: packet ssrc=%u, seqno=%u, timestamp=%u, rtp->connect=%d\n", src, seqno, rtpts, (int)rtp->connect));
+   rtpts_payload = rtp_packet_timestamp(rtp);
+   vrtp_log(("audio/vorbis.vrtp_rtp_in: packet ssrc=%u, seqno=%u, timestamp=%u, rtp->connect=%d\n", src, seqno, rtpts_payload, (int)rtp->connect));
 
    sender = session_member_state(rtp->session, src);
 
-   if(sender && sender->valid && !connect_match(rtp->connect, sender->rtp_connect)){
-
+   if(sender && sender->valid && !connect_match(rtp->connect, sender->rtp_connect))
+   {
       session_solve_collision(sender, src);
 
       rtp_packet_done(rtp);
@@ -143,11 +214,11 @@ int vrtp_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
       return XRTP_CONSUMED;
    }
 
-   if(!sender){
-
+   if(!sender)
+   {
       /* The rtp packet is recieved before rtcp arrived, so the participant is not identified yet */
-      if(!vh->session->$state.receive_from_anonymous){
-
+      if(!vh->session->$state.receive_from_anonymous)
+	  {
          vrtp_log(("audio/vorbis.vrtp_rtp_in: participant waiting for identifed before receiving media\n"));
          rtp_packet_done(rtp);
          return XRTP_CONSUMED;
@@ -160,27 +231,27 @@ int vrtp_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
       rtp->connect = NULL; /* Dump the connect from rtcp packet */
 
       sender = session_new_member(vh->session, src, NULL);
-      if(!sender){
-
+      if(!sender)
+	  {
          /* Something WRONG!!! packet disposed */
          rtp_packet_done(rtp);
 
          return XRTP_CONSUMED;
       }
 
-      if(vh->session->$callbacks.member_connects){
-
+      if(vh->session->$callbacks.member_connects)
+	  {
          vh->session->$callbacks.member_connects(vh->session->$callbacks.member_connects_user, src, &rtp_conn, &rtcp_conn);
          session_member_set_connects(sender, rtp_conn, rtcp_conn);
-
-      }else{
-
+      }
+	  else
+	  {
          rtcp_conn = connect_rtp_to_rtcp(rtp->connect); /* For RFC1889 static port allocation: rtcp port = rtp port + 1 */
          session_member_set_connects(sender, rtp->connect, rtcp_conn);
       }
 
-      if(vh->session->join_to_rtp_port && connect_from_teleport(rtp->connect, vh->session->join_to_rtp_port)){
-
+      if(vh->session->join_to_rtp_port && connect_from_teleport(rtp->connect, vh->session->join_to_rtp_port))
+	  {
          /* participant joined, clear the join desire */
          teleport_done(vh->session->join_to_rtp_port);
          vh->session->join_to_rtp_port = NULL;
@@ -189,39 +260,38 @@ int vrtp_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
       }
    }
 
-   if(!sender->valid){
-
+   if(!sender->valid)
+   {
       /* The rtp packet is recieved before rtcp arrived, so the participant is not identified yet */
-      if(!vh->session->$state.receive_from_anonymous){
-
+      if(!vh->session->$state.receive_from_anonymous)
+	  {
          vrtp_log(("audio/vorbis.vrtp_rtp_in: participant waiting for validated before receiving media\n"));
          rtp_packet_done(rtp);
          return XRTP_CONSUMED;
       }
 
-      if(!session_update_seqno(sender, seqno)){
-
+      if(!session_update_seqno(sender, seqno))
+	  {
          rtp_packet_done(rtp);
-
          return XRTP_CONSUMED;
-
-      }else{
-
-         if(!sender->rtp_connect){
-
+      }
+	  else
+	  {
+         if(!sender->rtp_connect)
+		 {
             /* Get connect of the participant */
             rtp_conn = rtp->connect;
             rtcp_conn = NULL;
 
             rtp->connect = NULL; /* Dump the connect from rtcp packet */
 
-            if(vh->session->$callbacks.member_connects){
-
+            if(vh->session->$callbacks.member_connects)
+			{
                vh->session->$callbacks.member_connects(vh->session->$callbacks.member_connects_user, src, &rtp_conn, &rtcp_conn);
                session_member_set_connects(sender, rtp_conn, rtcp_conn);
-
-            }else{
-
+            }
+			else
+			{
                rtcp_conn = connect_rtp_to_rtcp(rtp->connect); /* For RFC1889 static port allocation: rtcp port = rtp port + 1 */
                session_member_set_connects(sender, rtp->connect, rtcp_conn);
             }
@@ -231,78 +301,200 @@ int vrtp_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
       }
    }
 
-   if(sender->n_rtp_received == 0)   vh->seqno_next_unit = seqno;
-
-   session_member_update_rtp(sender, rtp);
-
-   /* Calculate local playtime */
-   later = time_nsec_now(vh->session->clock) - session_member_mapto_local_time(sender, rtp);
-
-   /* FIXME: Bug if packet lost */
-   while(seqno == vh->seqno_next_unit){
-
-      /* Dummy rtp packet for time resynchronization */
-      if(rtp->is_sync){
-
-         xrtp_session_t * ses = vh->session;
-         xrtp_hrtime_t hrt_local = sender->last_hrt_local - sender->last_hrt_rtpts + rtp->hrt_rtpts;
-
-         ses->$callbacks.resync_timestamp(ses->$callbacks.resync_timestamp_user, ses,
-                                              rtp->hi_ntp, rtp->lo_ntp, hrt_local);
-
-         rtp_packet_done(rtp);
-
-      }else{
-
-         vrtp_log(("audip/vorbis.vrtp_rtp_in: media data assembled, deliver\n"));
-         media_dlen = rtp_packet_dump_payload(rtp, &media_data);
-
-
-         if(rtpmedia->$callbacks.media_arrived)
-            rtpmedia->$callbacks.media_arrived(rtpmedia->$callbacks.media_arrived_user, media_data, media_dlen, src, later, 0);
-
-         sender->last_hrt_local = rtp->hrt_local;
-         sender->last_hrt_rtpts = rtp->hrt_rtpts;
-
-         rtp_packet_done(rtp);
-         rtp = NULL;
-
-         vh->seqno_next_unit++;
-      }
-
-      rtp = session_member_next_rtp_withhold(sender);
-      if(!rtp){
-
-         return XRTP_CONSUMED;
-      }
-
-      seqno = rtp_packet_seqno(rtp);
+   if(session_member_update_by_rtp(sender, rtp) < XRTP_OK)
+   {
+	   vrtp_log(("text/rtp-test.tm_rtp_in: bad packet\n"));
+	   rtp_packet_done(rtp);
+	   return XRTP_CONSUMED;
    }
 
-   session_member_hold_rtp(sender, rtp);
+   if(session_member_seqno_stall(sender, seqno))
+   {
+	   vrtp_log(("audio/vorbis.vrtp_rtp_in: seqno[%u] is stall, discard\n", seqno));
+	   rtp_packet_done(rtp);
+	   return XRTP_CONSUMED;
+   }
+
+   /* calculate play timestamp */
+   rtp_packet_arrival_time(rtp, &ms_arrival, &us_arrival, &ns_arrival);
+   session_member_media_playing(sender, &rtpts_playing, &ms_playing, &us_playing, &ns_playing);
+
+   rtp_media = (xrtp_media_t*)vh->vorbis_media;
+
+   rate = rtp_media->rate(rtp_media);
+   rtpts_arrival = rtpts_playing - (uint32)((us_playing - us_arrival)/1000000.0 * rate);
+
+   rtpts_toplay = session_member_mapto_local_time(sender, rtpts_payload, rtpts_arrival, JITTER_ADJUSTMENT_LEVEL);
+   
+   if(!sender->media_playable)
+   {
+	   uint32 rtpts_mi;
+	   int signum;
+
+	   int32 rtpts_pass;
+
+	   vorbis_info_t *vinfo = (vorbis_info_t*)session_member_media_info(sender, &rtpts_mi, &signum);
+	   
+	   if(!vinfo || vinfo->head_packets != 3)
+	   {
+			vrtp_log(("audio/vorbis.vrtp_rtp_in: invalid media info\n"));
+			rtp_packet_done(rtp);
+			return XRTP_CONSUMED;
+	   }
+
+	   rtpts_pass = rtpts_toplay - rtpts_mi;
+	   if(rtpts_pass >= 0)
+	   {
+		   int ret;
+		   ogg_packet pack;
+		   media_player_t *player, *explayer = NULL;
+		   media_control_t *ctrl;
+
+		   pack.granulepos = -1;
+
+		   pack.packet = vinfo->header_identification;
+		   pack.bytes = vinfo->header_identification_len;
+		   pack.packetno = 0;
+		   vorbis_synthesis_headerin(&vinfo->vi, &vinfo->vc, &pack);
+
+		   pack.packet = vinfo->header_comment;
+		   pack.bytes = vinfo->header_comment_len;
+		   pack.packetno = 1;
+		   vorbis_synthesis_headerin(&vinfo->vi, &vinfo->vc, &pack);
+
+		   pack.packet = vinfo->header_setup;
+		   pack.bytes = vinfo->header_setup_len;
+		   pack.packetno = 2;
+		   vorbis_synthesis_headerin(&vinfo->vi, &vinfo->vc, &pack);
+
+		   sender->media_playable = 1;
+
+		   ctrl = (media_control_t*)session_media_control(vh->session);
+		   player = ctrl->find_player(ctrl, "playback", VORBIS_MIME, "");
+
+		   ret = player->open_stream(player, (media_info_t*)vinfo);
+		   if( ret < MP_OK)
+		   {
+				sender->media_playable = -1;
+				player->done(player);
+			
+				vrtp_log(("audio/vorbis.vrtp_rtp_in: media is not playable\n"));
+				rtp_packet_done(rtp);
+			
+				return XRTP_CONSUMED;
+		   }         
+
+		   explayer = (media_player_t*)session_member_set_player(sender, player);
+		   if(explayer)
+			   explayer->done(explayer);
+
+		   /* start media delivery */
+		   session_member_deliver(sender, seqno, 3);
+	   }
+   }
+
+   /* convert rtp timestamp to usec */
+   session_member_sync_point(sender, &rtpts_sync, &ms_sync, &us_sync, &ns_sync);
+   us_since_sync = (uint32)((rtpts_toplay - rtpts_sync)/1000000.0 * rate);
+   
+   /* convert rtp packet to ogg packet */
+   {   
+	   char *payload;
+	   int payload_bytes;
+	   int cont,comp,count;
+	   ogg_packet *oggpack;
+
+	   payload_bytes = rtp_packet_payload(rtp, &payload);
+	   cont = vorbis_rtp_is_continue((uint8)payload[0]);
+	   comp = vorbis_rtp_is_complete((uint8)payload[0]);
+	   count = vorbis_rtp_counter((uint8)payload[0]);
+
+	   if(cont || !comp)
+	   {
+		   /*  handling fragments is NOT implemented currently */
+		   vrtp_log(("audio/vorbis.vrtp_rtp_in: simply discard an ogg fragment\n"));
+	   }
+	   else if(count==1)
+	   {
+		   int last = 1;
+		   /* single complete ogg packet */
+		   oggpack = malloc(sizeof(ogg_packet));
+
+		   payload_bytes = rtp_packet_dump_payload(rtp, &payload);
+
+		   oggpack->packet = &payload[1];
+		   oggpack->bytes = payload_bytes - 1;
+
+		   /* convert rtp timestamp to granulepos */
+		   oggpack->granulepos = session_member_samples(sender, rtpts_payload); 
+
+		   session_member_hold_media(sender, (void*)oggpack, oggpack->bytes, seqno, rtpts_toplay, us_sync, us_since_sync, last, payload);
+	   }
+	   else if(count>1)
+	   {
+		   /* multi ogg packet bundle */
+		   char *ogg = &payload[1];
+		   int last = 0;
+		   int i;
+
+		   oggpack = malloc(sizeof(ogg_packet));
+
+		   payload_bytes = rtp_packet_dump_payload(rtp, &payload);
+
+		   for(i=0; i<count; i++)
+		   {
+			   oggpack->bytes = (int)ogg[0];
+			   oggpack->packet = &ogg[1];
+
+			   if(i==count-1)
+			   {
+				   oggpack->granulepos = session_member_samples(sender, rtpts_payload); 
+				   last = 1;
+			   }
+			   else
+			   {
+				   oggpack->granulepos = -1;
+			   }
+
+			   session_member_hold_media(sender, (void*)oggpack, oggpack->bytes, seqno, rtpts_toplay, us_sync, us_since_sync, last, payload);
+			   
+			   ogg = ogg + oggpack->bytes + 1;
+		   }
+	   }
+   }
+
+   rtp_packet_done(rtp);
 
    return XRTP_CONSUMED;
 }
 
+/* move to session member 
+int vrtp_deliver_loop(vrtp_handler_t *h)
+{
+	   if(rtpmedia->$callbacks.media_arrived)
+		   rtpmedia->$callbacks.media_arrived(rtpmedia->$callbacks.media_arrived_user, media_data, media_dlen, src, vh->timestamp_play);
+}
+*/
+
 /**
  * put payload into the outward rtp packet
  */
-int vrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp) {
-
+int vrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp)
+{
    vrtp_handler_t * profile = (vrtp_handler_t *)handler;
 
    /* Mark always '0', Audio silent suppression not used */
    rtp_packet_set_mark(rtp, 0);
 
    /* timestamp */
-   rtp_packet_set_timestamp(rtp, profile->usec_payload_timestamp);
+   rtp_packet_set_timestamp(rtp, profile->timestamp_send);
 
    rtp_packet_set_payload(rtp, profile->payload_buf);
 
-   vrtp_log(("audio/vorbis.vrtp_rtp_out: payload[%d] (%d bytes)\n", profile->usec_payload_timestamp, buffer_datalen(profile->payload_buf)));
+   vrtp_log(("audio/vorbis.vrtp_rtp_out: payload[%u] (%d bytes)\n", profile->timestamp_send, buffer_datalen(profile->payload_buf)));
 
-   if(!rtp_pack(rtp)){
-
+   if(!rtp_pack(rtp))
+   {
       vrtp_log(("audio/vorbis.vrtp_rtp_out: Fail to pack rtp data\n"));
 
       return XRTP_FAIL;
@@ -319,11 +511,44 @@ int vrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp) {
  * - If a new src, add to member list, waiting to validate.
  * - If is a SR, do nothing before be validated, otherwise check
  * - If is a RR, check with session self
- */
-int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp){
+ * 
+ * Following RTP APP packet is for stream header transferring
+ * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ * NOTE: THIS IS NOT COMPLAINT to 
+ * "RTP Payload Format for Vorbis Encoded Audio <draft-kerr-avt-vorbis-rtp-03.txt>"
+ * So, Version is set to 0xFFFF.
 
-   uint32 src_sender = 0, hintp_sender = 0, lontp_sender = 0;
-   uint32 rtpts_sender = 0, packet_sent = 0,  octet_sent = 0;
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |V=2|P| stype(0)|   PT=APP=204  |             Length            |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                           SSRC/CSRC                           |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                             VORB                              |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                 Timestamp (in sample rate units)              |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                  Vorbis Version (FFFF)                        |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |1|2|3|0|0|0|0|0| sequence num  |     Header 1 Bytes (HL)       |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |     Header 2 Bytes (HL)       |     Header 3 Bytes (HL)       |
+   +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+   ..                          Header 1                            |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   ..                          Header 2                            |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   ..                          Header 3                            |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ *
+ *
+ */
+int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
+{
+   uint32 src_sender = 0;
+   uint32 rtcpts = 0, packet_sent = 0,  octet_sent = 0;
 
    uint8 frac_lost = 0;
    uint32 total_lost = 0, full_seqno, jitter = 0;
@@ -331,15 +556,23 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp){
 
    member_state_t * sender = NULL;
 
+   rtime_t ms,us,ns;
+
+   int rate;
+
    xrtp_session_t * ses = rtcp->session;
 
-   vrtp_log(("audio/vorbis.vrtp_rtcp_in: rtcp size = %u\n", rtcp->bytes_received));
+   /* for vorbis stream setup */
+   char *appdata;
+   int applen;
+
+   vrtp_handler_t *profile = (vrtp_handler_t*)handler;
 
    /* Here is the implementation */
-   ((vrtp_handler_t *)handler)->rtcp_size = rtcp->bytes_received;
+   profile->rtcp_size = rtcp->bytes_received;
 
-   if(!rtcp->valid_to_get){
-
+   if(!rtcp->valid_to_get)
+   {
       rtcp_unpack(rtcp);
       rtcp->valid_to_get = 1;
 
@@ -349,42 +582,64 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp){
    session_count_rtcp(ses, rtcp);
 
    src_sender = rtcp_sender(rtcp);
-   vrtp_log(("audio/vorbis.vrtp_rtcp_in: packet sender ssrc is %d\n", src_sender));
+
+   rtcp_arrival_time(rtcp, &ms, &us, &ns);
+   vrtp_log(("audio/vorbis.vrtp_rtcp_in: arrived %dB at %dms/%dus/%dns\n", rtcp->bytes_received, ms, us, ns));
 
    /* rtp_conn and rtcp_conn will be uncertain after this call */
    sender = session_update_member_by_rtcp(rtcp->session, rtcp);
-
-   if(!sender){
-
+   if(!sender)
+   {
       rtcp_compound_done(rtcp);
 
       vrtp_log(("audio/vorbis.vrtp_rtcp_in: Ssrc[%d] refused\n", src_sender));
       return XRTP_CONSUMED;
    }
 
-   if(!sender->valid){
+   rate = profile->vorbis_media->rtp_media.rate(&profile->vorbis_media->rtp_media);
 
+   if(!sender->valid)
+   {
       vrtp_log(("audio/vorbis.vrtp_rtcp_in: Member[%d] is not valid yet\n", src_sender));
       rtcp_compound_done(rtcp);
 
       return XRTP_CONSUMED;
+   }
+   else
+   {
+	  uint32 hi_ntp, lo_ntp;
 
-   }else{
+      if(rtcp_sender_info(rtcp, &src_sender, &hi_ntp, &lo_ntp,
+                          &rtcpts, &packet_sent, &octet_sent) >= XRTP_OK)
+	  {
+         /* Check the SR report */
+		  
+         /* record the sync reference point */
+		 rtcp_arrival_time(rtcp, &ms, &us, &ns);
 
-      vrtp_log(("audio/vorbis.vrtp_rtcp_in: Member[%d] is valid now, check report\n", src_sender));
-      if(rtcp_sender_info(rtcp, &src_sender, &hintp_sender, &lontp_sender,
-                        &rtpts_sender, &packet_sent, &octet_sent) >= XRTP_OK){
+		 /* convert rtcpts to local ts */
+		 session_member_synchronise(sender, rtcpts, hi_ntp, lo_ntp, rate);
 
-         /* SR */
          /* Check the report */
-         sender->lsr_hrt = rtcp->hrt_arrival;  /* FIXME: clarify the interface */
-         sender->lsr_lrt = rtcp->lrt_arrival;
-         session_member_check_senderinfo(sender, hintp_sender, lontp_sender,
-                                            rtpts_sender, packet_sent, octet_sent);
-      }else{
+         session_member_check_senderinfo(sender, hi_ntp, lo_ntp,
+										 rtcpts, packet_sent, octet_sent);
 
+         sender->lsr_msec = ms;
+         sender->lsr_usec = us;
+
+		 vrtp_log(("audio/vorbis.vrtp_rtcp_in:========================\n"));
+		 vrtp_log(("audio/vorbis.vrtp_rtcp_in: [%s] SR report\n", sender->cname));
+		 vrtp_log(("audio/vorbis.vrtp_rtcp_in: ssrc[%u]\n", sender->ssrc));
+		 vrtp_log(("audio/vorbis.vrtp_rtcp_in: ntp[%u,%u];ts[%u]\n", hi_ntp,lo_ntp,rtcpts));
+		 vrtp_log(("audio/vorbis.vrtp_rtcp_in: sent[%dp;%dB]\n", packet_sent, octet_sent));
+      }
+	  else
+	  {
          /* RR */
-         /* Nothing */
+
+		 vrtp_log(("audio/vorbis.vrtp_rtcp_in:========================\n"));
+		 vrtp_log(("audio/vorbis.vrtp_rtcp_in: [%s] RR report\n", sender->cname));
+		 vrtp_log(("audio/vorbis.vrtp_rtcp_in: ssrc[%u]\n", sender->ssrc));
       }
    }
 
@@ -392,19 +647,113 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp){
    if(rtcp_report(rtcp, ses->self->ssrc, &frac_lost, &total_lost,
                       &full_seqno, &jitter, &lsr_stamp, &lsr_delay) >= XRTP_OK)
    {
-
       session_member_check_report(ses->self, frac_lost, total_lost, full_seqno,
                                 jitter, lsr_stamp, lsr_delay);
+   }
+   else
+   { /* Strange !!! */ }
 
-   }else{ /* Strange !!! */ }
+   /* Check SDES */
 
-   /* Check SDES with registered key by user */
+   /* Check APP if carried, vorbis header packet is carried by APP packet */
+   applen = rtcp_app(rtcp, src_sender, 0, 'VORB', &appdata);
+   if(applen)
+   {
+		vorbis_info_t *vinfo;
+		uint32 rtpts_vi;
+		int signum_vi;
 
-   /* Check APP if carried */
+		uint8 *bytes = (uint8*)appdata;
 
-   rtcp_compound_done(rtcp);
+		uint32 *rtpts_h = (uint32*)&bytes[0];
+		uint32 *ver = (uint32*)&bytes[4];
 
-   return XRTP_CONSUMED;
+        rtime_t ms_sync, us_sync, ns_sync;
+		uint32 rtpts_sync, rtpts_h_local;
+
+		/* mapto local rtpts, rough method */
+		rtpts_h_local = *rtpts_h + session_member_sync_point(sender, &rtpts_sync, &ms_sync, &us_sync, &ns_sync);
+		
+		vinfo = (vorbis_info_t*)session_member_media_info(sender, &rtpts_vi, &signum_vi);
+
+		if(*ver == 0xFFFF)
+		{
+			/* My own vorbis app version */
+			if(signum_vi != (int)bytes[9])
+			{
+				session_member_expire_media_info(sender, rtpts_h_local, (int)bytes[9]);
+
+				if(vinfo->header_identification_len)
+				{
+					free(vinfo->header_identification);
+					vinfo->header_identification_len = 0;
+				}
+				if(vinfo->header_comment_len)
+				{
+					free(vinfo->header_comment);
+					vinfo->header_comment_len = 0;
+				}
+				if(vinfo->header_setup_len)
+				{		   
+					free(vinfo->header_setup);
+					vinfo->header_setup_len = 0;
+				}
+
+				vinfo->head_packets = 0;
+			}
+			
+		    if(vinfo->head_packets != 3)
+			{
+				int16 *h1_bytes = (int16*)&bytes[10];
+				int16 *h2_bytes = (int16*)&bytes[12];
+				int16 *h3_bytes = (int16*)&bytes[14];
+				char *pack = &appdata[16];
+
+				if(bytes[8] & 0x8)
+				{
+					/*header 1*/
+					vinfo->header_identification_len = *h1_bytes;
+					vinfo->header_identification = malloc(*h1_bytes);
+					memcpy(vinfo->header_identification, pack, *h1_bytes);
+					vinfo->head_packets++;
+
+					pack += *h1_bytes;
+				}
+
+				if(bytes[8] & 0x4)
+				{
+					/*header 2*/
+					vinfo->header_comment_len = *h2_bytes;
+					vinfo->header_comment = malloc(*h2_bytes);
+					memcpy(vinfo->header_comment, pack, *h2_bytes);
+					vinfo->head_packets++;
+
+					pack += *h2_bytes;
+				}
+
+				if(bytes[8] & 0x2)
+				{
+					/* header 3 */
+					vinfo->header_setup_len = *h3_bytes;
+					vinfo->header_setup = malloc(*h3_bytes);
+					memcpy(vinfo->header_setup, pack, *h3_bytes);
+					vinfo->head_packets++;
+				}
+
+				if(vinfo->head_packets == 3)
+				{
+					vrtp_log(("audio/vorbis.vrtp_rtcp_in: ssrc[%u]#ts[%u] vorbis info cached\n", src_sender, rtpts_h_local));
+					
+					/* give a chance to inspect the media info of the participant */
+					sender->on_mediainfo(sender->on_mediainfo_user, src_sender, vinfo);	
+				}
+			}
+		}
+	}
+
+	rtcp_compound_done(rtcp);
+
+	return XRTP_CONSUMED;
 }
 
 /*
@@ -413,63 +762,108 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp){
  * - SDES:CNAME
  * - BYE if bye
  */
-int vrtp_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp){
+int vrtp_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
+{
+   vrtp_handler_t *h = (vrtp_handler_t *)handler;
 
-   vrtp_handler_t * h = (vrtp_handler_t *)handler;
+   /* APP packet for vorbis codebook transfer */
+   xrtp_session_t *ses = rtcp->session;
+   uint32 rtpts_h;
+   int signum;
+   void *minfo;
+
+   session_report(h->session, rtcp, h->timestamp_send);
+    
+   if(session_renew_media_info(ses, &rtpts_h, &signum, &minfo))
+   {
+	   vorbis_info_t *vinfo = (vorbis_info_t*)minfo;
+	   int applen = vinfo->header_identification_len + vinfo->header_comment_len + vinfo->header_setup_len + 16;
+	   char *app_mi = malloc(applen);
+	   char *app;
+
+	   app_mi[0] = rtpts_h & 0xF000;
+	   app_mi[1] = rtpts_h & 0x0F00;
+	   app_mi[2] = rtpts_h & 0x00F0;
+	   app_mi[3] = rtpts_h & 0x000F;
+	   app_mi[4] = (char)0xFF;
+	   app_mi[5] = (char)0xFF;
+	   app_mi[6] = (char)0xFF;
+	   app_mi[7] = (char)0xFF;
+	   app_mi[8] = (char)0xEF;
+	   app_mi[9] = signum & 0xFF;
+
+	   app_mi[10] = vinfo->header_identification_len & 0xF0;
+	   app_mi[11] = vinfo->header_identification_len & 0x0F;
+	   app_mi[12] = vinfo->header_comment_len & 0xF0;
+	   app_mi[13] = vinfo->header_comment_len & 0x0F;
+	   app_mi[14] = vinfo->header_setup_len & 0xF0;
+	   app_mi[15] = vinfo->header_setup_len & 0x0F;
+
+	   app = &app_mi[16];
+	   memcpy(app, vinfo->header_identification, vinfo->header_identification_len);
+
+	   app += vinfo->header_identification_len;
+	   memcpy(app, vinfo->header_comment, vinfo->header_comment_len);
+
+	   app += vinfo->header_comment_len;
+	   memcpy(app, vinfo->header_setup, vinfo->header_setup_len);
+
+	   rtcp_new_app(rtcp, session_ssrc(ses), 0, 'VORB', applen, app_mi);
+   }
 
    /* Profile specified */
-   if(!rtcp_pack(rtcp)){
-
-      vrtp_log(("text/rtp-test.tm_rtcp_out: Fail to pack rtcp data\n"));
+   if(!rtcp_pack(rtcp))
+   {
+      vrtp_log(("audio/vorbis.vrtp_rtcp_out: Fail to pack rtcp data\n"));
       return XRTP_FAIL;
    }
 
    h->rtcp_size = rtcp_length(rtcp);
-   vrtp_log(("text/rtp-test.tm_rtcp_out: rtcp size = %u\n", h->rtcp_size));
+   vrtp_log(("audio/vorbis.vrtp_rtcp_out: rtcp size = %u\n", h->rtcp_size));
 
    return XRTP_OK;
 }
 
-int vrtp_rtp_size(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
-
+int vrtp_rtp_size(profile_handler_t *handler, xrtp_rtp_packet_t *rtp)
+{
    return ((vrtp_handler_t *)handler)->rtp_size;
 }
 
-int vrtp_rtcp_size(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp){
-
+int vrtp_rtcp_size(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
+{
    return ((vrtp_handler_t *)handler)->rtcp_size;
 }
 
 /**
  * Methods for module class
  */
-profile_class_t * rtp_vorbis_module(profile_handler_t * handler){
-
+profile_class_t * rtp_vorbis_module(profile_handler_t * handler)
+{
    return vrtp;
 }
 
-int rtp_vorbis_set_master(profile_handler_t *handler, void *master){
-
+int rtp_vorbis_set_master(profile_handler_t *handler, void *master)
+{
    vrtp_handler_t * _h = (vrtp_handler_t *)handler;
    _h->master = master;
 
    return XRTP_OK;
 }
 
-void * rtp_vorbis_master(profile_handler_t *handler){
-
+void * rtp_vorbis_master(profile_handler_t *handler)
+{
    vrtp_handler_t * _h = (vrtp_handler_t *)handler;
 
    return _h->master;
 }
 
-const char * rtp_vorbis_mime(xrtp_media_t * media){
-
+const char * rtp_vorbis_mime(xrtp_media_t * media)
+{
    return vorbis_mime;
 }
 
-int rtp_vorbis_done(xrtp_media_t * media){
-
+int rtp_vorbis_done(xrtp_media_t * media)
+{
    vrtp_handler_t * h = ((vrtp_media_t *)media)->vorbis_profile;
    h->vorbis_media = NULL;
 
@@ -477,10 +871,14 @@ int rtp_vorbis_done(xrtp_media_t * media){
    return XRTP_OK;
 }
 
-int rtp_vorbis_set_parameter(xrtp_media_t * media, int key, void * val){
+int rtp_vorbis_set_parameter(xrtp_media_t * media, char *key, void *val)
+{
+	return XRTP_OK;
+}
 
-   /* Do nothing */
-   return XRTP_OK;
+void* rtp_vorbis_parameter(xrtp_media_t * media, char *key)
+{
+	return NULL;
 }
 
 /**
@@ -500,8 +898,8 @@ int rtp_vorbis_rate(xrtp_media_t * media){
    return media->clockrate;
 }
 
-uint32 rtp_vorbis_sign(xrtp_media_t * media){
-
+uint32 rtp_vorbis_sign(xrtp_media_t * media)
+{
    srand(rand());
    
    return rand();
@@ -561,20 +959,20 @@ int rtp_vorbis_done_frame(void *gen)
  * Param:
  * last - the last packet of the same samplestamp, all packet on hold will be send.
  **/
-uint8 vorbis_rtp_mark_continue(uint8 h, int cont){
-
+uint8 vorbis_rtp_mark_continue(uint8 h, int cont)
+{
 	if (cont) return h | 0x80; /* '10000000' */
 
 	return h & 0x7F; /* '01111111' */
 }
-uint8 vorbis_rtp_mark_complete(uint8 h, int comp){
-
+uint8 vorbis_rtp_mark_complete(uint8 h, int comp)
+{
 	if (comp) return h | 0x40;  /* '01000000' */
 
 	return h & 0xBF; /* '10111111' */
 }
-uint8 vorbis_rtp_set_number(uint8 h, uint8 n){
-
+uint8 vorbis_rtp_set_number(uint8 h, uint8 n)
+{
 	return ((h&0xE0) | (n&0x1F));  /* '11100000' '00011111' */
 }
 
@@ -585,6 +983,7 @@ int rtp_vorbis_loop(void *gen)
 	int eos=0, eots=0;
 
 	int first_loop= 1;
+	int first_group = 1;
 	int first_payload = 1;
 
 	vrtp_handler_t *profile = (vrtp_handler_t*)gen;
@@ -605,7 +1004,6 @@ int rtp_vorbis_loop(void *gen)
 
 	xclock_t *clock = session_clock(profile->session);
 
-	int64 stream_samples = 0;
 	int group_samples = 0;
 	int payload_samples = 0;
 
@@ -615,8 +1013,7 @@ int rtp_vorbis_loop(void *gen)
 	rtime_t usec_group_start;
 	rtime_t usec_group_end;
 
-	rtime_t usec_group_payload;
-	rtime_t usec_payload_deadline;
+	rtime_t usec_stream_payload;
 
 	rtime_t usec_group = 0;
 
@@ -744,8 +1141,6 @@ int rtp_vorbis_loop(void *gen)
 			in_group = 1;
 			first_group_payload = 1;
 
-			usec_group_payload = 0;
-
 			first_loop = 0;
 
 			vorbis_header = 0;
@@ -769,13 +1164,13 @@ int rtp_vorbis_loop(void *gen)
 		/* rtpf is a flesh packet */
 		if(!remain_frame)
 		{
-			stream_samples += rtpf->samples;
+			profile->timestamp_send += rtpf->samples;
 			group_samples += rtpf->samples;
 			group_packets++;
 		}
 
 		/* Test purpose */
-		//vrtp_log(("audio/vorbis.rtp_vorbis_loop: (%d), %dB, %d/%d/%d(p/g/s) samples\n", rtpf->grpno, rtpf->unit_bytes, rtpf->samples, group_samples, stream_samples));
+		//vrtp_log(("audio/vorbis.rtp_vorbis_loop: (%d), %dB, %d/%d/%d(p/g/s) samples\n", rtpf->grpno, rtpf->unit_bytes, rtpf->samples, group_samples, profile->timestamp_send));
 		/* Test end */
 		
 		/* send small packet bundled up to 32 */
@@ -891,35 +1286,45 @@ int rtp_vorbis_loop(void *gen)
 		/* send payload in a rtp packet */
 		if(payload_done)
 		{
-			int64 usec_payload;
-			rtime_t usec_payload_schedule;
+			rtime_t usec_payload_deadline;
+			rtime_t usec_payload;
+			rtime_t in_usec;
 
-			
+			usec_now = time_usec_now(clock);
+
+			if(first_payload)
+				usec_stream_payload = usec_now;
+
 			if(first_group_payload)
 			{
 				/* group usec range from the time send the first rtp payload of the samplestamp */
-				usec_now = usec_group_start = time_usec_now(clock);
+				if(first_group)
+					usec_group_start = usec_now;
+				else
+					usec_group_start = usec_group_end + 1;
+
+					
 				usec_group_end = usec_group_start + usec_group;
 
 				vrtp_log(("rtp_vorbis_loop: %dus...%dus\n", usec_group_start, usec_group_end));
-
-				usec_payload_deadline = usec_group_start;
-				usec_payload_schedule = 0;
-			}
-			else
-			{
-				usec_now = time_usec_now(clock);
-				usec_payload_schedule = usec_payload_deadline - usec_now;
 			}
 
 			if(continue_packet)
+			{
 				usec_payload = 0;
+				usec_payload_deadline = usec_stream_payload;
+			}
 			else
-				usec_payload = (int64)payload_samples * 1000000 / vinfo->vi.rate;
+			{
+				usec_payload = (rtime_t)((int64)payload_samples * 1000000 / vinfo->vi.rate);
+				usec_payload_deadline = usec_stream_payload + usec_payload;
+			}
+
+			in_usec = usec_payload_deadline - usec_now;
 
 			/* Test purpose */
-			//vrtp_log(("audio/vorbis.rtp_vorbis_loop: payload[%d] (%dP,%dS,%dus)\n", profile->usec_payload_timestamp, n_packet, payload_samples, usec_payload));
-			//vrtp_log(("audio/vorbis.rtp_vorbis_loop: %dus now, payload @%dus...#%dus\n", usec_now, usec_payload_deadline, usec_payload_schedule));
+			//vrtp_log(("audio/vorbis.rtp_vorbis_loop: payload[%d]@%dus (%dP,%dS,%dus)\n", profile->usec_payload_timestamp, usec_stream_payload, n_packet, payload_samples, usec_payload));
+			vrtp_log(("audio/vorbis.rtp_vorbis_loop: %dus now, deadline[%dus]...in #%dus\n", usec_now, usec_payload_deadline, in_usec));
 			/* Test end */
 
 			/* call for session sending 
@@ -927,22 +1332,21 @@ int rtp_vorbis_loop(void *gen)
 			 * usec left before send rtp packet to the net
 			 * deadline<=0, means ASAP, the quickness decided by bandwidth
 			 */
-			session_rtp_to_send(session, usec_payload_schedule, eots);  
+			//session_rtp_to_send(session, usec_group_payload + usec_payload - usec_now, eots);  
 
 			/* timestamp update */
 			profile->usec_payload_timestamp += (int)usec_payload; 
 
-			usec_group_payload += (rtime_t)usec_payload;
-
-			usec_payload_deadline += (rtime_t)usec_payload;
+			usec_stream_payload += (rtime_t)usec_payload;
 
 			/* buffer ready to next payload */
 			buffer_clear(profile->payload_buf, BUFFER_QUICKCLEAR);
 			n_packet = 0;
 			payload_samples = 0;
 
-			first_group_payload = 0;
 			first_payload = 0;
+			first_group = 0;
+			first_group_payload = 0;
 		}
 
 		/* group process on time */
@@ -963,11 +1367,12 @@ int rtp_vorbis_loop(void *gen)
 	return MP_OK;
 }
 
-/* the media enter point of the rtp session 
+/*
+ * the media enter point of the rtp session 
  * NOTE: '*data' is NOT what 'mlen' indicated.
  */
-int rtp_vorbis_post(xrtp_media_t * media, media_data_t *frame, int len_useless, int last_useless){
-
+int rtp_vorbis_post(xrtp_media_t * media, media_data_t *frame, int data_bytes, uint32 timestamp)
+{
    rtp_frame_t *rtpf = (rtp_frame_t*)frame;
 
    vrtp_handler_t *profile = ((vrtp_media_t*)media)->vorbis_profile;
@@ -985,13 +1390,38 @@ int rtp_vorbis_post(xrtp_media_t * media, media_data_t *frame, int len_useless, 
 
    xthr_unlock(profile->packets_lock);
 
-   if(profile->idle) xthr_cond_signal(profile->pending);
+   if(profile->idle) 
+	   xthr_cond_signal(profile->pending);
 
    return MP_OK;
 }
 
-xrtp_media_t * rtp_vorbis(profile_handler_t *handler){
+int rtp_vorbis_play(void *player, void *media, int64 packetno, int ts_last, int eos)
+{
+	media_player_t *mp = (media_player_t*)player;
+	ogg_packet *pack = (ogg_packet*)media;
 
+	pack->packetno = packetno;
+
+	if(eos)
+		mp->receive_media(mp, pack, pack?pack->granulepos:-1, MP_EOS);
+	else
+		mp->receive_media(mp, pack, pack->granulepos, ts_last);
+
+	free(pack->packet);
+	free(pack);
+
+	return XRTP_OK;
+}
+
+int rtp_vorbis_sync(void *play, uint32 stamp, uint32 hi_ntp, uint32 lo_ntp)
+{
+    vrtp_log(("audio/vorbis.rtp_vorbis_sync: sync isn't implemented\n"));
+	return XRTP_OK;
+}
+
+xrtp_media_t * rtp_vorbis(profile_handler_t *handler)
+{
    xrtp_media_t * media = NULL;
    
    vrtp_handler_t * h = (vrtp_handler_t *)handler;
@@ -1001,13 +1431,13 @@ xrtp_media_t * rtp_vorbis(profile_handler_t *handler){
    if(h->vorbis_media) return (xrtp_media_t*)h->vorbis_media;
 
    h->vorbis_media = (vrtp_media_t *)malloc(sizeof(struct vrtp_media_s));
-   if(h->vorbis_media){
-
+   if(h->vorbis_media)
+   {
       memset(h->vorbis_media, 0, sizeof(struct vrtp_media_s));
 
 	  h->packets = xlist_new();
-	  if(!h->packets){
-
+	  if(!h->packets)
+	  {
 		vrtp_debug(("audio/vorbis.rtp_vorbis: no input buffer created\n"));
 
 		free(h->vorbis_media);
@@ -1016,8 +1446,8 @@ xrtp_media_t * rtp_vorbis(profile_handler_t *handler){
 	  }
 	   
 	  h->thread = xthr_new(rtp_vorbis_loop, h, XTHREAD_NONEFLAGS); 
-	  if(!h->thread){
-		
+	  if(!h->thread)
+	  {
 		  xlist_done(h->packets, NULL);
 		  free(h->vorbis_media);
 		  h->vorbis_media = NULL;
@@ -1037,11 +1467,18 @@ xrtp_media_t * rtp_vorbis(profile_handler_t *handler){
       media->done = rtp_vorbis_done;
       
       media->set_parameter = rtp_vorbis_set_parameter;
+      media->parameter = rtp_vorbis_parameter;
+
+	  media->set_callback = rtp_media_set_callback;
+
       media->set_rate = rtp_vorbis_set_rate;
       media->rate = rtp_vorbis_rate;
       
       media->sign = rtp_vorbis_sign;
       media->post = rtp_vorbis_post;
+	  media->play = rtp_vorbis_play;
+	  media->sync = rtp_vorbis_sync;
+
       vrtp_log(("audio/vorbis.rtp_vorbis: media handler created\n"));
    }
 

@@ -64,8 +64,8 @@ typedef struct ogm_stream_s ogm_stream_t;
 typedef struct ogm_format_s ogm_format_t;
 typedef struct ogm_media_s ogm_media_t;
 
-struct ogm_stream_s {
-
+struct ogm_stream_s
+{
    struct  media_stream_s  stream;
    
    int                     serial;   /* stream no */
@@ -95,12 +95,10 @@ struct ogm_stream_s {
    ogg_int64_t             max_granulepos;
 
    int                     subnr;
-
-   //ogm_media_t             *handler;
 };
 
-struct ogm_format_s {
-
+struct ogm_format_s
+{
    struct  media_format_s  format;
 
    ogg_sync_state       sync;
@@ -111,22 +109,19 @@ struct ogm_format_s {
    ogg_packet           packet;
    int                  packet_ready;
 
-   //xrtp_media_t         *strm_rtps[MAX_STREAMS];  /* the rtp handlers for every enabled stream */
    uint64               last_pts;
-
 };
 
-struct ogm_media_s {
-
+struct ogm_media_s
+{
    int (*done) (ogm_media_t * ogmm);
 
    /* Detect a media type from ogg packet */
    int (*detect_media) (ogg_packet *packet);
 
-   int (*open_media) (ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *sstate, int sno, stream_header *sth);
+   int (*open_media) (ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ctrl, ogg_stream_state *sstate, int sno, stream_header *sth);
 
    int (*process_media) (ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int hdrlen, int64 lenbytes, int64 samplestamp, int last_packet, int stream_end);
-
 };
 
 /* New detected stream add to group */

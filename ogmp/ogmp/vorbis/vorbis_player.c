@@ -32,38 +32,37 @@
 #define vorbis_player_log(fmtargs)  do{if(vorbis_pa_log) printf fmtargs;}while(0)
 
 #ifdef VORBIS_PLAYER_DEBUG
-   const int vorbis_pa_debug = 1;
+ #define vorbis_player_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int vorbis_pa_debug = 0;
+ #define vorbis_player_debug(fmtargs)
 #endif
-#define vorbis_player_debug(fmtargs)  do{if(vorbis_pa_debug) printf fmtargs;}while(0)
 
-typedef struct vorbis_packet_s {
-   
+typedef struct vorbis_packet_s
+{
 	int vorbis_flag;
 	ogg_packet *packet;
 	ogg_int64_t samplestamp;
 
 } vorbis_packet_t;
    
-struct global_const_s {
-
+struct global_const_s
+{
    const char media_type[6];
    const char mime_type[13];
    const char play_type[6];
 
 } global_const = {"audio", "audio/vorbis", "local"};
 
-int vorbis_set_callback (media_player_t * mp, int type, int(*call)(void*), void * user) {
-
+int vorbis_set_callback (media_player_t * mp, int type, int(*call)(void*,...), void * user)
+{
    vorbis_decoder_t *playa = (vorbis_decoder_t *)mp;
 
-   switch(type){
+   switch(type)
+   {
+      case (CALLBACK_PLAYER_READY):
 
-      case (CALLBACK_PLAY_MEDIA):
-
-         playa->play_media = call;
-         playa->play_media_user = user;
+         playa->callback_on_ready = call;
+         playa->callback_on_ready = user;
          vorbis_player_log(("vorbis_set_callback: 'media_sent' callback added\n"));
          break;
 
@@ -220,8 +219,8 @@ int vorbis_stop (media_player_t *mp) {
    return MP_OK;
 }
 
-int vorbis_receive_next (media_player_t *mp, void *vorbis_packet, int64 samplestamp, int last_packet) {
-
+int vorbis_receive_next (media_player_t *mp, void *vorbis_packet, int64 samplestamp, int last_packet)
+{
    media_pipe_t * output = NULL;
    media_frame_t * auf = NULL;
    
@@ -230,17 +229,22 @@ int vorbis_receive_next (media_player_t *mp, void *vorbis_packet, int64 samplest
    
 
    //move decode process into vorbis_loop thread...
-   
-   if (!mp->device) {
-
+   if (!mp->device)
+   {
       vorbis_player_debug(("vorbis_receive_next: No device to play vorbis audio\n"));
       return MP_FAIL;
    }
 
    output = mp->device->pipe(mp->device);
-   /*
-   vorbis_player_log(("vorbis_receive_next: packet %d bytes\n", ((ogg_packet*)vorbis_packet)->bytes));
-   */
+
+   /**
+    * packetno from 0,1,2 is head, then increase by 1 to last packet
+	* granulepos[-1] in same page, granulepos[page granulepos] at last page packet.
+	*
+   vorbis_player_log(("vorbis_receive_next: packetno[%llu]\n", ((ogg_packet*)vorbis_packet)->packetno));
+   vorbis_player_log(("vorbis_receive_next: granule[%lld]\n", ((ogg_packet*)vorbis_packet)->granulepos));
+    */
+
    /* decode and submit */
    auf = vorbis_decode (vp->vorbis_info, (ogg_packet*)vorbis_packet, output);
    if(!auf){
@@ -359,11 +363,11 @@ int vorbis_set_device (media_player_t * mp, media_control_t *cont, module_catalo
    
    vorbis_player_log(("vorbis_set_device: need audio device\n"));
 
-   dev = cont->find_device(cont, "audio");
+   dev = cont->find_device(cont, "audio_out");
    
    if(!dev) return MP_FAIL;
 
-   setting = cont->fetch_setting(cont, "audio", dev);
+   setting = cont->fetch_setting(cont, "audio_out", dev);
    if(!setting){
      
       vorbis_player_log(("vorbis_set_device: use default setting for audio device\n"));

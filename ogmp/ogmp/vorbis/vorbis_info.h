@@ -34,15 +34,17 @@
 *********************************************************************/
 
 /* mode ************************************************************/
-typedef struct {
+typedef struct
+{
   int blockflag;
   int windowtype;
   int transformtype;
   int mapping;
+
 } vorbis_info_mode;
 
-typedef struct some_codec_setup_info {
-
+typedef struct some_codec_setup_info
+{
   /* Vorbis supports only short and long blocks, but allows the
      encoder to choose the sizes */
 

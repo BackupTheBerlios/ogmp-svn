@@ -71,8 +71,8 @@ static int ilog2(unsigned int v){
 }
 
 /* Open a new 'Ogg/Vorbis' stream in the ogm file */
-int ogm_open_vorbis(ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *sstate, int sno, stream_header *sth){
-
+int ogm_open_vorbis(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ctrl, ogg_stream_state *sstate, int sno, stream_header *sth)
+{
    int ret;
 
    vorbis_info_t * vinfo = NULL;
@@ -85,13 +85,13 @@ int ogm_open_vorbis(ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *
    
    ogm_vorbis_log(("ogm_open_vorbis: open vorbis with stream #%d as time reference\n", sno));
    
-   if( !ogm_strm ){
-   
+   if( !ogm_strm )
+   {
       ogm_vorbis_log(("ogm_open_vorbis: no stream #%d, new allocation\n", sno));
 
       ogm_strm = malloc(sizeof(ogm_stream_t));
-      if (ogm_strm == NULL) {
-
+      if (ogm_strm == NULL)
+	  {
          ogm_vorbis_log(("ogm_open_vorbis: stream malloc failed.\n"));
          return MP_EMEM;
       }
@@ -100,12 +100,12 @@ int ogm_open_vorbis(ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *
       
       stream = (media_stream_t *)ogm_strm;
 
-      strncpy(stream->mime, "audio/vorbis", 12);
+      strncpy(stream->mime, "audio/vorbis", strlen("audio/vorbis"));
       ((ogm_stream_t*)stream)->stype = 'a';
       
       vinfo = malloc(sizeof(struct vorbis_info_s));
-      if (!vinfo) {
-
+      if (!vinfo)
+	  {
          ogm_vorbis_log(("ogm_open_vorbis: mediainfo malloc failed.\n"));
 
          free(ogm_strm);
@@ -116,9 +116,9 @@ int ogm_open_vorbis(ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *
       memset(vinfo, 0, sizeof(struct vorbis_info_s));
       
       stream->media_info = (media_info_t*)vinfo;
-
-   }else{
-
+   }
+   else
+   {
       stream = (media_stream_t *)ogm_strm;
       vinfo = (vorbis_info_t*)stream->media_info;      
    }
@@ -126,15 +126,15 @@ int ogm_open_vorbis(ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *
    vorbis_info_init(&vinfo->vi);
    vorbis_comment_init(&vinfo->vc);
 
-   if(vinfo->head_packets < 3){
-
+   if(vinfo->head_packets < 3 && stream->playable != -1)
+   {
       ret = vorbis_synthesis_headerin(&vinfo->vi, &vinfo->vc, &ogm->packet);
-      if ( ret >= 0) {
-
+      if ( ret >= 0)
+	  {
          vinfo->head_packets++;
          
-         if (vinfo->head_packets == 1) {
-
+         if (vinfo->head_packets == 1)
+		 {
             mf->add_stream(mf, stream, sno, 'a');
 
             stream->sample_rate = vinfo->vi.rate;
@@ -156,8 +156,8 @@ int ogm_open_vorbis(ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *
 			
 			/* Cache the header identification */
             vinfo->header_identification = malloc(ogm->packet.bytes);
-            if (!vinfo->header_identification) {
-
+            if (!vinfo->header_identification)
+			{
                ogm_vorbis_log(("ogm_open_vorbis: no memory to cache header setup\n"));
                return MP_EMEM;
             }
@@ -176,6 +176,14 @@ int ogm_open_vorbis(ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *
             ogm_vorbis_log(("ogm_open_vorbis: window bitrate: %ld\n", vinfo->vi.bitrate_window));
             ogm_vorbis_log(("ogm_open_vorbis: short blocksize: %ld\n", vinfo->some_csi->blocksizes[0]));
             ogm_vorbis_log(("ogm_open_vorbis: long blocksize: %ld\n", vinfo->some_csi->blocksizes[1]));
+
+            /* time to open the stream with a player */            
+			stream->player = ctrl->find_player(ctrl, ogm->format.default_mode, stream->mime, stream->fourcc);
+			if(!stream->player)
+			{
+				ogm_vorbis_debug(("ogm_process_vorbis: stream can't be played\n"));
+				stream->playable = -1;
+			}
 		 }
 
          if (vinfo->head_packets == 2) {
@@ -216,15 +224,6 @@ int ogm_open_vorbis(ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *
             }
             memcpy(vinfo->header_setup, ogm->packet.packet, ogm->packet.bytes);
             vinfo->header_setup_len = ogm->packet.bytes;
-
-            /* time to open the stream with a player */
-            if(!stream->player)
-               stream->player = mf->control->find_player(mf->control, stream->mime, stream->fourcc);
-
-            ogm_vorbis_log(("ogm_open_vorbis: 1\n"));
-
-            if(!stream->player)
-               stream->playable = -1;
 
             ret = stream->player->open_stream(stream->player, (media_info_t*)vinfo);
             if( ret < MP_OK) {
@@ -338,20 +337,10 @@ int ogm_process_vorbis(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *pag
          memcpy(vinfo->header_setup, ogm->packet.packet, ogm->packet.bytes);
          vinfo->header_setup_len = ogm->packet.bytes;
          
-         /* time to open the stream with a player */         
-         if(!stream->player)
-            stream->player = mf->control->find_player(mf->control, stream->mime, stream->fourcc);
-
-         if(!stream->player) {
-           
-            ogm_vorbis_debug(("ogm_process_vorbis: stream can't be played\n"));
-            stream->playable = -1;
-         }
-
          ret = stream->player->open_stream(stream->player, (media_info_t*)vinfo);
          
-         if( ret < MP_OK) {
-         
+         if( ret < MP_OK)
+		 {
             stream->playable = -1;
             return ret;
          }         
@@ -412,8 +401,8 @@ module_interface_t * ogm_new_media() {
  * Loadin Infomation Block
  */
 extern DECLSPEC 
-module_loadin_t mediaformat = {
-
+module_loadin_t mediaformat =
+{
    "ogm",   /* Label */
 
    000001,         /* Plugin version */

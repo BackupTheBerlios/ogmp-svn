@@ -23,26 +23,22 @@
 */
 
 #ifdef VORBIS_CODEC_LOG
-   const int vorbis_codec_log = 1;
+ #define vorbis_player_log(fmtargs)  do{printf fmtargs;}while(0)
 #else                     
-   const int vorbis_codec_log = 0;
+ #define vorbis_player_log(fmtargs)
 #endif
-
-#define vorbis_player_log(fmtargs)  do{if(vorbis_codec_log) printf fmtargs;}while(0)
 
 #ifdef VORBIS_CODEC_DEBUG
-   const int vorbis_codec_debug = 1;
+ #define vorbis_player_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else                
-   const int vorbis_codec_debug = 0;
+ #define vorbis_player_debug(fmtargs)
 #endif
-#define vorbis_player_debug(fmtargs)  do{if(vorbis_codec_debug) printf fmtargs;}while(0)
-
 
 #ifndef _V_CLIP_MATH
 #define _V_CLIP_MATH
 
-static ogg_int32_t CLIP_TO_15(ogg_int32_t x) {
-  
+static ogg_int32_t CLIP_TO_15(ogg_int32_t x)
+{
       int ret=x;
       ret-= ((x<=32767)-1)&(x-32767);
       ret-= ((x>=-32768)-1)&(x+32768);
@@ -55,8 +51,8 @@ static ogg_int32_t CLIP_TO_15(ogg_int32_t x) {
 #define VORBIS_SIMULATING
 */
 
-media_frame_t * vorbis_decode (vorbis_info_t *vorbis, ogg_packet * packet, media_pipe_t * output) {
-
+media_frame_t * vorbis_decode (vorbis_info_t *vorbis, ogg_packet * packet, media_pipe_t * output)
+{
    int channels = 0;
    media_frame_t *auf = NULL;
    int i, j;
@@ -89,23 +85,23 @@ media_frame_t * vorbis_decode (vorbis_info_t *vorbis, ogg_packet * packet, media
       vorbis_player_debug(("vorbis_decode: a bad vorbis packet!\n"));
 
       return NULL;
-
-   }else{
-
+   }
+   else
+   {
       /* the packet contains vorbis data */
 
       samples = vorbis_synthesis_pcmout(&vorbis->vd, &pcm);
 
-      if ( samples <= 0 ) {
-      
+      if ( samples <= 0 )
+	  {
          vorbis_player_debug(("vorbis_decode: no audio samples retrieved!\n"));
 
          return NULL;
       }
    }
 
-   if(!output){
-
+   if(!output)
+   {
       vorbis_synthesis_read(&vorbis->vd, samples);
 
       vorbis_player_debug(("vorbis_decode: no output, discard\n"));
@@ -118,13 +114,14 @@ media_frame_t * vorbis_decode (vorbis_info_t *vorbis, ogg_packet * packet, media
 #ifdef OGG_TREMOR_CODEC
 
    int i, j;
-   for ( i=0; i<channels; i++ ) { /* It's faster in this order */
-
+   for ( i=0; i<channels; i++ )
+   {
+	  /* It's faster in this order */
       ogg_int32_t *src = (ogg_int32_t *)pcm[i];
       short *dest = ((short *)buf) + i;
 
-      for( j=0; j<samples; j++ ) {
-
+      for( j=0; j<samples; j++ )
+	  {
          *dest = CLIP_TO_15(src[j]>>9);
          dest += channels;
       }

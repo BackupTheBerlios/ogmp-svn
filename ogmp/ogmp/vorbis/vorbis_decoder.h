@@ -45,8 +45,8 @@ struct vorbis_decoder_s{
    int dad_min_ms;
    int dad_max_ms;
 
-   int (*play_media) (void * user);
-   void * play_media_user;
+   int (*callback_on_ready) (void *user, ...);
+   void *callback_on_ready_user;
 
    int (*stop_media) (void * user);
    void * stop_media_user;

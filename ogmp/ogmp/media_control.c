@@ -26,22 +26,20 @@
 #define MEDIA_CONTROL_DEBUG
 
 #ifdef MEDIA_CONTROL_LOG
-   const int media_ctrl_log = 1;
+ #define cont_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int media_ctrl_log = 0;
+ #define cont_log(fmtargs)
 #endif             
 
-#define cont_log(fmtargs)  do{if(media_ctrl_log) printf fmtargs;}while(0)
 
 #ifdef MEDIA_CONTROL_DEBUG
-   const int media_ctrl_debug = 1;
+ #define cont_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int media_ctrl_debug = 0;
+ #define cont_debug(fmtargs)
 #endif
-#define cont_debug(fmtargs)  do{if(media_ctrl_debug) printf fmtargs;}while(0)
 
-typedef struct control_setting_item_s {
-
+typedef struct control_setting_item_s
+{
    char *name;
 
    control_setting_call_t *call;
@@ -49,14 +47,12 @@ typedef struct control_setting_item_s {
   
 } control_setting_item_t;
 
-typedef struct control_impl_s {
-
+typedef struct control_impl_s
+{
    struct media_control_s control;
    
    media_format_t * format;
    
-   char *type;
-
    char *name;
    
    int namelen;
@@ -75,8 +71,8 @@ typedef struct control_impl_s {
    
 } control_impl_t;
 
-int cont_done_setting (void* gen) {
-
+int cont_done_setting (void* gen)
+{
    control_setting_t *setting = (control_setting_t*)gen;
 
    setting->done(setting);
@@ -84,8 +80,8 @@ int cont_done_setting (void* gen) {
    return MP_OK;
 }
 
-int cont_done_device(void * gen) {
-
+int cont_done_device(void * gen)
+{
    media_device_t *dev = (media_device_t *)gen;
 
    dev->done(dev);
@@ -93,8 +89,8 @@ int cont_done_device(void * gen) {
    return MP_OK;
 }
 
-int cont_done (media_control_t * cont) {
-
+int cont_done (media_control_t * cont)
+{
    control_impl_t *impl = (control_impl_t *)cont;
    
    time_end(impl->clock);
@@ -106,15 +102,15 @@ int cont_done (media_control_t * cont) {
    return MP_OK;
 }
 
-int cont_set_format (media_control_t * cont, char *name, media_format_t * format) {
-
+int cont_set_format (media_control_t * cont, char *name, media_format_t * format)
+{
    control_impl_t *impl = (control_impl_t *)cont;
 
    int len = strlen(name)+1;
    
    impl->name = malloc (len);
-   if (!impl->name) {
-
+   if (!impl->name)
+   {
       cont_debug(("cont_set_format: no enough memory\n"));
 
       return MP_EMEM;
@@ -130,8 +126,8 @@ int cont_set_format (media_control_t * cont, char *name, media_format_t * format
    return MP_OK;
 }
 
-int cont_done_player(void * gen) {
-
+int cont_done_player(void * gen)
+{
    media_player_t *player = (media_player_t *)gen;
 
    player->done(player);
@@ -139,8 +135,8 @@ int cont_done_player(void * gen) {
    return MP_OK;
 }
 
-int cont_add_device (media_control_t *cont, char *name, control_setting_call_t *call, void*user) {
-
+int cont_add_device (media_control_t *cont, char *name, control_setting_call_t *call, void*user)
+{
    control_impl_t *impl = (control_impl_t*)cont;
    
    control_setting_item_t *item;
@@ -149,26 +145,26 @@ int cont_add_device (media_control_t *cont, char *name, control_setting_call_t *
    xlist_user_t $lu;
    xlist_t *devs = xlist_new();
 
-   if(!impl->catalog){
-   
+   if(!impl->catalog)
+   {
 	   cont_debug(("cont_add_device: device->config need to be call first\n"));
 	   return MP_INVALID;
    }
 
-   if (catalog_create_modules(impl->catalog, "device", devs) <= 0) {
+   if (catalog_create_modules(impl->catalog, "device", devs) <= 0)
+   {
+	   cont_log(("cont_add_device: no device module found\n"));
 
-      cont_log(("cont_add_device: no device module found\n"));
+	   xrtp_list_free(devs, NULL);
 
-      xrtp_list_free(devs, NULL);
-
-      return MP_FAIL;
+	   return MP_FAIL;
    }
 
    dev = xlist_first(devs, &$lu);
-   while (dev) {
-
-      if (dev->match_type(dev, name)) {
-
+   while (dev)
+   {
+      if (dev->match_type(dev, name))
+	  {
          cont_log(("cont_add_device: found '%s' device\n", name));
 
          xlist_remove_item(devs, dev);
@@ -180,8 +176,8 @@ int cont_add_device (media_control_t *cont, char *name, control_setting_call_t *
    }
 
    xlist_done(devs, cont_done_device);
-   if(!dev){
-   
+   if(!dev)
+   {
 	   cont_log(("cont_add_device: No '%s' device found.\n", name));
 	   return MP_FAIL;
    }
@@ -207,8 +203,8 @@ int cont_add_device (media_control_t *cont, char *name, control_setting_call_t *
    return MP_OK;
 }
 
-int cont_match_device(void* t, void *p){
-
+int cont_match_device(void* t, void *p)
+{
    media_device_t *dev = (media_device_t*)t;
    char *name = (char*)p;
 
@@ -220,8 +216,8 @@ int cont_match_device(void* t, void *p){
    return -1;
 }
 
-media_device_t* cont_find_device(media_control_t *cont, char *name) {
-
+media_device_t* cont_find_device(media_control_t *cont, char *name)
+{
    xlist_user_t lu;
    xlist_t *devs;
 
@@ -233,8 +229,8 @@ media_device_t* cont_find_device(media_control_t *cont, char *name) {
 
    devs = xlist_new();
 
-   if (catalog_create_modules(impl->catalog, "device", devs) <= 0) {
-
+   if (catalog_create_modules(impl->catalog, "device", devs) <= 0)
+   {
       cont_log(("cont_find_device: no device module found\n"));
 
       xlist_done(devs, cont_done_device);
@@ -243,10 +239,10 @@ media_device_t* cont_find_device(media_control_t *cont, char *name) {
    }
 
    dev = xlist_first(devs, &lu);
-   while (dev) {
-	   
-      if (dev->match_type(dev, name)) {
-
+   while (dev)
+   {
+      if (dev->match_type(dev, name))
+	  {
          cont_log(("cont_find_device: found '%s' device\n", name));
 
          xlist_remove_item(devs, dev);
@@ -264,16 +260,16 @@ media_device_t* cont_find_device(media_control_t *cont, char *name) {
    return dev;
 }
 
-int cont_match_call(void* t, void *p){
-
+int cont_match_call(void* t, void *p)
+{
    control_setting_item_t *item = (control_setting_item_t*)t;
    char *name = (char*)p;
 
    return strcmp(name, item->name);
 }
 
-control_setting_t* cont_fetch_setting(media_control_t *cont, char *name, media_device_t *dev) {
-
+control_setting_t* cont_fetch_setting(media_control_t *cont, char *name, media_device_t *dev)
+{
    xlist_user_t lu;
 
    control_setting_t *setting = NULL;
@@ -282,8 +278,8 @@ control_setting_t* cont_fetch_setting(media_control_t *cont, char *name, media_d
 
    control_impl_t *impl = (control_impl_t*)cont;
 
-   if(!dev->new_setting){
-
+   if(!dev->new_setting)
+   {
       cont_log(("cont_fetch_setting: No need to set device\n"));
       
       return NULL;
@@ -291,8 +287,8 @@ control_setting_t* cont_fetch_setting(media_control_t *cont, char *name, media_d
    
    item = xlist_find(impl->setting_calls, name, cont_match_call, &lu);
    
-   if(item) {
-   
+   if(item)
+   {
       setting = dev->new_setting(dev);
       
       if(!setting) return NULL;
@@ -307,8 +303,8 @@ control_setting_t* cont_fetch_setting(media_control_t *cont, char *name, media_d
    return NULL;
 }
 
-media_player_t * cont_find_player (media_control_t *cont, char *mime, char *fourcc) {
-
+media_player_t * cont_find_player (media_control_t *cont, char *mode, char *mime, char *fourcc)
+{
    media_player_t * player = NULL;
    
    xrtp_list_user_t $lu;   
@@ -318,22 +314,22 @@ media_player_t * cont_find_player (media_control_t *cont, char *mime, char *four
    
    control_impl_t *impl = (control_impl_t *)cont;
    
-   cont_log(("cont_find_player: need '%s' module \n", impl->type));
+   cont_log(("cont_find_player: need '%s' module \n", mode));
 
-   num = catalog_create_modules(impl->catalog, impl->type, players);
-   if (num <= 0) {
-
-      cont_log(("cont_find_player: no '%s' module \n", impl->type));
+   num = catalog_create_modules(impl->catalog, mode, players);
+   if (num <= 0)
+   {
+      cont_log(("cont_find_player: no '%s' module \n", mode));
 
       xrtp_list_free(players, NULL);
       return NULL;
    }
 
    player = xrtp_list_first(players, &$lu);
-   while (player) {
-
-      if(player->match_type(player, mime, fourcc)){
-      
+   while (player)
+   {
+      if(player->match_type(player, mime, fourcc))
+	  {
          cont_log(("cont_find_player: found player(mime:%s, fourcc:%s)\n", mime, fourcc));
 
          xrtp_list_remove_item(players, player);
@@ -352,17 +348,17 @@ media_player_t * cont_find_player (media_control_t *cont, char *mime, char *four
    return player; 
 }
 
-int cont_seek_millisec (media_control_t * cont, int msec) {
-
+int cont_seek_millisec (media_control_t * cont, int msec)
+{
    control_impl_t *impl = (control_impl_t *)cont;
 
    impl->started = 0;
    
    return impl->format->seek_millisecond(impl->format, msec);
 }            
-
-int cont_demux_next (media_control_t * cont, int strm_end) {
-
+/*
+int cont_demux_next (media_control_t * cont, int strm_end)
+{
    rtime_t period_us = 0, real_period = 0, sleep_us = 0;
    rtime_t demux_start, demux_us;
 
@@ -377,7 +373,7 @@ int cont_demux_next (media_control_t * cont, int strm_end) {
 
    period_us = impl->format->demux_next(impl->format, strm_end);
 
-   if(period_us <= 0) return period_us; /* errno < 0 */
+   if(period_us <= 0) return period_us; // errno < 0 
    
    cont_log(("cont_demux_next: %dus period, real period %dus\n", period_us, real_period));
    
@@ -391,25 +387,53 @@ int cont_demux_next (media_control_t * cont, int strm_end) {
 
    return MP_OK;
 }
+*/
 
-int cont_config (media_control_t *cont, char *type, config_t *conf, module_catalog_t *cata) {
+int cont_demux_next (media_control_t * cont, int strm_end)
+{
+   rtime_t period_us = 0;
+   rtime_t demux_start, demux_us;
 
    control_impl_t *impl = (control_impl_t *)cont;
 
-   impl->type = xstr_clone(type);
+   demux_start = time_usec_now(impl->clock);
+
+   period_us = impl->format->demux_next(impl->format, strm_end);
+
+   if(period_us <= 0) return period_us; // errno < 0 
+   
+   cont_log(("cont_demux_next: %dus period\n", period_us));
+   
+   demux_us = time_usec_spent(impl->clock, demux_start);
+   
+   time_usec_sleep(impl->clock, period_us - demux_us, NULL);
+   
+   impl->started = 1;
+
+   return MP_OK;
+}
+
+int cont_config (media_control_t *cont, config_t *conf, module_catalog_t *cata)
+{
+   control_impl_t *impl = (control_impl_t *)cont;
 
    impl->catalog = cata;
    
    return MP_OK;
 }
 
-module_interface_t* new_media_control () {
+module_catalog_t* cont_modules(media_control_t *cont)
+{
+	return ((control_impl_t*)cont)->catalog;
+}
 
+module_interface_t* new_media_control ()
+{
    media_control_t * cont;
 
    control_impl_t *impl = malloc (sizeof(struct control_impl_s));
-   if(!impl) {
-
+   if(!impl)
+   {
       cont_debug (("media_new_control: No memory to allocate\n"));
       return NULL;
    }
@@ -454,6 +478,7 @@ module_interface_t* new_media_control () {
    cont->demux_next = cont_demux_next;
 
    cont->config = cont_config;
+   cont->modules = cont_modules;
 
    return cont;
 }

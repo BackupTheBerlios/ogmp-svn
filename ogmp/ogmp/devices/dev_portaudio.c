@@ -369,9 +369,11 @@ int pa_setting (media_device_t * dev, control_setting_t *setting, module_catalog
 
 int pa_match_type(media_device_t *dev, char *type) {
 
-   pa_log(("portaudio.pa_match_type: I am audio device\n"));
+   pa_log(("portaudio.pa_match_type: I am audio in/out device\n"));
 
-   if( !strcmp("audio", type) ) return 1;
+   if( !strcmp("audio_out", type) ) return 1;
+   if( !strcmp("audio_in", type) ) return 1;
+   if( !strcmp("audio_io", type) ) return 1;
    
    return 0;
 }
@@ -435,8 +437,8 @@ module_interface_t* media_new_device () {
 /**
  * Loadin Infomation Block
  */
-extern DECLSPEC module_loadin_t mediaformat = {
-
+extern DECLSPEC module_loadin_t mediaformat = 
+{
    "device",   /* Label */
 
    000001,         /* Plugin version */
