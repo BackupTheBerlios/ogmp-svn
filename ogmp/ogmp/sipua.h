@@ -21,6 +21,7 @@
 #define UA_OK		0
 #define UA_FAIL		-1
 #define UA_REJECT	-2
+#define UA_IGNORE	-3
 
 #define MAX_CN_BYTES 256 /* max value in rtcp */
 #define MAX_IP_LEN   64  /* may enough for ipv6 ? */
@@ -30,50 +31,44 @@
  * recvr contact sender by interact with proxy
  */
 typedef struct sipua_s sipua_t;
-typedef struct sipua_record_s sipua_record_t;
+typedef struct sipua_action_s sipua_action_t;
 
-struct sipua_record_s
+struct sipua_action_s
 {
-    char cname[MAX_CN_BYTES];
-	int cnlen;
-	char sip_ip[MAX_IP_LEN];
-	uint16 sip_port;
+	int (*done)(sipua_action_t *rec);
 
-	int (*done)(sipua_record_t *rec);
-	int (*enable)(sipua_record_t *rec, capable_descript_t *cap);
-	int (*disable)(sipua_record_t *rec, capable_descript_t *cap);
-	int (*support)(sipua_record_t *rec, capable_descript_t *cap);
-
-	void *oncall_user;
+	void *sip_user;
 	int (*oncall)(void *user, char *cname, int cnlen, capable_descript_t* oppo_caps[], int oppo_ncap, capable_descript_t* **my_caps);
-
-	void *onconnect_user;
 	int (*onconnect)(void *user, char *cname, int cnlen, capable_descript_t* oppo_caps[], int oppo_ncap, capable_descript_t* **my_caps);
-
-	void *onreset_user;
 	int (*onreset)(void *user, char *cname, int cnlen, capable_descript_t* oppo_caps[], int oppo_ncap, capable_descript_t* **my_caps);
-
-	void *onbye_user;
 	int (*onbye)(void *user, char *cname, int cnlen);
 };
-sipua_record_t *sipua_new_record(void *cb_oncall_user, int(*cb_oncall)(void*,char*,int,capable_descript_t**,int,capable_descript_t***), 
-								 void *cb_onconnect_user, int(*cb_onconnect)(void*,char*,int,capable_descript_t**,int,capable_descript_t***), 
-								 void *cb_onreset_user, int(*cb_onreset)(void*,char*,int,capable_descript_t**,int,capable_descript_t***),
-								 void *cb_onbye_user, int(*cb_onbye)(void*,char*,int));
+
+sipua_action_t *sipua_new_action(void *sip_user, int(*cb_oncall)(void*,char*,int,capable_descript_t**,int,capable_descript_t***), 
+												 int(*cb_onconnect)(void*,char*,int,capable_descript_t**,int,capable_descript_t***), 
+												 int(*cb_onreset)(void*,char*,int,capable_descript_t**,int,capable_descript_t***),
+												 int(*cb_onbye)(void*,char*,int));
 
 struct sipua_s
 {
-	char proxy_ip[64];
-	uint16 proxy_port;
-
 	int (*done)(sipua_t *ua);
 
-	int (*regist)(sipua_t *ua, char *cn, int cnlen, sipua_record_t *rec);
-	int (*unregist)(sipua_t *ua, char *cn, int cnlen);
+	int (*regist)(sipua_t *sipua, char *registrar, char *id, int idbytes, int seconds, sipua_action_t *act);
+	int (*unregist)(sipua_t *sipua, char *registrar, char *id, int idbytes);
 
-	int (*connect)(sipua_t *ua, char *from_cn, int from_cnlen, char *to_cn, int to_cnlen);
+	int (*connect)(sipua_t *ua,
+					char *from, int from_bytes,
+					char *to, int to_bytes, 
+					char *subject, int subject_bytes,
+					char *route, int route_bytes);
+	
+	int (*disconnect)(sipua_t *ua,
+					char *from, int from_bytes,
+					char *to, int to_bytes, 
+					char *subject, int subject_bytes);
+	
 	int (*reconnect)(sipua_t *ua, char *from_cn, int from_cnlen, char *to_cn, int to_cnlen);
-	int (*disconnect)(sipua_t *ua, char *from_cn, int from_cnlen, char *to_cn, int to_cnlen);
 };
-sipua_t *sipua_new(char *proxy_ip, uint16 proxy_port, void *config);
+
+sipua_t *sipua_new(uint16 proxy_port, char *firewall, void *config);
 

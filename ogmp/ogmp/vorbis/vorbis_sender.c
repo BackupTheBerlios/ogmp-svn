@@ -22,6 +22,7 @@
 #include <stdlib.h>
 
 #include "../devices/dev_rtp.h"
+#include "../rtp_cap.h"
 
 #include "vorbis_info.h"
 
@@ -394,32 +395,17 @@ int vsend_set_options (media_player_t * mp, char *opt, void *value)
 
 capable_descript_t* vsend_capable(media_player_t * mp)
 {
-	rtpcap_descript_t *rtpcap;
 	vorbis_sender_t *vs = (vorbis_sender_t *)mp;
 
-	rtpcap = (rtpcap_descript_t*)rtp_capable_descript();
-	if(rtpcap)
-	{
-		rtpcap->profile_mime = xstr_clone(global_const.mime_type);
-		rtpcap->profile_no = vs->profile_no;
-		rtpcap->ipaddr = xstr_clone(vs->ipaddr);
-		rtpcap->rtp_portno = vs->rtp_port;
-		rtpcap->rtcp_portno = vs->rtcp_port;
-	}
+	vsend_log(("vsend_capable: #%d %s:%d/%d '%s' %dHz\n", vs->profile_no, vs->ipaddr, vs->rtp_port, vs->rtcp_port, global_const.mime_type, 8000));
 
-	return (capable_descript_t*)rtpcap;
+	/* vs->vorbis_info->vi.channels is not available yet */
+	return (capable_descript_t*)rtp_capable_descript(vs->profile_no, vs->ipaddr, vs->rtp_port, vs->rtcp_port, global_const.mime_type, 8000, 0/*vs->vorbis_info->vi.channels*/);
 }
 
 int vsend_match_capable(media_player_t * mp, capable_descript_t *cap)
 {
-   rtpcap_descript_t *rtpcap;
-
-   if(!cap->match_type(cap, "rtp"))
-      return 0;
-
-   rtpcap = (rtpcap_descript_t*)cap;
-
-	return !strncmp(global_const.mime_type, rtpcap->profile_mime, strlen(global_const.mime_type));
+	return cap->match_value(cap, "mime", global_const.mime_type);
 }
 
 /**************************************************************/
@@ -523,6 +509,8 @@ int vsend_set_device (media_player_t *mp, media_control_t *cont, module_catalog_
    mp->device = dev;
 
    setting->done(setting);
+
+   vsend_log(("vsend_set_device: netcast device ok\n"));
 
    return MP_OK;
 }

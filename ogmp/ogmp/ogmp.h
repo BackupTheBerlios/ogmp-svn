@@ -42,6 +42,7 @@
 
 #define FNAME "Dido_LifeForRent.ogg"
 
+#if 0
 typedef struct rtpcap_descript_s rtpcap_descript_t; 
 struct rtpcap_descript_s
 {
@@ -55,6 +56,7 @@ struct rtpcap_descript_s
 	uint16 rtcp_portno;
 };
 rtpcap_descript_t* rtp_capable_descript();
+#endif
 
 typedef struct media_transmit_s media_transmit_t;
 struct media_transmit_s

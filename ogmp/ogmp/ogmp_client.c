@@ -105,7 +105,7 @@ int client_setup(ogmp_client_t *client, char *src_cn, int src_cnlen, capable_des
 /****************************************************************************************
  * SIP Callbacks
  */
-int callback_client_oncall(void *user, char *from_cn, int from_cnlen, capable_descript_t *from_caps[], int from_ncap, capable_descript_t* **selected_caps)
+int client_action_oncall(void *user, char *from_cn, int from_cnlen, capable_descript_t *from_caps[], int from_ncap, capable_descript_t* **selected_caps)
 {
 	ogmp_client_t *client = (ogmp_client_t*)user;
 
@@ -134,7 +134,7 @@ int callback_client_oncall(void *user, char *from_cn, int from_cnlen, capable_de
 	return 0;
 }
 
-int callback_client_onconnect(void *user, char *from_cn, int from_cnlen, capable_descript_t* from_caps[], int from_ncap, capable_descript_t* **selected_caps)
+int client_action_onconnect(void *user, char *from_cn, int from_cnlen, capable_descript_t* from_caps[], int from_ncap, capable_descript_t* **selected_caps)
 {
 	ogmp_client_t *client = (ogmp_client_t*)user;
 
@@ -157,14 +157,14 @@ int callback_client_onconnect(void *user, char *from_cn, int from_cnlen, capable
 }
 
 /* change call status */
-int callback_client_onreset(void *user, char *from_cn, int from_cnlen, capable_descript_t *caps[], int ncap, capable_descript_t* **selected_caps)
+int client_action_onreset(void *user, char *from_cn, int from_cnlen, capable_descript_t *caps[], int ncap, capable_descript_t* **selected_caps)
 {
 	clie_log(("callback_client_onreset: reset from cn[%s]\n", from_cn));
 
 	return ncap;
 }
 
-int callback_client_onbye(void *user, char *from_cn, int cnlen)
+int client_action_onbye(void *user, char *from_cn, int cnlen)
 {
 	clie_log(("callback_client_onbye: bye from cn[%s]\n", from_cn));
 
@@ -187,9 +187,10 @@ int client_done(ogmp_client_t *client)
 
 ogmp_client_t* client_new(sipua_t *sipua)
 {
-	sipua_record_t *rec;
+	sipua_action_t *act=NULL;
+	ogmp_client_t *client=NULL;
 
-	ogmp_client_t *client = malloc(sizeof(ogmp_client_t));
+	client = malloc(sizeof(ogmp_client_t));
 	memset(client, 0, sizeof(ogmp_client_t));
 
 	client->course_lock = xthr_new_lock();
@@ -197,15 +198,14 @@ ogmp_client_t* client_new(sipua_t *sipua)
 
 	client->sipua = sipua;
 
-	rec = sipua_new_record( client, callback_client_oncall,
-							client, callback_client_onconnect, 
-							client, callback_client_onreset,
-							client, callback_client_onbye
-						  );
+	act = sipua_new_action( client, client_action_oncall,
+									client_action_onconnect, 
+									client_action_onreset,
+									client_action_onbye);
 
-	sipua->regist(sipua, RECV_CNAME, strlen(RECV_CNAME), rec);
+	sipua->regist(sipua, NULL, RECV_CNAME, strlen(RECV_CNAME)+1, 3600, act);
 
-	clie_log(("client_new: client sipua ready\n"));
+	clie_log(("client_new: client sipua online\n"));
 	return client;
 }
 
@@ -213,7 +213,11 @@ int client_communicate(ogmp_client_t *clie, char *to_cn, int to_cnlen)
 {
 	xthr_lock(clie->course_lock);
 
-	clie->sipua->connect(clie->sipua, RECV_CNAME, strlen(RECV_CNAME), to_cn, to_cnlen);
+	clie->sipua->connect(clie->sipua, 
+						RECV_CNAME, strlen(RECV_CNAME), 
+						to_cn, to_cnlen, 
+						"ogmp_client_test", strlen("ogmp_client_test"),
+						NULL, 0);
 
 	xthr_cond_wait(clie->wait_course_finish, clie->course_lock);
 	xthr_unlock(clie->course_lock);

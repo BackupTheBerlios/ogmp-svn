@@ -294,13 +294,13 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 	int i, total_bw, rtp_bw;
 
 	module_catalog_t *cata = ctrl->modules(ctrl);
-
+/*
 	if(!cap->match_type(cap, "rtp"))
 	{
 		rtp_log(("rtp_open_stream: Not RTP capable\n"));
 		return NULL;
 	}
-
+*/
 	strm = malloc(sizeof(rtp_stream_t));
 	if(!strm)
 	{
@@ -375,13 +375,17 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 		return NULL;
 	}
 
-	strm->rtp_cap = rtp_capable_descript();
+	strm->rtp_cap = rtp_capable_descript(profile_no, rset->ipaddr, 
+										rtp_portno, rtcp_portno, 
+										rtpcap->profile_mime, rtpcap->clockrate, 
+										rtpcap->coding_param);
+/*
 	strm->rtp_cap->ipaddr = xstr_clone(rset->ipaddr);
 	strm->rtp_cap->profile_mime = xstr_clone(rtpcap->profile_mime);
 	strm->rtp_cap->profile_no = profile_no;
 	strm->rtp_cap->rtp_portno = rtp_portno;
 	strm->rtp_cap->rtcp_portno = rtcp_portno;
-
+*/
 	strm->rtp_format = rtp_format;
 	rtp_log(("rtp_open_stream: FIXME - stream mime string overflow possible!!\n"));
 	strcpy(strm->stream.mime, rtpcap->profile_mime);

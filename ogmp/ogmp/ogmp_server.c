@@ -16,6 +16,7 @@
  ***************************************************************************/
 
 #include "ogmp.h"
+#include "rtp_cap.h"
 
 #include <timedia/xstring.h>
 
@@ -208,8 +209,11 @@ int server_setup(ogmp_server_t *server, char *mode)
 
    server->control->set_format (server->control, "av", format);
 
-   /* collect the caps of the file on "rtp" netcast device */
+
+   /* collect the caps of the players of the file */
    server->nplayer = format->players(format, "rtp", server->players, MAX_NCAP);
+   serv_log (("ogmplyer: '%s' opened by %d players\n", server->fname, server->nplayer));
+
    for(i=0; i<server->nplayer; i++)
    {
 	   server->caps[i] = server->players[i]->capable(server->players[i]);
@@ -229,13 +233,13 @@ int server_setup(ogmp_server_t *server, char *mode)
  * SIP Callbacks
  */
 
-int callback_server_oncall(void *user, char *from_cn, int from_cnlen, capable_descript_t* from_caps[], int from_ncap, capable_descript_t* **selected_caps)
+int server_action_oncall(void *user, char *from_cn, int from_cnlen, capable_descript_t* from_caps[], int from_ncap, capable_descript_t* **selected_caps)
 {
 	int i,j,c = 0;
 
 	ogmp_server_t *server = (ogmp_server_t*)user;
 
-	serv_log(("\ncallback_server_oncall: from cn[%s]\n\n", from_cn));
+	serv_log(("\nserver_action_oncall: from cn[%s]\n\n", from_cn));
 
 	/* parameter setting stage should be here, eg: rtsp conversation */
 
@@ -265,16 +269,16 @@ int callback_server_oncall(void *user, char *from_cn, int from_cnlen, capable_de
 		*selected_caps = server->selected_caps;
 	}
 
-	serv_log(("\ncallback_server_oncall: cn[%s] support %d capables\n\n", SEND_CNAME, c));
+	serv_log(("\nserver_action_oncall: cn[%s] support %d capables\n\n", SEND_CNAME, c));
 
 	return c;
 }
 
-int callback_server_onconnect(void *user, char *from_cn, int from_cnlen, capable_descript_t* from_caps[], int from_ncap, capable_descript_t* **estab_caps)
+int server_action_onconnect(void *user, char *from_cn, int from_cnlen, capable_descript_t* from_caps[], int from_ncap, capable_descript_t* **estab_caps)
 {
 	ogmp_server_t *server = (ogmp_server_t*)user;
 
-	serv_log(("\ncallback_server_onconnect: with cn[%s] requires %d capables\n\n", from_cn, from_ncap));
+	serv_log(("\nserver_action_onconnect: with cn[%s] requires %d capables\n\n", from_cn, from_ncap));
 
 	if(from_ncap>0)
 	{
@@ -286,12 +290,16 @@ int callback_server_onconnect(void *user, char *from_cn, int from_cnlen, capable
 		for(i=0; i<server->nplayer; i++)
 		{
 			mt = (media_transmit_t*)server->players[i];
-			for(j=0; j<from_ncap; j++)
 
+			for(j=0; j<from_ncap; j++)
 			{
 				if(mt->player.match_capable((media_player_t*)mt, from_caps[j]))
 				{
-					rtpcap_descript_t *rtpcap = (rtpcap_descript_t *)from_caps[j];
+					rtpcap_descript_t *rtpcap;
+
+					serv_log(("\nserver_action_onconnect: capability match!\n"));
+
+					rtpcap = (rtpcap_descript_t *)from_caps[j];
 					mt->add_destinate(mt, from_cn, from_cnlen, rtpcap->ipaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno);
 				}
 			}
@@ -306,11 +314,11 @@ int callback_server_onconnect(void *user, char *from_cn, int from_cnlen, capable
 }
 
 /* change call status */
-int callback_server_onreset(void *user, char *from_cn, int from_cnlen, capable_descript_t* caps[], int ncap, capable_descript_t* **estab_caps)
+int server_action_onreset(void *user, char *from_cn, int from_cnlen, capable_descript_t* caps[], int ncap, capable_descript_t* **estab_caps)
 {
 	ogmp_server_t *server = (ogmp_server_t*)user;
 
-	serv_log(("cb_server_recall: recall from cn[%s]\n", from_cn));
+	serv_log(("server_action_onreset: recall from cn[%s]\n", from_cn));
 
 	if(ncap == 0)
 	{
@@ -320,7 +328,7 @@ int callback_server_onreset(void *user, char *from_cn, int from_cnlen, capable_d
 	return ncap;
 }
 
-int callback_server_onbye(void *user, char *cname, int cnlen)
+int server_action_onbye(void *user, char *cname, int cnlen)
 {
 	int i, ndest;
 	media_transmit_t *mt;
@@ -355,7 +363,7 @@ int server_done(ogmp_server_t *server)
 
 ogmp_server_t* server_new(sipua_t *sipua, char *fname)
 {
-	sipua_record_t *rec;
+	sipua_action_t *act;
 
 	ogmp_server_t *server = malloc(sizeof(ogmp_server_t));
 	memset(server, 0, sizeof(ogmp_server_t));
@@ -364,15 +372,14 @@ ogmp_server_t* server_new(sipua_t *sipua, char *fname)
 
 	server->sipua = sipua;
 
-	rec = sipua_new_record( server, callback_server_oncall, 
-							server, callback_server_onconnect, 
-							server, callback_server_onreset,
-							server, callback_server_onbye
-						  );
+	act = sipua_new_action (server, server_action_oncall, 
+									server_action_onconnect, 
+									server_action_onreset,
+									server_action_onbye);
 
-	sipua->regist(sipua, SEND_CNAME, strlen(SEND_CNAME), rec);
+	sipua->regist(sipua, NULL, SEND_CNAME, strlen(SEND_CNAME)+1, 14400, act);
 
-	serv_log(("server_new: server sipua ready\n"));
+	serv_log(("server_new: server sipua online\n"));
 	return server;
 }
 

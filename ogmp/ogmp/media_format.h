@@ -94,7 +94,7 @@ struct capable_descript_s
 {
 	int (*done)(capable_descript_t *cap);
 	int (*match)(capable_descript_t *cap1, capable_descript_t *cap2);
-	int (*match_type)(capable_descript_t *cap, char *type);
+	int (*match_value)(capable_descript_t *cap, char *type, char *value);
 };
 
 struct media_format_s

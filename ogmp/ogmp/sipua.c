@@ -30,138 +30,149 @@
 
 #define MAX_REC 16
 #define MAX_REC_CAP 8
+#define MAX_CN_BYTES 256 /* max value in rtcp */
 
-typedef struct record_impl_s record_impl_t;
-struct record_impl_s
+typedef struct action_impl_s action_impl_t;
+struct action_impl_s
 {
-	struct sipua_record_s record;
+	struct sipua_action_s action;
 
 	int ncap;
 	capable_descript_t* caps[MAX_REC_CAP];
 };
 
 typedef struct sipua_impl_s sipua_impl_t;
+typedef struct sipua_actionrec_s
+{
+	char cname[MAX_CN_BYTES];
+	int cnlen;
+
+	sipua_action_t *action;
+
+}sipua_actionrec_t;
+
 struct sipua_impl_s
 {
 	struct sipua_s sipua;
 
 	/* participants registered */
-	int nrec;
-	sipua_record_t* records[MAX_REC];
+	int nact;
+	int lastrec;
+
+	sipua_actionrec_t actions[MAX_REC];
 };
 
-int sipua_done_record(sipua_record_t *record)
+int sipua_done_action(sipua_action_t *action)
 {
-	record_impl_t *rec = (record_impl_t*)record;
+	action_impl_t *act = (action_impl_t*)action;
 	int i;
 
-	for(i=0; i<rec->ncap; i++)
+	for(i=0; i<act->ncap; i++)
 	{
-		rec->caps[i]->done(rec->caps[i]);
+		act->caps[i]->done(act->caps[i]);
 	}
 
-	free(rec);
+	free(act);
 
 	return UA_OK;
 }
 
-int sipua_record_enable(sipua_record_t *record, capable_descript_t *cap)
+#if 0
+int sipua_action_enable(sipua_action_t *action, capable_descript_t *cap)
 {
-	record_impl_t *rec = (record_impl_t*)record;
+	action_impl_t *act = (action_impl_t*)action;
 	int i;
 
-	if(rec->ncap == MAX_REC_CAP)
+	if(act->ncap == MAX_REC_CAP)
 		return UA_FAIL;
 
-	for(i=0; i<rec->ncap; i++)
+	for(i=0; i<act->ncap; i++)
 	{
-		if(rec->caps[i]->match(rec->caps[i], cap))
+		if(act->caps[i]->match(act->caps[i], cap))
 			return UA_OK;
 	}
 
-	rec->caps[rec->ncap++] = cap;
+	act->caps[act->ncap++] = cap;
 
 	return UA_OK;
 }
 
-int sipua_record_disable(sipua_record_t *record, capable_descript_t *cap)
+int sipua_action_disable(sipua_action_t *action, capable_descript_t *cap)
 {
-	record_impl_t *rec = (record_impl_t*)record;
+	action_impl_t *act = (action_impl_t*)action;
 
 	int i;
-	for(i=0; i<rec->ncap; i++)
+	for(i=0; i<act->ncap; i++)
 	{
-		if(rec->caps[i]->match(rec->caps[i], cap))
+		if(act->caps[i]->match(act->caps[i], cap))
 		{
 			if(i == MAX_REC_CAP-1)
-				rec->caps[i] = NULL;
+				act->caps[i] = NULL;
 			else
-				rec->caps[i] = rec->caps[i+1];
+				act->caps[i] = act->caps[i+1];
 
-			rec->ncap--;
+			act->ncap--;
 		}
 
-		if(rec->caps[i] == NULL)
+		if(act->caps[i] == NULL)
 			break;
 	}
 
 	return UA_OK;
 }
 
-int sipua_record_support(sipua_record_t *record, capable_descript_t *cap)
+int sipua_action_support(sipua_action_t *action, capable_descript_t *cap)
 {
-	record_impl_t *rec = (record_impl_t*)record;
+	action_impl_t *act = (action_impl_t*)action;
 	int i;
-	for(i=0; i<rec->ncap; i++)
+	for(i=0; i<act->ncap; i++)
 	{
-		if(rec->caps[i] == cap || rec->caps[i]->match(rec->caps[i], cap))
+		if(act->caps[i] == cap || act->caps[i]->match(act->caps[i], cap))
 			return 1;
 	}
 
 	return 0;
 }
+#endif
 
-sipua_record_t *sipua_new_record(void *cb_oncall_user, int(*cb_oncall)(void*,char*,int,capable_descript_t**,int,capable_descript_t***), 
-								 void *cb_onconnect_user, int(*cb_onconnect)(void*,char*,int,capable_descript_t**,int,capable_descript_t***), 
-								 void *cb_onreset_user, int(*cb_onreset)(void*,char*,int,capable_descript_t**,int,capable_descript_t***),
-								 void *cb_onbye_user, int(*cb_onbye)(void*,char*,int))
+sipua_action_t *sipua_new_action(void *sip_user, int(*cb_oncall)(void*,char*,int,capable_descript_t**,int,capable_descript_t***), 
+												 int(*cb_onconnect)(void*,char*,int,capable_descript_t**,int,capable_descript_t***), 
+												 int(*cb_onreset)(void*,char*,int,capable_descript_t**,int,capable_descript_t***),
+												 int(*cb_onbye)(void*,char*,int))
 {
-	sipua_record_t *rec;
-	rec = malloc(sizeof(struct record_impl_s));
-	if(!rec)
+	sipua_action_t *act;
+	act = malloc(sizeof(struct action_impl_s));
+	if(!act)
 	{
-		ua_log(("record_new: No memory\n"));
+		ua_log(("action_new: No memory\n"));
 		return NULL;
 	}
-	memset(rec, 0, sizeof(struct record_impl_s));
+	memset(act, 0, sizeof(struct action_impl_s));
 
-	rec->done = sipua_done_record;
-	rec->enable = sipua_record_enable;
-	rec->disable = sipua_record_disable;
-	rec->support = sipua_record_support;
+	act->done = sipua_done_action;
+//	act->enable = sipua_action_enable;
+//	act->disable = sipua_action_disable;
+//	act->support = sipua_action_support;
 
-	rec->oncall_user = cb_oncall_user;
-	rec->oncall = cb_oncall;
+	act->sip_user = sip_user;
+	act->oncall = cb_oncall;
 
-	rec->onconnect_user = cb_onconnect_user;
-	rec->onconnect = cb_onconnect;
+	act->onconnect = cb_onconnect;
 
-	rec->onreset_user = cb_onreset_user;
-	rec->onreset = cb_onreset;
+	act->onreset = cb_onreset;
 
-	rec->onbye_user = cb_onbye_user;
-	rec->onbye = cb_onbye;
+	act->onbye = cb_onbye;
 
-	return rec;
+	return act;
 }
 
 int sipua_done(sipua_t *sipua)
 {
 	sipua_impl_t *ua = (sipua_impl_t*)sipua;
 	int i;
-	for(i=0; i<ua->nrec; i++)
+	for(i=0; i<ua->nact; i++)
 	{
-		ua->records[i]->done(ua->records[i]);
+		ua->actions[i].action->done(ua->actions[i].action);
 	}
 
 	free(ua);
@@ -169,101 +180,150 @@ int sipua_done(sipua_t *sipua)
 	return UA_OK;
 }
 
-int sipua_regist(sipua_t *sipua, char *cname, int cnlen, sipua_record_t *rec)
+int sipua_regist(sipua_t *sipua, char *registrar, char *id, int idbytes, int seconds, sipua_action_t *act)
 {
 	sipua_impl_t *ua = (sipua_impl_t*)sipua;
+	sipua_action_t *actrec = NULL;
+
+	int nullrec = -1;
 	int i;
 
-	if(ua->nrec == MAX_REC)
+	if(ua->nact == MAX_REC)
 		return UA_FAIL;
 
-	for(i=0; i<ua->nrec; i++)
+	for(i=0; i<=ua->lastrec; i++)
 	{
-		if(strncmp(ua->records[i]->cname, cname, ua->records[i]->cnlen) == 0)
+		if(ua->actions[i].action == NULL)
 		{
-			strncpy(rec->cname,cname,cnlen);
-			rec->cnlen = cnlen;
+			if(nullrec == -1)
+				nullrec = i;
 
-			ua->records[i] = rec;
+			continue;
+		}
+		
+		if(0 == strncmp(ua->actions[i].cname, id, ua->actions[i].cnlen))
+		{
+			strncpy(ua->actions[i].cname,id,idbytes);
+			ua->actions[i].cnlen = idbytes;
+
+			ua->actions[i].action = act;
 			return UA_OK;
 		}
 	}
 
-	strncpy(rec->cname,cname,cnlen);
-	rec->cnlen = cnlen;
+	if(nullrec == -1)
+	{
+		nullrec = ua->lastrec+1;
+		ua->lastrec = nullrec;
+	}
 
-	ua->records[ua->nrec++] = rec;
+	strncpy(ua->actions[nullrec].cname, id, idbytes);
 
-	ua_log(("sipua_regist: cn[%s] registered, %d records now\n", cname, ua->nrec));
+	ua->actions[nullrec].cnlen = idbytes;
+
+	ua->actions[nullrec].action = act;
+
+	ua->nact++;
+
+	ua_log(("sipua_regist: rec #%d: cn[%s] registered\n", nullrec, ua->actions[nullrec].cname));
 
 	return UA_OK;
 }
 
-int sipua_unregist(sipua_t *sipua, char *cn, int cnlen)
+int sipua_unregist(sipua_t *sipua, char *registrar, char *cn, int cnlen)
 {
 	sipua_impl_t *ua = (sipua_impl_t*)sipua;
 
 	int i;
-	for(i=0; i<ua->nrec; i++)
+	for(i=0; i<=ua->lastrec; i++)
 	{
-		sipua_record_t *rec = ua->records[i];
+		if(!ua->actions[i].action)
+			continue;
 
-		if(strncmp(rec->cname, cn, cnlen) == 0)
+		if(0 == strncmp(ua->actions[i].cname, cn, cnlen))
 		{
-			if(i == MAX_REC-1)
-				ua->records[i] = NULL;
-			else
-				ua->records[i] = ua->records[i+1];
+			ua->actions[i].action = NULL;
+			ua->actions[i].cnlen = 0;
 
-			ua->nrec--;
-		}
-
-		if(ua->records[i] == NULL)
+			ua->nact--;
 			break;
+		}
+	}
+
+	if(i == ua->lastrec)
+	{
+		for(i = ua->lastrec; i>=0; i--)
+			if(ua->actions[i].action != NULL)
+				break;
+				
+		ua->lastrec = i;
 	}
 
 	return UA_OK;
 }
 
-int sipua_connect(sipua_t *sipua, char *from_cn, int from_cnlen, char *to_cn, int to_cnlen)
+int sipua_connect(sipua_t *sipua,
+					char *from_cn, int from_cnlen,
+					char *to_cn, int to_cnlen, 
+					char *subject, int subject_bytes,
+					char *route, int route_bytes)
 {
-	record_impl_t *from_rec = NULL, *to_rec = NULL;
+	action_impl_t *from_act = NULL, *to_act = NULL;
 	sipua_impl_t *ua = (sipua_impl_t*)sipua;
 
 	capable_descript_t **to_caps, **selected_caps, **estab_caps;
 	int to_ncap, selected_ncap, estab_ncap;
 
 	int i, from_ok=0, to_ok=0;
-	for(i=0; i<ua->nrec; i++)
-	{
-		if(strncmp(from_cn, ua->records[i]->cname, from_cnlen) == 0)
-		{
-			from_rec =  (record_impl_t*)ua->records[i];
-			from_ok = 1;
 
+	ua_log(("sipua_connect: Call from [%s] to [%s]\n", from_cn, to_cn));
+
+	for(i=0; i<=ua->lastrec; i++)
+	{
+		if(!ua->actions[i].action)
+			continue;
+		
+		ua_log(("sipua_connect: rec #%d: cn[%s]\n", i, ua->actions[i].cname));
+
+		if(strncmp(from_cn, ua->actions[i].cname, from_cnlen) == 0)
+		{
+			from_act =  (action_impl_t*)ua->actions[i].action;
+
+			from_ok = 1;
 			if(to_ok)
 				break;
 		}
 
-		if(strncmp(to_cn, ua->records[i]->cname, to_cnlen) == 0)
+		if(strncmp(to_cn, ua->actions[i].cname, to_cnlen) == 0)
 		{
-			to_rec =  (record_impl_t*)ua->records[i];
-			to_ok = 1;
+			to_act =  (action_impl_t*)ua->actions[i].action;
 
+			to_ok = 1;
 			if(from_ok)
 				break;
 		}
 	}
 
-	if(!to_rec || !from_rec)
+	if(!from_act)
+	{
+		ua_log(("sipua_connect: [%s] is not present\n", from_cn));
 		return UA_FAIL;
+	}
+
+	if(!to_act)
+	{
+		ua_log(("sipua_connect: [%s] is not present\n", to_cn));
+		return UA_FAIL;
+	}
 
 	/* Three way handshake */
-	to_ncap = to_rec->record.oncall(to_rec->record.oncall_user, from_cn, from_cnlen, from_rec->caps, from_rec->ncap, &to_caps);
+	to_ncap = to_act->action.oncall(to_act->action.sip_user, from_cn, from_cnlen, from_act->caps, from_act->ncap, &to_caps);
 	
-	selected_ncap = from_rec->record.onconnect(from_rec->record.onconnect_user, to_cn, to_cnlen, to_caps, to_ncap, &selected_caps);
-	estab_ncap = to_rec->record.onconnect(to_rec->record.onconnect_user, from_cn, from_cnlen, selected_caps, selected_ncap, &estab_caps);
+	selected_ncap = from_act->action.onconnect(from_act->action.sip_user, to_cn, to_cnlen, to_caps, to_ncap, &selected_caps);
+	
+	estab_ncap = to_act->action.onconnect(to_act->action.sip_user, from_cn, from_cnlen, selected_caps, selected_ncap, &estab_caps);
 
+	/* Established */
 	ua_log(("sipua_connect: sip session established ======================================\n"));
 
 	return UA_OK;
@@ -271,7 +331,7 @@ int sipua_connect(sipua_t *sipua, char *from_cn, int from_cnlen, char *to_cn, in
 
 int sipua_reconnect(sipua_t *sipua, char *from_cn, int from_cnlen, char *to_cn, int to_cnlen)
 {
-	record_impl_t *from_rec = NULL, *to_rec = NULL;
+	action_impl_t *from_act = NULL, *to_act = NULL;
 	sipua_impl_t *ua = (sipua_impl_t*)sipua;
 
 	int i, from_ok=0, to_ok=0;
@@ -279,20 +339,23 @@ int sipua_reconnect(sipua_t *sipua, char *from_cn, int from_cnlen, char *to_cn, 
 	capable_descript_t **selected_caps, **estab_caps;
 	int selected_ncap, estab_ncap;
 
-	for(i=0; i<ua->nrec; i++)
+	for(i=0; i<=ua->lastrec; i++)
 	{
-		if(strncmp(from_cn, ua->records[i]->cname, from_cnlen) == 0)
+		if(!ua->actions[i].action)
+			continue;
+		
+		if(strncmp(from_cn, ua->actions[i].cname, from_cnlen) == 0)
 		{
-			from_rec =  (record_impl_t*)ua->records[i];
+			from_act =  (action_impl_t*)ua->actions[i].action;
 			from_ok = 1;
 
 			if(to_ok)
 				break;
 		}
 
-		if(strncmp(to_cn, ua->records[i]->cname, to_cnlen) == 0)
+		if(strncmp(to_cn, ua->actions[i].cname, to_cnlen) == 0)
 		{
-			to_rec =  (record_impl_t*)ua->records[i];
+			to_act =  (action_impl_t*)ua->actions[i].action;
 			to_ok = 1;
 
 			if(from_ok)
@@ -300,13 +363,13 @@ int sipua_reconnect(sipua_t *sipua, char *from_cn, int from_cnlen, char *to_cn, 
 		}
 	}
 
-	if(!to_rec || !from_rec)
+	if(!to_act || !from_act)
 		return UA_FAIL;
 
 	/* Three way handshake */
-	selected_ncap = to_rec->record.onreset(to_rec->record.onreset_user, from_cn, from_cnlen, from_rec->caps, from_rec->ncap, &selected_caps);
+	selected_ncap = to_act->action.onreset(to_act->action.sip_user, from_cn, from_cnlen, from_act->caps, from_act->ncap, &selected_caps);
 
-	estab_ncap = from_rec->record.onreset(from_rec->record.onreset_user, to_cn, to_cnlen, selected_caps, selected_ncap, &estab_caps);
+	estab_ncap = from_act->action.onreset(from_act->action.sip_user, to_cn, to_cnlen, selected_caps, selected_ncap, &estab_caps);
 
 	ua_log(("sipua_reconnect: session modified ======================================\n"));
 
@@ -315,24 +378,27 @@ int sipua_reconnect(sipua_t *sipua, char *from_cn, int from_cnlen, char *to_cn, 
 
 int sipua_disconnect(sipua_t *sipua, char *from_cn, int from_cnlen, char *to_cn, int to_cnlen)
 {
-	record_impl_t *from_rec = NULL, *to_rec = NULL;
+	action_impl_t *from_act = NULL, *to_act = NULL;
 	sipua_impl_t *ua = (sipua_impl_t*)sipua;
 
 	int i, from_ok=0, to_ok=0;
-	for(i=0; i<ua->nrec; i++)
+	for(i=0; i<=ua->lastrec; i++)
 	{
-		if(strncmp(from_cn, ua->records[i]->cname, from_cnlen) == 0)
+		if(!ua->actions[i].action)
+			continue;
+		
+		if(strncmp(from_cn, ua->actions[i].cname, from_cnlen) == 0)
 		{
-			from_rec =  (record_impl_t*)ua->records[i];
+			from_act =  (action_impl_t*)ua->actions[i].action;
 			from_ok = 1;
 
 			if(to_ok)
 				break;
 		}
 
-		if(strncmp(to_cn, ua->records[i]->cname, to_cnlen) == 0)
+		if(strncmp(to_cn, ua->actions[i].cname, to_cnlen) == 0)
 		{
-			to_rec =  (record_impl_t*)ua->records[i];
+			to_act =  (action_impl_t*)ua->actions[i].action;
 			to_ok = 1;
 
 			if(from_ok)
@@ -340,18 +406,18 @@ int sipua_disconnect(sipua_t *sipua, char *from_cn, int from_cnlen, char *to_cn,
 		}
 	}
 
-	if(!to_rec || !from_rec)
+	if(!to_act || !from_act)
 		return UA_FAIL;
 
-	to_rec->record.onbye(to_rec->record.onbye_user, from_cn, from_cnlen);
-	from_rec->record.onbye(from_rec->record.onbye_user, to_cn, to_cnlen);
+	to_act->action.onbye(to_act->action.sip_user, from_cn, from_cnlen);
+	from_act->action.onbye(from_act->action.sip_user, to_cn, to_cnlen);
 
 	ua_log(("sipua_reconnect: session finished ======================================\n"));
 
 	return UA_OK;
 }
 
-sipua_t *sipua_new(char *proxy_ip, uint16 proxy_port, void *config)
+sipua_t *sipua_new(uint16 proxy_port, char *firewall, void *config)
 {
 	sipua_t *sipua = malloc(sizeof(struct sipua_impl_s));
 	if(!sipua)
@@ -362,14 +428,10 @@ sipua_t *sipua_new(char *proxy_ip, uint16 proxy_port, void *config)
 
 	memset(sipua, 0, sizeof(struct sipua_impl_s));
 
-	strcpy(sipua->proxy_ip, proxy_ip);
-	sipua->proxy_port = proxy_port;
-
 	sipua->regist = sipua_regist;
 	sipua->unregist = sipua_unregist;
 
 	sipua->connect = sipua_connect;
-	sipua->reconnect = sipua_reconnect;
 
 	sipua->done = sipua_done;
 

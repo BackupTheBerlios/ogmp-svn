@@ -41,7 +41,7 @@ int main(int argc, char** argv){
    ogmp_log (("\nmain: modules in dir:%s\n", MODDIR));
    
    /* Initialise */
-   sipua = sipua_new("127.0.0.1", 3500, NULL);
+   sipua = sipua_new(5060, NULL, NULL);
    server = server_new(sipua, playmode);
    
    if(!strcmp(playmode, "playback"))

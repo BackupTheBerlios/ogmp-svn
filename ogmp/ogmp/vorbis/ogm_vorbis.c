@@ -181,9 +181,11 @@ int ogm_open_vorbis(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *c
 			stream->player = ctrl->find_player(ctrl, ogm->format.default_mode, stream->mime, stream->fourcc);
 			if(!stream->player)
 			{
-				ogm_vorbis_debug(("ogm_process_vorbis: stream can't be played\n"));
+				ogm_vorbis_debug(("ogm_open_vorbis: stream can't be played\n"));
 				stream->playable = -1;
 			}
+      
+			ogm_vorbis_log(("ogm_open_vorbis: player ok\n", sno));
 		 }
 
          if (vinfo->head_packets == 2)
@@ -249,6 +251,8 @@ int ogm_open_vorbis(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *c
          return MP_FAIL;
       }
    }
+
+   ogm_vorbis_log(("ogm_open_vorbis: stream #%d opened as Vorbis\n", sno));
 
    return MP_OK;
 }

@@ -1124,12 +1124,14 @@ int rtp_vorbis_send_loop(void *gen)
 		if (xlist_size(profile->packets) == 0) 
 		{
 			profile->idle = 1;
-			/* vrtp_log(("rtp_vorbis_send_loop: no packet waiting, sleep!\n")); */
+			
+			vrtp_log(("rtp_vorbis_send_loop: no packet waiting, sleep!\n"));
 
 			xthr_cond_wait(profile->pending, profile->packets_lock);
 
 			profile->idle = 0;
-			/* vrtp_log(("rtp_vorbis_send_loop: wakeup! %d packets pending\n", xlist_size(profile->packets))); */
+			
+			vrtp_log(("rtp_vorbis_send_loop: wakeup! %d packets pending\n", xlist_size(profile->packets)));
 		}
 
 		/* sometime it's still empty, weired? */
@@ -1245,7 +1247,7 @@ int rtp_vorbis_send_loop(void *gen)
 		/* Test purpose */
 		//vrtp_log(("audio/vorbis.rtp_vorbis_send_loop: (%d), %dB, %d/%d/%d(p/g/s) samples\n", rtpf->grpno, rtpf->unit_bytes, rtpf->samples, group_samples, profile->timestamp_send));
 		/* Test end */
-		
+
 		/* send small packet bundled up to 32 */
 		if(rtpf->unit_bytes < MAX_BUNDLE_PACKET_BYTES)
 		{

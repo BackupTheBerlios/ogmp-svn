@@ -16,6 +16,8 @@
  ***************************************************************************/
 
 #include "ogmp.h"
+#include "rtp_cap.h"
+
 #include <timedia/xstring.h>
 
 #define TRAN_LOG
@@ -41,9 +43,14 @@ int rtp_descript_done(capable_descript_t *cap)
 	return MP_OK;
 }
 
-int rtp_descript_match_type(capable_descript_t *cap, char *type)
+int rtp_descript_match_value(capable_descript_t *cap, char *type, char *value)
 {
-	return !strncmp("rtp", type, 3);
+	rtpcap_descript_t *rtpcap = (rtpcap_descript_t*)cap;
+
+	if(0 != strncmp("mime", type, 4))
+		return 0;
+
+	return (0 != strcmp(rtpcap->profile_mime, value));
 }
 
 int rtp_descript_match(capable_descript_t *me, capable_descript_t *oth)
@@ -51,17 +58,12 @@ int rtp_descript_match(capable_descript_t *me, capable_descript_t *oth)
 	rtpcap_descript_t *rtpoth;
 	rtpcap_descript_t *rtpme = (rtpcap_descript_t*)me;
 
-	if(!oth->match_type(oth, "rtp"))
-		return 0;
-
 	rtpoth = (rtpcap_descript_t*)oth;
 
-   tran_log(("rtp_descript_match: rtp:%s\n", rtpoth->profile_mime));
-	
-	return !strncmp(rtpme->profile_mime, rtpoth->profile_mime, strlen(rtpme->profile_mime));
+	return oth->match_value(oth, "mime", rtpme->profile_mime);
 }
 
-rtpcap_descript_t* rtp_capable_descript()
+rtpcap_descript_t* rtp_capable_descript(int payload_no, char *ip, uint16 media_port, uint16 control_port, char *mime, int clockrate, int coding_param)
 {
 	rtpcap_descript_t *rtpcap;
 
@@ -75,7 +77,15 @@ rtpcap_descript_t* rtp_capable_descript()
 
 	rtpcap->descript.done = rtp_descript_done;
 	rtpcap->descript.match = rtp_descript_match;
-	rtpcap->descript.match_type = rtp_descript_match_type;
+	rtpcap->descript.match_value = rtp_descript_match_value;
+
+	rtpcap->profile_mime = xstr_clone(mime);
+	rtpcap->profile_no = payload_no;
+
+	rtpcap->ipaddr = xstr_clone(ip);
+
+	rtpcap->rtp_portno = media_port;
+	rtpcap->rtcp_portno = 0;
 
 	return rtpcap;
 }
