@@ -80,26 +80,33 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			sipua_reg_event_t *reg_e = (sipua_reg_event_t*)e;
 			user_profile_t* user_prof = client->reg_profile;
 
-			if(user_prof->reg_reason_phrase) 
-				xfree(user_prof->reg_reason_phrase);
-
-			if(user_prof->reg_status == SIPUA_STATUS_REG_DOING)
+			if(user_prof && user_prof->reg_status == SIPUA_STATUS_REG_DOING)
 			{
 				user_prof->reg_server = xstr_clone(reg_e->server);
+
+                if(user_prof->reg_reason_phrase)
+                    xfree(user_prof->reg_reason_phrase);
 				
 				user_prof->reg_reason_phrase = xstr_clone(reg_e->server_info);
 
 				client->user_prof = client->reg_profile;
 
 				user_prof->reg_status = SIPUA_STATUS_REG_OK;
+
+                client->reg_profile = NULL;
 			}
 
-			if(user_prof->reg_status == SIPUA_STATUS_UNREG_DOING)
+			if(user_prof && user_prof->reg_status == SIPUA_STATUS_UNREG_DOING)
+            {
 				user_prof->reg_status = SIPUA_STATUS_NORMAL;
 
-			/* registering transaction completed */
-			client->reg_profile = NULL;
+                if(user_prof->reg_reason_phrase)
+                    xfree(user_prof->reg_reason_phrase);
 
+                client->reg_profile = NULL;
+            }
+
+			/* registering transaction completed */
 			break;
 		}
 		case(SIPUA_EVENT_REGISTRATION_FAILURE):
@@ -110,7 +117,10 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			sipua_reg_event_t *reg_e = (sipua_reg_event_t*)e;
 			user_profile_t* user_prof = client->reg_profile;
 
-			snprintf(buf, 99, "Register %s Error[%i]: %s",
+            if(!user_prof)
+                break;
+                
+            snprintf(buf, 99, "Register %s Error[%i]: %s",
 					reg_e->server, reg_e->status_code, reg_e->server_info);
 
 			clie_log(("client_sipua_event: %s\n", buf));
@@ -119,6 +129,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			if(user_prof->reg_reason_phrase) 
 				xfree(user_prof->reg_reason_phrase);
+                
 			user_prof->reg_reason_phrase = xstr_clone(reg_e->server_info);
 
 			/* registering transaction completed */
@@ -248,6 +259,7 @@ int sipua_done_sip_session(void* gen)
 	sipua_set_t *set = (sipua_set_t*)gen;
 	
 	if(set->setid.nettype) xfree(set->setid.nettype);
+
 	if(set->setid.addrtype) xfree(set->setid.addrtype);
 	if(set->setid.netaddr) xfree(set->setid.netaddr);
 
@@ -348,6 +360,7 @@ sipua_set_t* client_find_call(sipua_t* sipua, char* id, char* username, char* ne
 
 	return ua->lines[i];
 }
+
 
 sipua_set_t* client_new_call(sipua_t* sipua, char* subject, int sbytes, char *desc, int dbytes)
 {
@@ -834,7 +847,7 @@ int main(int argc, char** argv)
     if(!uas)
         clie_log (("main: fail to create sipua server!\n"));
     
-	if(uas && uas->init(uas, 5060, "IN", "IP4", NULL, NULL) >= UA_OK)
+	if(uas && uas->init(uas, 5070, "IN", "IP4", NULL, NULL) >= UA_OK)
 	{
 		sipua = client_new("cursesui", uas, mod_cata, 64*1024);
 
