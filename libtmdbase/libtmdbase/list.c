@@ -67,7 +67,8 @@ int xlist_done(xlist_t *list, int(*free_item)(void *)){
       list->head = curr->next;
       list->num--;
 
-      free_item(curr->data);
+      if(free_item) free_item(curr->data);
+
       _xrtp_list_freenode(curr);
       
       curr = list->head;
@@ -219,21 +220,21 @@ int xlist_addto_last(xlist_t * list, void * data){
 
    if(!node) return OS_EMEM;
 
-   node->next = NULL;
    node->data = data;
   
-   if(list->end){
-    
-      list->end->next = node;
+   if(list->num == 0){
+
+	   list->head = list->end = node;
 
    }else{
-
-      list->head = node;
+	   
+	   list->end->next = node;
+	   list->end = node;
    }
   
-   list->end = node;
-  
    list->num++;
+
+   xlist_log(("xlist_addto_last: %d items\n", list->num));
 
 	return OS_OK;
 }
@@ -319,7 +320,7 @@ void * xlist_remove_first(xlist_t * list){
    list->head = node->next;
    list->num--;
 
-   if(!list->num)  xlist_log(("< xrtp_list_remove_first: list empty now >\n"));
+   if(list->num==0)  xlist_log(("xrtp_list_remove_first: list empty now\n"));
 
    data = node->data;
    _xrtp_list_freenode(node);

@@ -61,11 +61,17 @@
  typedef unsigned __int64  uint64;
  typedef __int64           int64;
  typedef long              off_t;
- typedef unsigned int   uint;
+ typedef unsigned int		uint;
+
+ #define s64(x) x ## i64
+ #define u64(x) x ## ui64
 #else
  #include <sys/types.h>
  typedef unsigned long long  uint64;
  typedef long long int64;
+
+ #define s64(x) x ## ll
+ #define u64(x) x ## ull
 #endif
 
 #ifdef __MINGW32__
