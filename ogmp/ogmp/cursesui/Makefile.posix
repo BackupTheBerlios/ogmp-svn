@@ -6,7 +6,7 @@ PREFIX = /home/hling/timedia-project
 
 CC = gcc
 
-LIBS = -L$(PREFIX)/lib -lcurses
+LIBS = -L$(PREFIX)/lib -lcurses -ltmdbase -logmp
 
 INCLUDES = -I$(PREFIX)/include -I.. -I../include
 

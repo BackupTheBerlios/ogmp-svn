@@ -7,8 +7,9 @@ PREFIX = /home/hling/timedia-project
 CC = gcc
 
 INCLUDES = -I$(PREFIX)/include -I.. -I../include
+LIBS = -L$(PREFIX)/lib -ltmdbase -lrtime -lxrtp -losip2
 
-INSTDIR = $(PREFIX)/lib/$(PROGNAME)
+INSTDIR = $(PREFIX)/lib
 
 SRCFILES = media_control.c ogmp_source.c ogmp_ui.c ogmp_config.c \
 				sipua.c rtp_cap.c phonebook.c ogmp_client.c
@@ -28,7 +29,7 @@ all:	 libs install
 	-$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $*.o
 
 libs: $(SRCFILES:.c=.o)
-	gcc -shared $(OBJFILES) -o $(LIBFILES)
+	gcc -shared $(OBJFILES) $(LIBS) -o $(LIBFILES)
 
 install: $(LIBFILES)
 	-@cp -f $(LIBFILES) $(INSTDIR)

@@ -10,8 +10,7 @@ interface nsIScriptableWMPPlugin : nsISupports
 [scriptable, uuid(f728830f-1dd1-4444-6666-fb9f414f2465)]
 interface nsIScriptableOgmpPlugin : nsISupports
 {
-	void func_one(in long value);
-	void func_two(in string str);
+	void get_ip();
 
     /* SIP UA interface */
 	void load_user(in string uid, in long uidsz);
@@ -48,6 +47,7 @@ interface nsIScriptableOgmpPlugin : nsISupports
 	readonly attribute long playState;
 	*/
 	readonly attribute string version;
+	readonly attribute string netaddr;
 
 	readonly attribute nsIScriptableWMPPlugin controls;
 };

@@ -3,17 +3,12 @@
 <TITLE>Simple Plug-in Test</TITLE>
 <script type="text/javascript">
 
-  function func_one(sipua)
+  function get_ip(sipua)
   {
-	 document.formname.status.value="func_one pushed";
+	 document.sipua.get_ip();
   }
 
-  function func_two(sipua)
-  {
-	 document.sipua.func_two("this is an input");
-  }
-
-  function func_two_return(result)
+  function get_ip_return(result)
   {
 	 document.formname.status.value=result;
 	 alert(result);
@@ -91,8 +86,7 @@ document.sipua.bye(lineno);
 
 <form name="formname">
 <input type="text" name="status" value="idle">
-<input type="button" value="func_one" onclick='func_one(sipua)'>
-<input type="button" value="func_two" onclick='func_two(sipua)'>
+<input type="button" value="get ip" onclick='get_ip(sipua)'>
 </form>
 
 </center>

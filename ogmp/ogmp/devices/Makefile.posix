@@ -10,13 +10,12 @@ INCLUDES = -I$(PREFIX)/include -I.. -I../include
 
 INSTDIR = $(PREFIX)/lib/$(PROGNAME)
 
-AULIBS = -shared -L$(PREFIX)/lib -lrtime -lportaudio \
-		 	-L$(PREFIX)/lib/$(PROGNAME) -logmp
+AULIBS = -shared -L$(PREFIX)/lib -lrtime -lportaudio -logmp
 
 AUFILES = timed_pipe.c dev_portaudio.c
 AUOBJ = timed_pipe.o dev_portaudio.o
 
-RTPLIBS = -shared -L$(PREFIX)/lib -lrtime -lxrtp
+RTPLIBS = -shared -L$(PREFIX)/lib -lrtime -lxrtp -logmp
 RTPFILES = dev_rtp.c
 RTPOBJ = dev_rtp.o
 

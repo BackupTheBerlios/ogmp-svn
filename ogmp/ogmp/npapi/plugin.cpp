@@ -35,6 +35,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "plugin.h"
+
 #include "nsIServiceManager.h"
 #include "nsIMemory.h"
 #include "nsISupportsUtils.h"	// this is where some useful macros defined
@@ -237,17 +238,42 @@ void nsPluginInstance::getVersion(char* *aVersion)
 	NS_IF_RELEASE(nsMemoryService);
 }
 
-void nsPluginInstance::func_one(PRInt32 value)
+void nsPluginInstance::getNetaddr(char* *addr)
 {
-	/* display on status bar */
-	NPN_Status(mInstance, "func_one invoked");
+    char *nettype, *addrtype, *netaddr;
+    
+	this->sipua->uas->address(this->sipua->uas, &nettype, &addrtype, &netaddr);
+
+	// although we can use NPAPI NPN_MemAlloc call to allocate memory:
+	//    version = (char*)NPN_MemAlloc(strlen(ua) + 1);
+	// for illustration purposed we use the service manager to access
+	// the memory service provided by Mozilla
+	nsIMemory * nsMemoryService = NULL;
+
+	if (gServiceManager)
+    {
+		// get service using its contract id and use it to allocate the memory
+		gServiceManager->GetServiceByContractID("@mozilla.org/xpcom/memory-service;1",
+												NS_GET_IID(nsIMemory), (void **)&nsMemoryService);
+		if(nsMemoryService)
+			*addr = (char *)nsMemoryService->Alloc(strlen(netaddr) + 1);
+	}
+
+	if(*addr)
+		strcpy(*addr, netaddr);
+
+	// release service
+	NS_IF_RELEASE(nsMemoryService);
 }
 
-void nsPluginInstance::func_two(const char *str)
+void nsPluginInstance::get_ip()
 {
 	/* return to javascript */
-    char javascript[128];
-    sprintf(javascript, "javascript:func_two_return('sip got: %s');", str);
+    char javascript[512], *nettype, *addrtype, *netaddr;
+    
+	this->sipua->uas->address(this->sipua->uas, &nettype, &addrtype, &netaddr);
+
+    sprintf(javascript, "javascript:get_ip_return('%s');", netaddr);
     
 	NPN_GetURL(mInstance, javascript, NULL);
 }
@@ -265,7 +291,7 @@ NPError nsPluginInstance::sipua_init()
 
     mod_cata = catalog_new( "mediaformat" );
 
-    catalog_scan_modules ( this->mod_cata, OGMP_VERSION, MOD_DIR );
+    catalog_scan_modules( this->mod_cata, OGMP_VERSION, MOD_DIR );
 
     this->uas = client_new_uas(this->mod_cata, "eXosipua");
     if(!this->uas)
@@ -290,8 +316,6 @@ NPError nsPluginInstance::sipua_init()
 
 	client_start(this->sipua);
 
-	/* locate user when plugin initialized */
-	this->sipua->locate_user(this->sipua, this->user);
     return NPERR_NO_ERROR;
 }
 
@@ -302,11 +326,16 @@ void nsPluginInstance::load_user(const char *uid, PRInt32 uidsz)
     if(!this->user)
         this->user = user_new((char*)uid, uidsz);
 
-    if(this->user)
-        sprintf(javascript_callback, "javascript:load_user_return(0);");
-    else
+    if(!this->user)
+    {
         sprintf(javascript_callback, "javascript:load_user_return(-1);");
+        NPN_GetURL(mInstance, javascript_callback, NULL);
+    }
 
+    /* locate user when plugin initialized */
+    this->sipua->locate_user(this->sipua, this->user);
+    
+    sprintf(javascript_callback, "javascript:load_user_return(0);");
     NPN_GetURL(mInstance, javascript_callback, NULL);
 }
 

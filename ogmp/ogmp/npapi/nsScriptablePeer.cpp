@@ -141,18 +141,20 @@ NS_IMETHODIMP nsScriptablePeer::GetVersion(char* *aVersion)
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsScriptablePeer::Func_one(PRInt32 value)
+NS_IMETHODIMP nsScriptablePeer::GetNetaddr(char* *addr)
 {
-    printf("JS Func_one issued\n");
-    mPlugin->func_one(value);
+	printf("JS netaddress issued\n");
 
-    return NS_OK;
+	if (mPlugin)
+		mPlugin->getNetaddr(addr);
+
+	return NS_OK;
 }
 
-NS_IMETHODIMP nsScriptablePeer::Func_two(const char *str)
+NS_IMETHODIMP nsScriptablePeer::Get_ip()
 {
-    printf("JS Func_two issued\n");
-    mPlugin->func_two(str);
+    printf("To retrieve current ip address\n");
+    mPlugin->get_ip();
 
     return NS_OK;
 }

@@ -43,11 +43,6 @@ extern ogmp_ui_t* global_ui;
 #define SIPUA_MAX_RING 6
 #define MAX_CALL_BANDWIDTH  5000  /* in Bytes */
 
-#ifdef OGMP_CPLUSPLUS
-extern "C"
-{
-#endif
-
 /****************************************************************************************/
 int client_call_ringing(void* gen)
 {
@@ -1142,7 +1137,3 @@ sipua_uas_t* client_new_uas(module_catalog_t* mod_cata, char* type)
 
     return uas;
 }
-
-#ifdef OGMP_CPLUSPLUS
-}
-#endif

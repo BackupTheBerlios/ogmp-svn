@@ -82,17 +82,16 @@ struct ogmp_ui_s
 
 	ogmp_command_t*(*wait_command)(ogmp_ui_t *ui);
 };
-/*
-extern DECLSPEC
-ogmp_ui_t* 
-ogmp_new_ui(sipua_t* sipua);
-*/
+
 struct ogmp_command_s
 {
-	int type;
-	void* instruction;
+    int type;
+    void* instruction;
 };
 
+/**
+ * OGMP Client
+ */
 struct ogmp_client_s
 {
 	sipua_t sipua;
@@ -110,9 +109,6 @@ struct ogmp_client_s
 	char *background_source_subject;
 	char *background_source_info;
 
-	/*
-	sipua_set_t* call;
-	*/
 	config_t * conf;
 
 	char *sdp_body;
@@ -182,38 +178,40 @@ struct netcast_parameter_s
 	user_profile_t *user_profile;
 };
 
-/*
-extern DECLSPEC
-ogmp_ui_t* global_ui;
-*/
 extern DECLSPEC
 ui_t* 
 client_new_ui(module_catalog_t* mod_cata, char* type);
 
-DECLSPEC
+extern DECLSPEC
 int 
 client_config_rtp(void *conf, control_setting_t *setting);
 
-DECLSPEC
+extern DECLSPEC
 sipua_setting_t* client_setting(sipua_t* sipua);
 
-int client_call(ogmp_client_t *client, char *regname);
+int
+client_call(ogmp_client_t *client, char *regname);
 
-DECLSPEC
+extern DECLSPEC
 media_source_t* 
 source_open(char* name, media_control_t* control, char* mode, void* mode_param);
 
-sipua_setting_t* source_setting(media_control_t *control);
-
-#include <timedia/ui.h>
-
-extern ogmp_ui_t* global_ui;
+sipua_setting_t*
+source_setting(media_control_t *control);
 
 /****************************************************************************************/
-sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, int bandwidth);
+extern ogmp_ui_t* global_ui;
 
-int client_start(sipua_t* sipua);
+extern DECLSPEC
+sipua_t*
+client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, int bandwidth);
 
-sipua_uas_t* client_new_uas(module_catalog_t* mod_cata, char* type);
+extern DECLSPEC
+int
+client_start(sipua_t* sipua);
+
+extern DECLSPEC
+sipua_uas_t*
+client_new_uas(module_catalog_t* mod_cata, char* type);
 
 #endif

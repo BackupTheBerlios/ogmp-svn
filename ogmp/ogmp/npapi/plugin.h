@@ -66,8 +66,7 @@
 #include <string.h>
 
 extern "C" {
-#include "sipua.h"
-#include "ogmp_client.h"
+#include "ogmp.h"
 }
 
 class nsPluginInstance:public nsPluginInstanceBase {
@@ -96,8 +95,8 @@ class nsPluginInstance:public nsPluginInstanceBase {
     
   public:
     /* SIP UA interface */
-    void func_one(PRInt32 value);
-    void func_two(const char *str);
+    void getNetaddr(char* *addr);
+    void get_ip();
 
     /* SIP UA interface */
     NPError sipua_init();
