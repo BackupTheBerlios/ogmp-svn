@@ -35,6 +35,7 @@ char loc[128];
 char* inputs[3];
 editline_t *edit[3];
 
+
 int cursor_user = 0;
 
 int window_new_user_print(gui_t* gui, int wid)
@@ -271,11 +272,15 @@ int window_new_user_run_command(gui_t* gui, int c)
 		default:
 		{
 			if(editline_append(edit[cursor_user], (char*)&c, 1) == 0)
+            {
 				beep();
 	
-			return -1;
+                return -1;
+            }
 		}
 	}
+
+    gui_update(gui);
 
 	return 0;
 }
