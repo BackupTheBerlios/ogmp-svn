@@ -19,7 +19,6 @@
 #include "ogmp.h"
 
 #include <timedia/xstring.h>
-#include <timedia/xmalloc.h>
 #include <timedia/ui.h>
 #include <stdarg.h>
 
@@ -35,7 +34,66 @@ extern ogmp_ui_t* global_ui;
  #define clie_log(fmtargs)
 #endif
 
+#define SIPUA_MAX_RING 6
+
 /****************************************************************************************/
+
+int client_call_ringing(void* gen)
+{
+	int i;
+	sipua_set_t* call;
+	rtime_t r;
+	ogmp_client_t *client = (ogmp_client_t*)gen;
+
+	xclock_t *clock = time_start();
+
+	while(1)
+	{
+		xthr_lock(client->nring_lock);
+
+		if(client->nring == 0)
+			break;
+
+		client->ogui->ui.beep(&client->ogui->ui);
+
+		for(i=0; i<MAX_SIPUA_LINES; i++)
+		{
+			call = client->lines[i];
+			if(call && call->status == SIPUA_EVENT_NEW_CALL)
+			{
+				if(call->ring_num == 0)
+				{
+					/* On hold or redirect this call */
+					call->status = SIPUA_EVENT_ONHOLD;
+					client->nring--;
+
+					if(client->nring == 0)
+						break;
+
+					continue;
+				}
+				
+				sipua_answer(&client->sipua, call, SIPUA_STATUS_RINGING);
+				call->ring_num--;
+			}
+		}
+
+		if(client->nring == 0)
+			break;
+
+		xthr_unlock(client->nring_lock);
+
+		time_msec_sleep(clock, 2000, &r);
+	}
+
+	xthr_unlock(client->nring_lock);
+
+	client->thread_ringing = NULL;
+
+	time_end(clock);
+
+	return UA_OK;
+}
 
 int client_done_format_handler(void *gen)
 {
@@ -52,8 +110,7 @@ int client_done(ogmp_client_t *client)
    
    xlist_done(client->format_handlers, client_done_format_handler);
 
-   xthr_done_lock(client->course_lock);
-   xthr_done_cond(client->wait_course_finish);
+   xthr_done_lock(client->nring_lock);
    conf_done(client->conf);
    
    if(client->sdp_body)
@@ -82,7 +139,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
                 break;
                 
             if(user_prof->reg_reason_phrase)
-
             {
                 xfree(user_prof->reg_reason_phrase);
                 user_prof->reg_reason_phrase = NULL;
@@ -208,11 +264,22 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			{
 				if(client->lines[i] == NULL)
 				{
+					call->ring_num = SIPUA_MAX_RING;
+					
 					client->lines[i] = call;
 					sipua->uas->accept(sipua->uas, lineno);
 
-					client->ogui->ui.beep(&client->ogui->ui);
-                    sipua_answer(&client->sipua, call, SIPUA_STATUS_RINGING);
+					if(!client->thread_ringing)
+					{
+						client->nring++;
+						client->thread_ringing = xthr_new(client_call_ringing, client, XTHREAD_NONEFLAGS);
+					}
+					else
+					{
+						xthr_lock(client->nring_lock);
+						client->nring++;
+						xthr_unlock(client->nring_lock);
+					}
 
 					break;
 				}
@@ -289,6 +356,9 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
 			sipua_set_t *call = e->call_info;
 
+			client->ogui->ui.beep(&client->ogui->ui);
+			printf("client_sipua_event: SIPUA_EVENT_REQUESTFAILURE\n");
+
 			if(call_e->status_code == SIPUA_STATUS_UNKNOWN)
 				call->status = SIPUA_EVENT_REQUESTFAILURE;
 			else
@@ -301,6 +371,9 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
 			sipua_set_t *call = e->call_info;
 
+			client->ogui->ui.beep(&client->ogui->ui);
+			printf("client_sipua_event: SIPUA_EVENT_SERVERFAILURE\n");
+
 			if(call_e->status_code == SIPUA_STATUS_UNKNOWN)
 				call->status = SIPUA_EVENT_SERVERFAILURE;
 			else
@@ -312,6 +385,9 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		{
 			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
 			sipua_set_t *call = e->call_info;
+
+			client->ogui->ui.beep(&client->ogui->ui);
+			printf("client_sipua_event: SIPUA_EVENT_GLOBALFAILURE\n");
 
 			if(call_e->status_code == SIPUA_STATUS_UNKNOWN)
 				call->status = SIPUA_EVENT_GLOBALFAILURE;
@@ -618,7 +694,6 @@ media_source_t* client_set_background_source(sipua_t* sipua, char* name)
         */
 	} 
 
-
 	return client->backgroud_source;
 }
 
@@ -682,6 +757,8 @@ int client_hold(sipua_t* sipua)
 			break;
 
 	client->lines[i] = client->sipua.incall;
+	client->sipua.incall->status = SIPUA_EVENT_ONHOLD;
+
 	client->sipua.incall = NULL;
 
 	/* FIXME: Howto transfer call to waiting session */
@@ -760,8 +837,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
 
 	client->control = new_media_control();
 
-	client->course_lock = xthr_new_lock();
-	client->wait_course_finish = xthr_new_cond(XTHREAD_NONEFLAGS);
+	client->nring_lock = xthr_new_lock();
 
 	/* Initialise */
 	client->conf = conf_new ( "ogmprc" );

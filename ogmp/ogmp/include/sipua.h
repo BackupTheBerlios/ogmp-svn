@@ -126,6 +126,8 @@ struct sipua_set_s
 	rtpcap_set_t* rtpcapset;
 
 	char* reply_body;
+
+	int ring_num;
 };
 
 typedef struct sipua_event_s sipua_event_t;

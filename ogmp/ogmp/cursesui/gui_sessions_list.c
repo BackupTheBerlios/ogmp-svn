@@ -138,6 +138,9 @@ int window_sessions_list_print(gui_t* gui, int wid)
 				strcpy(status, "Server Fail"); break;
 			case SIPUA_EVENT_GLOBALFAILURE:
 				strcpy(status, "Global Fail"); break;
+			case SIPUA_EVENT_ONHOLD:
+				strcpy(status, "On hold"); break;
+
 			case SIPUA_STATUS_REJECT:
 				strcpy(status, "Rejected"); break;
 			case SIPUA_STATUS_BUSY:

@@ -118,9 +118,6 @@ struct ogmp_client_s
 	int ncap;
 	capable_descript_t *caps[MAX_NCAP];
 
-	xthr_lock_t *course_lock;
-	xthr_cond_t *wait_course_finish;
-
 	ogmp_ui_t* ogui;
 
 	xthread_t* main_thread;
@@ -149,6 +146,11 @@ struct ogmp_client_s
 	char* mediatypes[MAX_SIPUA_MEDIA];
 	int default_rtp_ports[MAX_SIPUA_MEDIA];
 	int default_rtcp_ports[MAX_SIPUA_MEDIA];
+
+	xthread_t *thread_ringing;
+
+	int nring;
+	xthr_lock_t *nring_lock;
 };
 
 struct ogmp_source_s
