@@ -59,11 +59,13 @@
 #define WIN32
 #endif /* Windows */
 
-#ifdef WIN32
+#if (defined WIN32 || defined _WIN32_WCE)
  #define vsnprintf _vsnprintf
  #define snprintf _snprintf
  #define itoa _itoa
  #define ltoa _ltoa
+ #define strcasecmp _stricmp
+ #define strncasecmp _strnicmp
 
  #ifdef __STDC__
   #ifndef strdup
