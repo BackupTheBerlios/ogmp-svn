@@ -19,8 +19,8 @@
 
 #ifdef MONITE_MEM
 /*
-*/
 #define XMALLOC_LOG
+*/
 #define XMALLOC_DEBUG
 
 #ifdef XMALLOC_LOG
@@ -49,8 +49,8 @@ struct memory_monitor_s
 {
    struct mblock
    {
-      void* start;
-      void* end;
+      char* start;
+      char* end;
 
       int prev;
       int next;
@@ -87,11 +87,12 @@ xmalloc(size_t bytes)
 {
    int b, m, n, succ = 0;
    int i;
+   char *p;
    
    if(!monitor_inited)
       xmalloc_init();
       
-   void *p = malloc(bytes);
+   p = malloc(bytes);
    if(!p)
    {
       xmalloc_warning(("xmalloc: No memory at all\n"));
@@ -229,7 +230,7 @@ xfree(void *p)
    i = FIRST_BLOCK;
    while(i != 0)
    {
-      if(p >= monitor.blocks[i].start && p < monitor.blocks[i].end)
+      if((char*)p >= monitor.blocks[i].start && (char*)p < monitor.blocks[i].end)
       {
          /* found block to release */
          start = (uint)monitor.blocks[i].start;

@@ -16,7 +16,8 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "xthread.h" 
+#include <timedia/xmalloc.h> 
+#include <timedia/xthread.h> 
 #include "timer.h"
 
 #include <signal.h>
@@ -75,7 +76,7 @@ int win32_time_now(xrtp_clock_t * clock)
 xrtp_clock_t* 
 time_start()
 {
-    xrtp_clock_t * clock = (xrtp_clock_t *)malloc(sizeof(struct xrtp_clock_s));
+    xrtp_clock_t * clock = (xrtp_clock_t *)xmalloc(sizeof(struct xrtp_clock_s));
 
 	/*return null if window doesn't support a high-resolution performance counter*/
 
@@ -83,7 +84,7 @@ time_start()
 	{
 		if (!QueryPerformanceFrequency( &clock->frequency))
 		{
-			free(clock);
+			xfree(clock);
 			return NULL;
 		}
 
@@ -102,7 +103,7 @@ time_start()
         clock->lock = xthr_new_lock();
         if(!clock->lock)
 		{
-          free(clock);
+          xfree(clock);
           return NULL;
         }
     }
@@ -115,7 +116,7 @@ time_start()
 int time_end(xrtp_clock_t * clock)
 {
     xthr_done_lock(clock->lock);
-    free(clock);
+    xfree(clock);
 
     return OS_OK;
 }
