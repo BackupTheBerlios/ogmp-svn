@@ -5,7 +5,7 @@
     copyright            : (C) 2004 by Heming
     email                : heming@bigfoot.com; heming@sf.net
  ***************************************************************************/
-
+ 
 /***************************************************************************
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -233,6 +233,7 @@ int vrtp_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
 
          vrtp_log(("audip/vorbis.vrtp_rtp_in: media data assembled, deliver\n"));
          media_dlen = rtp_packet_dump_payload(rtp, &media_data);
+
 
          if(rtpmedia->$callbacks.media_arrived)
             rtpmedia->$callbacks.media_arrived(rtpmedia->$callbacks.media_arrived_user, media_data, media_dlen, src, later, 0);

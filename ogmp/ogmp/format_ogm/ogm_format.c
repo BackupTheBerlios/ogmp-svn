@@ -1,4 +1,4 @@
-/*
+/*   
   Most modified codes are token from ogmtool, it's only for testing. Detail refer
   to the origional project:
   
@@ -118,6 +118,7 @@ media_stream_t * ogm_find_stream(media_format_t * mf, int strmno) {
   media_stream_t *cur = mf->first;
 
   while (cur != NULL) {
+
 
     if ((((ogm_stream_t*)cur)->serial) == strmno) break;
     cur = cur->next;
@@ -675,6 +676,7 @@ int ogm_seek_millisecond (media_format_t *mf, int millis) {
 
    return start_pos;
 
+
    /* fixme - this would be a nice position to do the following tasks
       1. adjust an ogg videostream to a keyframe
       2. compare the keyframe_pts with start_time. if the difference is to
@@ -994,6 +996,7 @@ module_interface_t * media_new_format() {
 
    /* Stream management */
    mf->add_stream = ogm_add_stream;
+
    mf->find_stream = ogm_find_stream;
    mf->find_mime = ogm_find_mime;
    mf->find_fourcc = ogm_find_fourcc;

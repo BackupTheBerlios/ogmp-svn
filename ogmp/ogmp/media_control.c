@@ -169,11 +169,13 @@ int cont_match_call(void* t, void *p){
 
 control_setting_t* cont_fetch_setting(media_control_t *cont, char *name, media_device_t *dev) {
 
+   xlist_user_t lu;
+
    control_setting_t *setting = NULL;
-   
-   control_impl_t *impl = (control_impl_t*)cont;
 
    control_setting_item_t *item = NULL;
+
+   control_impl_t *impl = (control_impl_t*)cont;
 
    if(!dev->new_setting){
 
@@ -182,7 +184,7 @@ control_setting_t* cont_fetch_setting(media_control_t *cont, char *name, media_d
       return NULL;
    }
    
-   item = list_find(impl->setting_calls, name, cont_match_call);
+   item = xlist_find(impl->setting_calls, name, cont_match_call, &lu);
    
    if(item) {
    
