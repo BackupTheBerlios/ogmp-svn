@@ -224,37 +224,41 @@ session_connect_t * connect_rtp_to_rtcp(session_connect_t * rtp_conn)
   
 session_connect_t * connect_rtcp_to_rtp(session_connect_t * rtcp_conn)
 {
-      xrtp_port_t *rtp_port, *rtcp_port;
-	  xrtp_session_t * ses = NULL;
+   xrtp_port_t *rtp_port, *rtcp_port;
+   xrtp_session_t * ses = NULL;
 
-      uint16 pno = 0;
+   uint16 pno = 0;
 
-      session_connect_t * rtp_conn = (session_connect_t *)xmalloc(sizeof(struct session_connect_s));
-      if(!rtp_conn)
-	  {
-        udp_log(("connect_rtcp_to_rtp: Fail to allocate memery for rtp connect\n"));
-        return NULL;
-      }
+   session_connect_t * rtp_conn = (session_connect_t *)xmalloc(sizeof(struct session_connect_s));
+   if(!rtp_conn)
+   {
+      udp_log(("connect_rtcp_to_rtp: Fail to allocate memery for rtp connect\n"));
+      return NULL;
+   }
       
-      memset(rtp_conn, 0, sizeof(struct session_connect_s));
+   memset(rtp_conn, 0, sizeof(struct session_connect_s));
 
-      ses = rtcp_conn->port->session;
-      session_ports(ses, &rtp_port, &rtcp_port);
+   ses = rtcp_conn->port->session;
+   session_ports(ses, &rtp_port, &rtcp_port);
 
-      
-      rtp_conn->port = rtp_port;
+   rtp_conn->port = rtp_port;
 
-      rtp_conn->remote_addr.sin_family = AF_INET;
+   rtp_conn->remote_addr.sin_family = AF_INET;
 
-      pno = ntohs(rtcp_conn->remote_addr.sin_port);
-      rtp_conn->remote_addr.sin_port = htons(--pno);       /* rtp port = rtcp port - 1 */
+   pno = ntohs(rtcp_conn->remote_addr.sin_port);
+   rtp_conn->remote_addr.sin_port = htons(--pno);       /* rtp port = rtcp port - 1 */
 
-      rtp_conn->remote_addr.sin_addr.s_addr = rtcp_conn->remote_addr.sin_addr.s_addr;  /* Already in Network byteorder, see inet_addr() */
+   rtp_conn->remote_addr.sin_addr.s_addr = rtcp_conn->remote_addr.sin_addr.s_addr;  /* Already in Network byteorder, see inet_addr() */
 
-      udp_log(("connect_rtcp_to_rtp: rtcp[%s:%u]\n", inet_ntoa(rtcp_conn->remote_addr.sin_addr), ntohs(rtcp_conn->remote_addr.sin_port)));
-      udp_log(("connect_rtcp_to_rtp: rtp[%s:%u]\n", inet_ntoa(rtp_conn->remote_addr.sin_addr), ntohs(rtp_conn->remote_addr.sin_port)));
+   udp_log(("connect_rtcp_to_rtp: rtcp[%s:%u]\n", inet_ntoa(rtcp_conn->remote_addr.sin_addr), ntohs(rtcp_conn->remote_addr.sin_port)));
+   udp_log(("connect_rtcp_to_rtp: rtp[%s:%u]\n", inet_ntoa(rtp_conn->remote_addr.sin_addr), ntohs(rtp_conn->remote_addr.sin_port)));
 
-      return rtp_conn;
+   return rtp_conn;
+}
+
+int connect_set_session(session_connect_t* conn, xrtp_session_t* ses)
+{
+   return port_set_session(conn->port, ses);
 }
 
 xrtp_port_t * port_new(char *local_addr,  uint16 local_portno, enum port_type_e type)

@@ -66,6 +66,8 @@ extern DECLSPEC
 session_connect_t *
 connect_rtcp_to_rtp(session_connect_t * rtcp_conn);
   
+int connect_set_session(session_connect_t *conn, xrtp_session_t * session);
+
 extern DECLSPEC 
 xrtp_port_t*
 port_new(char * addr, uint16 portno, enum port_type_e type);

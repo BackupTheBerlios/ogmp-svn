@@ -100,8 +100,8 @@ typedef struct member_state_s
     
     uint n_payload_oct_received;  /* payload octet counter */
     uint n_rtp_received;  /* number of rtp received by now */
-	uint n_payload_oct_sent;
-	uint n_rtp_sent;
+    uint n_payload_oct_sent;
+    uint n_rtp_sent;
 
     uint n_rtp_received_prior;
     uint32 n_rtp_expected_prior;
@@ -364,110 +364,110 @@ typedef struct param_members_s
 
 struct xrtp_session_s
 {
-    int id;
+   int id;
 
-    module_catalog_t * module_catalog;
+   module_catalog_t * module_catalog;
 	void *media_control;
 
-    /* NOTE: The Redundancy is not implemented yet */
-    xrtp_media_t * media;
-    profile_handler_t* media_handler;
+   /* NOTE: The Redundancy is not implemented yet */
+   xrtp_media_t * media;
+   profile_handler_t* media_handler;
 
-    session_mode_t mode_trans;
+   session_mode_t mode_trans;
 
-    packet_pipe_t *rtp_send_pipe;
+   packet_pipe_t *rtp_send_pipe;
 	packet_pipe_t *rtcp_send_pipe;
     
-    uint n_rtcp_recv;
+   uint n_rtcp_recv;
 
-    int rtcp_avg_size;
+   int rtcp_avg_size;
 
-    packet_pipe_t *rtp_recv_pipe;
+   packet_pipe_t *rtp_recv_pipe;
 	packet_pipe_t *rtcp_recv_pipe;
 	uint32 recv_seq;
 
 	xrtp_clock_t * clock;
 
-    int  bandwidth;			/* Total bandwidth */
-    int  bandwidth_rtp;     /* RTP bandwidth */
+   int  bandwidth;			/* Total bandwidth */
+   int  bandwidth_rtp;     /* RTP bandwidth */
 
 	int  bandwidth_budget;
-    int	 bandwidth_rtp_budget;  /* unused bandwidth each sending */
-    int  bandwidth_rtcp_budget;	/* RTCP bandwidth */
+   int	 bandwidth_rtp_budget;  /* unused bandwidth each sending */
+   int  bandwidth_rtcp_budget;	/* RTCP bandwidth */
 
 	xthr_lock_t * bandwidth_lock;
 
-    rtime_t hrts_last_rtp_sent;
+   rtime_t hrts_last_rtp_sent;
 
-    rtime_t usec_period;
-    rtime_t msec_rtcp_interval;
+   rtime_t usec_period;
+   rtime_t msec_rtcp_interval;
     
-    session_sched_t *sched;
+   session_sched_t *sched;
 
-    int bye_mode; /* if in BYE Reconsideration */
+   int bye_mode; /* if in BYE Reconsideration */
 
-    member_state_t * self;
+   member_state_t * self;
 
-    uint n_sender;
-    xlist_t *senders;
+   uint n_sender;
+   xlist_t *senders;
 	xthr_lock_t * senders_lock;
     
-    uint n_member; /* the number of validated member */
-    xlist_t *members;
+   uint n_member; /* the number of validated member */
+   xlist_t *members;
 	xthr_lock_t *members_lock;
 
 	int renew_minfo_level;
 	xthr_lock_t *renew_level_lock;
 
-    struct xrtp_list_user_s $member_list_block;
+   struct xrtp_list_user_s $member_list_block;
 
-    int  rtcp_init;   /* if rtcp is sent ever */
+   int  rtcp_init;   /* if rtcp is sent ever */
 
-    rtime_t tp, tc, tn; /* RTCP transition time (RFC3550 6.3) */
+   rtime_t tp, tc, tn; /* RTCP transition time (RFC3550 6.3) */
 
-    uint pn_member;    /* pmember */
+   uint pn_member;    /* pmember */
     
-    char ip[MAX_IPADDR_BYTES];
+   char ip[MAX_IPADDR_BYTES];
 	int default_rtp_portno;
 	int default_rtcp_portno;
 
 	xrtp_port_t *rtp_port;
-    xrtp_port_t *rtcp_port;
+   xrtp_port_t *rtcp_port;
 
-    xthr_lock_t *rtp_incoming_lock;
+   xthr_lock_t *rtp_incoming_lock;
 	session_connect_t * rtp_incoming;
-    session_connect_t * rtcp_incoming;
+   session_connect_t * rtcp_incoming;
 
-    session_connect_t * outgoing_rtcp[XRTP_MAX_REPORTS]; /* Only send to member on the report once a time */
-    int n_rtcp_out;     /* How many rtcp send once */
+   session_connect_t * outgoing_rtcp[XRTP_MAX_REPORTS]; /* Only send to member on the report once a time */
+   int n_rtcp_out;     /* How many rtcp send once */
     
-    struct param_members_s param_members;
+   struct param_members_s param_members;
     
-    uint32 next_report_ssrc;
+   uint32 next_report_ssrc;
 
 	/* should be maintained by profile for different meaning
     uint32 timestamp;
 	*/
 
-    rtime_t rtp_cancel_ts;
-    int rtp_cancelled;
+   rtime_t rtp_cancel_ts;
+   int rtp_cancelled;
 
-    sched_schedinfo_t * schedinfo;
+   sched_schedinfo_t * schedinfo;
 
-    xrtp_teleport_t * join_to_rtp_port;
-    xrtp_teleport_t * join_to_rtcp_port;
+   xrtp_teleport_t * join_to_rtp_port;
+   xrtp_teleport_t * join_to_rtcp_port;
 
 	struct session_state_s $state;
 	struct session_callbacks_s $callbacks;
 	struct session_lock_s $locks;
 	struct session_cond_s $condvars;
 
-    spin_queue_t * packets_in_sched;
-    rtime_t timesize;
+   spin_queue_t * packets_in_sched;
+   rtime_t timesize;
 
-    xrtp_thread_t * thr_rtp_recv;
-    xthr_lock_t * rtp_recv_lock;
-    int thread_run;
+   xrtp_thread_t * thr_rtp_recv;
+   xthr_lock_t * rtp_recv_lock;
+   int thread_run;
 
 	xrtp_set_t* set;
 };
@@ -540,6 +540,8 @@ char*
 session_address(xrtp_session_t * session);
 
 /**
+
+
  * Set session number of rtp and rtcp ports
  */
 extern DECLSPEC
@@ -709,7 +711,13 @@ session_delete_cname(xrtp_session_t * ses, char *cname, int cnlen);
  * Move member from one rtp session to other session.
  */
 member_state_t *
-session_move_member_by_cname(xrtp_session_t *from_session, xrtp_session_t *to_session, char *cname, int cnlen);
+session_move_member_by_cname(xrtp_session_t *from_session, xrtp_session_t *to_session, char *cname);
+
+/**
+ * Move all members except session owner from one rtp session to other session.
+ */
+int
+session_move_all_guests(xrtp_session_t *ses, xrtp_session_t *to_ses);
 
 int
 session_add_member(xrtp_session_t *ses, member_state_t* member);
