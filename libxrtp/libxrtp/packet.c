@@ -213,14 +213,18 @@
   */
  int rtp_packet_set_maxlen(xrtp_rtp_packet_t * pac, uint maxlen){
 
-    if(pac->buffer && maxlen != buffer_maxlen(pac->buffer)){
+    int ret = OS_OK;
+
+	if(pac->buffer && maxlen != buffer_maxlen(pac->buffer))
+	{
        
-       xrtp_buffer_t * buf = buffer_newsize(pac->buffer, maxlen);
-       buffer_done(pac->buffer);
-       pac->buffer = buf;
+		ret = buffer_newsize(pac->buffer, maxlen);
+
+		if(ret < OS_OK) 
+			return ret;
     }
     
-    return XRTP_OK;
+    return OS_OK;
  }
 
  uint rtp_packet_maxlen(xrtp_rtp_packet_t * pac){
