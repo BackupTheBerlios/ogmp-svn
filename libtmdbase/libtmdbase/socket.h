@@ -22,10 +22,14 @@
  */
  
 #ifdef WIN32
-	#include <winsock.h>
-	#define socket_close closesocket
+
+ #include <winsock.h>
+ #define socket_close closesocket
+
 #else
-	#include <sys/socket.h>
-	#include <sys/select.h>
-	#define socket_close close
+
+ #include <sys/socket.h>
+ #include <sys/select.h>
+ #define socket_close close
+
 #endif
