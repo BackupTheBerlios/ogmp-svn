@@ -46,6 +46,7 @@ extern ogmp_ui_t* global_ui;
 
 
 
+
 #define MAX_CALL_BANDWIDTH  20480  /* in Bytes */
 
 /****************************************************************************************/
@@ -273,6 +274,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
 			sipua_set_t *call;
 
+
 			int lineno = e->lineno;
 
 			rtpcap_set_t* rtpcapset;
@@ -439,6 +441,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
          }
           */
          
+
 			break;
 		}
 		case(SIPUA_EVENT_ACK):
@@ -558,6 +561,7 @@ int sipua_done_sip_session(void* gen)
 }
 
 int client_done_call(sipua_t* sipua, sipua_set_t* set)
+
 {
 	int i;
 	ogmp_client_t *ua = (ogmp_client_t*)sipua;
@@ -766,6 +770,7 @@ int client_unlock_lines(sipua_t* sipua)
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
 	xthr_unlock(client->lines_lock);
+
 
 	return UA_OK;
 }

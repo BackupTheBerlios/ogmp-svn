@@ -378,6 +378,7 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 	{
 		sdp_message_free(sdp_info.sdp_message);
 
+
 		
 		xfree(set);
 
@@ -523,8 +524,7 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
 	{
 		ua_log(("sipua_establish_call: no format support\n"));
 		return 0;
-	}
-   
+	}  
 	/*
 	rtp_media = session_media(rtp_session);
 	xlist_addto_first(call->mediaset, rtp_media);
@@ -784,6 +784,7 @@ int sipua_regist(sipua_t *sipua, user_profile_t *user, char *userloc)
 	if(ret < UA_OK)
 		user->reg_status = SIPUA_STATUS_REG_FAIL;
 	else
+
 	{
 		user->cname = userloc;
 

@@ -332,6 +332,8 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
    speex_decoder_t *dec = (speex_decoder_t *)mp;
    int sample_rate = ((media_info_t*)dec->speex_info)->sample_rate;
 
+   spxp_debug(("spxp_receive_next: samplestamp[%lld]\n", samplestamp));
+   
    if (!mp->device)
    {
       spxp_debug(("spxp_receive_next: No device to play vorbis audio\n"));
