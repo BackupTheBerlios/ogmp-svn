@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <timedia/xmalloc.h>
 #include <timedia/socket.h> 
 #include <timedia/inet.h> 
 /*
@@ -89,7 +90,7 @@ struct xrtp_teleport_s
 
 session_connect_t * connect_new(xrtp_port_t * port, xrtp_teleport_t * tport)
 {
-     session_connect_t * udp = (session_connect_t *)malloc(sizeof(struct session_connect_s));
+     session_connect_t * udp = (session_connect_t *)xmalloc(sizeof(struct session_connect_s));
      if(!udp)
 	 {
 		udp_debug(("connect_new: No memory\n"));
@@ -113,8 +114,8 @@ int connect_done(session_connect_t * conn)
 {
      udp_log(("connect_done: free connect[#%d]\n", connect_io(conn)));
 
-     if(conn->data_in) free(conn->data_in);
-     free(conn);
+     if(conn->data_in) xfree(conn->data_in);
+     xfree(conn);
 
      return XRTP_OK;
 }
@@ -180,7 +181,7 @@ session_connect_t * connect_rtp_to_rtcp(session_connect_t * rtp_conn)
 
       uint16 pno;      
       
-      session_connect_t * rtcp_conn = (session_connect_t *)malloc(sizeof(struct session_connect_s));
+      session_connect_t * rtcp_conn = (session_connect_t *)xmalloc(sizeof(struct session_connect_s));
       if(!rtcp_conn)
         return NULL;
 
@@ -211,7 +212,7 @@ session_connect_t * connect_rtcp_to_rtp(session_connect_t * rtcp_conn)
 
       uint16 pno = 0;
 
-      session_connect_t * rtp_conn = (session_connect_t *)malloc(sizeof(struct session_connect_s));
+      session_connect_t * rtp_conn = (session_connect_t *)xmalloc(sizeof(struct session_connect_s));
       if(!rtp_conn)
 	  {
         udp_log(("connect_rtcp_to_rtp: Fail to allocate memery for rtp connect\n"));
@@ -249,7 +250,7 @@ xrtp_port_t * port_new(char *local_addr,  uint16 local_portno, enum port_type_e 
 
 	 udp_log(("port_new: %s:%d\n", local_addr, local_portno));
 
-     port = (xrtp_port_t *)malloc(sizeof(struct xrtp_port_s));
+     port = (xrtp_port_t *)xmalloc(sizeof(struct xrtp_port_s));
 
      if(!port) return NULL;
 
@@ -262,6 +263,7 @@ xrtp_port_t * port_new(char *local_addr,  uint16 local_portno, enum port_type_e 
 		 udp_debug(("port_new: fail to create  socket\n"));
 		 return NULL;
 	 }
+
 	
      /*
      setsockopt(port->socket, SOL_IP, IP_PKTINFO, (void *)1, sizeof(int));
@@ -273,7 +275,7 @@ xrtp_port_t * port_new(char *local_addr,  uint16 local_portno, enum port_type_e 
 	 {
         udp_debug(("port_new: Illegal ip address\n"));
         socket_close(port->socket);
-        free(port);
+        xfree(port);
         
         return NULL;
      }
@@ -283,7 +285,7 @@ xrtp_port_t * port_new(char *local_addr,  uint16 local_portno, enum port_type_e 
         udp_debug(("port_new: Fail to name socket '%s:%d'\n", local_addr, local_portno));
         socket_close(port->socket);
         port->socket = 0;
-        free(port);
+        xfree(port);
            
         return NULL;
      }
@@ -309,7 +311,7 @@ xrtp_port_t * port_new(char *local_addr,  uint16 local_portno, enum port_type_e 
 
      socket_close(port->socket);
      xthr_done_lock(port->lock);
-     free(port);
+     xfree(port);
 
      return XRTP_OK;
   }
@@ -384,12 +386,13 @@ int port_match(xrtp_port_t *port, char *ip, uint16 pno)
 
      /* From Address 0:0 is unacceptable */
      if(remote_addr.sin_addr.s_addr == 0 && remote_addr.sin_port == 0)
+
 	 {     
         udp_log(("port_incoming: discard data from [%s:%d] which is unacceptable !\n", inet_ntoa(remote_addr.sin_addr), ntohs(remote_addr.sin_port)));
         return XRTP_EREFUSE;
      }
         
-     conn = (session_connect_t *)malloc(sizeof(struct session_connect_s));
+     conn = (session_connect_t *)xmalloc(sizeof(struct session_connect_s));
      if(!conn)
 	 {
         udp_debug(("port_incoming: fail to allocate connect of incoming\n"));
@@ -397,12 +400,12 @@ int port_match(xrtp_port_t *port, char *ip, uint16 pno)
      }     
      memset(conn, 0, sizeof(struct session_connect_s));
 
-     conn->data_in = (char *)malloc(datalen);
+     conn->data_in = (char *)xmalloc(datalen);
      if(!conn->data_in)
 	 {
         udp_log(("port_incoming: fail to allocate data space of incoming connect\n"));
         
-        free(conn);
+        xfree(conn);
         return XRTP_EMEM;
      }
      memset(conn->data_in, 0, datalen);
@@ -433,7 +436,7 @@ int port_match(xrtp_port_t *port, char *ip, uint16 pno)
 
   xrtp_teleport_t * teleport_new(char * addr_str, uint16 pno){
 
-     xrtp_teleport_t * tp = malloc(sizeof(struct xrtp_teleport_s));
+     xrtp_teleport_t * tp = xmalloc(sizeof(struct xrtp_teleport_s));
      if(tp){
 
         tp->portno = htons(pno);
@@ -441,7 +444,7 @@ int port_match(xrtp_port_t *port, char *ip, uint16 pno)
         if(inet_aton(addr_str, (struct in_addr *)&(tp->addr)) == 0){ /* string to int addr */
 
             udp_log(("teleport_new: Illegal ip address\n"));
-            free(tp);
+            xfree(tp);
 
             return NULL;
         }
@@ -454,7 +457,7 @@ int port_match(xrtp_port_t *port, char *ip, uint16 pno)
 
   int teleport_done(xrtp_teleport_t * tport){
 
-     free(tport);
+     xfree(tport);
      return XRTP_OK;
   }
 

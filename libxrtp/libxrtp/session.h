@@ -378,7 +378,7 @@ struct xrtp_session_s
     
     uint n_rtcp_recv;
 
-    uint rtcp_avg_size;
+    int rtcp_avg_size;
 
     packet_pipe_t *rtp_recv_pipe;
 	packet_pipe_t *rtcp_recv_pipe;
@@ -531,6 +531,7 @@ uint session_mode(xrtp_session_t * session);
 extern DECLSPEC
 xrtp_media_t * 
 session_new_media(xrtp_session_t * ses, char * id, uint8 payload_type);
+
 
 extern DECLSPEC
 xrtp_media_t*

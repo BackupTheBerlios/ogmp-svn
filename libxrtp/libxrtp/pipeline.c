@@ -21,6 +21,8 @@
  
 #include "const.h"
 #include <stdlib.h>
+
+#include <timedia/xmalloc.h>
 #include <string.h>
  
 #include "stdio.h"
@@ -39,7 +41,7 @@
    
     packet_pipe_t * pipe;
     
-    pipe = (packet_pipe_t *)malloc(sizeof(packet_pipe_t));    
+    pipe = (packet_pipe_t *)xmalloc(sizeof(packet_pipe_t));    
     if(!pipe){
       
        pipe_log(("< pipe_new: Can't create pipe >\n"));
@@ -71,7 +73,7 @@
        queue_done(pipe->packets);
     }
     
-    free(pipe);
+    xfree(pipe);
 
     return XRTP_OK;
  }
@@ -86,7 +88,7 @@
        return NULL;
     }
 
-    step = (pipe_step_t *)malloc(sizeof(pipe_step_t));
+    step = (pipe_step_t *)xmalloc(sizeof(pipe_step_t));
     if(!step){
       
        pipe_log(("< pipe_add: No enough memory to alloc pipe handler >\n"));
@@ -103,6 +105,7 @@
     step->enable = enable;
 
     pipe->steps[pipe->num_step] = step;
+
 
     step->step_no = pipe->num_step;
     pipe->num_step++;
@@ -124,7 +127,7 @@
        return NULL;
     }
 
-    step = (pipe_step_t *)malloc(sizeof(pipe_step_t));
+    step = (pipe_step_t *)xmalloc(sizeof(pipe_step_t));
     if(!step){
        pipe_log(("< pipe_add_before: No enough memory to alloc pipe handler >\n"));
        return NULL;
@@ -165,7 +168,7 @@
     if(pipe->packets && queue_length(pipe->packets) > 0)
        return NULL;
 
-    step = (pipe_step_t *)malloc(sizeof(pipe_step_t));
+    step = (pipe_step_t *)xmalloc(sizeof(pipe_step_t));
     if(!step){
        pipe_log(("< pipe_add: No enough memory to alloc pipe handler >\n"));
        return NULL;
@@ -195,7 +198,7 @@
     if(oldstep){
 
        modu->done_handler(hand);
-       free(oldstep);
+       xfree(oldstep);
     }
 
     return step;
@@ -219,6 +222,7 @@
        return XRTP_EMEM;
     }
     
+
     pipe->timesize = timesize;
 
     return XRTP_OK;
@@ -368,10 +372,11 @@
 
           xrtp_rtcp_compound_t * rtcp = (xrtp_rtcp_compound_t*)(load->packet);
           pipe_rtcp_outgoing(pipe, rtcp);
+
           rtcp_compound_done(rtcp);
        }
        
-       free(load);
+       xfree(load);
        step->load = NULL;
        
        npacket++;
@@ -425,7 +430,7 @@
           rtcp_compound_done(rtcp);
        }
 
-       free(load);
+       xfree(load);
 
        npacket++;
        
@@ -455,7 +460,7 @@
     *packet_bytes = 0;
     
     pipe_log(("pipe_pump: start proccess ...\n"));
-    load = (pipe_load_t *)malloc(sizeof(struct pipe_load_s));
+    load = (pipe_load_t *)xmalloc(sizeof(struct pipe_load_s));
     if(!load){
 
        return XRTP_EMEM;
@@ -477,7 +482,7 @@
 
        if(_pipe_step(step) == XRTP_CONSUMED){    /* pipe step */
 
-          free(step->load);
+          xfree(step->load);
           step->load = NULL;
 
           return XRTP_CONSUMED;
@@ -516,7 +521,7 @@
        if(pipe->type == XRTP_RTCP)
           rtcp_compound_done((xrtp_rtcp_compound_t*)pac);
 
-       free(step->load);
+       xfree(step->load);
        step->load = NULL;
 
        return 0;
@@ -526,7 +531,7 @@
        *packet_bytes = load->packet_bytes;
 
 
-    free(step->load);
+    xfree(step->load);
     step->load = NULL;
 
     pipe_log(("pipe_pump: packet produced.\n"));

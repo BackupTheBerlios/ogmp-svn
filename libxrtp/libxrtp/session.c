@@ -18,6 +18,7 @@
 #include <string.h>
 #include "internal.h"      
 #include <timedia/md5.h>
+#include <timedia/xmalloc.h>
  
 #define MAX_PRODUCE_TIME  (20 * HRTIME_MILLI)
 #define SESSION_DEFAULT_RTCP_NPACKET  0
@@ -169,8 +170,8 @@ int session_done_media(void* gen)
 {
     media_hold_t *hold = (media_hold_t*)gen;
 
-	free(hold->media);
-	free(hold);
+	xfree(hold->media);
+	xfree(hold);
 
     return XRTP_OK;
 }
@@ -192,9 +193,9 @@ int session_done_active_member(void *gen)
     xthr_done_lock(mem->lock);
     
     if(mem->cname)
-		free(mem->cname);
+		xfree(mem->cname);
     
-    free(mem);
+    xfree(mem);
 
     return XRTP_OK;
 }
@@ -219,9 +220,9 @@ int session_done_member(void *gen)
     xthr_done_lock(mem->lock);
     
     if(mem->cname)
-		free(mem->cname);
+		xfree(mem->cname);
     
-    free(mem);
+    xfree(mem);
 
     return XRTP_OK;
 }
@@ -249,7 +250,7 @@ int session_done(xrtp_session_t * ses)
 	
 	xstr_done_string(ses->$state.profile_type);
 
-    free(ses);
+    xfree(ses);
 
     return XRTP_OK;
 }
@@ -262,7 +263,7 @@ xrtp_session_t* session_new(char *cname, int clen, char *ip, uint16 rtp_portno, 
     char *name;
 
 
-	xrtp_session_t* ses = (xrtp_session_t *)malloc(sizeof(struct xrtp_session_s));
+	xrtp_session_t* ses = (xrtp_session_t *)xmalloc(sizeof(struct xrtp_session_s));
     if(!ses)
 	{
        session_log(("session_new: No memory for session\n"));
@@ -272,11 +273,11 @@ xrtp_session_t* session_new(char *cname, int clen, char *ip, uint16 rtp_portno, 
 
     ses->module_catalog = cata;
     
-    name = (char *)malloc(clen + 1);
+    name = (char *)xmalloc(clen + 1);
     if(!name)
 	{
         session_log(("session_new: fail to allocate cname memery\n"));
-        free(ses);
+        xfree(ses);
         return NULL;
     }
 
@@ -300,8 +301,8 @@ xrtp_session_t* session_new(char *cname, int clen, char *ip, uint16 rtp_portno, 
        if(ses->members) xlist_done(ses->members, NULL);
        if(ses->senders) xlist_done(ses->senders, NULL);
 
-       free(name);
-       free(ses);
+       xfree(name);
+       xfree(ses);
        return NULL;
     }
 
@@ -312,8 +313,8 @@ xrtp_session_t* session_new(char *cname, int clen, char *ip, uint16 rtp_portno, 
        xlist_done(ses->members, NULL);
        xlist_done(ses->senders, NULL);
 
-       free(name);
-       free(ses);
+       xfree(name);
+       xfree(ses);
        return NULL;      
     }
 
@@ -339,8 +340,8 @@ xrtp_session_t* session_new(char *cname, int clen, char *ip, uint16 rtp_portno, 
        xlist_done(ses->members, NULL);
 
        session_done_member(ses->self);
-       free(name);
-       free(ses);
+       xfree(name);
+       xfree(ses);
        session_log(("< session_new: Fail to create pipes! >\n"));
 
        return NULL;
@@ -484,7 +485,7 @@ double session_determistic_interval(int members,
                                     int senders,
                                     int rtcp_bw,
                                     int we_sent,
-                                    double avg_rtcp_size,
+                                    int avg_rtcp_size,
                                     int initial)
 {
        /*
@@ -570,7 +571,7 @@ xrtp_lrtime_t session_interval(int members,
                                int senders,
                                int rtcp_bw,
                                int we_sent,
-                               double avg_rtcp_size,
+                               int avg_rtcp_size,
                                int initial)
 {
        /*
@@ -644,7 +645,7 @@ member_state_t * session_new_member(xrtp_session_t * ses, uint32 src, void *user
 		return mem;
 	}
 
-    mem = (member_state_t *)malloc(sizeof(struct member_state_s));
+    mem = (member_state_t *)xmalloc(sizeof(struct member_state_s));
     if(!mem)
 	{
 		session_debug(("session_new_member: No memory for member\n"));
@@ -656,7 +657,7 @@ member_state_t * session_new_member(xrtp_session_t * ses, uint32 src, void *user
     mem->lock = xthr_new_lock();
     if(!mem->lock)
 	{
-       free(mem);
+       xfree(mem);
        return NULL;
     }
     
@@ -838,12 +839,12 @@ int member_deliver_media_loop(void *gen)
 				mem->expect_seqno = hold->seqno + 1;
 
 				/* in case, several packet in one payload memory */
-				free(hold->memory);
+				xfree(hold->memory);
 			}
 
 			xthr_unlock(mem->delivery_lock);
 
-			free(hold);
+			xfree(hold);
 		}
 		else if((hold->seqno - mem->expect_seqno) > 0)
 		{
@@ -876,7 +877,7 @@ int session_cmp_media_usec(void *tar, void *pat)
  */
 int session_member_hold_media(member_state_t * mem, void *media, int bytes, uint16 seqno, uint32 rtpts, rtime_t us_ref, rtime_t us, int last, void *memblock)
 {
-	media_hold_t *hold = malloc(sizeof(media_hold_t));
+	media_hold_t *hold = xmalloc(sizeof(media_hold_t));
 
 	hold->media = media;
 	hold->bytes = bytes;
@@ -1267,6 +1268,7 @@ uint32 session_make_ssrc(xrtp_session_t * ses)
 
     return ssrc;
  }
+
  
 /* retrieve media info of the member */
 void* session_member_mediainfo(member_state_t *mem, uint32 *rtpts, int *signum)
@@ -1308,7 +1310,7 @@ int session_issue_mediainfo(xrtp_session_t *ses, void *minfo, int signum)
 {
 	if(signum != ses->self->minfo_signum || ses->self->mediainfo == NULL)
 	{
-		session_debug(("session_issue_media_info: mediainfo[#%d] @%d\n", signum, minfo));
+		session_debug(("session_issue_media_info: mediainfo[#%d] @%d\n", signum, (uint)minfo));
    
 		ses->self->mediainfo = minfo;
 		ses->self->minfo_signum = signum;
@@ -1424,7 +1426,7 @@ int session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, u
 		return XRTP_OK;
 	}
 
-    mem = (member_state_t *)malloc(sizeof(struct member_state_s));
+    mem = (member_state_t *)xmalloc(sizeof(struct member_state_s));
     if(!mem)
 	{
 		session_debug(("session_new_member: No memory for member\n"));
@@ -1437,7 +1439,7 @@ int session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, u
     mem->lock = xthr_new_lock();
     if(!mem->lock)
 	{
-        free(mem);
+        xfree(mem);
 		xthr_unlock(ses->members_lock);
 		return XRTP_FAIL;
     }
@@ -1456,7 +1458,7 @@ int session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, u
     if(!mem->delivery_buffer)
 	{
         xthr_done_lock(mem->lock);
-		free(mem);
+		xfree(mem);
 
 		xthr_unlock(ses->members_lock);
 		return XRTP_FAIL;
@@ -1795,6 +1797,7 @@ int session_set_rtp_rate(xrtp_session_t *ses, int rate)
    ses->usec_period = 1000000 / rate;
 
    session_set_buffer(ses, RTP_MAX_PACKET_DELAY, ses->usec_period * RTP_DELAY_FACTOR);
+
 
    return XRTP_OK;
 }

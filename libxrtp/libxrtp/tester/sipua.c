@@ -16,7 +16,10 @@
  ***************************************************************************/
 
 #include "sipua.h"
+
 #include <stdlib.h>
+
+#include <timedia/xmalloc.h>
 #include <string.h>
  
 #define UA_LOG
@@ -60,7 +63,7 @@ int sipua_done_record(sipua_record_t *record)
 		rec->caps[i]->done(rec->caps[i]);
 	}
 
-	free(rec);
+	xfree(rec);
 
 	return UA_OK;
 }
@@ -126,7 +129,7 @@ sipua_record_t *sipua_new_record(void *cb_connect_user, int(*cb_connect)(void*,c
 								void *cb_disconnect_user, int(*cb_disconnect)(void*,char*,int))
 {
 	sipua_record_t *rec;
-	rec = malloc(sizeof(struct record_impl_s));
+	rec = xmalloc(sizeof(struct record_impl_s));
 	if(!rec)
 	{
 		ua_log(("record_new: No memory\n"));
@@ -158,7 +161,7 @@ int sipua_done(sipua_t *sipua)
 		ua->records[i]->done(ua->records[i]);
 	}
 
-	free(ua);
+	xfree(ua);
 
 	return UA_OK;
 }
@@ -345,7 +348,7 @@ int sipua_disconnect(sipua_t *sipua, char *from_cn, int from_cnlen, char *to_cn,
 
 sipua_t *sipua_new(char *proxy_ip, uint16 proxy_port, void *config)
 {
-	sipua_t *sipua = malloc(sizeof(struct sipua_impl_s));
+	sipua_t *sipua = xmalloc(sizeof(struct sipua_impl_s));
 	if(!sipua)
 	{
 		ua_log(("sipua_new: No memory\n"));

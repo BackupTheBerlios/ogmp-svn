@@ -21,6 +21,9 @@
   */
 
 #include "internal.h"
+
+#include <timedia/xmalloc.h>
+
 /*
 #define PSCHED_SIMPLE_LOG
 */
@@ -148,7 +151,7 @@ struct ssch_unit_s{
     portman_done(ssch->rtp_portman);
     portman_done(ssch->rtcp_portman);
 
-    free(ssch);
+    xfree(ssch);
 
     return XRTP_OK;
  }
@@ -202,7 +205,7 @@ struct ssch_unit_s{
 
     simple_sched_log(("simple_sched_add: free_slot = %d\n", free_slot));
     
-    unit = (ssch_unit_t *)malloc(sizeof(struct ssch_unit_s));
+    unit = (ssch_unit_t *)xmalloc(sizeof(struct ssch_unit_s));
     if(!unit)
     {
        portman_remove_port(ssch->rtp_portman, rtp_port);
@@ -261,7 +264,7 @@ struct ssch_unit_s{
           portman_remove_port(ssch->rtcp_portman, rtcp_port);
 
           session_set_schedinfo(ses, NULL);
-          free(ssch->units[i]);
+          xfree(ssch->units[i]);
           ssch->units[i] = NULL;
           ssch->rtcp_queue[i].ssch_unit = NULL;
 
@@ -563,6 +566,7 @@ int simple_schedule_rtcp(void * gen)
 
          simple_sched_log(("simple_schedule_rtcp: waiting for rtcp request\n"));
          xthr_cond_wait(ssch->wait_rtcp_request, ssch->rtcp_lock);
+
          simple_sched_log(("simple_schedule_rtcp: schedule rtcp\n"));
       }
 
@@ -742,7 +746,7 @@ int simple_schedule_rtcp(void * gen)
 
 session_sched_t * sched_new()
 {
-   simple_sched_t * ssch = (simple_sched_t *)malloc(sizeof(struct simple_sched_s));
+   simple_sched_t * ssch = (simple_sched_t *)xmalloc(sizeof(struct simple_sched_s));
 
    if(!ssch) return NULL;
 
@@ -752,7 +756,7 @@ session_sched_t * sched_new()
 
    if(!ssch->clock)
    {
-      free(ssch);
+      xfree(ssch);
       return NULL;
    }
     
@@ -780,7 +784,7 @@ session_sched_t * sched_new()
       if(ssch->rtp_portman) portman_done(ssch->rtp_portman);
       if(ssch->rtcp_portman) portman_done(ssch->rtcp_portman);
        
-      free(ssch);
+      xfree(ssch);
       return NULL;
    }
     

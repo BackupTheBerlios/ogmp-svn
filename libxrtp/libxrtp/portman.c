@@ -18,7 +18,8 @@
 #include <timedia/socket.h>    /* POSIX 1003.1 - 2001 compliant */
  
 #include "portman.h"
-#include <timedia/xmap.h>
+
+#include <timedia/xmalloc.h>
 #include <stdlib.h>
 
 #include <stdio.h>
@@ -42,7 +43,7 @@ struct portman_s{
 
 portman_t * portman_new(){
 
-   portman_t * man = malloc(sizeof(struct portman_s));
+   portman_t * man = xmalloc(sizeof(struct portman_s));
    if(man){
 
       man->maxio = 0;
@@ -66,7 +67,7 @@ int portman_done(portman_t * man){
    //map_done(man->ports);
    xlist_done(man->portlist, portman_done_io);
 
-   free(man);
+   xfree(man);
 
    return XRTP_OK;
 }
