@@ -33,8 +33,8 @@
  #endif
  #define time_log(fmtargs)  do{if(timer_log) printf fmtargs;}while(0)
  
- struct xclock_s{
-
+ struct xclock_s
+ {
     struct timeval now;
     
     int nsec;  /* 1 nanosec */
@@ -43,13 +43,15 @@
 
     int msec;   /* 1 millisec */
 
+    uint32 ntp_usec;
+
     int (*hrtime_now)(xclock_t *clock);
 
     xthr_lock_t * lock;
  };
 
-int posix_time_now(xclock_t * clock){
-    
+int posix_time_now(xclock_t * clock)
+{
     struct timeval then = clock->now;
     
     gettimeofday(&clock->now, NULL);
@@ -60,8 +62,10 @@ int posix_time_now(xclock_t * clock){
     clock->usec += (clock->now.tv_sec - then.tv_sec) * 1000000;
     clock->usec += clock->now.tv_usec - then.tv_usec;
 
-    clock->nsec += (clock->now.tv_sec - then.tv_sec) * HRTIME_SECOND_DIVISOR;
+    clock->nsec += (clock->now.tv_sec - then.tv_sec) * 1000000000;
     clock->nsec += (clock->now.tv_usec - then.tv_usec) * 1000;
+
+    clock->ntp_usec = clock->now.tv_usec;
 
     time_log(("posix_time_now: msec = %d, nsec = %u\n",clock->msec , clock->nsec));
 
@@ -294,6 +298,19 @@ int time_msec_sleep(xclock_t * clock, int msec, int * remain) {
         *remain = rem.tv_sec * 1000 + rem.tv_nsec * 1000000;
 
     if(r == -1) return OS_EINTR;
+
+    return OS_OK;
+}
+
+int time_ntp(xrtp_clock_t * clock, uint32 *hintp, uint32 *lontp)
+{
+    xthr_lock(clock->lock);
+
+    clock->hrtime_now(clock);
+    *lontp = clock->ntp_usec;
+    *hintp = time(NULL) + EPOCH_OFFSET;
+
+    xthr_unlock(clock->lock);
 
     return OS_OK;
 }

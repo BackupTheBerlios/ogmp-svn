@@ -23,7 +23,7 @@
  #include <time.h>
 
  /* seconds b/w 1970(epoch) and 1900(ntp) */
- #define EPOCH_OFFSET 2208988800
+ #define EPOCH_OFFSET 2208988800u
  
  /* FIXME: Consider time warp */
  #define HRTIME_BITS   32
