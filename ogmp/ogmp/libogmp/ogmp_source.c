@@ -41,15 +41,17 @@ int source_loop(void * gen)
 {
    ogmp_source_t * source = (ogmp_source_t *)gen;
 
-   xrtp_hrtime_t itv;
+   rtime_t itv;
    
    source->finish = 0;
 	
    source->demuxing = 1;
 
+   src_debug (("source_loop: start demuxing ...\n"));
+
    while (1)
    {
-      {/*lock*/ xthr_lock(source->lock);}
+	  {/*lock*/ xthr_lock(source->lock);}
       
       if (source->finish)
       {
@@ -63,13 +65,14 @@ int source_loop(void * gen)
       if( itv < 0 && itv == MP_EOF)
       {
          src_log(("(source_loop: stop demux)\n"));
+
          break;
       }
       
       {/*unlock*/ xthr_unlock(source->lock);}
    }
    
-   source->demuxer = NULL;
+   source->demuxing = 0;
 
    {/*unlock*/ xthr_unlock(source->lock);}
 
@@ -82,13 +85,23 @@ int source_start (media_source_t *msrc)
 {
 	ogmp_source_t *source = (ogmp_source_t*)msrc;
 
-	if(source->demuxer)
+	if(source->demuxing)
+	{
+		src_debug (("source_start: source already running\n"));
+
 		return MP_OK;
+	}
 		
 	/* start thread */
 	if(source->nstream == 0)
+	{
+		src_debug (("source_start: no source stream available\n"));
+
 		return MP_FAIL;
-		
+	}
+
+	src_log (("source_start: start\n"));
+
 	source->demuxer = xthr_new(source_loop, source, XTHREAD_NONEFLAGS);
    
 	return MP_OK;
@@ -145,7 +158,8 @@ int source_cb_on_player_ready(void *gen, media_player_t *player)
 {
 	ogmp_source_t *src = (ogmp_source_t*)gen;
 
-	src_log (("source_cb_on_player_ready: player ready\n"));
+	src_debug (("source_cb_on_player_ready: player ready\n"));
+	exit(0);
 
 	source_start(&src->source);
 

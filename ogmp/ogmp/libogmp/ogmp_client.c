@@ -667,7 +667,9 @@ char* client_set_call_source(sipua_t* sipua, sipua_set_t* call, media_source_t* 
                        clie->nmedia, source, clie->pt);
  
     if(sdp)
-        call->renew_body = sdp;
+	{
+		call->renew_body = sdp;
+	}
 
     return sdp;
 }
@@ -1024,11 +1026,12 @@ int client_set_bye_callback (sipua_t *sipua, int (*callback)(void *callback_user
 
     client->on_bye = callback;
     client->user_on_bye = callback_user;
+
     return UA_OK;
 }
-/************************************
- *  End of set Callbacks for SIPUA  *
- ************************************/
+/************************************/
+/*  End of set Callbacks for SIPUA  */
+/************************************/
  
 
 sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, int bandwidth)

@@ -93,7 +93,6 @@ int spxs_set_callback (media_player_t *mp, int type, int (*call)(), void *user)
 {
    speex_sender_t *playa = (speex_sender_t *)mp;
 
-
    switch(type)
    {
       case (CALLBACK_PLAYER_READY):
@@ -260,7 +259,7 @@ int spxs_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
 {
    speex_sender_t *vs = (speex_sender_t*)gen;
 
-   spxs_log(("spxs_on_member_update: dest[%s] connected\n", cn));
+   spxs_debug(("spxs_on_member_update: dest[%s] connected\n", cn));
    
    if(vs->callback_on_ready)
 	   vs->callback_on_ready(vs->callback_on_ready_user, (media_player_t*)vs);
@@ -375,7 +374,6 @@ int spxs_stop (media_player_t *mp)
 }
 
 /**************************************************************/
-
 int spxs_match_type (media_receiver_t *recvr, char *mime, char *fourcc)
 {
    /* FIXME: Due to no strncasecmp on win32 mime is case sensitive */

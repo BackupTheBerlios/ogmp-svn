@@ -421,7 +421,7 @@ int spxrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp)
    return XRTP_OK;
 }
 
-/**
+/****************************************************************
  * When a rtcp come in, need to do following:
  * - If a new src, add to member list, waiting to validate.
  * - If is a SR, do nothing before be validated, otherwise check
@@ -445,8 +445,6 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 	spxrtp_handler_t *profile = (spxrtp_handler_t*)handler;
 	member_state_t *myself = session_owner(ses);
 
-	spxrtp_debug(("audio/speex.spxrtp_rtcp_in: 0\n"));
-    
 	/* Here is the implementation */
 	profile->rtcp_size = rtcp->bytes_received;
 
@@ -463,6 +461,7 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 	src_sender = rtcp_sender(rtcp);
 
 	rtcp_arrival_time(rtcp, &ms, &us, &ns);
+
 	spxrtp_log(("audio/speex.spxrtp_rtcp_in: arrived %dB at %dms/%dus/%dns\n", rtcp->bytes_received, ms, us, ns));
 
 	/* rtp_conn and rtcp_conn will be uncertain after this call */
@@ -473,7 +472,9 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 	{
 		rtcp_compound_done(rtcp);
 
-		spxrtp_log(("audio/speex.spxrtp_rtcp_in: Ssrc[%d] refused\n", src_sender));
+		spxrtp_log(("audio/speex.spxrtp_rtcp_in: discard ssrc[%d]\n", src_sender));
+
+		exit(0);
 
 		return XRTP_CONSUMED;
 	}
