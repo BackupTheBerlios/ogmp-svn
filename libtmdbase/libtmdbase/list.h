@@ -78,6 +78,16 @@ extern DECLSPEC int xlist_remove_item(xlist_t * list, void *item);
 extern DECLSPEC void * xlist_remove_if(xlist_t * list, void * data, int(*match)(void*, void*));
 extern DECLSPEC int xlist_delete_if(xlist_t * list, void * cdata, int(*condition)(void*, void*), int(*freer)(void*));
 extern DECLSPEC void * xlist_find(xlist_t * list, void * data, int (*match)(void*, void*), xlist_user_t *user);
+
+/**
+ * Trim the items before given item, into an EMPTY list
+ *
+ * return number of dumped item, if error or given item is not in the list, return 0.
+ */
+extern DECLSPEC 
+int 
+xlist_trim_before(xlist_t * list, void * item, xlist_t *dumps);
+
 /**
  * Traverse the list by a function, if function return error, abort.
  */

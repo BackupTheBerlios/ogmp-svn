@@ -495,6 +495,50 @@ int xlist_visit(xlist_t * list, int(*visit)(void*, void*), void *visitor){
    return ret;
 }
 
+int xlist_trim_before(xlist_t * list, void * data, xlist_t *dumps)
+{
+   xrtp_list_node_t *newhead = NULL;
+   xrtp_list_node_t *end = NULL;
+
+   int num = 0;
+   
+   if(!list || list->num == 0)
+      return 0;
+
+   if(dumps->num != 0)
+   {
+	   xlist_log(("xlist_trim_before: need an empty list to dump\n"));
+	   return 0;
+   }
+
+   newhead = list->head;
+   end = NULL;
+   
+   while(newhead)
+   {
+      if( newhead->data == data ) break;
+      
+	  num++;
+      end = newhead;
+      newhead = newhead->next;
+   }
+
+   if(!newhead)
+   {
+	   xlist_log(("xlist_trim_before: nothing to trim\n"));
+	   return 0;
+   }
+
+   dumps->head = list->head;
+   dumps->end = end;
+   dumps->num = num;
+
+   list->head = newhead;
+   list->num -= num;
+
+   return num;
+}
+
 /*old api, not use anymore*/
 xrtp_list_t * xrtp_list_new(){return xlist_new();}
 
