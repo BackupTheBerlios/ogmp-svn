@@ -183,6 +183,7 @@ struct ogmp_curses_s
     xthr_lock_t* event_queue_lock;
 
 	user_profile_t* edit_profile;
+	int clear_profile;
 };
 /*
 char log_buf3[LOG_LEN];

@@ -249,6 +249,8 @@ int window_profiles_run_command(gui_t* gui, int c)
 		case 1:  /* Ctrl-A */
 		{
 			ocui->edit_profile = NULL;
+			ocui->clear_profile = 1;
+
 			gui_show_window(gui, GUI_NEWID, GUI_PROFILES);
 
 			break;

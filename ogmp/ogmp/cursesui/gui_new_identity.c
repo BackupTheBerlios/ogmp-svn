@@ -138,13 +138,15 @@ int window_new_identity_print(gui_t* gui, int wid)
 		editline_set_line(newid_edit[NEWID_REGNAME], ocui->edit_profile->regname, strlen(ocui->edit_profile->regname));
 		editline_set_line(newid_edit[NEWID_REGSEC], seconds, strlen(seconds));
 	}
-	else
+	else if(ocui->clear_profile)
 	{
 		editline_clear(newid_edit[NEWID_FULLNAME]);
 		editline_clear(newid_edit[NEWID_BOOKLOC]);
 		editline_clear(newid_edit[NEWID_REGISTARY]);
 		editline_clear(newid_edit[NEWID_REGNAME]);
 		editline_clear(newid_edit[NEWID_REGSEC]);
+
+		ocui->clear_profile = 0;
 	}
 
 	attrset(COLOR_PAIR(0));
