@@ -30,6 +30,7 @@
 
  #include <sys/socket.h>
  #include <sys/select.h>
+ #include <unistd.h>
  #define socket_close close
 
 #endif

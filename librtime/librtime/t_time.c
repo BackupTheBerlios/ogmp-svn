@@ -68,7 +68,7 @@ int recv_loop(void * param){
        if(delt > 0){
 
           xthr_unlock(show.lock);
-          lrtime_sleep(show.clock, delt, NULL);
+          time_msec_sleep(show.clock, delt, NULL);
           //printf("recv_loop: selpt %dms\n", lrtime_passed(show.clock, lrnow));
 
        }else{
@@ -196,7 +196,7 @@ int recv_loop(void * param){
 
           xthr_unlock(show.lock);
           printf("thread run: now = %dms, next sub shown in %dms, during %dms\n", lrnow, delt, show.end-show.start);
-          lrtime_sleep(show.clock, delt, NULL);
+          time_msec_sleep(show.clock, delt, NULL);
 
        }else{
 
