@@ -15,9 +15,12 @@
  *                                                                         *
  ***************************************************************************/
 
- #include "os.h"
+#ifndef XMAP_H
+#define XMAP_H
 
- typedef struct xrtp_map_s xrtp_map_t;
+#include "os.h"
+
+typedef struct xrtp_map_s xrtp_map_t;
 
 extern DECLSPEC  xrtp_map_t * map_new(int size);
 
@@ -32,3 +35,5 @@ extern DECLSPEC  int map_blank(xrtp_map_t * map);
 extern DECLSPEC  void * map_item(xrtp_map_t * map, int key);
 
 extern DECLSPEC  int map_max_key(xrtp_map_t * map);
+
+#endif

@@ -61,7 +61,9 @@
  typedef unsigned __int64  uint64;
  typedef __int64           int64;
  typedef long              off_t;
+ typedef unsigned int   uint;
 #else
+ #include <sys/types.h>
  typedef unsigned long long  uint64;
  typedef long long int64;
 #endif
@@ -73,8 +75,6 @@
 typedef unsigned int   uint32;
 typedef unsigned short uint16;
 typedef unsigned char  uint8;
-
-typedef unsigned int   uint;
 
 typedef int   int32;
 typedef short int16;
