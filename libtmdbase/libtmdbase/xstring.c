@@ -37,11 +37,12 @@
 
  char * xstr_nclone(char *str, int len)
  {
-     char * new_str = (char *)xmalloc(sizeof(char) * (len+1));
-
-     strncpy(new_str, str, len);
-	 new_str[len] = '\0';
-
+     char *new_str = (char *)xmalloc(sizeof(char) * (len+1));
+     if(new_str)
+     {
+         strncpy(new_str, str, len);
+         new_str[len] = '\0';
+     }
      return new_str;
  }
 
@@ -50,8 +51,8 @@
     return memcmp(src, des, len);
  }
 
- char * xstr_new_string(char str[]){
-
+ char * xstr_new_string(char str[])
+ {
     char * s = (char *)xmalloc(strlen(str) + 1);
     if(!s)
        return NULL;
@@ -61,8 +62,8 @@
     return s;    
  }
 
- int xstr_done_string(char * str){
-
+ int xstr_done_string(char * str)
+ {
     if(str)
 		xfree(str);
     
