@@ -22,7 +22,7 @@
 #include <string.h>
 
 #include <stdio.h>
-/* 
+/*
 #define BUFFER_LOG
 */
 #ifdef BUFFER_LOG
@@ -56,21 +56,26 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
 
       buf->len = size;
       buf->mounted = 1;
-
-      buffer_log(("buffer_new: %d bytes buffer mounted\n", buf->len));
    }
+   
+   buffer_log(("buffer_new: Buf@%d, %d bytes Data@%d\n", (int)buf, buf->len, (int)buf->data));
    
    return buf;
 }
 
- int buffer_done(xrtp_buffer_t * buf){
-
-    if(buf->mounted == 1) free(buf->data);
+int buffer_done(xrtp_buffer_t * buf)
+{
+   if(buf->mounted == 1)
+   {
+      buffer_log(("buffer_done: free mounted data[@%d]\n", (int)(buf->data)));
+      free(buf->data);
+   }
             
-    free(buf);
+   buffer_log(("buffer_done: free Buf[@%d]\n", (int)buf));
+   free(buf);
 
-    return OS_OK;
- }
+   return OS_OK;
+}
 
  int buffer_mount(xrtp_buffer_t * buf, char *data, int len){
 
@@ -195,7 +200,7 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
 
     memcpy((buf->data + buf->len_data), data, len);
     
-    buffer_log(("buffer_add_data: Add %d bytes data to buf[%d-%d]\n", len, buf->len_data, (buf->len_data + len - 1)));
+    buffer_log(("buffer_add_data: Add %d bytes data to buf[%d-%d]@%d\n", len, buf->len_data, (buf->len_data + len - 1), (int)buf->data));
 
     buf->len_data += len;
     buf->pos += len;
@@ -212,7 +217,7 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
 
     memset((buf->data + buf->len_data), val, run);
 
-    buffer_log(("buffer_fill_value: Fill %d '%d's data to buf[%d-%d]\n", run, val, buf->len_data, (buf->len_data + run - 1)));
+    buffer_log(("buffer_fill_value: Fill %d '%d's data to buf[%d-%d]@%d\n", run, val, buf->len_data, (buf->len_data + run - 1), (int)buf->data));
 
     buf->len_data += run;
     buf->pos += run;
@@ -239,14 +244,14 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
 
  int buffer_add_uint8(xrtp_buffer_t * buf, uint8 byte){
 
-    if(buf->len_data + sizeof(uint8) > buf->len){
-
+    if(buf->len_data + sizeof(uint8) > buf->len)
+    {
        return OS_EREFUSE;
     }
 
     buf->data[buf->len_data] = byte;
     
-    buffer_log(("buffer_add_uint8: Add (%d) to buf[%d]\n", byte, buf->pos));
+    buffer_log(("buffer_add_uint8: Add '%u' to buf[%d]@%d\n", byte, buf->pos, (int)buf->data));
 
     buf->len_data += sizeof(uint8);
     buf->pos += sizeof(uint8);
@@ -262,11 +267,15 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
     }
 
     if(buf->byte_order == BIGEND_ORDER)
+    {
+       buffer_log(("buffer_add_uint16: Add BE(%u) to buf[%d]@%d\n", word, buf->pos, (int)(buf->data)));
        RSSVAL(buf->data, buf->len_data, word);
+    }
     else
+    {
+       buffer_log(("buffer_add_uint16: Add LE(%u) to buf[%d]@%d\n", word, buf->pos, (int)(buf->data)));
        SSVAL(buf->data, buf->len_data, word);
-       
-    buffer_log(("buffer_add_uint16: Add (%d) to buf[%d]@%d\n", word, buf->pos, (int)&(buf->data[buf->len_data])));
+    }
 
     buf->len_data += sizeof(uint16);
     buf->pos += sizeof(uint16);
@@ -276,25 +285,23 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
 
  int buffer_add_uint32(xrtp_buffer_t * buf, uint32 dword){
 
-    if(buf->len_data + sizeof(uint32) > buf->len){
-
-       buffer_log(("buffer_add_uint32(): buffer.len(%d) full! Can't add (%d)", buf->len, dword));
-
+    if(buf->len_data + sizeof(uint32) > buf->len)
+    {
+       buffer_log(("buffer_add_uint32: buffer.len(%d) full! Can't add (%d)", buf->len, dword));
        return OS_EREFUSE;
     }
 
-    if(buf->byte_order == BIGEND_ORDER){
-       
-       buffer_log(("Report :)\tbuffer_add_uint32()\t{ Add Big end uint32 }\n"));
+    if(buf->byte_order == BIGEND_ORDER)
+    {
+       buffer_log(("buffer_add_uint32: Add BE(%u) to buf[%d]@%d\n", dword, buf->pos, (int)(buf->data)));
        RSIVAL(buf->data, buf->len_data, dword);
     }
-    else{
-       
-       buffer_log(("buffer_add_uint32: Add Little end uint32\n"));
+    else
+    {
+       buffer_log(("buffer_add_uint32: Add LE(%u) to buf[%d]@%d\n", dword, buf->pos, (int)(buf->data)));
        SIVAL(buf->data, buf->len_data, dword);
     }
        
-    buffer_log(("buffer_add_uint32: Add (%d) to buf[%d]@%d\n", dword, buf->pos, (int)&(buf->data[buf->len_data])));
 
     buf->len_data += sizeof(uint32);
     buf->pos += sizeof(uint32);
@@ -311,7 +318,7 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
 
     buf->data[buf->len_data] = byte;
 
-    buffer_log(("buffer_add_int8: Add (%d) to buf[%d]\n", byte, buf->pos));
+    buffer_log(("buffer_add_int8: Add '%d' to buf[%d]@%d\n", byte, buf->pos, (int)buf->data));
 
     buf->len_data += sizeof(int8);
     buf->pos += sizeof(int8);
@@ -319,19 +326,23 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
     return OS_OK;
  }
 
- int buffer_add_int16(xrtp_buffer_t * buf, int16 word){
-
-    if(buf->len_data + sizeof(int16) > buf->len){
-
+ int buffer_add_int16(xrtp_buffer_t * buf, int16 word)
+ {
+    if(buf->len_data + sizeof(int16) > buf->len)
+    {
        return OS_EREFUSE;
     }
 
     if(buf->byte_order == BIGEND_ORDER)
+    {
+       buffer_log(("buffer_add_int16: Add BE(%d) to buf[%d]@%d\n", word, buf->pos, (int)buf->data));
        RSSVALS(buf->data, buf->len_data, word);
+    }
     else
+    {
+       buffer_log(("buffer_add_int16: Add LE(%d) to buf[%d]@%d\n", word, buf->pos, (int)buf->data));
        SSVALS(buf->data, buf->len_data, word);
-
-    buffer_log(("buffer_add_int16: Add (%d) to buf[%d]\n", word, buf->pos));
+    }
 
     buf->len_data += sizeof(int16);
     buf->pos += sizeof(int16);
@@ -339,19 +350,23 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
     return OS_OK;
  }
 
- int buffer_add_int32(xrtp_buffer_t * buf, int32 dword){
-
-    if(buf->len_data + sizeof(int32) > buf->len){
-
+ int buffer_add_int32(xrtp_buffer_t * buf, int32 dword)
+ {
+    if(buf->len_data + sizeof(int32) > buf->len)
+    {
        return OS_EREFUSE;
     }
 
     if(buf->byte_order == BIGEND_ORDER)
+    {
+       buffer_log(("buffer_add_int32: Add BE(%d) to buf[%d]@%d\n", dword, buf->pos, (int)buf->data));
        RSIVALS(buf->data, buf->len_data, dword);
+    }
     else
+    {
+       buffer_log(("buffer_add_int32: Add LE(%d) to buf[%d]@%d\n", dword, buf->pos, (int)buf->data));
        SIVALS(buf->data, buf->len_data, dword);
-
-    buffer_log(("buffer_add_int32: Add (%d) to buf[%d]\n", dword, buf->pos));
+    }
 
     buf->len_data += sizeof(int32);
     buf->pos += sizeof(int32);
@@ -401,7 +416,7 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
 
     *ret = (uint8)buf->data[buf->pos];
 
-    buffer_log(("buffer_next_uint8: (%d) at buf[%d]\n", *ret, buf->pos));
+    buffer_log(("buffer_next_uint8: '%d' at buf[%d]@%d\n", *ret, buf->pos, (int)buf->data));
 
     buf->pos += sizeof(uint8);
 
@@ -415,27 +430,22 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
        return 0;
     }
 
-    if(HOST_BYTEORDER == BIGEND_ORDER){
-
+    if(HOST_BYTEORDER == BIGEND_ORDER)
+    {
        *ret = RSVAL(buf->data, buf->pos);
-
-       buffer_log(("buffer_next_uint16: bigend (%d) at buf[%d]@%d\n", *ret, buf->pos, (int)(buf->data+buf->pos)));
+       buffer_log(("buffer_next_uint16: BE(%u) at buf[%d]@%d\n", *ret, buf->pos, (int)(buf->data)));
     }
-    else{
-       
+    else
+    {
        *ret = SVAL(buf->data, buf->pos);
-       
-       buffer_log(("buffer_next_uint16: smallend (%d) at buf[%d]@%d\n", *ret, buf->pos, (int)(buf->data+buf->pos)));
+       buffer_log(("buffer_next_uint16: LE(%u) at buf[%d]@%d\n", *ret, buf->pos, (int)(buf->data)));
     }
     
-    if(HOST_BYTEORDER != buf->byte_order){
-
+    if(HOST_BYTEORDER != buf->byte_order)
+    {
        _buffer_swap16(*ret);
-
-       buffer_log(("buffer_next_uint16: hostend (%d) at buf[%d]@%d\n", *ret, buf->pos, (int)(buf->data+buf->pos)));
+       buffer_log(("buffer_next_uint16: HE(%u) at buf[%d]@%d\n", *ret, buf->pos, (int)(buf->data)));
     }
-    
-    buffer_log(("buffer_next_uint16: (%d) at buf[%d]@%d\n", *ret, buf->pos, (int)(buf->data+buf->pos)));
     
     buf->pos += sizeof(uint16);
 
@@ -449,24 +459,22 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
        return 0;
     }
 
-    if(HOST_ORDER == BIGEND_ORDER){
-       
-       buffer_log(("buffer_next_uint32: Get Big end uint32\n"));
+    if(HOST_ORDER == BIGEND_ORDER)
+    {
+       buffer_log(("buffer_next_uint32: BE (%u) at buf[%d]@%d\n", *ret, buf->pos, (int)(buf->data)));
        *ret = RIVAL(buf->data, buf->pos);
     }
-    else{
-       
-       buffer_log(("buffer_next_uint32: Get Little end uint32\n"));
+    else
+    {
+       buffer_log(("buffer_next_uint32: LE (%u) at buf[%d]@%d\n", *ret, buf->pos, (int)(buf->data)));
        *ret = IVAL(buf->data, buf->pos);
     }
        
-    if(HOST_ORDER != buf->byte_order){
-       
-       buffer_log(("buffer_next_uint32: Convert to host endian uint32\n"));
+    if(HOST_ORDER != buf->byte_order)
+    {
+       buffer_log(("buffer_next_uint32: HE (%u) at buf[%d]@%d\n", *ret, buf->pos, (int)(buf->data)));
        _buffer_swap32(*ret);
     }
-
-    buffer_log(("buffer_next_uint32: (%d) at buf[%d]@%d\n", *ret, buf->pos, (int)(buf->data+buf->pos)));
 
     buf->pos += sizeof(uint32);
 
@@ -482,7 +490,7 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
 
     *ret = (int8)buf->data[buf->pos];
 
-    buffer_log(("buffer_next_int8: (%d) at buf[%d]\n", *ret, buf->pos));
+    buffer_log(("buffer_next_int8: '%d' at buf[%d]@%d\n", *ret, buf->pos, (int)buf->data));
 
     buf->pos += sizeof(int8);
 
@@ -501,8 +509,7 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
     else
        *ret = SVALS(&(buf->data), buf->pos);
 
-
-    buffer_log(("buffer_next_int16: (%d) at buf[%d]\n", *ret, buf->pos));
+    buffer_log(("buffer_next_int16: (%d) at buf[%d]@%d\n", *ret, buf->pos, (int)buf->data));
 
     buf->pos += sizeof(int16);
 
@@ -521,7 +528,7 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
     else
        *ret = IVALS(&(buf->data), buf->pos);
 
-    buffer_log(("buffer_next_int32: (%d) at buf[%d]\n", *ret, buf->pos));
+    buffer_log(("buffer_next_int32: (%d) at buf[%d]@%d\n", *ret, buf->pos, (int)buf->data));
 
     buf->pos += sizeof(int32);
 
@@ -537,7 +544,7 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
 
     memcpy(data, buf->data + buf->pos, len);
     
-    buffer_log(("buffer_next_data: (data) at buf[%d-%d]\n", buf->pos, (buf->pos + len - 1)));
+    buffer_log(("buffer_next_data: (data) at buf[%d-%d]@%d\n", buf->pos, (buf->pos + len - 1), (int)buf->data));
 
     buf->pos += len;
 
