@@ -86,6 +86,8 @@ int window_sessions_list_print(gui_t* gui, int wid)
 				strcpy(status, "Ringing"); break;
 			case SIPUA_EVENT_ANSWERED:
 				strcpy(status, "Answered"); break;
+			case SIPUA_EVENT_ACK:
+				strcpy(status, "Established"); break;
 			case SIPUA_EVENT_REQUESTFAILURE:
 				strcpy(status, "Request Fail"); break;
 			case SIPUA_EVENT_SERVERFAILURE:
@@ -101,8 +103,6 @@ int window_sessions_list_print(gui_t* gui, int wid)
 				strcpy(status, "Busy"); break;
 			case SIPUA_STATUS_DECLINE:
 				strcpy(status, "Declined"); break;
-			case SIPUA_EVENT_ACK:
-				strcpy(status, "Established"); break;
 			default:
 				strcpy(status, "Unknown");
 		}

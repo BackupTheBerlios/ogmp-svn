@@ -22,6 +22,7 @@
 
 #include <timedia/xmalloc.h>
 #include "eXosipua.h"
+#include "eXosip2.h"
 
 //jcall_t jcalls[MAX_NUMBER_OF_CALLS];
 //char   _localip[30];
@@ -113,6 +114,8 @@ int jcall_new(eXosipua_t *jua, eXosip_event_t *je)
 	call_e.local_uri = je->local_uri;
 	call_e.remote_uri = je->remote_uri;
 
+	je->jc->c_ack_sdp = 0;
+
 	if (je->reason_phrase[0]!='\0')
     {
 		call_e.reason_phrase = je->reason_phrase;
@@ -168,6 +171,8 @@ int jcall_proceeding(eXosipua_t *jua, eXosip_event_t *je)
 		call_e.status_code = je->status_code;
     }
 
+	je->jc->c_ack_sdp = 0;
+
 	/* event notification */
 	jua->sipuas.notify_event(jua->sipuas.lisener, &call_e.event);
 
@@ -188,6 +193,8 @@ int jcall_ringing(eXosipua_t *jua, eXosip_event_t *je)
 	call_e.req_uri = je->req_uri;
 	call_e.local_uri = je->local_uri;
 	call_e.remote_uri = je->remote_uri;
+
+	je->jc->c_ack_sdp = 0;
 
 	if (je->reason_phrase[0]!='\0')
     {
@@ -221,6 +228,27 @@ int jcall_answered(eXosipua_t *jua, eXosip_event_t *je)
 		call_e.reason_phrase = je->reason_phrase;
 		call_e.status_code = je->status_code;
     }
+			
+#if 0
+	{
+		osip_message_t *ack;
+
+		generating_ack_for_2xx(&ack, je->osip_dialog_t *dialog);
+  
+		i = osip_transaction_init(&transaction, NICT, eXosip.j_osip, ack);
+		if (i!=0)
+		{
+			/* TODO: release the j_call.. */
+
+			osip_message_free(reg);
+		}
+		else
+		{
+			jr->r_last_tr = transaction;
+		}
+	}
+#endif
+
 /*
 #ifdef MEDIASTREAMER_SUPPORT
 	if (ca->remote_sdp_audio_ip[0]=='\0')
@@ -235,6 +263,7 @@ int jcall_answered(eXosipua_t *jua, eXosip_event_t *je)
     }
 #endif
 */
+
 	/* event notification */
 	jua->sipuas.notify_event(jua->sipuas.lisener, &call_e.event);
 
@@ -245,6 +274,8 @@ int jcall_ack(eXosipua_t *jua, eXosip_event_t *je)
 {
 	sipua_event_t e;
 	sipua_set_t* call;
+
+	printf("jcall_ack: 1\n");
 
 	/* event back to sipuac */
 	memset(&e, 0, sizeof(sipua_event_t));
