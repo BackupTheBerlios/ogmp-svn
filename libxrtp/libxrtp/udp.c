@@ -277,7 +277,7 @@
         
      port->lock = xthr_new_lock();
 
-     udp_log(("port_new: socket[%u] opened as local ip[%u]:%u\n", port->socket, sin.sin_addr.s_addr, ntohs(sin.sin_port)));
+     udp_log(("port_new: socket[%d] opened as local ip[%u]:%u\n", port->socket, sin.sin_addr.s_addr, ntohs(sin.sin_port)));
 
      return port;
   }

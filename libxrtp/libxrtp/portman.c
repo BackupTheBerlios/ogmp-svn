@@ -33,7 +33,6 @@
 
 struct portman_s{
 
-   //int max_port;
    int maxio;
 
    xlist_t     *portlist; /* used to retrieve all */
@@ -46,9 +45,11 @@ portman_t * portman_new(){
    portman_t * man = malloc(sizeof(struct portman_s));
    if(man){
 
-      FD_ZERO(&(man->io_set));
+      man->maxio = 0;
         
       man->portlist = xlist_new();
+		
+		FD_ZERO(&(man->io_set));
    }
 
    return man;
@@ -118,12 +119,17 @@ int portman_remove_port(portman_t * man, xrtp_port_t * port){
 
    io = port_io(port);
    FD_CLR(io, &(man->io_set));
+
    xlist_remove_item(man->portlist, port);
 
-   /* DEBUG Start */
    portman_log(("portman_remove_port: port[%d] removed\n", io));
    portman_log(("portman_remove_port: ports to detect are:"));
    p = xlist_first(man->portlist, &lu);
+   if(p) 
+		man->maxio = port_io(p);
+	else
+		man->maxio = 0;
+
    while(p){
 
       io = port_io(p);
@@ -131,11 +137,11 @@ int portman_remove_port(portman_t * man, xrtp_port_t * port){
 
           portman_log((" [%d]", io));
       }
+		man->maxio = man->maxio < io ? io : man->maxio;
 
       p = xlist_next(man->portlist, &lu);
    }
-   portman_log(("\n"));
-   /* DEBUG End */
+   portman_log(("\nportman_remove_port: maxio=%d\n", man->maxio));
 
    return XRTP_OK;
 }
