@@ -254,7 +254,9 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 		media_bw = session_new_sdp(cata, nettype, addrtype, netaddr, &rtp_portno, &rtcp_portno, pt, codings[i].mime, codings[i].clockrate, codings[i].param, bw_budget, control, &sdp_info);
 
 		if(media_bw > 0)
+		{
 			bw_budget -= media_bw;
+		}
 		else
 			break;
 	}
@@ -270,9 +272,9 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 
 /* Create a empty call from incoming sdp, and generate new sdp */
 sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof, 
-								rtpcap_set_t* rtpcapset,
-								char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
-								int nmedia, media_control_t* control)
+								rtpcap_set_t* rtpcapset, char* mediatypes[], 
+								int rtp_ports[], int rtcp_ports[], int nmedia, 
+								media_control_t* control, int call_max_bw)
 {
 	sipua_set_t* set;
 
@@ -287,9 +289,18 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 	char tmp2[16];
 
 	int medias[MAX_SIPUA_MEDIA];
+
 	int bw_budget;
+	int call_bw;
 
 	module_catalog_t *cata = control->modules(control);
+
+	bw_budget = control->book_bandwidth(control, call_max_bw);
+	if(bw_budget == 0)
+	{
+		/* No enough bandwidth to make call */
+		return NULL;
+	}
 
 	set = xmalloc(sizeof(sipua_set_t));
 	if(!set)
@@ -298,6 +309,8 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 		return NULL;
 	}
 	memset(set, 0, sizeof(sipua_set_t));
+
+	set->bandwidth = bw_budget;
 
 	set->user_prof = user_prof;
 
@@ -365,10 +378,10 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 	
 	memset(medias, 0, sizeof(medias));
 
-	bw_budget = control->book_bandwidth(control, 0);
-
 	rtpcap = xlist_first(rtpcapset->rtpcaps, &u);
 
+	call_bw = 0;
+	
 	while(rtpcap)
 	{
 		int media_bw;
@@ -409,14 +422,13 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 							rtpcap->clockrate, rtpcap->coding_param, 
 							bw_budget, control, &sdp_info);
 			
-			if(media_bw > 0)
-			{
-				medias[j]++;
-				bw_budget -= media_bw;
-				rtpcap->enable = 1;
-			}
-			else
+			if(media_bw < 0 || bw_budget < call_bw)
 				break;
+
+			medias[j]++;
+			rtpcap->enable = 1;
+
+			call_bw += media_bw;
 		}
 		
 		rtpcap = xlist_next(rtpcapset->rtpcaps, &u);
@@ -449,15 +461,10 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
 	char *nettype, *addrtype, *netaddr;
 
 	int bw = 0;
-	int bw_budget;
 	module_catalog_t *cata;
 
 	/* define a player */
 	media_format_t *format;
-
-	bw_budget = control->book_bandwidth(control, call->bandwidth);
-	if(bw_budget < 0)
-		return UA_FAIL;
 
 	sipua->uas->address(sipua->uas, &nettype, &addrtype, &netaddr);
 	
@@ -486,6 +493,8 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
       
 		format = (media_format_t*) xlist_next(format_handlers, &u);
 	}
+
+	printf("sipua_establish_call: 5\n");
 
 	if(call->rtp_format == NULL)
 	{

@@ -482,7 +482,7 @@ int ogm_set_handlers ( ogm_format_t *ogm, module_catalog_t * cata )
 
 int ogm_support_type (media_format_t *mf, char *type, char *subtype)
 {
-	if(!strcmp(type, "mime") && !strcmp(type, "application/ogg"))
+	if(!strcmp(type, "mime") && !strcmp(subtype, "application/ogg"))
 		return 1;
 
 	if(!strcmp(type, "ext"))

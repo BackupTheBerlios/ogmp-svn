@@ -35,6 +35,7 @@ extern ogmp_ui_t* global_ui;
 #endif
 
 #define SIPUA_MAX_RING 6
+#define MAX_CALL_BANDWIDTH  5000  /* in Bytes */
 
 /****************************************************************************************/
 
@@ -47,7 +48,9 @@ int client_call_ringing(void* gen)
 
 	xclock_t *clock = time_start();
 
-	while(1)
+	int ringing = 1;
+
+	while(ringing)
 	{
 		xthr_lock(client->nring_lock);
 
@@ -56,11 +59,15 @@ int client_call_ringing(void* gen)
 
 		client->ogui->ui.beep(&client->ogui->ui);
 
+		ringing = 0;
+
 		for(i=0; i<MAX_SIPUA_LINES; i++)
 		{
 			call = client->lines[i];
 			if(call && call->status == SIPUA_EVENT_NEW_CALL)
 			{
+				ringing = 1;
+
 				if(call->ring_num == 0)
 				{
 					/* On hold or redirect this call */
@@ -74,6 +81,7 @@ int client_call_ringing(void* gen)
 				}
 				
 				sipua_answer(&client->sipua, call, SIPUA_STATUS_RINGING);
+
 				call->ring_num--;
 			}
 		}
@@ -274,6 +282,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			}
 
 			rtpcapset = rtp_capable_from_sdp(sdp_message);
+			rtpcapset->user_profile = client->sipua.user_profile;
 
 			/* now to negotiate call, which will generate call structure with sdp message for reply
 			 * still no rtp session created !
@@ -281,7 +290,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			call = sipua_negotiate_call(sipua, client->sipua.user_profile, rtpcapset,
 							client->mediatypes, client->default_rtp_ports, 
 							client->default_rtcp_ports, client->nmedia,
-							client->control);
+							client->control, MAX_CALL_BANDWIDTH);
 			
 			if(!call)
 			{
@@ -568,7 +577,7 @@ sipua_set_t* client_new_call(sipua_t* sipua, char* subject, int sbytes, char *de
 	sipua_set_t* call;
 	ogmp_client_t* clie = (ogmp_client_t*)sipua;
 
-	int bw_budget = clie->control->book_bandwidth(clie->control, 0);
+	int bw_budget = clie->control->book_bandwidth(clie->control, MAX_CALL_BANDWIDTH);
 
 	setting = client_setting(clie->control);
 
@@ -778,7 +787,10 @@ sipua_set_t* client_pick(sipua_t* sipua, int line)
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
 	if(client->sipua.incall)
+	{
+		client->lines[line]->status = SIPUA_EVENT_ONHOLD;
 		return NULL;
+	}
 
 	client->sipua.incall = client->lines[line];
 	client->lines[line] = NULL;

@@ -347,7 +347,7 @@ sipua_set_t*
 sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof, 
 								rtpcap_set_t* rtpcapset,
 								char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
-								int nmedia, media_control_t* control);
+								int nmedia, media_control_t* control, int call_max_bw);
 
 DECLSPEC
 int 

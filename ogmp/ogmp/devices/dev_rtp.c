@@ -21,20 +21,20 @@
 
 #include "dev_rtp.h"
 
-#define RTP_LOG
-#define RTP_DEBUG
+#define RTPDEV_LOG
+#define RTPDEV_DEBUG
 
-#ifdef RTP_LOG
- #define rtp_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
+#ifdef RTPDEV_LOG
+ #define rtpdev_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
- #define rtp_log(fmtargs)
+ #define rtpdev_log(fmtargs)
 #endif
 
 
-#ifdef RTP_DEBUG
- #define rtp_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
+#ifdef RTPDEV_DEBUG
+ #define rtpdev_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
- #define rtp_debug(fmtargs)
+ #define rtpdev_debug(fmtargs)
 #endif
 
 int rtp_done_setting(control_setting_t *gen){
@@ -49,7 +49,7 @@ control_setting_t* rtp_new_setting(media_device_t *dev)
    rtp_setting_t * set = xmalloc(sizeof(struct rtp_setting_s));
    if(!set)
    {
-      rtp_debug(("rtp_new_setting: No memory"));
+      rtpdev_debug(("rtp_new_setting: No memory"));
       return NULL;
    }
 
@@ -69,7 +69,7 @@ media_frame_t* rtp_new_frame (media_pipe_t *pipe, int bytes, char *init_data)
    rtp_frame_t * rtpf = (rtp_frame_t*)xmalloc(sizeof(struct rtp_frame_s));
    if(!rtpf)
    {
-      rtp_debug(("rtp_new_frame: No memory for frame\n"));
+      rtpdev_debug(("rtp_new_frame: No memory for frame\n"));
       return NULL;
    }   
    memset(rtpf, 0, sizeof(*rtpf));
@@ -80,7 +80,7 @@ media_frame_t* rtp_new_frame (media_pipe_t *pipe, int bytes, char *init_data)
    if(rtpf->media_unit == NULL)
    {
 	   xfree(rtpf);
-	   rtp_debug(("rtp_new_frame: No memory for data"));
+	   rtpdev_debug(("rtp_new_frame: No memory for data"));
 	   
 	   return NULL;
    }
@@ -91,7 +91,7 @@ media_frame_t* rtp_new_frame (media_pipe_t *pipe, int bytes, char *init_data)
    /* initialize data */
    if(init_data != NULL)
    {
-		//rtp_log(("rtp_new_frame: initialize %d bytes data\n", bytes));
+		//rtpdev_log(("rtp_new_frame: initialize %d bytes data\n", bytes));
 		memcpy(rtpf->media_unit, init_data, bytes);
    }
 
@@ -112,21 +112,21 @@ int rtp_recycle_frame (media_pipe_t *pipe, media_frame_t *f)
 
 int rtp_put_frame (media_pipe_t *pipe, media_frame_t *frame, int last)
 {
-   rtp_log(("rtp_put_frame: NOP, put frame to rtp_media instead\n"));
+   rtpdev_log(("rtp_put_frame: NOP, put frame to rtp_media instead\n"));
 
    return MP_EIMPL;
 }
 
 media_frame_t* rtp_pick_frame (media_pipe_t *pipe)
 {
-   rtp_log(("rtp_pick_frame: NOP, pick frame in media_post() instead\n"));
+   rtpdev_log(("rtp_pick_frame: NOP, pick frame in media_post() instead\n"));
 
    return NULL;
 }
 
 int rtp_pick_content (media_pipe_t *pipe, media_info_t *media_info, char* raw, int nraw_once)
 {
-   rtp_log(("rtp_pick_content: Can only pick whole frame\n"));
+   rtpdev_log(("rtp_pick_content: Can only pick whole frame\n"));
 
    return MP_EUNSUP;
 }
@@ -143,7 +143,7 @@ media_pipe_t * rtp_pipe_new()
    media_pipe_t *mp = (media_pipe_t*)xmalloc(sizeof(struct media_pipe_s));
    if(!mp)
    {
-      rtp_debug(("rtp_pipe_new: No memory to allocate\n"));
+      rtpdev_debug(("rtp_pipe_new: No memory to allocate\n"));
       return NULL;
    }
    memset(mp, 0, sizeof(struct media_pipe_s));
@@ -201,7 +201,7 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
    xrtp_session_t *ses = NULL;
    xrtp_media_t *rtp_media;
 
-   rtp_debug(("rtp_session: [%s] on [%s:%u|%u], mime[%s]\n", cname, netaddr, rtp_portno, rtcp_portno, profile_mime));
+   printf("rtp_session: [%s] on [%s:%u|%u], mime[%s]\n", cname, netaddr, rtp_portno, rtcp_portno, profile_mime);
 
    /* If the session is exist */
    ses = xrtp_find_session(rtp->session_set, cname, cnlen, netaddr, rtp_portno, rtcp_portno, profile_no, profile_mime);
@@ -217,10 +217,12 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
 		{
 			session_set_scheduler(ses, xrtp_scheduler(rtp->session_set));
    
-			rtp_debug(("rtp_session: session[%s:%s] created\n", cname, profile_mime));
+			printf("rtp_session: session[%s:%s] created\n", cname, profile_mime);
 		}
 		else
-			rtp_debug(("rtp_session: session[%s:%s] exceed the bandwidth\n", cname, profile_mime));
+		{
+			printf("rtp_session: session[%s:%s][%d] exceed the bandwidth[%d]\n", cname, profile_mime, session_bandwidth(ses), bw_budget);
+		}
    }
 
    return ses;
@@ -228,8 +230,8 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
 
 int rtp_setting (media_device_t *dev, control_setting_t *setting, module_catalog_t *cata)
 {
-	rtp_log(("rtp_setting: do nothing here\n"));
-	rtp_log(("rtp_setting: use rtp_device->rtp_session() to get rtp session\n"));
+	rtpdev_log(("rtp_setting: do nothing here\n"));
+	rtpdev_log(("rtp_setting: use rtp_device->rtp_session() to get rtp session\n"));
 
 	return MP_OK;
 }
@@ -247,7 +249,7 @@ int rtp_start (media_device_t * dev, media_control_t *ctrl)
    if(!rdev->session_set) 
 	   return MP_FAIL;
    
-   rtp_debug(("rtp.rtp_start: started...\n"));
+   rtpdev_debug(("rtp.rtp_start: started...\n"));
    
    return MP_OK;
 }
@@ -274,7 +276,7 @@ int rtp_set_output_media (media_device_t *dev, media_info_t *info)
 
 int rtp_match_type(media_device_t *dev, char *type)
 {
-   rtp_log(("rtp.rtp_match_type: I am rtp device\n"));
+   rtpdev_log(("rtp.rtp_match_type: I am rtp device\n"));
 
    if( !strcmp("rtp", type) ) return 1;
 
@@ -287,7 +289,7 @@ int rtp_done (media_device_t *dev)
 
    if(!dev)
    {
-      rtp_debug(("rtp.rtp_done: NULL dev\n"));
+      rtpdev_debug(("rtp.rtp_done: NULL dev\n"));
       return MP_OK;
    }
    /*
@@ -311,7 +313,7 @@ module_interface_t * rtp_new ()
    dev_rtp_t *dr = (dev_rtp_t*)xmalloc(sizeof(struct dev_rtp_s));
    if (!dr)
    {
-      rtp_debug(("vrtp_new: No free memory\n"));
+      rtpdev_debug(("vrtp_new: No free memory\n"));
       return NULL;
    }
 

@@ -19,6 +19,7 @@
 
 #include <timedia/xmalloc.h>
 #include <timedia/xstring.h>
+#include <timedia/ui.h>
 
 #define CATALOG_VERSION  0x0001
 #define DIRNAME_MAXLEN  128
@@ -27,13 +28,13 @@
 #define RTP_DEBUG
 
 #ifdef RTP_LOG
- #define rtp_log(fmtargs)  do{printf fmtargs;}while(0)
+ #define rtp_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define rtp_log(fmtargs)  
 #endif
 
 #ifdef RTP_DEBUG
- #define rtp_debug(fmtargs)  do{printf fmtargs;}while(0)
+ #define rtp_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define rtp_debug(fmtargs)  
 #endif
@@ -258,8 +259,11 @@ int rtp_set_fourcc_player (media_format_t * mf, media_player_t * player, const c
 
 int rtp_support_type (media_format_t *mf, char *type, char *subtype)
 {
-	if(!strcmp(type, "mime") && !strcmp(type, "application/sdp"))
+	if(!strcmp(type, "mime") && !strcmp(subtype, "application/sdp"))
+	{
+		printf("rtp_support_type: support mime:application/sdp\n");
 		return 1;
+	}
 
 	return 0;
 }
@@ -304,13 +308,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 	char* remote_nettype;
 	char* remote_addrtype;
 	char* remote_netaddr;
-/*
-	if(!cap->match_type(cap, "rtp"))
-	{
-		rtp_log(("rtp_open_stream: Not RTP capable\n"));
-		return NULL;
-	}
-*/
+
 	strm = xmalloc(sizeof(rtp_stream_t));
 	if(!strm)
 	{
@@ -368,14 +366,6 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 	session_portno(strm->session, &rtp_portno, &rtcp_portno);
 	rtpcap->profile_no = session_payload_type(strm->session);
 
-	/* the stream rtp capable 
-	strm->rtp_cap = rtp_capable_descript(rtpcap->profile_no, 
-						user_prof->user->nettype, user_prof->user->addrtype, user_prof->user->netaddr, 
-						rtp_portno, rtcp_portno, 
-						rtpcap->profile_mime, rtpcap->clockrate, 
-						rtpcap->coding_param, NULL);
-	*/
-
 	strm->rtp_format = rtp_format;
 
 	rtp_log(("rtp_open_stream: FIXME - stream mime string overflow possible!!\n"));
@@ -383,8 +373,6 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 
 	rtp_add_stream((media_format_t*)rtp_format, (media_stream_t*)strm, sno, stype);
 
-	rtp_log(("rtp_open_stream: for [%s:%u|%u]\n", rtpcapset->cname, rtpcap->rtp_portno, rtpcap->rtcp_portno));
-	
 	if(rtpcap->netaddr)
 	{
 		remote_nettype = rtpcap->nettype;
@@ -398,7 +386,11 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 		remote_netaddr = rtpcapset->netaddr;
 	}
 	
+	printf("rtp_open_stream: for %s:%u|%u\n", rtpcapset->cname, rtpcap->rtp_portno, rtpcap->rtcp_portno);
+	
 	session_add_cname(strm->session, rtpcapset->cname, strlen(rtpcapset->cname), remote_netaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno, rtpcap, ctrl);
+	
+	printf("rtp_open_stream: 3\n");
 
 	/* waiting to source to be available */
 	strm->source_cname = xstr_clone(rtpcapset->cname);
