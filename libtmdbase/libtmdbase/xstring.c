@@ -63,7 +63,8 @@
 
  int xstr_done_string(char * str){
 
-    xfree(str);
+    if(str)
+		xfree(str);
     
     return OS_OK;
  }
