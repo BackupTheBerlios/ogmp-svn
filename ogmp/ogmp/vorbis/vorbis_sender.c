@@ -133,8 +133,6 @@ int vsend_open_stream (media_player_t *mp, media_info_t *media_info)
 
    struct audio_info_s ai;
    
-   vsend_log (("vsend_open_stream: open vorbis stream\n"));
-
    if (!mp->device)
    {
       vsend_log (("vsend_open_stream: No device to play vorbis audio\n"));
@@ -151,9 +149,7 @@ int vsend_open_stream (media_player_t *mp, media_info_t *media_info)
    
    vs->rtp_media->set_rate(vs->rtp_media, ai.info.sample_rate);
 
-   vsend_log (("vsend_open_stream: here\n"));
-
-   session_issue_media_info(vs->rtp_session, vinfo, vs->vorbis_info_signum++);
+   session_require_mediainfo(vs->rtp_session, vinfo, vs->vorbis_info_signum++);
    
    vsend_log (("vsend_open_stream: vorbis stream opened\n"));
    
@@ -208,6 +204,7 @@ int vsend_receive_next (media_player_t *mp, void *vorbis_packet, int64 samplesta
 
    if(samplestamp != vs->recent_samplestamp)
    {
+       vsend_log(("....................................................\n"));
 	   vsend_log(("vsend_receive_next: samples(%lld) ", samplestamp));
 	   vsend_log(("start @%dus\n", time_usec_now(clock)));
 

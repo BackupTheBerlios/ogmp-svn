@@ -166,7 +166,7 @@
     //uint len_buffer;
     uint maxlen;
 
-    xrtp_buffer_t * buffer;
+    xrtp_buffer_t *buffer;
 
     int member_state_updated;
  };
@@ -311,7 +311,7 @@
 
     uint32 SSRC;
     
-    uint32 name; /* ASCII string */
+    char name[4]; /* ASCII string */
 
     int len_data;
     char * data;
@@ -534,7 +534,7 @@ rtcp_report(xrtp_rtcp_compound_t * compound, uint32 SRC,
                      uint32 * ret_full_seqno, uint32 * ret_jitter,
                      uint32 * ret_lsr_stamp, uint32 * ret_lsr_delay);
 
- int rtcp_done_all_reports(xrtp_rtcp_compound_t * compound);
+int rtcp_done_reports(xrtp_rtcp_compound_t * compound);
 
  /**
   * Create the rtcp packet,
@@ -563,11 +563,11 @@ rtcp_report(xrtp_rtcp_compound_t * compound, uint32 SRC,
 
 extern DECLSPEC
 xrtp_rtcp_app_t * 
-rtcp_new_app(xrtp_rtcp_compound_t * compound, uint32 SRC, uint8 subtype, uint32 name, uint len, char * appdata);
+rtcp_new_app(xrtp_rtcp_compound_t * compound, uint32 SRC, uint8 subtype, char name[4], uint len, char * appdata);
  
 extern DECLSPEC
 int 
-rtcp_app(xrtp_rtcp_compound_t * compound, uint32 SRC, uint8 subtype, uint32 name, char **appdata);
+rtcp_app(xrtp_rtcp_compound_t * compound, uint32 SRC, uint8 subtype, char name[4], char **appdata);
 
  /**
   * Release the compound packet

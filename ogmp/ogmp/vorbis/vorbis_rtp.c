@@ -332,7 +332,7 @@ int vrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 
 	   int32 rtpts_pass;
 
-	   vorbis_info_t *vinfo = (vorbis_info_t*)session_member_media_info(sender, &rtpts_mi, &signum);
+	   vorbis_info_t *vinfo = (vorbis_info_t*)session_member_mediainfo(sender, &rtpts_mi, &signum);
 	   
 	   if(!vinfo || vinfo->head_packets != 3)
 	   {
@@ -489,9 +489,9 @@ int vrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp)
    rtp_packet_set_timestamp(rtp, profile->timestamp_send);
 
    rtp_packet_set_payload(rtp, profile->payload_buf);
-
+   /*
    vrtp_log(("audio/vorbis.vrtp_rtp_out: payload[%u] (%d bytes)\n", profile->timestamp_send, buffer_datalen(profile->payload_buf)));
-
+   */
    if(!rtp_pack(rtp))
    {
       vrtp_log(("audio/vorbis.vrtp_rtp_out: Fail to pack rtp data\n"));
@@ -528,7 +528,7 @@ int vrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp)
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                 Timestamp (in sample rate units)              |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                  Vorbis Version (FFFF)                        |
+   |                  Vorbis Version (FFFFFFFF)                    |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |1|2|3|0|0|0|0|0| sequence num  |     Header 1 Bytes (HL)       |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -630,8 +630,7 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
          sender->lsr_usec = us;
 
 		 vrtp_log(("audio/vorbis.vrtp_rtcp_in:========================\n"));
-		 vrtp_log(("audio/vorbis.vrtp_rtcp_in: [%s] SR report\n", sender->cname));
-		 vrtp_log(("audio/vorbis.vrtp_rtcp_in: ssrc[%u]\n", sender->ssrc));
+		 vrtp_log(("audio/vorbis.vrtp_rtcp_in: SR report ssrc[%u][%s]\n", sender->ssrc, sender->cname));
 		 vrtp_log(("audio/vorbis.vrtp_rtcp_in: ntp[%u,%u];ts[%u]\n", hi_ntp,lo_ntp,rtcpts));
 		 vrtp_log(("audio/vorbis.vrtp_rtcp_in: sent[%dp;%dB]\n", packet_sent, octet_sent));
       }
@@ -640,8 +639,7 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
          /* RR */
 
 		 vrtp_log(("audio/vorbis.vrtp_rtcp_in:========================\n"));
-		 vrtp_log(("audio/vorbis.vrtp_rtcp_in: [%s] RR report\n", sender->cname));
-		 vrtp_log(("audio/vorbis.vrtp_rtcp_in: ssrc[%u]\n", sender->ssrc));
+		 vrtp_log(("audio/vorbis.vrtp_rtcp_in: RR report ssrc[%u][%s] \n", sender->ssrc, sender->cname));
       }
    }
 
@@ -657,8 +655,9 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 
    /* Check SDES */
 
+#if 0
    /* Check APP if carried, vorbis header packet is carried by APP packet */
-   applen = rtcp_app(rtcp, src_sender, 0, (uint32)appname, &appdata);
+   applen = rtcp_app(rtcp, src_sender, 0, appname, &appdata);
    if(applen)
    {
 		vorbis_info_t *vinfo;
@@ -669,77 +668,109 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 
 		uint32 *rtpts_h = (uint32*)&bytes[0];
 		uint32 *ver = (uint32*)&bytes[4];
+		int signum_now = (int)bytes[9];
 
         rtime_t ms_sync, us_sync, ns_sync;
 		uint32 rtpts_sync, rtpts_h_local;
 
+		vrtp_log(("audio/vorbis.vrtp_rtcp_in:------------------------\n"));
+		vrtp_log(("audio/vorbis.vrtp_rtcp_in: APP[VORB] ver[%x] %d bytes\n", *ver, applen));
+		
 		/* mapto local rtpts, rough method */
 		rtpts_h_local = *rtpts_h + session_member_sync_point(sender, &rtpts_sync, &ms_sync, &us_sync, &ns_sync);
 		
-		vinfo = (vorbis_info_t*)session_member_media_info(sender, &rtpts_vi, &signum_vi);
-
-		if(*ver == 0xFFFF)
+		vinfo = (vorbis_info_t*)session_member_mediainfo(sender, &rtpts_vi, &signum_vi);
+		if(!vinfo)
 		{
-			/* My own vorbis app version */
-			if(signum_vi != (int)bytes[9])
+			vinfo = malloc(sizeof(vorbis_info_t));
+			if(!vinfo)
 			{
-				session_member_expire_media_info(sender, rtpts_h_local, (int)bytes[9]);
+				vrtp_log(("audio/vorbis.vrtp_rtcp_in: no memory for vorbis info\n"));
+			}
+			else
+			{
+				memset(vinfo, 0, sizeof(vorbis_info_t));
+				session_member_update_mediainfo(sender, (void*)vinfo, rtpts_h_local, signum_now);
+			}
+		}
 
-				if(vinfo->header_identification_len)
+		if(*ver == 0xFFFFFFFF && vinfo != NULL)
+		{
+			vrtp_log(("audio/vorbis.vrtp_rtcp_in: vorbis info #%d\n", bytes[9]));
+			/* My own vorbis app version */
+			if(signum_vi != signum_now)
+			{
+				vorbis_info_t *exvi = (vorbis_info_t*)session_member_renew_mediainfo(sender, vinfo, rtpts_h_local, signum_now);
+
+				if(exvi && exvi->header_identification_len)
 				{
-					free(vinfo->header_identification);
-					vinfo->header_identification_len = 0;
+					free(exvi->header_identification);
+					exvi->header_identification_len = 0;
 				}
-				if(vinfo->header_comment_len)
+				if(exvi && exvi->header_comment_len)
 				{
-					free(vinfo->header_comment);
-					vinfo->header_comment_len = 0;
+					free(exvi->header_comment);
+					exvi->header_comment_len = 0;
 				}
-				if(vinfo->header_setup_len)
+				if(exvi && exvi->header_setup_len)
 				{		   
-					free(vinfo->header_setup);
-					vinfo->header_setup_len = 0;
+					free(exvi->header_setup);
+					exvi->header_setup_len = 0;
 				}
 
-				vinfo->head_packets = 0;
+				exvi->head_packets = 0;
 			}
 			
-		    if(vinfo->head_packets != 3)
+			if(vinfo->head_packets != 3)
 			{
-				int16 *h1_bytes = (int16*)&bytes[10];
-				int16 *h2_bytes = (int16*)&bytes[12];
-				int16 *h3_bytes = (int16*)&bytes[14];
-				char *pack = &appdata[16];
+				int h1_bytes = bytes[10];
+				int h2_bytes = bytes[12];
+				int h3_bytes = bytes[14];
 
-				if(bytes[8] & 0x8)
+				uint8 *pack = &appdata[16];
+
+				h1_bytes = (h1_bytes << 8) | bytes[11];
+				h2_bytes = (h2_bytes << 8) | bytes[13];
+				h3_bytes = (h3_bytes << 8) | bytes[15];
+
+				if(bytes[8] & 0x80)
 				{
 					/*header 1*/
-					vinfo->header_identification_len = *h1_bytes;
-					vinfo->header_identification = malloc(*h1_bytes);
-					memcpy(vinfo->header_identification, pack, *h1_bytes);
+					vinfo->header_identification_len = h1_bytes;
+					vinfo->header_identification = malloc(h1_bytes);
+					memcpy(vinfo->header_identification, pack, h1_bytes);
+
 					vinfo->head_packets++;
 
-					pack += *h1_bytes;
+					pack += h1_bytes;
+
+					vrtp_log(("audio/vorbis.vrtp_rtcp_in: cached identification header[%dB]\n", h1_bytes));
 				}
 
-				if(bytes[8] & 0x4)
+				if(bytes[8] & 0x40)
 				{
 					/*header 2*/
-					vinfo->header_comment_len = *h2_bytes;
-					vinfo->header_comment = malloc(*h2_bytes);
-					memcpy(vinfo->header_comment, pack, *h2_bytes);
+					vinfo->header_comment_len = h2_bytes;
+					vinfo->header_comment = malloc(h2_bytes);
+					memcpy(vinfo->header_comment, pack, h2_bytes);
+
 					vinfo->head_packets++;
 
-					pack += *h2_bytes;
+					pack += h2_bytes;
+
+					vrtp_log(("audio/vorbis.vrtp_rtcp_in: cached comment header[%dB]\n", h2_bytes));
 				}
 
-				if(bytes[8] & 0x2)
+				if(bytes[8] & 0x20)
 				{
 					/* header 3 */
-					vinfo->header_setup_len = *h3_bytes;
-					vinfo->header_setup = malloc(*h3_bytes);
-					memcpy(vinfo->header_setup, pack, *h3_bytes);
+					vinfo->header_setup_len = h3_bytes;
+					vinfo->header_setup = malloc(h3_bytes);
+					memcpy(vinfo->header_setup, pack, h3_bytes);
+
 					vinfo->head_packets++;
+
+					vrtp_log(("audio/vorbis.vrtp_rtcp_in: cached setup header[%dB]\n", h3_bytes));
 				}
 
 				if(vinfo->head_packets == 3)
@@ -747,13 +778,15 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 					vrtp_log(("audio/vorbis.vrtp_rtcp_in: ssrc[%u]#ts[%u] vorbis info cached\n", src_sender, rtpts_h_local));
 					
 					/* give a chance to inspect the media info of the participant */
-					sender->on_mediainfo(sender->on_mediainfo_user, src_sender, vinfo);	
+					if(sender->on_mediainfo)
+						sender->on_mediainfo(sender->on_mediainfo_user, src_sender, vinfo);	
 				}
 			}
 		}
 	}
-
+#endif
 	rtcp_compound_done(rtcp);
+	vrtp_log(("audio/vorbis.vrtp_rtcp_in:************ RTCP[%u]\n", src_sender));
 
 	return XRTP_CONSUMED;
 }
@@ -778,41 +811,64 @@ int vrtp_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 
    session_report(h->session, rtcp, h->timestamp_send);
     
-   if(session_renew_media_info(ses, &rtpts_h, &signum, &minfo))
+   if(session_distribute_mediainfo(ses, &rtpts_h, &signum, &minfo))
    {
 	   vorbis_info_t *vinfo = (vorbis_info_t*)minfo;
+   
 	   int applen = vinfo->header_identification_len + vinfo->header_comment_len + vinfo->header_setup_len + 16;
-	   char *app_mi = malloc(applen);
-	   char *app;
+	   
+	   if(applen > 0)
+	   {
+			uint8 *app_mi = malloc(applen);
+			uint8 *app;
+			int nheader=0;
 
-	   app_mi[0] = rtpts_h & 0xF000;
-	   app_mi[1] = rtpts_h & 0x0F00;
-	   app_mi[2] = rtpts_h & 0x00F0;
-	   app_mi[3] = rtpts_h & 0x000F;
-	   app_mi[4] = (char)0xFF;
-	   app_mi[5] = (char)0xFF;
-	   app_mi[6] = (char)0xFF;
-	   app_mi[7] = (char)0xFF;
-	   app_mi[8] = (char)0xEF;
-	   app_mi[9] = signum & 0xFF;
+			app_mi[0] = rtpts_h & 0xF000;
+			app_mi[1] = rtpts_h & 0x0F00;
+			app_mi[2] = rtpts_h & 0x00F0;
+			app_mi[3] = rtpts_h & 0x000F;
+			app_mi[4] = (char)0xFF;
+			app_mi[5] = (char)0xFF;
+			app_mi[6] = (char)0xFF;
+			app_mi[7] = (char)0xFF;
+			app_mi[8] = (char)0x0;
+			app_mi[9] = signum & 0xFF;
+			memset(&app_mi[10], 0, 6); /* len set to zero */
 
-	   app_mi[10] = vinfo->header_identification_len & 0xF0;
-	   app_mi[11] = vinfo->header_identification_len & 0x0F;
-	   app_mi[12] = vinfo->header_comment_len & 0xF0;
-	   app_mi[13] = vinfo->header_comment_len & 0x0F;
-	   app_mi[14] = vinfo->header_setup_len & 0xF0;
-	   app_mi[15] = vinfo->header_setup_len & 0x0F;
+			app = &app_mi[16];
 
-	   app = &app_mi[16];
-	   memcpy(app, vinfo->header_identification, vinfo->header_identification_len);
+			vrtp_log(("audio/vorbis.vrtp_rtcp_out: vinfo@%d\n", vinfo));
+			if(vinfo->header_identification_len)
+			{
+				app_mi[8] |= 0x80;
+				app_mi[10] = (vinfo->header_identification_len & 0xFF00) >> 8;
+				app_mi[11] = vinfo->header_identification_len & 0x00FF;
+				memcpy(app, vinfo->header_identification, vinfo->header_identification_len);
+				app += vinfo->header_identification_len;
+				nheader++;
+			}
+			if(vinfo->header_comment_len)
+			{
+				app_mi[8] |= 0x40;
+				app_mi[12] = (vinfo->header_comment_len & 0xFF00) >> 8;
+				app_mi[13] = vinfo->header_comment_len & 0x00FF;
+				memcpy(app, vinfo->header_comment, vinfo->header_comment_len);
+				app += vinfo->header_comment_len;
+				nheader++;
+			}
+			if(vinfo->header_setup_len)
+			{
+				app_mi[8] |= 0x20;
+				app_mi[14] = (vinfo->header_setup_len & 0xFF00) >> 8;
+				app_mi[15] = vinfo->header_setup_len & 0x00FF;
+				memcpy(app, vinfo->header_setup, vinfo->header_setup_len);
+				nheader++;
+			}
 
-	   app += vinfo->header_identification_len;
-	   memcpy(app, vinfo->header_comment, vinfo->header_comment_len);
-
-	   app += vinfo->header_comment_len;
-	   memcpy(app, vinfo->header_setup, vinfo->header_setup_len);
-
-	   rtcp_new_app(rtcp, session_ssrc(ses), 0, (uint32)appname, applen, app_mi);
+			vrtp_log(("audio/vorbis.vrtp_rtcp_out: %d packets media info in app packet\n", nheader));
+			
+			rtcp_new_app(rtcp, session_ssrc(ses), 0, appname, applen, app_mi);
+	   }
    }
 
    /* Profile specified */
@@ -823,7 +879,6 @@ int vrtp_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
    }
 
    h->rtcp_size = rtcp_length(rtcp);
-   vrtp_log(("audio/vorbis.vrtp_rtcp_out: rtcp size = %u\n", h->rtcp_size));
 
    return XRTP_OK;
 }
@@ -980,7 +1035,7 @@ uint8 vorbis_rtp_set_number(uint8 h, uint8 n)
 	return ((h&0xE0) | (n&0x1F));  /* '11100000' '00011111' */
 }
 
-int rtp_vorbis_loop(void *gen)
+int rtp_vorbis_send_loop(void *gen)
 {
 	rtp_frame_t *rtpf = NULL;
 
@@ -1004,7 +1059,7 @@ int rtp_vorbis_loop(void *gen)
 
 	//int current_group_end = 0;
 
-	xclock_t *clock = session_clock(profile->session);
+	xclock_t *ses_clock = session_clock(profile->session);
 
 	int group_samples = 0;
 	int payload_samples = 0;
@@ -1022,12 +1077,12 @@ int rtp_vorbis_loop(void *gen)
 	xlist_t *discard_frames = xlist_new();
 	if(!discard_frames)
 	{
-		vrtp_log(("rtp_vorbis_loop: no memory for discard_frames\n"));
+		vrtp_log(("rtp_vorbis_send_loop: no memory for discard_frames\n"));
 		return MP_EMEM;
 	}
 
 	/* randem value from current nano second */
-	vrtp_log(("rtp_vorbis_loop: FIXME - timestamp should start at randem value\n"));
+	vrtp_log(("rtp_vorbis_send_loop: FIXME - timestamp should start at randem value\n"));
    
 	profile->run = 1;
 
@@ -1053,12 +1108,12 @@ int rtp_vorbis_loop(void *gen)
 		if (xlist_size(profile->packets) == 0) 
 		{
 			profile->idle = 1;
-			/* vrtp_log(("rtp_vorbis_loop: no packet waiting, sleep!\n")); */
+			/* vrtp_log(("rtp_vorbis_send_loop: no packet waiting, sleep!\n")); */
 
 			xthr_cond_wait(profile->pending, profile->packets_lock);
 
 			profile->idle = 0;
-			/* vrtp_log(("rtp_vorbis_loop: wakeup! %d packets pending\n", xlist_size(profile->packets))); */
+			/* vrtp_log(("rtp_vorbis_send_loop: wakeup! %d packets pending\n", xlist_size(profile->packets))); */
 		}
 
 		/* sometime it's still empty, weired? */
@@ -1093,10 +1148,10 @@ int rtp_vorbis_loop(void *gen)
 		if(profile->new_group && !first_payload)
 		{
 
-			usec_now = time_usec_now(clock);
+			usec_now = time_usec_now(ses_clock);
 			if(in_group && usec_now > usec_group_end)
 			{
-				vrtp_log(("rtp_vorbis_loop: timeout for samplestamp[%lld]\n", profile->recent_samplestamp));
+				vrtp_log(("rtp_vorbis_send_loop: timeout for samplestamp[%lld]\n", profile->recent_samplestamp));
 				discard = 1;
 
 				/* new group notice consumed */
@@ -1134,7 +1189,7 @@ int rtp_vorbis_loop(void *gen)
 				
 			usec_group = (rtime_t)(1000000 * delta_samplestamp / vinfo->vi.rate);
 				
-			vrtp_log(("rtp_vorbis_loop: new group[%lld], ", rtpf->samplestamp));
+			vrtp_log(("rtp_vorbis_send_loop: new group[%lld], ", rtpf->samplestamp));
 			vrtp_log(("usec_group=%dus\n", usec_group));
 
 			profile->recent_samplestamp = rtpf->samplestamp;
@@ -1172,14 +1227,14 @@ int rtp_vorbis_loop(void *gen)
 		}
 
 		/* Test purpose */
-		//vrtp_log(("audio/vorbis.rtp_vorbis_loop: (%d), %dB, %d/%d/%d(p/g/s) samples\n", rtpf->grpno, rtpf->unit_bytes, rtpf->samples, group_samples, profile->timestamp_send));
+		//vrtp_log(("audio/vorbis.rtp_vorbis_send_loop: (%d), %dB, %d/%d/%d(p/g/s) samples\n", rtpf->grpno, rtpf->unit_bytes, rtpf->samples, group_samples, profile->timestamp_send));
 		/* Test end */
 		
 		/* send small packet bundled up to 32 */
 		if(rtpf->unit_bytes < MAX_BUNDLE_PACKET_BYTES)
 		{
 			/*
-			vrtp_log(("rtp_vorbis_loop: bundle packet[%lld]...", rtpf->samplestamp));
+			vrtp_log(("rtp_vorbis_send_loop: bundle packet[%lld]...", rtpf->samplestamp));
 			vrtp_log(("%d bytes\n", packet_bytes));
 			*/
 
@@ -1200,7 +1255,7 @@ int rtp_vorbis_loop(void *gen)
 
 				if(eots)
 				{
-					vrtp_log(("rtp_vorbis_loop: Last packet of the stamp[%lld]\n", rtpf->samplestamp));
+					vrtp_log(("rtp_vorbis_send_loop: Last packet of the stamp[%lld]\n", rtpf->samplestamp));
 			
 					buffer_seek(profile->payload_buf, 0);
 					vorbis_header = vorbis_rtp_set_number(vorbis_header, (uint8)(n_packet-1));
@@ -1236,7 +1291,7 @@ int rtp_vorbis_loop(void *gen)
 			{
 				if(remain_frame && packet_bytes < remain_frame->unit_bytes)
 				{
-					vrtp_log(("audio/vorbis.rtp_vorbis_loop: continue packet\n"));
+					vrtp_log(("audio/vorbis.rtp_vorbis_send_loop: continue packet\n"));
 					vorbis_header = vorbis_rtp_mark_continue(vorbis_header, 1);
 					continue_packet = 1;
 				}
@@ -1290,9 +1345,8 @@ int rtp_vorbis_loop(void *gen)
 		{
 			rtime_t usec_payload_deadline;
 			rtime_t usec_payload;
-			rtime_t in_usec;
 
-			usec_now = time_usec_now(clock);
+			usec_now = time_usec_now(ses_clock);
 
 			if(first_payload)
 				usec_stream_payload = usec_now;
@@ -1308,7 +1362,7 @@ int rtp_vorbis_loop(void *gen)
 					
 				usec_group_end = usec_group_start + usec_group;
 
-				vrtp_log(("rtp_vorbis_loop: %dus...%dus\n", usec_group_start, usec_group_end));
+				vrtp_log(("rtp_vorbis_send_loop: %dus...%dus\n", usec_group_start, usec_group_end));
 			}
 
 			if(continue_packet)
@@ -1322,11 +1376,9 @@ int rtp_vorbis_loop(void *gen)
 				usec_payload_deadline = usec_stream_payload + usec_payload;
 			}
 
-			in_usec = usec_payload_deadline - usec_now;
-
 			/* Test purpose */
-			//vrtp_log(("audio/vorbis.rtp_vorbis_loop: payload[%d]@%dus (%dP,%dS,%dus)\n", profile->usec_payload_timestamp, usec_stream_payload, n_packet, payload_samples, usec_payload));
-			vrtp_log(("audio/vorbis.rtp_vorbis_loop: %dus now, deadline[%dus]...in #%dus\n", usec_now, usec_payload_deadline, in_usec));
+			//vrtp_log(("audio/vorbis.rtp_vorbis_send_loop: payload[%d]@%dus (%dP,%dS,%dus)\n", profile->usec_payload_timestamp, usec_stream_payload, n_packet, payload_samples, usec_payload));
+			//vrtp_log(("audio/vorbis.rtp_vorbis_send_loop: %dus now, deadline[%dus]...in #%dus\n", usec_now, usec_payload_deadline, usec_payload_deadline - usec_now));
 			/* Test end */
 
 			/* call for session sending 
@@ -1334,7 +1386,7 @@ int rtp_vorbis_loop(void *gen)
 			 * usec left before send rtp packet to the net
 			 * deadline<=0, means ASAP, the quickness decided by bandwidth
 			 */
-			//session_rtp_to_send(session, usec_group_payload + usec_payload - usec_now, eots);  
+			session_rtp_to_send(profile->session, usec_payload_deadline, eots);  
 
 			/* timestamp update */
 			profile->usec_payload_timestamp += (int)usec_payload; 
@@ -1355,13 +1407,13 @@ int rtp_vorbis_loop(void *gen)
 		if(eots)
 		{
 			in_group = 0;
-			vrtp_log(("audio/vorbis.rtp_vorbis_loop: end of group @%dus\n", time_usec_now(clock)));
+			vrtp_log(("audio/vorbis.rtp_vorbis_send_loop: end of group @%dus\n", time_usec_now(ses_clock)));
 		}
 
 		/* when the stream ends, quit the thread */
 		if(eos && remain_frame==NULL)
 		{
-			vrtp_log(("rtp_vorbis_loop: End of Media, quit\n"));
+			vrtp_log(("audio/vorbis.rtp_vorbis_send_loop: End of Media, quit\n"));
 			break;
 		}
 	}
@@ -1447,7 +1499,7 @@ xrtp_media_t * rtp_vorbis(profile_handler_t *handler)
 		return NULL;
 	  }
 	   
-	  h->thread = xthr_new(rtp_vorbis_loop, h, XTHREAD_NONEFLAGS); 
+	  h->thread = xthr_new(rtp_vorbis_send_loop, h, XTHREAD_NONEFLAGS); 
 	  if(!h->thread)
 	  {
 		  xlist_done(h->packets, NULL);

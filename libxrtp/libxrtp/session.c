@@ -25,6 +25,7 @@
 /* issue 5 times media inf APP */
 #define RENEW_MINFO_LEVEL 5
 #define BUDGET_PERIOD_MSEC	1000  /* reset budget when large than one second */
+/**/
 
 #define SESSION_LOG
 #define SESSION_DEBUG
@@ -1255,18 +1256,33 @@ uint32 session_make_ssrc(xrtp_session_t * ses)
     return ssrc;
  }
  
-void* session_member_media_info(member_state_t *mem, uint32 *rtpts, int *signum)
+/* retrieve media info of the member */
+void* session_member_mediainfo(member_state_t *mem, uint32 *rtpts, int *signum)
 {
 	*rtpts = mem->rtpts_minfo;
 	*signum = mem->minfo_signum;
 	
-	return mem->media_info;
+	return mem->mediainfo;
 }
 
-int session_member_expire_media_info(member_state_t *mem, uint32 rtpts, int signum)
+/* new media info for the member */
+void* session_member_update_mediainfo(member_state_t *mem, void *minfo, uint32 rtpts, int signum)
+{
+	void *exmi = mem->mediainfo;
+
+	mem->mediainfo = minfo;
+	mem->minfo_signum = signum;
+	mem->rtpts_minfo = rtpts;
+
+	return exmi;
+}
+
+/* check if need to renew the media info */
+int session_member_renew_mediainfo(member_state_t *mem, void *minfo, uint32 rtpts, int signum)
 {
 	if(mem->minfo_signum != signum)
 	{
+		if(mem->mediainfo)
 		mem->rtpts_minfo = rtpts;
 		mem->minfo_signum = signum;
 		return 1;
@@ -1275,11 +1291,12 @@ int session_member_expire_media_info(member_state_t *mem, uint32 rtpts, int sign
 	return 0;
 }
 
-int session_issue_media_info(xrtp_session_t *ses, void *minfo, int signum)
+/* session is asked to distribute media info to members */
+int session_require_mediainfo(xrtp_session_t *ses, void *minfo, int signum)
 {
-   if(signum != signum)
+	if(signum != signum || ses->self->mediainfo == NULL)
 	{
-		ses->self->media_info = minfo;
+		ses->self->mediainfo = minfo;
 		ses->self->minfo_signum = signum;
 	}
 		
@@ -1287,25 +1304,31 @@ int session_issue_media_info(xrtp_session_t *ses, void *minfo, int signum)
 	ses->renew_minfo_level = RENEW_MINFO_LEVEL;
 	xthr_unlock(ses->renew_level_lock);
 
-   session_debug(("session_issue_media_info: pending...\n"));
+	session_log(("session_issue_media_info: pending...\n"));
    
-   return XRTP_OK;
+	return XRTP_OK;
 }
 
-int session_renew_media_info(xrtp_session_t *ses, uint32 *rtpts, int *signum, void **minfo_ret)
+/* check if need to send media info to member */
+int session_distribute_mediainfo(xrtp_session_t *ses, uint32 *rtpts, int *signum, void **minfo_ret)
 {
 	int n;
 
 	*rtpts = ses->self->rtpts_minfo;
 	*signum = ses->self->minfo_signum;
-	*minfo_ret = ses->self->media_info;
+	*minfo_ret = ses->self->mediainfo;
 
 	xthr_lock(ses->renew_level_lock);
 	n = ses->renew_minfo_level--;
 	xthr_unlock(ses->renew_level_lock);
 
 	if(n > 0 && *minfo_ret != NULL)
+	{
+		session_debug(("session_renew_media_info: [%s] renew level = %d\n", ses->self->cname, n));
 		return 1;
+	}
+
+	session_debug(("session_renew_media_info: [%s] has no media info to issue\n", ses->self->cname));
 
 	return 0;
 }
@@ -1340,12 +1363,12 @@ uint32 session_signature(xrtp_session_t * ses)
     return rand();
 }
 
- int session_solve_collision(member_state_t * mem, uint32 ssrc){
-
+int session_solve_collision(member_state_t * mem, uint32 ssrc)
+{
      xrtp_session_t * ses = mem->session;
      
-     if(ses->self == mem){
-
+     if(ses->self == mem)
+	 {
         /* The session is collided */
         
         if(ses->$callbacks.before_reset)
@@ -1361,8 +1384,8 @@ uint32 session_signature(xrtp_session_t * ses)
             ses->$callbacks.after_reset(ses->$callbacks.after_reset_user, ses);
      }
 
-     if(ses->self != mem){
-
+     if(ses->self != mem)
+	 {
         /* A third party collision detected 
          * Nothing to do, just keep receiving the media for the exist member, ignore the
          * new coming participant, the situation will be solved soon by the collided parties.
@@ -1370,7 +1393,7 @@ uint32 session_signature(xrtp_session_t * ses)
      }
 
      return XRTP_OK;
- }
+}
 
 int session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, uint16 rtp_portno, uint16 rtcp_portno, void *userinfo)
 {
@@ -1642,7 +1665,7 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 		session_log(("session_update_member_by_rtcp: Session[%s], %d members\n", ses->self->cname, ses->n_member));
 
 		/* issue media info to member */
-		session_issue_media_info(ses, ses->self->media_info, ses->self->minfo_signum);
+		session_require_mediainfo(ses, ses->self->mediainfo, ses->self->minfo_signum);
     }
 
     return mem;
@@ -2213,13 +2236,15 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id)
     return XRTP_OK;
  }
 
-int session_rtp_outgoing(xrtp_session_t * ses, xrtp_rtp_packet_t * rtp)
+int session_rtp_outgoing(xrtp_session_t * ses, xrtp_rtp_packet_t *rtp, rtime_t usec_deadline)
 {
     xrtp_buffer_t * buf= NULL;
     char * data = NULL;
     uint datalen = 0;
 
     session_connect_t * conn = NULL;
+
+	xclock_t *ses_clock = session_clock(ses);
 
     buf= rtp_packet_buffer(rtp);
     data = buffer_data(buf);
@@ -2240,13 +2265,16 @@ int session_rtp_outgoing(xrtp_session_t * ses, xrtp_rtp_packet_t * rtp)
 
         while(mem)
 		{
-            if(mem != ses->self)
+            if(mem != ses->self && mem->valid)
 			{
-                conn = mem->rtp_connect;
+                rtime_t us_now = time_usec_now(ses_clock);
 
-                session_log(("session_rtp_outgoing: [%s]=========RTP=>>>>>\n", ses->self->cname));
+				conn = mem->rtp_connect;
+
                 connect_send(conn, data, datalen);
                 nsent++;
+
+                session_log(("session_rtp_outgoing: due in %dus, [%s]=========RTP=>>>>>\n", usec_deadline - us_now, ses->self->cname));
             }
 
             mem = xrtp_list_next(ses->members, &ul);
@@ -2339,20 +2367,17 @@ int session_book_bandwidth(xrtp_session_t *ses, int bytes)
 /**
  * Send number of empty rtp packet to out/in pipe for containing media unit.
  */
-int session_rtp_to_send(xrtp_session_t *ses, rtime_t usec_allow, int last_packet)
+int session_rtp_to_send(xrtp_session_t *ses, rtime_t usec_deadline, int last_packet)
 {
     xrtp_rtp_packet_t * rtp;
     int packet_bytes;
     int pump_ret = 0;
-	rtime_t us_pass;
 
     /* Check time */
-	rtime_t ms_start;
-    rtime_t us_start;
-	rtime_t ns_start;
+	rtime_t ms_now;
+    rtime_t us_now;
+	rtime_t ns_now;
 	
-	time_rightnow(ses->clock, &ms_start, &us_start, &ns_start);
-
     /* <debug>
     static int mc;
     if(last_packet)
@@ -2394,8 +2419,10 @@ int session_rtp_to_send(xrtp_session_t *ses, rtime_t usec_allow, int last_packet
 
     if(ses->$state.n_pack_sent == 0)
 	{
-       ses->$state.usec_start_send = us_start;
-       ses->$state.lrts_start_send = ms_start;
+		time_rightnow(ses->clock, &ms_now, &us_now, &ns_now);
+
+		ses->$state.usec_start_send = us_now;
+		ses->$state.lrts_start_send = ms_now;
     }
 
     /* Test Time Atom
@@ -2412,7 +2439,7 @@ int session_rtp_to_send(xrtp_session_t *ses, rtime_t usec_allow, int last_packet
 
     rtp_packet_set_head(rtp, ses->self->ssrc, ses->self->max_seq);
 
-    pump_ret = pipe_pump(ses->rtp_send_pipe, usec_allow, rtp, &packet_bytes);
+    pump_ret = pipe_pump(ses->rtp_send_pipe, usec_deadline, rtp, &packet_bytes);
     if(pump_ret == XRTP_ETIMEOUT)
 	{
        session_log(("< session_rtp_to_send: Can't made packet on time, cancelled producing >\n"));
@@ -2437,16 +2464,13 @@ int session_rtp_to_send(xrtp_session_t *ses, rtime_t usec_allow, int last_packet
        return XRTP_FAIL;
 	}
 
-    session_rtp_outgoing(ses, rtp);
+	/* Get the making time */    
+	session_rtp_outgoing(ses, rtp, usec_deadline);
     rtp_packet_done(rtp);
 
-	/* Get the making time */
-    us_pass = time_usec_spent(ses->clock, us_start);
-    session_log(("session_rtp_to_send: spent %dus of total %dus\n", us_pass, usec_allow));
 	/*
     rtp_packet_set_info(rtp, packet_bytes);
     queue_wait(ses->packets_in_sched, rtp);
-       
     ses->sched->rtp_out(ses->sched, ses, usec_allow - us_pass, 0);
 	*/
     return XRTP_OK;
@@ -2460,12 +2484,14 @@ int session_cancel_rtp_sending(xrtp_session_t *ses, xrtp_hrtime_t ts)
     
     return XRTP_OK;
 }
+
+#if 0
 /* Return n bytes sent */
 int session_rtp_send_now(xrtp_session_t *ses)
 {
     int nbytes = 0;
 
-    int bw_per_recvr = 0;   /* bandwidth per member to receive media per period */
+    int bw_per_recvr = 0;   //bandwidth per member to receive media per period
     int packet_bytes = 0;
 
     rtime_t lrt_now = time_msec_now(ses->clock);
@@ -2474,14 +2500,14 @@ int session_rtp_send_now(xrtp_session_t *ses)
     rtime_t us_passed = 0;
     rtime_t lrt_passed = 0;
 
-	rtime_t ns_dummy = 0; /* just satisfy the api */
+	rtime_t ns_dummy = 0; //just satisfy the api
 
     xrtp_rtp_packet_t *rtp = (xrtp_rtp_packet_t *)queue_head(ses->packets_in_sched);
 
-    /* Get next packet info */
+    // Get next packet info
     rtp_packet_info(rtp, &packet_bytes);
 
-    /* Calculate current bandwidth */
+    // Calculate current bandwidth
     if(ses->$state.n_pack_sent)
 	{
         int rtp_bw = session_member_bandwidth(ses);
@@ -2547,6 +2573,8 @@ int session_rtp_send_now(xrtp_session_t *ses)
     
     return nbytes;
  }
+
+#endif
 
  int session_rtp_to_receive(xrtp_session_t *ses){
 
@@ -2779,13 +2807,13 @@ int session_rtp_send_now(xrtp_session_t *ses)
 
  int session_rtcp_send_now(xrtp_session_t * ses, xrtp_rtcp_compound_t * rtcp)
  {
+    session_connect_t * conn = NULL;
+
     xrtp_buffer_t * buf= rtcp_buffer(rtcp);
     char * data = buffer_data(buf);
     uint datalen = buffer_datalen(buf);
-    session_connect_t * conn = NULL;
 
     int i;
-
     for(i=0; i<ses->n_rtcp_out; i++)
 	{
        conn = ses->outgoing_rtcp[i];
@@ -3031,7 +3059,7 @@ int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 time
        session_rtcp_send_now(ses, rtcp);
        ses->rtcp_init = 0;
 
-        rtcp_compound_done(rtcp);
+       rtcp_compound_done(rtcp);
     }
     else
     {

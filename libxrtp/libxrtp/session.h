@@ -149,7 +149,8 @@ typedef struct member_state_s
 	int		media_playable;  /* eg: after setup by 3 vorbis header packet */
 	uint32  rtpts_minfo;
 	int		minfo_signum;
-	void*	media_info;
+
+	void*	mediainfo;
 	void*	media_player;
 
     /* Playout buffer */
@@ -687,25 +688,31 @@ extern DECLSPEC
 int 
 session_member_synchronise(member_state_t *member, uint32 ts_remote, uint32 hi_ntp, uint32 lo_ntp, int clockrate);
 
+/* retrieve media info of the member */
 extern DECLSPEC
 void*
-session_member_media_info(member_state_t *member, uint32 *rtpts, int *signum);
+session_member_mediainfo(member_state_t *member, uint32 *rtpts, int *signum);
 
+/* new media info for the member */
+/* return previous media info */
+extern DECLSPEC
+void *
+session_member_update_mediainfo(member_state_t *member, void *minfo, uint32 rtpts, int signum);
+
+/* check if need to renew the media info */
 extern DECLSPEC
 int
-session_member_expire_media_info(member_state_t *member, uint32 rtpts, int signum);
+session_member_renew_mediainfo(member_state_t *member, void *minfo, uint32 rtpts, int signum);
 
-extern DECLSPEC
-int
-session_update_media_info(member_state_t *member, void *minfo);
-
+/* session is asked to distribute media info to members */
 extern DECLSPEC
 int 
-session_issue_media_info(xrtp_session_t *ses, void *minfo, int signum);
+session_require_mediainfo(xrtp_session_t *ses, void *minfo, int signum);
 
+/* check if need to send media info to member */
 extern DECLSPEC
 int
-session_renew_media_info(xrtp_session_t *ses, uint32 *rtpts, int *signum, void **minfo_ret);
+session_distribute_mediainfo(xrtp_session_t *ses, uint32 *rtpts, int *signum, void **minfo_ret);
 
 extern DECLSPEC
 void*

@@ -19,10 +19,10 @@
 
 #define CATALOG_VERSION  0x0001
 #define DIRNAME_MAXLEN  128
-
+/*
 #define DEMUX_OGM_LOG
 #define DEMUX_OGM_DEBUG
-
+*/
 #ifdef DEMUX_OGM_LOG
  #define ogm_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -887,7 +887,6 @@ int ogm_demux_next (media_format_t *mf, int stream_end)
 
 			 ogm_log(("............................................................................\n"));
 			 ogm_log(("(ogm_demux_next: %lld samples in the page)\n", delta_granu));
-			 ogm_log(("(ogm_demux_next: sleep %lldus)\n\n", us_interval));
 
 			 ogm_strm->last_granulepos = page_granul;
 			 ogm_strm->last_microsec += (int)us_interval;

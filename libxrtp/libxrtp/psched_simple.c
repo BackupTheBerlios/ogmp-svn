@@ -21,9 +21,9 @@
   */
 
 #include "internal.h"
-
+/*
 #define PSCHED_SIMPLE_LOG
-
+*/
 #ifdef PSCHED_SIMPLE_LOG
  #define simple_sched_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -428,6 +428,7 @@ int simple_sched_rtp_out(session_sched_t * sched, xrtp_session_t * ses, rtime_t 
     return XRTP_OK;
 }
 
+/* rtp scheduling is not incharge now */
 int simple_schedule_rtp(void * gen)
 {
    simple_sched_t * ssch = (simple_sched_t *)gen;
@@ -496,9 +497,9 @@ int simple_schedule_rtp(void * gen)
          if(req->next) req->next->prev = NULL;
          req->next = req->prev = NULL;
             
-         simple_sched_log(("simple_schedule_rtp: %dus now, send rtp packet !\n", us_now));
+         simple_sched_log(("simple_schedule_rtp: session_rtp_send_now() skipped!\n", us_now));
 
-         session_rtp_send_now(unit->session);
+         //session_rtp_send_now(unit->session);
             
          req = ssch->rtp_queue_head;
       }
@@ -519,6 +520,7 @@ int simple_schedule_rtp(void * gen)
 
    return XRTP_OK;
 }
+
 
 int simple_schedule_rtcp(void * gen)
 {
