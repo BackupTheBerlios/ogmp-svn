@@ -207,6 +207,7 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t *rtp, xrtp_rtp_payload_t *pay)
 
     pac->valid_to_get = 1;
 
+
     return XRTP_OK;
  }
 
@@ -430,6 +431,7 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t *rtp, xrtp_rtp_payload_t *pay)
   */
  int rtp_packet_set_payload(xrtp_rtp_packet_t *rtp, buffer_t *payload_buf)
  {
+
     rtp->$payload.out_buffer = payload_buf;
 
     if(payload_buf == NULL)
@@ -736,6 +738,7 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
 
  /**
   * See packet.h
+
   */
  xrtp_rtcp_compound_t * rtcp_receiver_report_new(xrtp_session_t * ses, uint32 ssrc, int padding)
  {
@@ -868,6 +871,7 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
     sdes->$head.type = RTCP_TYPE_SDES;
     sdes->$head.bytes = RTCP_HEAD_FIX_BYTE;
     sdes->$head.length = sdes->$head.bytes / 4 - 1;   /* RFC 1889 */
+
 
     com->heads[com->n_packet++] = (xrtp_rtcp_head_t *)sdes;
     
@@ -1285,6 +1289,7 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
     }
 
     if(!new_sdes && new_chunk)
+
        sdes->chunks[sdes->$head.count++] = chunk;
 
     if(new_sdes)
@@ -1373,6 +1378,7 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
     for(i=0; i<com->n_packet; i++){
 
        if(com->heads[i]->type == RTCP_TYPE_SDES){
+
 
           sdes = (xrtp_rtcp_sdes_t *)com->heads[i];
           break;
@@ -1646,6 +1652,7 @@ xrtp_rtcp_app_t* rtcp_new_app(xrtp_rtcp_compound_t * com, uint32 SSRC, uint8 sub
 
     if(com->n_packet == com->max_packets)
 	{
+
        packet_log(("rtcp_new_app: Maximum packet reached\n"));
        return NULL;
     }
@@ -1998,9 +2005,11 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
 {
     xrtp_rtcp_senderinfo_t * info;
 
-    if(com->first_head->type != RTCP_TYPE_SR){
+    if(com->first_head->type != RTCP_TYPE_SR)
+    {
+        packet_debug(("rtcp_sender_info: Receiver Report\n"));
 
-       return XRTP_EFORMAT;
+        return XRTP_EFORMAT;
     }
 
     info = &((xrtp_rtcp_sr_t *)(com->first_head))->$sender;
@@ -2011,6 +2020,8 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
     *r_ts = info->rtp_stamp;
     *r_pnum = info->n_packet_sent;
     *r_onum = info->n_octet_sent;
+
+    packet_debug(("rtcp_sender_info: 3\n"));
 
     return XRTP_OK;
  }
@@ -2084,6 +2095,8 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
  {
     int i;
 
+    packet_debug(("rtcp_compound_done: 1\n"));
+
     for(i=0; i<com->n_packet; i++)
     {
        rtcp_done_packet(com, com->heads[i]);
@@ -2091,7 +2104,7 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
 
     if(com->connect)
     {
-        packet_log(("rtcp_compound_done: xfree connect[@%d] in rtcp packet\n", (int)(com->connect)));
+        packet_debug(("rtcp_compound_done: xfree connect[@%d] in rtcp packet\n", (int)(com->connect)));
         connect_done(com->connect);
     }
         
@@ -2100,7 +2113,7 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
     
 	xfree(com);
 
-    packet_log(("rtcp_compound_done: done\n"));
+    packet_debug(("rtcp_compound_done: done\n"));
     
     return XRTP_OK;
  }
@@ -2553,6 +2566,7 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
              printf("\n</value>\n");
              printf("</item>\n");
           }
+
        }
        printf("</chunk>\n\n");
     }
@@ -2790,6 +2804,7 @@ xrtp_buffer_t * rtcp_pack(xrtp_rtcp_compound_t * com)
        xrtp_rtcp_sr_t * sr = (xrtp_rtcp_sr_t *)rtcphead;
        
        buffer_add_uint32(buf, sr->$sender.SSRC);
+
        buffer_add_uint32(buf, sr->$sender.hi_ntp);
        buffer_add_uint32(buf, sr->$sender.lo_ntp);
        buffer_add_uint32(buf, sr->$sender.rtp_stamp);
