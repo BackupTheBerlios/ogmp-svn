@@ -33,7 +33,7 @@
  #endif
  #define time_log(fmtargs)  do{if(timer_log) printf fmtargs;}while(0)
  
- struct clock_s{
+ struct xclock_s{
 
     struct timeval now;
     
@@ -43,12 +43,12 @@
 
     int msec;   /* 1 millisec */
 
-    int (*hrtime_now)(xrtp_clock_t *clock);
+    int (*hrtime_now)(xclock_t *clock);
 
     xthr_lock_t * lock;
  };
 
-int posix_time_now(xrtp_clock_t * clock){
+int posix_time_now(xclock_t * clock){
     
     struct timeval then = clock->now;
     
@@ -68,9 +68,9 @@ int posix_time_now(xrtp_clock_t * clock){
     return clock->nsec;
  }
 
- xrtp_clock_t * time_start(){
+ xclock_t * time_start(){
 
-    xrtp_clock_t * clock = (xrtp_clock_t *)malloc(sizeof(struct xrtp_clock_s));
+    xclock_t * clock = (xclock_t *)malloc(sizeof(struct xrtp_clock_s));
     if(clock){
 
         gettimeofday(&clock->now, NULL);
@@ -93,7 +93,7 @@ int posix_time_now(xrtp_clock_t * clock){
     return clock;
  }
 
-int time_end(xrtp_clock_t * clock){
+int time_end(xclock_t * clock){
 
    xthr_done_lock(clock->lock);
    free(clock);
@@ -101,7 +101,7 @@ int time_end(xrtp_clock_t * clock){
    return OS_OK;
 }
 
-int time_adjust(xrtp_clock_t * clock, int dmsec, int dusec, int dnsec){
+int time_adjust(xclock_t * clock, int dmsec, int dusec, int dnsec){
   
    int u, n;
 
@@ -128,7 +128,7 @@ int time_adjust(xrtp_clock_t * clock, int dmsec, int dusec, int dnsec){
    return OS_OK;
 }
 
-int time_spent(xrtp_clock_t * clock, rtime_t ms_then, rtime_t us_then, rtime_t ns_then, rtime_t *ms_spent, rtime_t *us_spent, rtime_t *ns_spent){
+int time_spent(xclock_t * clock, rtime_t ms_then, rtime_t us_then, rtime_t ns_then, rtime_t *ms_spent, rtime_t *us_spent, rtime_t *ns_spent){
 
     rtime_t ms_now, us_now, ns_now;
 
@@ -145,7 +145,7 @@ int time_spent(xrtp_clock_t * clock, rtime_t ms_then, rtime_t us_then, rtime_t n
     return OS_OK;
 }
 
-int time_rightnow(xrtp_clock_t * clock, int *msec, int *usec, int *nsec){
+int time_rightnow(xclock_t * clock, int *msec, int *usec, int *nsec){
 
     xthr_lock(clock->lock);
 
@@ -159,7 +159,7 @@ int time_rightnow(xrtp_clock_t * clock, int *msec, int *usec, int *nsec){
 }
 
 /* For nanosec */
-int time_nsec_now(xrtp_clock_t * clock) {
+int time_nsec_now(xclock_t * clock) {
 
     int t;
 
@@ -170,12 +170,12 @@ int time_nsec_now(xrtp_clock_t * clock) {
     return t;
 }
 
-int time_nsec_spent(xrtp_clock_t * clock, int then){
+int time_nsec_spent(xclock_t * clock, int then){
 
     return time_nsec_now(clock) - then;
 }
 
-int time_nsec_checkpass(xrtp_clock_t * clock, int *then){
+int time_nsec_checkpass(xclock_t * clock, int *then){
 
     int t = *then;
 
@@ -184,7 +184,7 @@ int time_nsec_checkpass(xrtp_clock_t * clock, int *then){
     return *then - t;
 }
 
-int time_nsec_sleep(xrtp_clock_t * clock, int nsec, int * remain) {
+int time_nsec_sleep(xclock_t * clock, int nsec, int * remain) {
 
     int r;
 
@@ -205,7 +205,7 @@ int time_nsec_sleep(xrtp_clock_t * clock, int nsec, int * remain) {
 }
 
 /* For microsec */
-int time_usec_now(xrtp_clock_t * clock) {
+int time_usec_now(xclock_t * clock) {
 
     int t;
 
@@ -217,12 +217,12 @@ int time_usec_now(xrtp_clock_t * clock) {
     return t;
 }
 
-int time_usec_spent(xrtp_clock_t * clock, int then){
+int time_usec_spent(xclock_t * clock, int then){
 
     return time_usec_now(clock) - then;
 }
 
-int time_usec_checkpass(xrtp_clock_t * clock, int *then){
+int time_usec_checkpass(xclock_t * clock, int *then){
 
     int t = *then;
     
@@ -231,7 +231,7 @@ int time_usec_checkpass(xrtp_clock_t * clock, int *then){
     return *then - t;
 }
 
-int time_usec_sleep(xrtp_clock_t * clock, int usec, int * remain) {
+int time_usec_sleep(xclock_t * clock, int usec, int * remain) {
 
     int r;
 
@@ -252,7 +252,7 @@ int time_usec_sleep(xrtp_clock_t * clock, int usec, int * remain) {
 }
 
 /* For millisec */
-int time_msec_now(xrtp_clock_t * clock) {
+int time_msec_now(xclock_t * clock) {
 
     int t;
 
@@ -264,12 +264,12 @@ int time_msec_now(xrtp_clock_t * clock) {
     return t;
 }
 
-int time_msec_spent(xrtp_clock_t * clock, int then){
+int time_msec_spent(xclock_t * clock, int then){
 
     return time_msec_now(clock) - then;
 }
 
-int time_msec_checkpass(xrtp_clock_t * clock, int *then){
+int time_msec_checkpass(xclock_t * clock, int *then){
 
     int t = *then;
 
@@ -278,7 +278,7 @@ int time_msec_checkpass(xrtp_clock_t * clock, int *then){
     return *then - t;
 }
 
-int time_msec_sleep(xrtp_clock_t * clock, int msec, int * remain) {
+int time_msec_sleep(xclock_t * clock, int msec, int * remain) {
 
     int r;
 
@@ -299,9 +299,9 @@ int time_msec_sleep(xrtp_clock_t * clock, int msec, int * remain) {
 }
 
 /* old api, don't use any more */
- xrtp_hrtime_t hrtime_now(xrtp_clock_t * clock){
+ rtime_t hrtime_now(xclock_t * clock){
 
-    xrtp_hrtime_t t;
+    rtime_t t;
 
     xthr_lock(clock->lock);
     t =clock->hrtime_now(clock);
@@ -310,10 +310,10 @@ int time_msec_sleep(xrtp_clock_t * clock, int msec, int * remain) {
     return t;
  }
 
- /* FIXME: Consider nagetive integer value as xrtp_hrtime_t is signed */
- xrtp_hrtime_t hrtime_passed(xrtp_clock_t * clock, xrtp_hrtime_t then){
+ /* FIXME: Consider nagetive integer value as rtime_t is signed */
+ rtime_t hrtime_passed(xclock_t * clock, rtime_t then){
 
-    xrtp_hrtime_t now;
+    rtime_t now;
 
     xthr_lock(clock->lock);
     now =clock->hrtime_now(clock);
@@ -322,9 +322,9 @@ int time_msec_sleep(xrtp_clock_t * clock, int msec, int * remain) {
     return now - then;
  }
 
- xrtp_hrtime_t hrtime_checkpass(xrtp_clock_t * clock, xrtp_hrtime_t *then){
+ rtime_t hrtime_checkpass(xclock_t * clock, rtime_t *then){
 
-    xrtp_hrtime_t t = *then;
+    rtime_t t = *then;
     
     xthr_lock(clock->lock);
     *then = clock->hrtime_now(clock);
@@ -333,10 +333,10 @@ int time_msec_sleep(xrtp_clock_t * clock, int msec, int * remain) {
     return *then - t;
  }
 
- int time_passed(xrtp_clock_t * clock, xrtp_lrtime_t lrts_then, xrtp_hrtime_t hrts_then, xrtp_lrtime_t *lrt_passed, xrtp_hrtime_t *hrt_passed){
+ int time_passed(xclock_t * clock, rtime_t lrts_then, rtime_t hrts_then, rtime_t *lrt_passed, rtime_t *hrt_passed){
 
-    xrtp_hrtime_t hrts_now;
-    xrtp_lrtime_t lrts_now;
+    rtime_t hrts_now;
+    rtime_t lrts_now;
 
     xthr_lock(clock->lock);
     hrts_now = clock->hrtime_now(clock);
@@ -349,9 +349,9 @@ int time_msec_sleep(xrtp_clock_t * clock, int msec, int * remain) {
     return OS_OK;
  }
 
- xrtp_clock_t * time_begin(xrtp_lrtime_t lrt, xrtp_hrtime_t hrt){
+ xclock_t * time_begin(rtime_t lrt, rtime_t hrt){
 
-    xrtp_clock_t * clock = (xrtp_clock_t *)malloc(sizeof(struct xrtp_clock_s));
+    xclock_t * clock = (xclock_t *)malloc(sizeof(struct xrtp_clock_s));
     if(clock){
 
         gettimeofday(&clock->now, NULL);
@@ -373,7 +373,7 @@ int time_msec_sleep(xrtp_clock_t * clock, int msec, int * remain) {
     return clock;
  }
 
-int time_now(xrtp_clock_t * clock, xrtp_lrtime_t *lrt, xrtp_hrtime_t *hrt){
+int time_now(xclock_t * clock, rtime_t *lrt, rtime_t *hrt){
 
     xthr_lock(clock->lock);
 
@@ -385,9 +385,9 @@ int time_now(xrtp_clock_t * clock, xrtp_lrtime_t *lrt, xrtp_hrtime_t *hrt){
     return OS_OK;
 }
 
- xrtp_lrtime_t lrtime_now(xrtp_clock_t * clock){
+ rtime_t lrtime_now(xclock_t * clock){
 
-    xrtp_lrtime_t t;
+    rtime_t t;
 
     xthr_lock(clock->lock);
     clock->hrtime_now(clock);
@@ -397,20 +397,20 @@ int time_now(xrtp_clock_t * clock, xrtp_lrtime_t *lrt, xrtp_hrtime_t *hrt){
     return t;
  }
                               
- xrtp_lrtime_t lrtime_passed(xrtp_clock_t * clock, xrtp_lrtime_t then){
+ rtime_t lrtime_passed(xclock_t * clock, rtime_t then){
 
     return lrtime_now(clock) - then;
  }
 
- xrtp_lrtime_t lrtime_checkpass(xrtp_clock_t * clock, xrtp_lrtime_t *then){
+ rtime_t lrtime_checkpass(xclock_t * clock, rtime_t *then){
 
-    xrtp_lrtime_t t = *then;
+    rtime_t t = *then;
     *then = lrtime_now(clock);
     
     return *then - t;
  }
  
- int hrtime_sleep(xrtp_clock_t * clock, xrtp_hrtime_t howlong, xrtp_hrtime_t *remain){
+ int hrtime_sleep(xclock_t * clock, rtime_t howlong, rtime_t *remain){
 
     int r;
 
@@ -429,7 +429,7 @@ int time_now(xrtp_clock_t * clock, xrtp_lrtime_t *lrt, xrtp_hrtime_t *hrt){
     return OS_OK;
  }
 
- int lrtime_sleep(xrtp_clock_t * clock, xrtp_lrtime_t howlong, xrtp_lrtime_t *remain){
+ int lrtime_sleep(xclock_t * clock, rtime_t howlong, rtime_t *remain){
 
     int r;
 

@@ -34,7 +34,7 @@
  #endif
  #define time_log(fmtargs)  do{if(timer_log) printf fmtargs;}while(0)
  
- struct clock_s{
+ struct xclock_s{
 
 	LARGE_INTEGER  frequency;
  

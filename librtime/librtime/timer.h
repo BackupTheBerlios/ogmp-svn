@@ -33,9 +33,9 @@
  typedef int32 xrtp_hrtime_t;  /* 1 nanosecond unit */
  typedef int32 xrtp_lrtime_t;  /* 1 millisecond unit */
 
- #define xrtp_clock_s clock_s
- #define xrtp_clock_t clock_t
- typedef struct clock_s clock_t;
+ #define xrtp_clock_s xclock_s
+ #define xrtp_clock_t xclock_t
+ typedef struct xclock_s xclock_t;
  
  typedef struct clock_timeout_s clock_timeout_t;
 
@@ -53,51 +53,75 @@
 
 /* new api */
 /* start timer at (0,0,0), time_begin will be replace by this */
-extern DECLSPEC clock_t* 
+extern DECLSPEC
+xclock_t* 
 time_start();
-extern DECLSPEC int 
-time_end(clock_t * clock);
+
+extern DECLSPEC
+int 
+time_end(xclock_t * clock);
 
 /**
  * Adjust the clock forward if positive int, backward if negitive int or nochange if zero
  * Note: hrt value MUST fall in the range of the ONE unit of lrt value
  */
 extern DECLSPEC int 
-time_adjust(xrtp_clock_t * clock, int dmsec, int dusec, int dnsec);
+time_adjust(xclock_t * clock, int dmsec, int dusec, int dnsec);
 
 extern DECLSPEC int 
-time_rightnow(xrtp_clock_t * clock, int *msec, int *usec, int *nsec); 
+time_rightnow(xclock_t * clock, int *msec, int *usec, int *nsec); 
 extern DECLSPEC int 
 time_spent(xrtp_clock_t * clock, int ms_then, int us_then, int ns_then, int *ms_spent, int *us_spent, int *ns_spent);
 
 /* for nanosecond */
-extern DECLSPEC int 
-time_nsec_now(xrtp_clock_t * clock);
-extern DECLSPEC int 
-time_nsec_spent(xrtp_clock_t * clock, int ns_then);
-extern DECLSPEC int 
-time_nsec_checkpass(xrtp_clock_t * clock, int * then);
-extern DECLSPEC int 
-time_nsec_sleep(xrtp_clock_t * clock, int howlong, int * remain);
+extern DECLSPEC
+rtime_t 
+time_nsec_now(xclock_t * clock);
+
+extern DECLSPEC
+rtime_t 
+time_nsec_spent(xclock_t * clock, int ns_then);
+
+extern DECLSPEC
+rtime_t
+time_nsec_checkpass(xclock_t * clock, int * then);
+
+extern DECLSPEC
+int 
+time_nsec_sleep(xclock_t * clock, int howlong, int * remain);
 
 /* for microsecond */
-extern DECLSPEC int 
-time_usec_now(xrtp_clock_t * clock);
-extern DECLSPEC int 
-time_usec_spent(xrtp_clock_t * clock, int us_then);
-extern DECLSPEC int 
-time_usec_checkpass(xrtp_clock_t * clock, int * then);
-extern DECLSPEC int 
-time_usec_sleep(xrtp_clock_t * clock, int howlong, int * remain);
+extern DECLSPEC
+rtime_t
+time_usec_now(xclock_t * clock);
+
+extern DECLSPEC
+rtime_t
+time_usec_spent(xclock_t * clock, int us_then);
+
+extern DECLSPEC
+rtime_t
+time_usec_checkpass(xclock_t * clock, int * then);
+
+extern DECLSPEC
+int 
+time_usec_sleep(xclock_t * clock, int howlong, int * remain);
  
 /* for millisecond */
-extern DECLSPEC int 
-time_msec_now(xrtp_clock_t * clock);
-extern DECLSPEC int 
-time_msec_spent(xrtp_clock_t * clock, int ms_then);
-extern DECLSPEC int 
-time_msec_checkpass(xrtp_clock_t * clock, int * then);
-extern DECLSPEC int 
-time_msec_sleep(xrtp_clock_t * clock, int howlong, int * remain);
+extern DECLSPEC
+rtime_t
+time_msec_now(xclock_t * clock);
+
+extern DECLSPEC
+rtime_t
+time_msec_spent(xclock_t * clock, int ms_then);
+
+extern DECLSPEC
+rtime_t
+time_msec_checkpass(xclock_t * clock, int * then);
+
+extern DECLSPEC
+int 
+time_msec_sleep(xclock_t * clock, int howlong, int * remain);
 
 #endif
