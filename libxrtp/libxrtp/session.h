@@ -703,6 +703,7 @@ session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, uint1
  * Remove a cname member to session by external protocol, such as SIP
  * return number of member 
  */
+
 extern DECLSPEC
 int 
 session_delete_cname(xrtp_session_t * ses, char *cname, int cnlen);
@@ -749,6 +750,10 @@ extern DECLSPEC
 int 
 session_member_hold_media(member_state_t * member, void *media, int bytes, uint16 seqno, uint32 rtpts, rtime_t us_ref, rtime_t us, int last, void *memblock);
  
+extern DECLSPEC
+int
+member_deliver_media_loop(void *gen);
+
 extern DECLSPEC
 int
 session_member_deliver(member_state_t * mem, uint16 seqno, int64 packetno);
