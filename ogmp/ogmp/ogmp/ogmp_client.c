@@ -414,7 +414,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			}
 
 			rtp_capable_done_set(rtpcapset);
-			sdp_message_free(sdp_message);
 
 			break;
 		}

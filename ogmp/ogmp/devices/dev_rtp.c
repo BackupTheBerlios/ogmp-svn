@@ -207,7 +207,7 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
    ses = xrtp_find_session(rtp->session_set, cname, cnlen, netaddr, rtp_portno, rtcp_portno, profile_no, profile_mime);
    if(!ses)
    {
-		ses = session_new(rtp->session_set, cname, cnlen, netaddr, rtp_portno, rtcp_portno, cata, ctrl);
+		ses = session_new(rtp->session_set, cname, cnlen, netaddr, rtp_portno, rtcp_portno, cata, ctrl, SESSION_DUPLEX);
 
 		if(!ses) return NULL;
 
