@@ -16,6 +16,7 @@
  ***************************************************************************/
 
 #include "t_session.h"
+#include <timedia/xstring.h>
 
 #define TEST_LOG
 
@@ -56,6 +57,7 @@ int rtp_match_capable(capable_t *cap1, capable_t *cap2)
 capable_t* rtp_new_capable(uint8 pt, char *type, char *ip, uint16 rtp_port, uint16 rtcp_port)
 {
 	rtp_capable_t *cap = malloc(sizeof(rtp_capable_t));
+
 	cap->profile_no = pt;
 	strcpy(cap->profile_type, type);
 	strcpy(cap->ip, ip);
@@ -77,7 +79,7 @@ int main(int argc, char** argv)
 	char *proxy_ip = "127.0.0.1";
 	uint16 proxy_port = 3500;
 
-	char *sender_cn = "subtitle.srt";
+	char *sender_cn = "spu_sender";
 
 	xclock_t *clock = time_start();
 	rtime_t ms_remain;

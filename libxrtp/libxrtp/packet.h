@@ -97,8 +97,6 @@
     rtime_t usec_arrival;
     rtime_t nsec_arrival;
 
-	uint32 rtpts_playout;
-    
     session_connect_t * connect;
 
     int valid_to_get;
@@ -366,14 +364,14 @@ extern DECLSPEC
 uint32 
 rtp_packet_ssrc(xrtp_rtp_packet_t * packet);
  
- /**
-  * Specify the maximum length of a rtp packet 
-  *
-  * param in: value zero means default max length.
-  */
- int rtp_packet_set_maxlen(xrtp_rtp_packet_t * packet, uint maxlen);
- uint rtp_packet_maxlen(xrtp_rtp_packet_t * packet);
- uint rtp_packet_payload_maxlen(xrtp_rtp_packet_t * packet);
+/**
+ * Specify the maximum length of a rtp packet 
+ *
+ * param in: value zero means default max length.
+ */
+int rtp_packet_set_maxlen(xrtp_rtp_packet_t * packet, uint maxlen);
+uint rtp_packet_maxlen(xrtp_rtp_packet_t * packet);
+uint rtp_packet_payload_maxlen(xrtp_rtp_packet_t * packet);
  
 extern DECLSPEC
 uint 
@@ -404,14 +402,6 @@ extern DECLSPEC
 uint32
 rtp_packet_timestamp(xrtp_rtp_packet_t * packet);
 
-extern DECLSPEC
-int 
-rtp_packet_set_playout_timestamp(xrtp_rtp_packet_t * packet, uint32 ts);
-
-extern DECLSPEC
-uint32
-rtp_packet_playout_timestamp(xrtp_rtp_packet_t * packet);
-
 /**
  * Add a CSRC and return num of CSRC in the packet.
  */
@@ -436,10 +426,12 @@ extern DECLSPEC
 xrtp_rtp_payload_t * 
 rtp_packet_new_payload(xrtp_rtp_packet_t * pac, int len, char * pay);
  
- /**
-  * Get payload data.
-  */
- uint rtp_packet_payload(xrtp_rtp_packet_t * packet, char **ret_payload);
+/**
+ * Get payload data.
+ */
+extern DECLSPEC
+uint 
+rtp_packet_payload(xrtp_rtp_packet_t * packet, char **ret_payload);
 
 extern DECLSPEC
 uint 
@@ -569,7 +561,13 @@ rtcp_report(xrtp_rtcp_compound_t * compound, uint32 SRC,
  uint8 rtcp_bye_why(xrtp_rtcp_compound_t * compound, uint32 SSRC, uint32 SRC, char* *ret_why);
  uint rtcp_bye_from(xrtp_rtcp_compound_t * compound, uint32 SSRCs[], uint nbuf);
 
- xrtp_rtcp_app_t * rtcp_new_app(xrtp_rtcp_compound_t * compound, uint32 SRC, uint8 subtype, uint32 name, uint len, char * appdata);
+extern DECLSPEC
+xrtp_rtcp_app_t * 
+rtcp_new_app(xrtp_rtcp_compound_t * compound, uint32 SRC, uint8 subtype, uint32 name, uint len, char * appdata);
+ 
+extern DECLSPEC
+int 
+rtcp_app(xrtp_rtcp_compound_t * compound, uint32 SRC, uint8 subtype, uint32 name, char **appdata);
 
  /**
   * Release the compound packet

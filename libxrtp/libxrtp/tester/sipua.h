@@ -54,10 +54,9 @@ struct sipua_record_s
 	void *disconnect_notify_user;
 	int (*disconnect_notify)(void *user, char *cname, int cnlen);
 };
-sipua_record_t *sipua_new_record(char *cname, int cnlen, 
-						   void *cb_connect_user, int(*cb_connect)(void*,char*,int,capable_t**,int), 
-						   void *cb_reconnect_user, int(*cb_reconnect)(void*,char*,int,capable_t**,int),
-						   void *cb_disconnect_user, int(*cb_disconnect)(void*,char*,int));
+sipua_record_t *sipua_new_record(void *cb_connect_user, int(*cb_connect)(void*,char*,int,capable_t**,int), 
+								void *cb_reconnect_user, int(*cb_reconnect)(void*,char*,int,capable_t**,int),
+								void *cb_disconnect_user, int(*cb_disconnect)(void*,char*,int));
 
 struct capable_s
 {

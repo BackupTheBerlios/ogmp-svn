@@ -29,7 +29,8 @@
 #define SEND_RTP_PORT 3000 
 #define SEND_RTCP_PORT 3001
  
-#define SEND_CNAME "subtitle.srt"
+#define SEND_CNAME "spu_sender"
+#define TITLE "subtitle.srt"
 
 /* subtitle sender */
 struct subt_sender_s
@@ -243,7 +244,6 @@ int sender_setup(subt_sender_t *send, int8 pt, char *type)
 
 	/* Sender Var */
     FILE *f;
-    char *title = cname; /*"subtitle.srt";*/                         
     demux_sputext_t * spu = NULL;
     xrtp_session_t *ses = NULL; 
 
@@ -258,10 +258,10 @@ int sender_setup(subt_sender_t *send, int8 pt, char *type)
     send_log(("sender_setup: rtp[%s:%u]\n", ip,rtp_port));
     send_log(("sender_setup: rtcp[%s:%u]\n\n", ip,rtcp_port));
 
-    f = fopen(title, "r");
+    f = fopen(TITLE, "r");
 
     spu = demux_sputext_new(f);
-    send_log(("sender_setup: Subtitle '%s' specialised\n", title));
+    send_log(("sender_setup: Subtitle '%s' specialised\n", TITLE));
 
     //fclose(f);
     
@@ -379,6 +379,9 @@ int cb_sender_oncall(void *user, char *from_cn, int from_cnlen, capable_t *caps[
 		xrtp_teleport_t *rtcp_tport = teleport_new(rtpcap->ip, rtpcap->rtcp_port);
 		send_log(("cb_sender_callin: call from cn[%s]@[%s:%u/%u]\n", from_cn, rtpcap->ip, rtpcap->rtp_port, rtpcap->rtcp_port));
 
+		/* parameter setting stage should be here, eg: rtsp conversation */
+
+		/* rtp session establish */
 		sender_setup(send, rtpcap->profile_no, rtpcap->profile_type);
 
 		session_add_cname(send->session, from_cn, from_cnlen, rtp_tport, rtcp_tport, NULL);
@@ -426,8 +429,7 @@ subt_sender_t* sender_new(sipua_t *sipua)
 	strcpy(send->cname, SEND_CNAME);
 	send->cnlen = strlen(SEND_CNAME);
 
-	rec = sipua_new_record(SEND_CNAME, strlen(SEND_CNAME), 
-							send, cb_sender_oncall, 
+	rec = sipua_new_record(send, cb_sender_oncall, 
 							send, cb_sender_onreset,
 							send, cb_sender_onbye);
 

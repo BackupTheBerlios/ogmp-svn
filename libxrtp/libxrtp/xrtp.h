@@ -43,7 +43,7 @@ xrtp_scheduler();
 
 extern DECLSPEC 
 xrtp_session_t* 
-xrtp_session(int id);
+xrtp_find_session(char *cname, int cnlen, char *ipaddr, uint16 rtp_portno, uint16 rtcp_portno, uint8 profile_no, char *profile_mime);
 
 #endif
 

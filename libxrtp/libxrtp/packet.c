@@ -298,17 +298,6 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t *rtp, xrtp_rtp_payload_t *pay)
     return pac->$head.timestamp;
  }
 
- int rtp_packet_set_playout_timestamp(xrtp_rtp_packet_t * rtp, uint32 ts){
-
-    rtp->rtpts_playout = ts;
-    return XRTP_OK;
- }
-
- uint32 rtp_packet_playout_timestamp(xrtp_rtp_packet_t * rtp){
-
-    return rtp->rtpts_playout;
- }
-
  /**
   * Add a CSRC and return num of CSRC in the packet.
   */
@@ -1398,8 +1387,8 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
  }
  /***** Get SDES Item from Packet *****/
 
- uint8 rtcp_sdes(xrtp_rtcp_compound_t * com, uint32 SRC, uint8 type, char **r_sdes){
-
+ uint8 rtcp_sdes(xrtp_rtcp_compound_t * com, uint32 SRC, uint8 type, char **r_sdes)
+ {
     xrtp_rtcp_sdes_t * sdes = NULL;
     xrtp_rtcp_sdes_chunk_t * chunk = NULL;
     xrtp_rtcp_sdes_item_t *item = NULL;
@@ -1674,27 +1663,27 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
  /*********************************************************
   * Methods for APP Packet
   */
- xrtp_rtcp_app_t * rtcp_new_app(xrtp_rtcp_compound_t * com, uint32 SSRC, uint8 subtype, uint32 name, uint len, char * appdata){
-    
+ xrtp_rtcp_app_t * rtcp_new_app(xrtp_rtcp_compound_t * com, uint32 SSRC, uint8 subtype, uint32 name, uint len, char * appdata)
+ {
     xrtp_rtcp_app_t * app;
 
-    if(com->n_packet == com->max_packets){
-
+    if(com->n_packet == com->max_packets)
+	{
        packet_log(("rtcp_new_app: Maximum packet reached\n"));
 
        return NULL;
     }
 
-    if(len % 4){
-
+    if(len % 4)
+	{
        packet_log(("rtcp_new_app: Data len MUST mutiple of 32bits\n"));
 
        return NULL;
     }
 
     app = (xrtp_rtcp_app_t *)malloc(sizeof(struct xrtp_rtcp_app_s));
-    if(!app){
-
+    if(!app)
+	{
        packet_log(("rtcp_new_app: Can't allocate for BYE packet\n"));
 
        return NULL;
@@ -1726,6 +1715,27 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
 
     return XRTP_OK;
  }
+
+int rtcp_app(xrtp_rtcp_compound_t *rtcp, uint32 ssrc, uint8 subtype, uint32 name, char **appdata)
+{
+    xrtp_rtcp_app_t * app;
+    int i;
+
+    for(i=0; i<rtcp->n_packet; i++)
+	{
+       if(rtcp->heads[i]->type == RTCP_TYPE_APP && rtcp->heads[i]->count == subtype)
+	   {
+          app = (xrtp_rtcp_app_t*)rtcp->heads[i];
+		  if(app->name == name)
+		  {
+			  *appdata = app->data;
+			  return app->len_data;
+		  }
+       }
+    }
+
+	return 0;
+}
 
  /**********************************************************/
 

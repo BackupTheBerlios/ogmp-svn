@@ -15,40 +15,41 @@
  *                                                                         *
  ***************************************************************************/
  
- #include "session.h"
- #include "const.h"
+#include "session.h"
+#include "const.h"
 
- #include <stdlib.h>
- #include <stdio.h>
- #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
- #include <timedia/socket.h> 
- #include <timedia/inet.h> 
+#include <timedia/socket.h> 
+#include <timedia/inet.h> 
 /*
 #define UDP_LOG
 #define UDP_DEBUG
 */
- #ifdef UDP_LOG
+#ifdef UDP_LOG
 	#define udp_log(fmtargs)  do{printf fmtargs;}while(0)
- #else
+#else
 	#define udp_log(fmtargs)  
- #endif
+#endif
 
- #ifdef UDP_DEBUG
+#ifdef UDP_DEBUG
 	#define udp_debug(fmtargs)  do{printf fmtargs;}while(0)
- #else
+#else
 	#define udp_debug(fmtargs)  
- #endif
+#endif
 
- #define LOOP_RTP_PORT  5000
- #define LOOP_RTCP_PORT  5001
+#define LOOP_RTP_PORT  5000
+#define LOOP_RTCP_PORT  5001
 
- #define UDP_FLAGS 0  /* Refer to man(sendto) */
+#define UDP_FLAGS 0  /* Refer to man(sendto) */
 
- #define UDP_MAX_LEN   5000
+#define UDP_MAX_LEN   5000
+#define IPV4_BYTES	16 /* 'xxx.xxx.xxx.xxx\0' */	
 
- struct session_connect_s{
- 
+ struct session_connect_s
+ {
     xrtp_port_t * port;
     
     rtime_t usec_arrival;
@@ -62,28 +63,31 @@
     int datalen_in;
  };
 
-  struct xrtp_port_s{
-
-    enum port_type_e type;
+struct xrtp_port_s
+{
+	enum port_type_e type;
 
     int socket;
 
-    xrtp_session_t * session;
+    xrtp_session_t *session;
 
-    xthr_lock_t * lock;
-  };
+    xthr_lock_t *lock;
 
-  struct xrtp_teleport_s{
+	char ip[IPV4_BYTES];
+	uint16 portno;
+};
 
+struct xrtp_teleport_s
+{
     uint16 portno;
     uint32 addr;
-  };
+};
 
-  session_connect_t * connect_new(xrtp_port_t * port, xrtp_teleport_t * tport)
-  {
+session_connect_t * connect_new(xrtp_port_t * port, xrtp_teleport_t * tport)
+{
      session_connect_t * udp = (session_connect_t *)malloc(sizeof(struct session_connect_s));
-     if(!udp){
-
+     if(!udp)
+	 {
 		udp_debug(("connect_new: No memory\n"));
         return NULL;
      }   
@@ -99,7 +103,7 @@
 		 inet_ntoa(udp->remote_addr.sin_addr), ntohs(udp->remote_addr.sin_port)));
 
      return udp;   
-  }
+}
 
   int connect_done(session_connect_t * conn){
 
@@ -191,8 +195,8 @@
       return rtcp_conn;
   }
   
-  session_connect_t * connect_rtcp_to_rtp(session_connect_t * rtcp_conn)
-  {
+session_connect_t * connect_rtcp_to_rtp(session_connect_t * rtcp_conn)
+{
       xrtp_port_t *rtp_port, *rtcp_port;
 	  xrtp_session_t * ses = NULL;
 
@@ -224,10 +228,10 @@
       udp_log(("connect_rtcp_to_rtp: rtp[%s:%u]\n", inet_ntoa(rtp_conn->remote_addr.sin_addr), ntohs(rtp_conn->remote_addr.sin_port)));
 
       return rtp_conn;
-  }
+}
 
-  xrtp_port_t * port_new(char * local_addr,  uint16 local_portno, enum port_type_e type){
-
+xrtp_port_t * port_new(char *local_addr,  uint16 local_portno, enum port_type_e type)
+{
      xrtp_port_t * port = NULL;
 
      struct sockaddr_in sin;
@@ -256,8 +260,8 @@
               
      sin.sin_family = AF_INET;
      sin.sin_port = htons(local_portno);
-     if(inet_aton(local_addr, &(sin.sin_addr)) == 0){ /* string to int addr */
-
+     if(inet_aton(local_addr, &(sin.sin_addr)) == 0) /* string to int addr */
+	 {
         udp_debug(("port_new: Illegal ip address\n"));
         socket_close(port->socket);
         free(port);
@@ -265,8 +269,8 @@
         return NULL;
      }
      
-     if(bind(port->socket, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) == SOCKET_FAIL){
-
+     if(bind(port->socket, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) == SOCKET_FAIL)
+	 {
         udp_debug(("port_new: Fail to name socket '%s:%d'\n", local_addr, local_portno));
         socket_close(port->socket);
         port->socket = 0;
@@ -276,6 +280,9 @@
      }
         
      port->lock = xthr_new_lock();
+
+	 strcpy(port->ip, local_addr);
+	 port->portno = local_portno;
 
      udp_log(("port_new: socket[%d] opened as local ip[%u]:%u\n", port->socket, sin.sin_addr.s_addr, ntohs(sin.sin_port)));
 
@@ -308,11 +315,22 @@
      return port->socket == io;
   }
 
-  /* Not implemented multicast yet */
-  int port_is_multicast(xrtp_port_t * port){
-
+/* Not implemented multicast yet */
+int port_is_multicast(xrtp_port_t * port)
+{
      return XRTP_NO;
-  }
+}
+
+int port_match(xrtp_port_t *port, char *ip, uint16 pno)
+{
+     if(strcmp(port->ip, ip) != 0)
+		 return 0;
+
+     if(port->portno != pno)
+		 return 0;
+
+	 return 1;
+}
 
   int port_poll(xrtp_port_t * port, rtime_t timeout_usec)
   {

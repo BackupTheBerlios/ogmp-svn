@@ -52,23 +52,23 @@ int initialized = 0;
 
 char * plugins_dir = ".";
 
-int xrtp_init(){
-
+int xrtp_init()
+{
    int nplug;  
 
-   if(socket_init()!=OS_OK){
-
+   if(socket_init()!=OS_OK)
+   {
 	  xrtp_debug(("xrtp_init: network down\n"));
 	  return XRTP_FAIL;
    }
 
    sessions_lock = xthr_new_lock();
 
-   module_catalog = catalog_new("xrtp_handler");
+   module_catalog = catalog_new("mediaformat");
    nplug = catalog_scan_modules(module_catalog, XRTP_VERSION, plugins_dir);
 
-   if(nplug < 0){
-      
+   if(nplug < 0)
+   {
       xrtp_log(("xrtp_init: No modules found !\n"));
        
       catalog_done(module_catalog);
@@ -80,8 +80,8 @@ int xrtp_init(){
    xrtp_log(("xrtp_init: Found %d module(s).\n", nplug));
 
    sessions = xrtp_list_new();
-   if(!sessions){
-
+   if(!sessions)
+   {
       xrtp_log(("xrtp_init: Can't create session list !\n"));
 
       catalog_done(module_catalog);
@@ -92,8 +92,8 @@ int xrtp_init(){
     
    /* NOTE: use which scheduler is compile-time determined */
    main_scheduler = sched_new();
-   if(!main_scheduler){
-
+   if(!main_scheduler)
+   {
       xrtp_log(("xrtp_init: Can't create session secheduler !\n"));
 
       catalog_done(module_catalog);
@@ -111,13 +111,13 @@ int xrtp_init(){
    return XRTP_OK;
 }
 
-int xrtp_done_session(void * gen){
-
+int xrtp_done_session(void * gen)
+{
    return session_done((xrtp_session_t *)gen);
 }
 
-int xrtp_done(){
-
+int xrtp_done()
+{
 	if(!initialized) return XRTP_OK;
 
    main_scheduler->done(main_scheduler);
@@ -131,25 +131,25 @@ int xrtp_done(){
    return XRTP_OK;
 }
 
-module_catalog_t * xrtp_catalog() {
-
+module_catalog_t * xrtp_catalog()
+{
    return module_catalog;
 }
 
-session_sched_t* xrtp_scheduler() {
-
+session_sched_t* xrtp_scheduler()
+{
    return main_scheduler;
 }
 
-xrtp_session_t* xrtp_session(int id){
-
+xrtp_session_t* xrtp_session(int id)
+{
 	xlist_user_t lu;
 	xrtp_session_t *ses;
 
 	xthr_lock(sessions_lock);
 	ses = xlist_first(sessions, &lu);
-	while(ses){
-	
+	while(ses)
+	{
 		if(id == ses->id) break;
 
 		ses = xlist_next(sessions, &lu);
@@ -161,6 +161,24 @@ xrtp_session_t* xrtp_session(int id){
 	return ses;
 }
 
-int xrtp_register_session(xrtp_session_t *session);
+xrtp_session_t* xrtp_find_session(char *cn, int cnlen, char *ip, uint16 rtp_pno, uint16 rtcp_pno, uint8 profno, char *mime)
+{
+	xlist_user_t lu;
+	xrtp_session_t *ses;
 
-int xrtp_unregister_session(xrtp_session_t *session);
+	xthr_lock(sessions_lock);
+	ses = xlist_first(sessions, &lu);
+	while(ses)
+	{
+		if(session_match(ses, cn, cnlen, ip, rtp_pno, rtcp_pno, profno, mime))
+			break;
+
+		ses = xlist_next(sessions, &lu);
+	}
+	xthr_lock(sessions_lock);
+
+	if(!ses) 
+		xrtp_log(("xrtp_session: No session match\n"));
+
+	return ses;
+}

@@ -378,8 +378,7 @@ subt_recvr_t* recvr_new(sipua_t *sipua)
 	strcpy(recvr->cname, RECV_CNAME);
 	recvr->cnlen = strlen(RECV_CNAME);
 
-	rec = sipua_new_record(RECV_CNAME, strlen(RECV_CNAME), 
-							recvr, cb_recvr_oncall, 
+	rec = sipua_new_record(recvr, cb_recvr_oncall, 
 							recvr, cb_recvr_onreset,
 							recvr, cb_recvr_onbye);
 

@@ -121,10 +121,9 @@ int sipua_record_support(sipua_record_t *record, capable_t *cap)
 	return 0;
 }
 
-sipua_record_t *sipua_new_record(char cname[], int cnlen, 
-						   void *cb_connect_user, int(*cb_connect)(void*,char*,int,capable_t**,int), 
-						   void *cb_reconnect_user, int(*cb_reconnect)(void*,char*,int,capable_t**,int),
-						   void *cb_disconnect_user, int(*cb_disconnect)(void*,char*,int))
+sipua_record_t *sipua_new_record(void *cb_connect_user, int(*cb_connect)(void*,char*,int,capable_t**,int), 
+								void *cb_reconnect_user, int(*cb_reconnect)(void*,char*,int,capable_t**,int),
+								void *cb_disconnect_user, int(*cb_disconnect)(void*,char*,int))
 {
 	sipua_record_t *rec;
 	rec = malloc(sizeof(struct record_impl_s));
@@ -139,9 +138,6 @@ sipua_record_t *sipua_new_record(char cname[], int cnlen,
 	rec->enable = sipua_record_enable;
 	rec->disable = sipua_record_disable;
 	rec->support = sipua_record_support;
-
-	strncpy(rec->cname,cname,cnlen);
-	rec->cnlen = cnlen;
 
 	rec->connect_notify_user = cb_connect_user;
 	rec->connect_notify = cb_connect;
@@ -167,7 +163,7 @@ int sipua_done(sipua_t *sipua)
 	return UA_OK;
 }
 
-int sipua_regist(sipua_t *sipua, char *cn, int cnlen, sipua_record_t *rec)
+int sipua_regist(sipua_t *sipua, char *cname, int cnlen, sipua_record_t *rec)
 {
 	sipua_impl_t *ua = (sipua_impl_t*)sipua;
 	int i;
@@ -177,16 +173,22 @@ int sipua_regist(sipua_t *sipua, char *cn, int cnlen, sipua_record_t *rec)
 
 	for(i=0; i<ua->nrec; i++)
 	{
-		if(strncmp(rec->cname, ua->records[i]->cname, cnlen) == 0)
+		if(strncmp(ua->records[i]->cname, cname, ua->records[i]->cnlen) == 0)
 		{
+			strncpy(rec->cname,cname,cnlen);
+			rec->cnlen = cnlen;
+
 			ua->records[i] = rec;
 			return UA_OK;
 		}
 	}
 
+	strncpy(rec->cname,cname,cnlen);
+	rec->cnlen = cnlen;
+
 	ua->records[ua->nrec++] = rec;
 
-	ua_log(("sipua_regist: cn[%s] registered, %d records now\n", cn, ua->nrec));
+	ua_log(("sipua_regist: cn[%s] registered, %d records now\n", cname, ua->nrec));
 
 	return UA_OK;
 }

@@ -62,8 +62,8 @@ typedef struct xrtp_session_s xrtp_session_t;
 #define RTP_DELAY_FACTOR  3  /* FIXME: 3 times period, need more consider */
 #define RTP_MAX_PACKET_DELAY 5
  
-typedef enum{
-   
+typedef enum
+{
     SESSION_SEND,
     SESSION_RECV,
     SESSION_DUPLEX
@@ -72,8 +72,8 @@ typedef enum{
 
 #define MIN_SEQUENTIAL  3
 
-typedef struct member_state_s{
-
+typedef struct member_state_s
+{
     xthr_lock_t * lock;
 
     xrtp_session_t * session;
@@ -128,7 +128,6 @@ typedef struct member_state_s{
 
     double jitter;
 
-
     int we_sent;    /* we are a sender */
 
     /* rtcp report elements: */
@@ -136,8 +135,6 @@ typedef struct member_state_s{
     rtime_t lsr_usec;   /* time of last sr received */
     rtime_t lsr_msec;   /* time of last sr received */
     
-    xlist_t * rtp_buffer; /* Playout buffer */
-
     void * user_info;    /* Extenal info given by the session user */
 
     rtime_t lrt_last_rtcp_sent;
@@ -148,58 +145,107 @@ typedef struct member_state_s{
     char * cname;
     int cname_len;
 
+    /* media info block */
+	int		media_playable;  /* eg: after setup by 3 vorbis header packet */
+	uint32  rtpts_minfo;
+	int		minfo_signum;
+	void*	media_info;
+	void*	media_player;
+
+    /* Playout buffer */
+	xlist_t *delivery_buffer;
+
+	xthr_lock_t *delivery_lock;
+	xthr_cond_t *wait_media_available;
+	xthr_cond_t *wait_seqno;
+
+	int stop_delivery;
+
+	uint16 expect_seqno;
+	int misorder;
+
+	uint32 timestamp_playing;
+	rtime_t msec_playing;
+	rtime_t usec_playing;
+	rtime_t nsec_playing;
+
+	xthr_lock_t *sync_lock;
+	uint32 timestamp_remote_sync;
+	uint32 timestamp_sync;
+	rtime_t msec_sync;
+	rtime_t usec_sync;
+	rtime_t nsec_sync;
+
+	uint32 timestamp_last_sync;
+	rtime_t msec_last_sync;
+	rtime_t usec_last_sync;
+	rtime_t nsec_last_sync;
+
+	int64 packetno;
+	uint32 rtpts_last_payload;
+	int64 samples;
+
+	xthread_t *deliver_thread;
+
+#define CALLBACK_ON_MEDIAINFO			0x1
+
+    /* callid: CALLBACK_MEDIAINFO */
+    int (*on_mediainfo)(void *user, uint32 ssrc, void *minfo);
+    void* on_mediainfo_user;
+
 } member_state_t;
 
-typedef struct session_state_s{
-
-	 /* aka payload_type */
-   int profile_no;
+typedef struct session_state_s
+{
+	/* aka payload_type */
+	int profile_no;
+	char *profile_type;
    
-   int receive_from_anonymous;
+	int receive_from_anonymous;
        
-	 int n_pack_recvd; 
-	 int n_pack_sent;  /* reset when changed ssrc */
+	int n_pack_recvd; 
+	int n_pack_sent;  /* reset when changed ssrc */
 
-   rtime_t usec_start_send;
-   xrtp_lrtime_t lrts_start_send;
+	rtime_t usec_start_send;
+	xrtp_lrtime_t lrts_start_send;
     
-	 int oct_recvd;  
-	 int oct_sent;  /* payload octet counter, reset when changed ssrc */
+	int oct_recvd;  
+	int oct_sent;  /* payload octet counter, reset when changed ssrc */
     
-	 int jitter;
+	int jitter;
 
 } session_state_t;
 
-struct session_lock_s{
-
-   void* send_waiting_lock;
-	 void* recv_waiting_lock;
+struct session_lock_s
+{
+	void* send_waiting_lock;
+	void* recv_waiting_lock;
 };
 
-struct session_cond_s{
-
+struct session_cond_s
+{
    void* send_waiting_cond;
 	 void* recv_waiting_cond;
 };
 
-typedef struct appinfo_s{
-    
+typedef struct appinfo_s
+{
    uint32 name;
    uint32 len;
    char * info;
     
 } xrtp_appinfo_t;
  
-typedef struct session_call_s{
-
+typedef struct session_call_s
+{
    int id;
    void * fn;
    void * user;
    
 } session_call_t;
 
-struct session_callbacks_s{
-
+struct session_callbacks_s
+{
     #define CALLBACK_SESSION_MEDIA_SENT       0x0
     #define CALLBACK_SESSION_MEDIA_RECVD      0x1
     #define CALLBACK_SESSION_APPINFO_RECVD    0x2
@@ -218,29 +264,29 @@ struct session_callbacks_s{
     void * default_user;
 
     /* Callout type: CALLBACK_SESSION_MEDIA_SENT */
-    void * media_sent_user;
+    void *media_sent_user;
     int (*media_sent)(void* user, xrtp_media_t *media);
 
     /* Callout type: CALLBACK_SESSION_MEDIA_RECVD */
-    void * media_recieved_user;
+    void *media_recieved_user;
     int (*media_recieved)(void* user, char *data, int dlen, uint32 ssrc, media_time_t mts, media_time_t dur);
 
     /* Callout type: CALLBACK_SESSION_APPINFO_RECVD */
-    void * appinfo_recieved_user;
+    void *appinfo_recieved_user;
     int (*appinfo_recieved)(void*user, xrtp_appinfo_t *appinfo);
     
     /**
      * Callout type: CALLBACK_SESSION_MEMBER_APPLY
      * This leave application to deside add a member or not
      */
-    void * member_apply_user;
+    void *member_apply_user;
     int (*member_apply)(void* user, uint32 member_src, char * cname, int cname_len, void ** user_info);
 
     /**
      * Callout type: CALLBACK_SESSION_MEMBER_UPDATE
      * Update member identification
      */
-    void * member_update_user;
+    void *member_update_user;
     int (*member_update)(void* user, uint32 member_src, char * cname, int cname_len);
 
     /**
@@ -248,14 +294,14 @@ struct session_callbacks_s{
      * Ask the connects to the member ports, which is preset by SIP protocol
      * If not set, use OLD RTP static ports allocation assumption, which is rtcp is ONE up the rtp port.
      */
-    void * member_connects_user;
+    void *member_connects_user;
     int (*member_connects)(void* user, uint32 member_src, session_connect_t **rtp_conn, session_connect_t **rtcp_conn);
 
     /**
      * Callout type: CALLBACK_SESSION_MEMBER_DELETED
      * The extra info return to the user.
      */
-    void * member_deleted_user;
+    void *member_deleted_user;
     int (*member_deleted)(void* user, uint32 member_src, void * user_info);
 
     /**
@@ -263,7 +309,7 @@ struct session_callbacks_s{
      * Report the transission condition of the member
      * may be judged to adapt better media data
      */
-    void * member_report_user;
+    void *member_report_user;
     int (*member_report)(void* user, void* member_info, 
 						 uint32 ssrc, char *cname, int cnlen,
 						 uint npack_recv, uint bytes_recv, 
@@ -274,57 +320,57 @@ struct session_callbacks_s{
      * Callout type: CALLBACK_SESSION_BEFORE_RESET
      * Notify right before the session reset
      */
-    void * before_reset_user;
+    void *before_reset_user;
     int (*before_reset)(void* user, xrtp_session_t * session);
 
     /**
      * Callout type: CALLBACK_SESSION_AFTER_RESET
      * Notify right after the session reset
      */
-    void * after_reset_user;
+    void *after_reset_user;
     int (*after_reset)(void* user, xrtp_session_t * session);
 
     /**
      * Callout type: CALLBACK_SESSION_NEED_SIGNATURE
      * Recreate a signature of the session
      */
-    void * need_signature_user;
+    void *need_signature_user;
     uint32 (*need_signature)(void* user, xrtp_session_t * session);
 
     /**
      * Callout type: CALLBACK_SESSION_NOTIFY_DELAY
      * Tell the user how late we are
      */
-    void * notify_delay_user;
+    void *notify_delay_user;
     int (*notify_delay)(void* user, xrtp_session_t * session, rtime_t late);
 
     /**
      * Callout type: CALLBACK_SESSION_NTP
      * Get NTP timestamp
      */
-    void * ntp_user;
+    void *ntp_user;
     int (*ntp)(void* user, uint32 * hi_ntp, uint32 * lo_ntp);
     /**
      * Callout type: CALLBACK_SESSION_SYNC
      * Get NTP timestamp
      */
-    void * synchronise_user;
+    void *synchronise_user;
     int (*synchronise)(void* user, uint32 timestamp, uint32 hi_ntp, uint32 lo_ntp);
 };
 
-typedef struct param_members_s{
-
+typedef struct param_members_s
+{
     uint32 * srcs;
     uint32 n_src;
 
-
 } param_member_t;
 
-struct xrtp_session_s {
-
+struct xrtp_session_s
+{
     int id;
 
     module_catalog_t * module_catalog;
+	void *media_control;
 
     /* NOTE: The Redundancy is not implemented yet */
     xrtp_media_t * media;
@@ -366,8 +412,11 @@ struct xrtp_session_s {
 	xthr_lock_t * senders_lock;
     
     uint n_member; /* the number of validated member */
-    xlist_t * members;
-	xthr_lock_t * members_lock;
+    xlist_t *members;
+	xthr_lock_t *members_lock;
+
+	int renew_minfo_level;
+	xthr_lock_t *renew_level_lock;
 
     struct xrtp_list_user_s $member_list_block;
 
@@ -377,8 +426,8 @@ struct xrtp_session_s {
 
     uint pn_member;    /* pmember */
     
-    xrtp_port_t * rtp_port;
-    xrtp_port_t * rtcp_port;
+    xrtp_port_t *rtp_port;
+    xrtp_port_t *rtcp_port;
 
     session_connect_t * rtp_incoming;
     session_connect_t * rtcp_incoming;
@@ -402,10 +451,10 @@ struct xrtp_session_s {
     xrtp_teleport_t * join_to_rtp_port;
     xrtp_teleport_t * join_to_rtcp_port;
 
-	  struct session_state_s $state;
-	  struct session_callbacks_s $callbacks;
-	  struct session_lock_s $locks;
-	  struct session_cond_s $condvars;
+	struct session_state_s $state;
+	struct session_callbacks_s $callbacks;
+	struct session_lock_s $locks;
+	struct session_cond_s $condvars;
 
     spin_queue_t * packets_in_sched;
     rtime_t timesize;
@@ -422,7 +471,7 @@ struct xrtp_session_s {
  */
 extern DECLSPEC
 xrtp_session_t * 
-session_new(xrtp_port_t *rtp_port, xrtp_port_t *rtcp_port, char * cname, int clen, module_catalog_t * cata);
+session_new(char * cname, int clen, char *ip, uint16 rtp_portno, uint16 rtcp_portno, module_catalog_t * cata, void *media_control);
 
 /**
  * Release the Session
@@ -439,6 +488,9 @@ extern DECLSPEC
 int 
 session_id(xrtp_session_t * session);
 
+extern DECLSPEC
+int
+session_match(xrtp_session_t * session, char *cn, int cnlen, char *ip, uint16 rtp_pno, uint16 rtcp_pno, uint8 profno, char *prof_type);
 
 int session_cname(xrtp_session_t * session, char * cname, int clen);
 
@@ -508,11 +560,11 @@ session_add_handler(xrtp_session_t * session, char * id);
 packet_pipe_t * session_process(xrtp_session_t * session, int type);
  
 /**
- * Reserved function
- int session_enable_process(xrtp_session_t * session, char * id, int enable); 
+ * Get ssrc of session owner
  */
-
-uint32 session_ssrc(xrtp_session_t *session);
+extern DECLSPEC
+uint32 
+session_ssrc(xrtp_session_t *session);
 
 extern DECLSPEC
 xclock_t*
@@ -572,7 +624,7 @@ session_member_check_report(member_state_t * member, uint8 frac_lost, uint32 tot
  */
 extern DECLSPEC
 int 
-session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, xrtp_teleport_t *rtp_port, xrtp_teleport_t *rtcp_port, void *userinfo);
+session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, uint16 rtp_portno, uint16 rtcp_portno, void *userinfo);
 
 /**
  * Remove a cname member to session by external protocol, such as SIP
@@ -599,22 +651,74 @@ session_member_update_by_rtp(member_state_t * mem, xrtp_rtp_packet_t * rtp);
 
 extern DECLSPEC
 int 
-session_member_hold_rtp(member_state_t * member, xrtp_rtp_packet_t * rtp);
- 
-extern DECLSPEC
-xrtp_rtp_packet_t*
-session_member_next_rtp_withhold(member_state_t * member);
- 
-media_time_t session_hrt2mt(xrtp_session_t * session, rtime_t hrt);
-rtime_t session_mt2hrt(xrtp_session_t * session, media_time_t mt);
-
-extern DECLSPEC
-uint32 
-session_member_mapto_local_time(member_state_t * member, uint32 ts_packet, uint32 ts_local, int level);
+session_member_seqno_stall(member_state_t * mem, int32 seqno);
 
 extern DECLSPEC
 int 
-session_member_synchronise(member_state_t * member, uint32 ts_packet, uint32 ts_local, uint32 hi_ntp, uint32 lo_ntp, int level);
+session_member_hold_media(member_state_t * member, void *media, int bytes, uint16 seqno, uint32 rtpts, rtime_t us_ref, rtime_t us, int last, void *memblock);
+ 
+extern DECLSPEC
+int
+session_member_deliver(member_state_t * mem, uint16 seqno, int64 packetno);
+ 
+extern DECLSPEC
+int
+session_member_media_playing(member_state_t *mem, uint32 *rtpts_playing, rtime_t *ms_playing, rtime_t *us_playing, rtime_t *ns_playing);
+
+/**
+ * return rtpts_sync - rtpts_remote_sync;
+ */
+extern DECLSPEC
+uint32
+session_member_sync_point(member_state_t *mem, uint32 *rtpts_sync, rtime_t *ms_sync, rtime_t *us_sync, rtime_t *ns_sync);
+
+extern DECLSPEC
+int64
+session_member_samples(member_state_t *mem, uint32 rtpts_payload); 
+
+media_time_t session_hrt2mt(xrtp_session_t *session, rtime_t hrt);
+rtime_t session_mt2hrt(xrtp_session_t *session, media_time_t mt);
+
+extern DECLSPEC
+uint32 
+session_member_mapto_local_time(member_state_t *member, uint32 ts_packet, uint32 ts_local, int level);
+
+extern DECLSPEC
+int 
+session_member_synchronise(member_state_t *member, uint32 ts_remote, uint32 hi_ntp, uint32 lo_ntp, int clockrate);
+
+extern DECLSPEC
+void*
+session_member_media_info(member_state_t *member, uint32 *rtpts, int *signum);
+
+extern DECLSPEC
+int
+session_member_expire_media_info(member_state_t *member, uint32 rtpts, int signum);
+
+extern DECLSPEC
+int
+session_update_media_info(member_state_t *member, void *minfo);
+
+extern DECLSPEC
+int 
+session_issue_media_info(xrtp_session_t *ses, void *minfo, int signum);
+
+extern DECLSPEC
+int
+session_renew_media_info(xrtp_session_t *ses, uint32 *rtpts, int *signum, void **minfo_ret);
+
+extern DECLSPEC
+void*
+session_member_player(member_state_t *member);
+
+/* return previous player */
+extern DECLSPEC
+void*
+session_member_set_player(member_state_t *member, void *player);
+
+extern DECLSPEC
+void*
+session_media_control(xrtp_session_t *session);
 
 uint32
 session_signature(xrtp_session_t *session);

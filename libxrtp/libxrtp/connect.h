@@ -71,6 +71,8 @@ int port_io(xrtp_port_t * port);
 
 int port_match_io(xrtp_port_t * port, int io);
   
+int port_match(xrtp_port_t * port, char *ip, uint16 pno);
+
 int port_is_multicast(xrtp_port_t * port);
 
 int port_poll(xrtp_port_t * port, rtime_t timeout_usec);

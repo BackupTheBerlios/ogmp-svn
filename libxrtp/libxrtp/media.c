@@ -35,38 +35,9 @@ uint32 media_realtime_to_rtpts(xrtp_media_t * media, rtime_t msec, rtime_t usec)
    return rtpts;
 }
 
-int media_set_callback(xrtp_media_t *media, int type, void* call, void* user){
-
-    switch(type){
-
-       case(CALLBACK_MEDIA_ARRIVED):
-
-           media->$callbacks.media_arrived = call;
-           media->$callbacks.media_arrived_user = user;
-           media_log(("text/rtp-test.tm_media_set_callback: 'media_arrived' callback set\n"));
-           break;
-
-       case(CALLBACK_MEDIA_FINISH):
-
-           media->$callbacks.media_finish = call;
-           media->$callbacks.media_finish_user = user;
-           media_log(("text/rtp-test.tm_media_set_callback: 'media_finish' callback set\n"));
-           break;
-
-       case(CALLBACK_MEDIA_REPORT):
-
-           media->$callbacks.media_report = call;
-           media->$callbacks.media_report_user = user;
-           media_log(("text/rtp-test.tm_media_set_callback: 'media_report' callback set\n"));
-           break;
-
-       default:
-
-           media_log(("< text/rtp-test.tm_media_set_callback: callback[%d] unsupported >\n", type));
-           return XRTP_EUNSUP;
-    }
-
-    return XRTP_OK;
+int rtp_media_set_callback(xrtp_media_t *media, int type, int (*cb)(), void *user)
+{
+	return session_set_callback(media->session, type, cb, user);
 }
 
 

@@ -266,7 +266,7 @@ int tm_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp)
 
     rtp_packet_set_mark(rtp, 0);
 
-	 rtp_packet_set_timestamp(rtp, profile->timestamp_payload);
+	rtp_packet_set_timestamp(rtp, profile->timestamp_payload);
     
     rtp_packet_set_payload(rtp, profile->payload_buf);
 

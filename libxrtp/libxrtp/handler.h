@@ -54,23 +54,23 @@
  
  typedef struct profile_class_s profile_class_t;
 
- struct profile_class_s {
+ struct profile_class_s
+ {
+	 const char* (*id)(profile_class_t *class);
 
-	const char* (*id)(profile_class_t *class);
-
-   int (*type)(profile_class_t *class);
+	 int (*type)(profile_class_t *class);
 
 	 char* (*description)(profile_class_t *class);
 
 	 int (*capacity)(profile_class_t *class);
 
-    int (*handler_number)(profile_class_t *class);
+	 int (*handler_number)(profile_class_t *class);
 
-    int (*done)(profile_class_t *class);
+	 int (*done)(profile_class_t *class);
 
-    profile_handler_t* (*new_handler)(profile_class_t *class, xrtp_session_t * session);
+	 profile_handler_t* (*new_handler)(profile_class_t *class, xrtp_session_t * session);
 
-    int (*done_handler)(profile_handler_t * h);
+	 int (*done_handler)(profile_handler_t * h);
  };
 
  struct profile_handler_s {
