@@ -597,6 +597,8 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 
 			maker->new_media_stream(maker, audio_in, player, (media_info_t*)&spxinfo);
 			
+
+
 			audio_in->start(audio_in, ctrl);
 
 			myself->media_playable = 1;
@@ -770,23 +772,44 @@ int rtp_speex_parameter(xrtp_media_t *media, char* key, void* value)
 
 void* rtp_speex_info(xrtp_media_t* media, void* rtp_cap)
 {
-	rtpcap_descript_t *rtpcap = (rtpcap_descript_t*)rtp_cap;
+    int nextpos = -1;
+    
+    rtpcap_descript_t *rtpcap = (rtpcap_descript_t*)rtp_cap;
 
 	speex_info_t* spxinfo;
 
-	spxinfo = malloc(sizeof(speex_info_t));
+    if(!rtpcap)
+    {
+		spxrtp_debug(("rtp_speex_info: no speex rtp capable\n"));
+		return NULL;
+    }
+
+	spxinfo = xmalloc(sizeof(speex_info_t));
 	if(!spxinfo)
 	{
 		spxrtp_debug(("rtp_speex_info: No memory\n"));
 		return NULL;
 	}
-
 	memset(spxinfo, 0, sizeof(speex_info_t));
 
-	speex_info_from_sdp((media_info_t*)spxinfo, rtpcap->profile_no, rtpcap->sdp_message, 0);
+	nextpos = speex_info_from_sdp((media_info_t*)spxinfo, rtpcap->profile_no, rtpcap->sdp_message, 0);
+    if(nextpos < 0)
+    {
+        xfree(spxinfo);
+        return NULL;
+    }
+    
+    printf("rtp_speex_info: clockrate[%d]\n", spxinfo->audioinfo.info.sample_rate);
+    printf("rtp_speex_info: coding_param[%d]\n", spxinfo->audioinfo.channels);
+    printf("rtp_speex_info: ptime[%d]\n", spxinfo->ptime);
+    printf("rtp_speex_info: vbr[%d]\n", spxinfo->vbr);
+    printf("rtp_speex_info: abr[%d]\n", spxinfo->abr);
+    printf("rtp_speex_info: cbr[%d]\n", spxinfo->cbr);
+    printf("rtp_speex_info: cng[%d]\n", spxinfo->cng);
+    printf("rtp_speex_info: penh[%d]\n", spxinfo->penh);
 
-	return spxinfo;
-}
+    return spxinfo;
+}              
 
 int rtp_speex_sdp(xrtp_media_t* media, void* sdp_info)
 {
@@ -831,6 +854,7 @@ int rtp_speex_sdp(xrtp_media_t* media, void* sdp_info)
 	if(spxinfo)
 		ret = speex_info_to_sdp((media_info_t*)spxinfo, rtpcap, sdp->sdp_message, sdp->sdp_media_pos);
 	else
+
 	{
 		char fmt[4];
 		ret = rtp_capable_to_sdp(rtpcap, sdp->sdp_message, sdp->sdp_media_pos);
@@ -1023,6 +1047,7 @@ int rtp_speex_send_loop(void *gen)
 
 			spxrtp_log(("rtp_speex_send_loop: waiting is over!\n"));
 
+
 			profile->idle = 0;
 		}
 
@@ -1198,6 +1223,7 @@ int rtp_speex_post(xrtp_media_t* media, media_data_t* frame, int data_bytes, uin
    xlist_addto_last(profile->packets, rtpf);
    if(rtpf->samplestamp != profile->recent_samplestamp)
    {
+
 	   /* when new group coming, old group will be discard 
 	    * if could not catch up the time */
 	   profile->group_first_frame = rtpf;
@@ -1241,6 +1267,7 @@ xrtp_media_t* rtp_speex(profile_handler_t *handler, int clockrate, int coding_pa
 {
 	media_control_t *mc;
 	spxrtp_handler_t *profile;
+
 
 	speex_setting_t *spxset;
 	speex_info_t *spxinfo;
@@ -1413,6 +1440,7 @@ profile_handler_t * spxrtp_new_handler(profile_class_t * clazz, xrtp_session_t *
 	h->rtp_in = spxrtp_rtp_in;
 	h->rtp_out = spxrtp_rtp_out;
 	h->rtp_size = spxrtp_rtp_size;
+
 
 	h->rtcp_in = spxrtp_rtcp_in;
 	h->rtcp_out = spxrtp_rtcp_out;

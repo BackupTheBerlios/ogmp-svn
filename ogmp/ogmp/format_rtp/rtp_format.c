@@ -386,12 +386,10 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 		remote_netaddr = rtpcapset->netaddr;
 	}
 	
-	printf("rtp_open_stream: for %s:%u|%u\n", rtpcapset->cname, rtpcap->rtp_portno, rtpcap->rtcp_portno);
+	printf("rtp_open_stream: for %s:(%u|%u)\n", rtpcapset->cname, rtpcap->rtp_portno, rtpcap->rtcp_portno);
 	
 	session_add_cname(strm->session, rtpcapset->cname, strlen(rtpcapset->cname), remote_netaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno, rtpcap, ctrl);
 	
-	printf("rtp_open_stream: 3\n");
-
 	/* waiting to source to be available */
 	strm->source_cname = xstr_clone(rtpcapset->cname);
 	strm->bandwidth = session_bandwidth(strm->session);
@@ -551,6 +549,7 @@ int rtp_set_player (media_format_t * mf, media_player_t * player)
 
    rtp_debug(("rtp_set_player: can't play the media with player\n"));
 
+
    return ret;
 }
 
@@ -564,6 +563,7 @@ module_interface_t * media_new_format()
       rtp_log(("rtp_new_rtp_group: No memery to allocate\n"));
       return NULL;
    }
+
 
    memset(rtp, 0, sizeof(struct rtp_format_s));
 

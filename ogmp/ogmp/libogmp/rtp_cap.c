@@ -112,7 +112,6 @@ rtpcap_descript_t* rtp_capable_descript(int payload_no,
 	rtpcap->clockrate = clockrate;
 	rtpcap->coding_param = coding_param;
 
-
 	rtpcap->sdp_message = sdp_message;
 
 	return rtpcap;
@@ -283,6 +282,7 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 
 	rtpcap_set_t* rtpcapset = xmalloc(sizeof(rtpcap_set_t));
 	if(!rtpcapset)
+
 	{
 		return NULL;
 	}
@@ -446,6 +446,7 @@ int rtpcap_match_mime(void* tar, void* pat)
 
 rtpcap_descript_t* rtp_get_capable(rtpcap_set_t* set, char* mime)
 {
+
 	xlist_user_t u;
 	return xlist_find(set->rtpcaps, mime, rtpcap_match_mime, &u);
 }
@@ -491,6 +492,9 @@ int rtp_capable_done_set(rtpcap_set_t* rtpcapset)
 
 	if(rtpcapset->rtpcaps)
 		xlist_done(rtpcapset->rtpcaps, rtpcap_done);
+
+    if(rtpcapset->sdp_message)
+        free(rtpcapset->sdp_message);
 
 	xfree(rtpcapset);
 

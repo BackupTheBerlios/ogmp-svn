@@ -288,8 +288,6 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 	char tmp[16];
 	char tmp2[16];
 
-	int medias[MAX_SIPUA_MEDIA];
-
 	int bw_budget;
 	int call_bw;
 
@@ -376,8 +374,6 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 		return NULL;
 	}
 	
-	memset(medias, 0, sizeof(medias));
-
 	rtpcap = xlist_first(rtpcapset->rtpcaps, &u);
 
 	call_bw = 0;
@@ -414,7 +410,7 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 			}
 		}
 
-		if(medias[j] == 0)
+		if(j < nmedia && !rtpcap->enable)
 		{
 			media_bw = session_new_sdp(cata, nettype, addrtype, netaddr, 
 							&rtpcap->local_rtp_portno, &rtpcap->local_rtcp_portno, 
@@ -425,7 +421,6 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 			if(media_bw < 0 || bw_budget < call_bw)
 				break;
 
-			medias[j]++;
 			rtpcap->enable = 1;
 
 			call_bw += media_bw;
@@ -436,9 +431,12 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 
 	sdp_message_to_str(sdp_info.sdp_message, &set->reply_body);
 
+    /* FIXME: If free here, lead to segment fault on linux(POSIX)
+     * But why?
 	sdp_message_free(sdp_info.sdp_message);
-
-	/*
+    */
+    
+    /*
 	printf("sipua_negotiate_call:\n");
 	printf("-------Reply SDP----------\n");
 	printf("CallId[%s]\n", set->setid.id);
@@ -447,7 +445,6 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 	printf("--------------------------\n");
 	getchar();
 	*/
-
 	return set;
 }
 
@@ -483,6 +480,7 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
 			rtp_format_t* rtpfmt = (rtp_format_t*)format;
 
 			bw = rtpfmt->open_capables(format, rtpcapset, control, mode, call->bandwidth);
+
 			if(bw > 0)
 			{
 				call->rtp_format = format;
@@ -493,8 +491,6 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
       
 		format = (media_format_t*) xlist_next(format_handlers, &u);
 	}
-
-	printf("sipua_establish_call: 5\n");
 
 	if(call->rtp_format == NULL)
 	{

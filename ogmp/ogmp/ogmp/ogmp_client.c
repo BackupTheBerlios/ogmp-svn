@@ -64,6 +64,7 @@ int client_call_ringing(void* gen)
 		for(i=0; i<MAX_SIPUA_LINES; i++)
 		{
 			call = client->lines[i];
+            
 			if(call && call->status == SIPUA_EVENT_NEW_CALL)
 			{
 				ringing = 1;
@@ -204,6 +205,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
             }
 
 			/* registering transaction completed */
+
+
             client->reg_profile = NULL;
 
 			/* Should be exact expire seconds returned by registrary*/
@@ -299,6 +302,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			}
 
 			call->cid = call_e->cid;
+
 			call->did = call_e->did;
 			call->rtpcapset = rtpcapset;
             
@@ -323,6 +327,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				{
 					call->ring_num = SIPUA_MAX_RING;
 					
+
 					client->lines[i] = call;
 					sipua->uas->accept(sipua->uas, lineno);
 
@@ -342,7 +347,9 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				}
 			}
 
-			sdp_message_free(sdp_message);
+            /* Cannot free here, need for media specific parsing !!!
+            sdp_message_free(sdp_message);
+            */
 
 			break;
 		}
@@ -409,6 +416,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			break;
 		}
+
 		case(SIPUA_EVENT_REQUESTFAILURE):
 		{
 			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
@@ -662,6 +670,7 @@ int client_lock_lines(sipua_t* sipua)
 	xthr_lock(client->lines_lock);
 
 	return UA_OK;
+
 }
 
 int client_unlock_lines(sipua_t* sipua)
@@ -689,11 +698,16 @@ int client_busylines(sipua_t* sipua, int *busylines, int nlines)
 {
 	int i;
 	int n=0;
+    
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
-	for(i=0; i<MAX_SIPUA_LINES; i++)
+	xthr_lock(client->lines_lock);
+
+    for(i=0; i<nlines; i++)
 		if(client->lines[i])
 			busylines[n++] = i;
+
+	xthr_unlock(client->lines_lock);
 
 	return n;
 }
@@ -772,6 +786,7 @@ int client_attach_source(sipua_t* sipua, sipua_set_t* call, transmit_source_t* t
 	
 		rtpcap = xlist_next(call->rtpcapset->rtpcaps, &lu);
 	}
+
 	
 	return MP_EIMPL;
 }
@@ -786,10 +801,10 @@ sipua_set_t* client_pick(sipua_t* sipua, int line)
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
-	if(client->sipua.incall)
+    if(client->sipua.incall)
 	{
 		client->lines[line]->status = SIPUA_EVENT_ONHOLD;
-		return NULL;
+		return client->lines[line];
 	}
 
 	client->sipua.incall = client->lines[line];
@@ -797,7 +812,7 @@ sipua_set_t* client_pick(sipua_t* sipua, int line)
 
 	/* FIXME: Howto transfer call from waiting session */
 
-	return client->sipua.incall;
+    return client->sipua.incall;
 }
 
 int client_hold(sipua_t* sipua)

@@ -17,7 +17,7 @@
  * License along with dpkg; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-
+ 
 #include "eXosipua.h"
 
 /* from Josua/src */
@@ -102,7 +102,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-            josua_printf(buf);
+            jua_log(buf);
             */
 
 			jcall_answered(jua, je);
@@ -114,7 +114,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-            josua_printf(buf);
+            jua_log(buf);
             */
 
 			jcall_ack(jua, je);
@@ -125,7 +125,8 @@ int jua_process_event(eXosipua_t *jua)
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
-			josua_printf(buf);
+                    
+			jua_log(buf);
 			*/
 			jcall_proceeding(jua, je);
 		}
@@ -138,6 +139,7 @@ int jua_process_event(eXosipua_t *jua)
 	  
             josua_printf(buf);
             */
+
 
 			jcall_ringing(jua, je);
 		}
@@ -155,11 +157,11 @@ int jua_process_event(eXosipua_t *jua)
 		}
 		else if (je->type==EXOSIP_CALL_REQUESTFAILURE)
 		{
-			/*
+		    /*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
-	  
+	  		
             josua_printf(buf);
             */
 

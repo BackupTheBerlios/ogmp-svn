@@ -195,7 +195,7 @@ int gui_run_command(ogmp_curses_t* ocui, int c)
 		return -1;
     }
 
-	if (ocui->active_gui->gui_run_command!=NULL)
+	if (ocui->active_gui->gui_run_command)
 		ocui->active_gui->gui_run_command(ocui->active_gui, c);
 
 	return 0;
@@ -423,7 +423,6 @@ int gui_key_pressed(ogmp_curses_t* ocui)
 	{
 		noecho();
 
-
 		c = getch();
 	}
     else
@@ -435,10 +434,10 @@ int gui_key_pressed(ogmp_curses_t* ocui)
 	  
 		noecho();
 
-		keypad(stdscr, TRUE);
+        keypad(stdscr, TRUE);
 
 		c= mvgetch(y,x);
-
+        
 		if ((c & 0x80))
 	    {}
 		
@@ -684,21 +683,13 @@ gui_show(ui_t* ui)
 	while(!ocui->quit)
     {
 		int key;
-		int i;
 
-		/* find the active gui window */
-		for (i=0; ocui->gui_windows[i]!=NULL && ocui->gui_windows[i]->on_off != GUI_ON ; i++)
-		{}
+        if (ocui->active_gui->gui_key_pressed)
+            key = ocui->active_gui->gui_key_pressed(ocui->active_gui);
+        else
+            key = gui_key_pressed(ocui);
         
-		if (ocui->gui_windows[i]->on_off != GUI_ON)
-			return -1; /* no active window?? */
-
-		if (ocui->gui_windows[i]->gui_key_pressed == NULL)
-			key = gui_key_pressed(ocui);
-		else
-			key = ocui->gui_windows[i]->gui_key_pressed(gui_windows[i]);
-
-		if (key != -1)
+        if (key != -1)
 			gui_run_command(ocui, key);
 
 		gui_e = gui_event(ogui);
@@ -827,6 +818,7 @@ int gui_print_log(ui_t* ui, char *buf)
 	xthr_lock(log_lock);
 
 	p = buf;
+
 
 	if(log_nline > 0)
 		ln = (log_lnn + 1) % log_maxline;

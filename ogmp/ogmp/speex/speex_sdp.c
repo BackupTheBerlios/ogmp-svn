@@ -25,7 +25,7 @@
 #define SPXSDP_LOG
 
 #ifdef SPXSDP_LOG
- #define spxsdp_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
+ #define spxsdp_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define spxsdp_log(fmtargs)
 #endif
@@ -136,15 +136,24 @@ int speex_info_from_sdp(media_info_t *info, int rtpmap_no, sdp_message_t *sdp, i
 	char *a;
 
 	speex_info_t *spxinfo = (speex_info_t*)info;
+    
 	int found_pos_speex = 0;
 	int ptime_ok=0, fmtp_ok=0;
 
 	/* locate speex sdp */
 	pos_media = 0;
+
+    if(!sdp)
+        return -1;
+
+    printf("speex_info_from_sdp: sdp\n");
+
 	while (!sdp_message_endof_media (sdp, pos_media))
 	{
 		int pos_attr = 0;
 		char* media_type = sdp_message_m_media_get (sdp, pos_media);
+
+        printf("speex_info_from_sdp: media\n");
 
 		if(0==strcmp(media_type, "audio"))
 		{
