@@ -507,6 +507,7 @@ int session_set_bandwidth(xrtp_session_t * ses, int total_bw, int rtp_bw){
  int session_match_member(void * tar, void * pat){
 
     member_state_t * stat = (member_state_t *)tar;
+
     member_state_t *mem = (member_state_t *)pat;
 
     return stat - mem;
@@ -770,7 +771,7 @@ int session_set_bandwidth(xrtp_session_t * ses, int total_bw, int rtp_bw){
 		uint32 e = (31*e16 + t16)/32;
 
 		/* final 32bit result */
-		mem->delay_estimate = mem->delay_estimate&0xFFFF0000 | e;
+		mem->delay_estimate = (mem->delay_estimate & 0xFFFF0000) | (e & 0xFFFF);
 	 }
 
 	 session_log(("session_member_mapto_local_time: active[%u], estimate[%u]\n", mem->active_delay, mem->delay_estimate));
@@ -1091,8 +1092,6 @@ int session_make_ssrc(xrtp_session_t * ses)
                                      uint32 hi_ntp, uint32 lo_ntp, uint32 rtp_ts,
                                      uint32 packet_sent, uint32 octet_sent)
  {
-    xrtp_session_t * ses = sender->session;
-    
     /* For report lsr: middle 32 bits of NTP */
     sender->lsr_ts = (hi_ntp << 16) + (lo_ntp >> 16);
     
@@ -1645,7 +1644,6 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
  int session_rtp_to_send(xrtp_session_t *ses, rtime_t usec_allow, int last_packet){
 
     xrtp_rtp_packet_t * rtp;
-    static int mc;
     int packet_bytes;
     int pump_ret = 0;
 
@@ -1653,19 +1651,20 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
     rtime_t us_start = time_usec_now(ses->clock);
 
     /* <debug>
+    static int mc;
     if(last_packet)
-	{
+	 {
         session_log(("session_rtp_to_send: Session[%u] produce last rtp frame packet within %d nsec for scheduling.\n", session_id(ses), ns_allow));
         mc = 0;
     }
-	else
-	{
+	 else
+	 {
         session_log(("session_rtp_to_send: Session[%u] produce %d frame packet within %d nsec for scheduling.\n", session_id(ses), mc++, ns_allow));
     }
      </debug> */  
 
     if(queue_is_full(ses->packets_in_sched))
-	{
+	 {
        session_log(("< session_rtp_to_send: Too many packets waiting for sending >\n"));
        /* FIXME: May callback to notify the applicaton */
        return XRTP_EBUSY;
@@ -1957,12 +1956,12 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
     rtp_packet_set_buffer(rtp, buf);
     
     if(pipe_pump(ses->rtp_recv_pipe, 0, rtp, &packet_bytes) != XRTP_CONSUMED)
-	{
+    {
         session_log(("session_rtp_to_receive: [%s] ######======RTP=====######\n\n", ses->self->cname));
         rtp_packet_done(rtp);
     }
-	else
-	{
+    else
+    {
         session_log(("session_rtp_to_receive: [%s] xxxxx=====RTP====xxxxxx\n\n", ses->self->cname));
     }
     
@@ -1995,6 +1994,7 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
             session_rtp_to_receive(ses);
 
         xthr_unlock(ses->rtp_recv_lock);
+
 
     }while(1);
 
@@ -2097,8 +2097,6 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
     member_state_t * mem = xrtp_list_find(ses->members, &ssrc, session_match_member_src, &(ses->$member_list_block));
     while(mem)
 	{
-       uint32 ssrc2 = mem->ssrc;
-
        mem = xrtp_list_next(ses->members, &(ses->$member_list_block));
        if(!mem)
           mem = xrtp_list_first(ses->members, &(ses->$member_list_block));
@@ -2178,152 +2176,152 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
     return XRTP_OK;
  }
 
- int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 timestamp)
- {
-    uint8 frac_lost; 
-    uint32 total_lost;
-    uint32 exseqno;
+int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 timestamp)
+{
+   uint8 frac_lost; 
+   uint32 total_lost;
+   uint32 exseqno;
     
-    uint32 lsr_delay = 0;
+   uint32 lsr_delay = 0;
 
-    rtime_t ms_now;
-    rtime_t us_now;
-	rtime_t ns_dummy;
+   rtime_t ms_now;
+   rtime_t us_now;
+   rtime_t ns_dummy;
 
-    /* Here is the implementation */
-    member_state_t * self = ses->self;
-    member_state_t * mem = NULL;
+   /* Here is the implementation */
+   member_state_t * self = ses->self;
+   member_state_t * mem = NULL;
 
-    int rtcp_end = 0;
+   int rtcp_end = 0;    
+   int max_report;
     
-    int max_report = XRTP_MAX_REPORTS > ses->n_member ? ses->n_member : XRTP_MAX_REPORTS;
+   max_report = XRTP_MAX_REPORTS > ses->n_member ? ses->n_member : XRTP_MAX_REPORTS;
+
+   /* Set sender info */
+   if(self->we_sent)
+   {
+      uint32 hi_ntp = 0, lo_ntp = 0;
+
+      /* SR Sender Info */
+      if(ses->$callbacks.ntp)
+         ses->$callbacks.ntp(ses->$callbacks.ntp_user, &hi_ntp, &lo_ntp);
+      /*
+      session_log(("session_report: ======ssrc[%u]=======\n", self->ssrc));
+      session_log(("session_report: ntp[%u,%u];[%u]\n", hi_ntp,lo_ntp,timestamp));
+      session_log(("session_report: sent[%dp;%dB]\n", ses->$state.n_pack_sent, ses->$state.oct_sent));
+      */
+      rtcp_set_sender_info(rtcp, self->ssrc, hi_ntp, lo_ntp, timestamp, 
+                           ses->$state.n_pack_sent, ses->$state.oct_sent);
+   }
+   else
+   {
+      /*
+      session_log(("session_report: ======ssrc[%u]=======\n", self->ssrc));
+      */
+   }
+
+   /* report peers */
+   time_rightnow(ses->clock, &ms_now, &us_now, &ns_dummy);
+
+   /* Add SDES packet */
+   if(self->cname)
+   {
+      rtcp_add_sdes(rtcp, self->ssrc, RTCP_SDES_CNAME, (uint8)self->cname_len, self->cname);
+      rtcp_end_sdes(rtcp, self->ssrc);
+   }
     
-    /* Set sender info */
-	if(self->we_sent)
-	{
-		uint32 hi_ntp = 0, lo_ntp = 0;
+   /* Bye not implemented */
 
-        /* SR Sender Info */
-        if(ses->$callbacks.ntp)
-           ses->$callbacks.ntp(ses->$callbacks.ntp_user, &hi_ntp, &lo_ntp);
+   /* report of members */
+   ses->n_rtcp_out = 0;
 
-		/*
-		session_log(("session_report: ======ssrc[%u]=======\n", self->ssrc));
-		session_log(("session_report: ntp[%u,%u];[%u]\n", hi_ntp,lo_ntp,timestamp));
-		session_log(("session_report: sent[%dp;%dB]\n", ses->$state.n_pack_sent, ses->$state.oct_sent));
-        */
-		rtcp_set_sender_info(rtcp, self->ssrc, hi_ntp, lo_ntp, timestamp, 
-							 ses->$state.n_pack_sent, ses->$state.oct_sent);
-    }
-	else
-	{
-		/*
-		session_log(("session_report: ======ssrc[%u]=======\n", self->ssrc));
-		*/
-	}
+   if(ses->n_member > 1)
+   {
+      /* Add more report if more valid members other than self */
+      uint32 start_report_ssrc = 0;
+      int report_end = 0;
 
-	/* report peers */
-	time_rightnow(ses->clock, &ms_now, &us_now, &ns_dummy);
-
-    /* Add SDES packet */
-    if(self->cname)
-	{
-		rtcp_add_sdes(rtcp, self->ssrc, RTCP_SDES_CNAME, (uint8)self->cname_len, self->cname);
-		rtcp_end_sdes(rtcp, self->ssrc);
-    }
-    
-    /* Bye not implemented */
-
-    /* report of members */
-    ses->n_rtcp_out = 0;
-
-    if(ses->n_member > 1)
-	{
-        /* Add more report if more valid members other than self */
-        uint32 start_report_ssrc = 0;
-        int report_end = 0;
-
-        if(ses->next_report_ssrc == 0)
-		{
+      if(ses->next_report_ssrc == 0)
+      {
+         mem = session_next_valid_member_of(ses, self->ssrc);
+         ses->next_report_ssrc = mem->ssrc;
+      }
+      else
+      {
+         /* !mem MUST NOT happen if member is left, this should avoid
+          * FIXME: always update ses->next_report_ssrc whenever member left
+          */
+         mem = session_member_state(ses, ses->next_report_ssrc);
+         if(mem == self)
+         {    
+            /* Actually, this never happen, as next_report_ssrc never record self */
+            session_log(("session_report: skip Self[%u]\n", self->ssrc));
             mem = session_next_valid_member_of(ses, self->ssrc);
-            ses->next_report_ssrc = mem->ssrc;
-        }
-		else
-		{
-            /* !mem MUST NOT happen if member is left, this should avoid
-             * FIXME: always update ses->next_report_ssrc whenever member left
-             */
-            mem = session_member_state(ses, ses->next_report_ssrc);
-            if(mem == self)
-			{    
-                /* Actually, this never happen, as next_report_ssrc never record self */
-                session_log(("session_report: skip Self[%u]\n", self->ssrc));
-                mem = session_next_valid_member_of(ses, self->ssrc);
-            }
-        }
+         }
+      }
         
-        start_report_ssrc = ses->next_report_ssrc;
+      start_report_ssrc = ses->next_report_ssrc;
     
-        while(!report_end && max_report > 0)
-		{
-          /* report other participants */
-          session_member_make_report(mem, &frac_lost, &total_lost, &exseqno);
+      while(!report_end && max_report > 0)
+      {
+         /* report other participants */
+         session_member_make_report(mem, &frac_lost, &total_lost, &exseqno);
 
-          /* Calculate last lsr_delay(sender received delay) */
-          if(mem->we_sent)
-		  {
-              lsr_delay = ((us_now - mem->lsr_usec) % 1000000) & 0xFF;
-              lsr_delay += ((ms_now - mem->lsr_msec) / 1000) << 16;
-          }
-		  else
-		  {
-              lsr_delay = 0;
-          }
-
-		  /*
-		  session_log(("session_report:-----------------------------\n"));
-		  session_log(("session_report: ssrc[%u]\n", mem->ssrc));
-		  session_log(("session_report: frac_lost[%u],total_lost[%u]\n", frac_lost, total_lost));
-		  session_log(("session_report: exseqno[%u],jitter[%f]\n", exseqno, mem->jitter));
-		  session_log(("session_report: lsr_ts[%dus],lsr_delay[%dus]\n", mem->lsr_ts, lsr_delay));
-		  session_log(("session_report:-----------------------------\n"));
-		  */
-          if(rtcp_add_report(rtcp, mem->ssrc, frac_lost, total_lost,
+         /* Calculate last lsr_delay(sender received delay) */
+         if(mem->we_sent)
+         {
+            lsr_delay = ((us_now - mem->lsr_usec) % 1000000) & 0xFF;
+            lsr_delay += ((ms_now - mem->lsr_msec) / 1000) << 16;
+         }
+         else
+         {
+            lsr_delay = 0;
+         }
+         /*
+         session_log(("session_report:-----------------------------\n"));
+         session_log(("session_report: ssrc[%u]\n", mem->ssrc));
+         session_log(("session_report: frac_lost[%u],total_lost[%u]\n", frac_lost, total_lost));
+         session_log(("session_report: exseqno[%u],jitter[%f]\n", exseqno, mem->jitter));
+         session_log(("session_report: lsr_ts[%dus],lsr_delay[%dus]\n", mem->lsr_ts, lsr_delay));
+         session_log(("session_report:-----------------------------\n"));
+         */
+         if(rtcp_add_report(rtcp, mem->ssrc, frac_lost, total_lost,
                           exseqno, (uint32)mem->jitter, mem->lsr_ts, lsr_delay) == XRTP_EREFUSE)
-		  {
+         {
               report_end = 1;
-          }
-		  else
-		  {
+         }
+         else
+         {
               max_report--;
-          }
+         }
        
-          /* Which connect send to for this member */
-          ses->outgoing_rtcp[ses->n_rtcp_out++] = mem->rtcp_connect;
+         /* Which connect send to for this member */
+         ses->outgoing_rtcp[ses->n_rtcp_out++] = mem->rtcp_connect;
           
-          mem = session_next_valid_member_of(ses, mem->ssrc);
-          if(mem == self)
-		  {
-             mem = session_next_valid_member_of(ses, self->ssrc);
-          }
+         mem = session_next_valid_member_of(ses, mem->ssrc);
+         if(mem == self)
+         {
+            mem = session_next_valid_member_of(ses, self->ssrc);
+         }
 
-          if(mem->ssrc == start_report_ssrc)
-		  {
-              break;
-          }
-       }
+         if(mem->ssrc == start_report_ssrc)
+         {
+            break;
+         }
+      }
        
-        /* Record next report member */
-        ses->next_report_ssrc = mem->ssrc;
-    }
+      /* Record next report member */
+      ses->next_report_ssrc = mem->ssrc;
+   }
 
-    /* Send SDES of member */
-    if(!rtcp_end){
-       /* Add SDES packet */
-    }
+   /* Send SDES of member */
+   if(!rtcp_end)
+   {
+      /* Add SDES packet */
+   }
 
-    return XRTP_OK;
- }
+   return XRTP_OK;
+}
  
  int session_rtcp_to_send(xrtp_session_t *ses)
  {
@@ -2332,18 +2330,18 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
     xrtp_rtcp_compound_t * rtcp;
 
     int rtcp_bytes;
-	rtime_t ms_pass;
+    rtime_t ms_pass;
 
-	session_log(("\nsession_rtcp_to_send: [%s] ++++++++++++++RTCP+++++++++++++\n", ses->self->cname));
+    session_log(("\nsession_rtcp_to_send: [%s] ++++++++++++++RTCP+++++++++++++\n", ses->self->cname));
     
-	while(self->ssrc == 0)
-	{
+    while(self->ssrc == 0)
+    {
        if(ses->$callbacks.need_signature)
-	   {
+       {
           self->ssrc = ses->$callbacks.need_signature(ses->$callbacks.need_signature_user, ses);
        }
-	   else
-	   {
+       else
+       {
           self->ssrc = rand();
        }
     }
@@ -2351,23 +2349,23 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
     ms_pass = time_msec_spent(ses->clock, self->msec_last_rtp_sent);
 
     if(ms_pass > ses->rtcp_interval * RTCP_SENDER_TIMEOUT_MULTIPLIER || ses->$state.n_pack_sent == 0)
-	{
+    {
         session_log(("session_rtcp_to_send: receiver, send no rtp within %dms\n", ms_pass));
         rtcp = rtcp_receiver_report_new(ses, self->ssrc, SESSION_DEFAULT_RTCP_NPACKET, XRTP_YES);
         self->we_sent = 0;
         ses->rtp_bw_left = 0;
 
-		xlist_remove_item(ses->senders, ses->self);
-		ses->n_sender = xlist_size(ses->senders);
+        xlist_remove_item(ses->senders, ses->self);
+        ses->n_sender = xlist_size(ses->senders);
     }
-	else
-	{
+    else
+    {
         session_log(("session_rtcp_to_send: sender, send rtp within %dms\n", ms_pass));
         rtcp = rtcp_sender_report_new(ses, SESSION_DEFAULT_RTCP_NPACKET, XRTP_YES); /* need padding */
         self->we_sent = 1;
 
-		xlist_add_once(ses->senders, ses->self);
-		ses->n_sender = xlist_size(ses->senders);
+        xlist_add_once(ses->senders, ses->self);
+        ses->n_sender = xlist_size(ses->senders);
     }
 
 	if(!rtcp)
@@ -2377,16 +2375,16 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
     }
 
     if(pipe_pump(ses->rtcp_send_pipe, 0, rtcp, &rtcp_bytes) >= XRTP_OK)
-	{
-		session_log(("session_rtcp_to_send: %d reports, %d bytes\n", ses->n_rtcp_out, rtcp_bytes));
-				
-		session_rtcp_send_now(ses, rtcp);
-        ses->rtcp_init = 0;
+    {
+       session_log(("session_rtcp_to_send: %d reports, %d bytes\n", ses->n_rtcp_out, rtcp_bytes));
+
+       session_rtcp_send_now(ses, rtcp);
+       ses->rtcp_init = 0;
 
         rtcp_compound_done(rtcp);
     }
-	else
-	{
+    else
+    {
         session_debug(("session_rtcp_to_send: Fail to produce the rtcp packet\n"));
         rtcp_compound_done(rtcp);
         
@@ -2402,6 +2400,7 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
 
     char *pdata = NULL;
     int datalen;
+
 
     xrtp_buffer_t * buf;
 

@@ -108,8 +108,6 @@ int tm_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
 
    rtime_t ms,us,ns;
 
-   xclock_t *clock = session_clock(profile->session);
-
    rtp_unpack(rtp);
     
    seqno = rtp_packet_seqno(rtp);
@@ -175,6 +173,7 @@ int tm_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
          profile->session->join_to_rtcp_port = NULL;
       }
    }
+
 
    if(!sender->valid)
    {
@@ -264,18 +263,15 @@ int tm_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
  int tm_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
 
     tm_handler_t *profile = (tm_handler_t *)handler;
-	xclock_t *clock = session_clock(profile->session);
-
-	int payload_bytes = buffer_datalen(profile->payload_buf);
 
     rtp_packet_set_mark(rtp, 0);
 
-	rtp_packet_set_timestamp(rtp, profile->timestamp_payload);
+	 rtp_packet_set_timestamp(rtp, profile->timestamp_payload);
     
     rtp_packet_set_payload(rtp, profile->payload_buf);
 
     if(!rtp_pack(rtp))
-	{
+	 {
        tm_log(("text/rtp-test.tm_rtp_out: Fail to pack rtp data\n"));
        return XRTP_FAIL;
     }
@@ -312,7 +308,7 @@ int tm_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
    rtime_t ms,us,ns;
 
    /* Here is the implementation */
-   ((tm_handler_t *)handler)->rtcp_size = rtcp->bytes_received;
+   profile->rtcp_size = rtcp->bytes_received;
     
    if(!rtcp->valid_to_get)
    {
@@ -408,7 +404,9 @@ int tm_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 	   /* If use RTCP to connect new participant, then will receive
 	    * reports exclude the new one 
 	    */ 
+	   tm_log(("text/rtp-test.tm_rtcp_in:-----------------------------\n"));
       tm_log(("text/rtp-test.tm_rtcp_in: No report for Member[%u]\n", src_sender));
+	   tm_log(("text/rtp-test.tm_rtcp_in:-----------------------------\n"));
    }
 
    /* Check SDES with registered key by user */
@@ -430,9 +428,9 @@ int tm_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 
     tm_handler_t * profile = (tm_handler_t *)handler;
 
-	uint32 ms_timestamp = time_msec_now(session_clock(profile->session));
+    uint32 ms_timestamp = time_msec_now(session_clock(profile->session));
 
-	session_report(profile->session, rtcp, ms_timestamp);
+    session_report(profile->session, rtcp, ms_timestamp);
     
     /* Profile specified */
     if(!rtcp_pack(rtcp)){

@@ -20,6 +20,14 @@
 #include "spu_text.h"
 #include <string.h>                          
 #include <stdlib.h>
+/*
+#define TEST_LOG
+*/
+#ifdef TEST_LOG
+ #define test_log(fmtargs)  do{printf fmtargs;}while(0)
+#else
+ #define test_log(fmtargs)
+#endif
 
 typedef struct subt_frame_s
 {
@@ -121,9 +129,9 @@ int spu_sender_run(void * param)
        
        if(sender.n_recvr == 0){
 
-          printf("spu_sender_run: waiting for receiver ...\n");
+          test_log(("spu_sender_run: waiting for receiver ...\n"));
           xthr_cond_wait(sender.wait_receiver, sender.lock);
-          printf("spu_sender_run: receiver available\n");
+          test_log(("spu_sender_run: receiver available\n"));
        }
        
        if(!tryagain){
@@ -164,18 +172,18 @@ int spu_sender_run(void * param)
 
           first = 0;
           ms_now = ms_begin = time_msec_now(sender.clock);
-          printf("\nspu_sender_run: Begin at %dms\n", ms_begin);
+          test_log(("\nspu_sender_run: Begin at %dms\n", ms_begin));
 
        }else{
 
           ms_now = time_msec_now(sender.clock);
-          printf("\nspu_sender_run: %dms now\n", ms_now);
+          test_log(("\nspu_sender_run: %dms now\n", ms_now));
        }
 
        dms = subt->start_ms - ms_now;
        if(dms > 0){
 
-          printf("spu_sender_run: sleep %dms\n\n", dms);
+          test_log(("spu_sender_run: sleep %dms\n\n", dms));
           
           xthr_unlock(sender.lock);
           time_msec_sleep(sender.clock, dms, NULL);
@@ -203,7 +211,7 @@ int spu_sender_run(void * param)
 
     xthr_unlock(sender.lock);
     
-    printf("\nspu_sender_run: end thread ...\n");
+    test_log(("\nspu_sender_run: end thread ...\n"));
 
     return XRTP_OK;
  }
@@ -229,13 +237,13 @@ int spu_sender_run(void * param)
     subt_recvr_t * r = (subt_recvr_t *)u;
     subt_frame_t * frm = NULL;
 
-    printf("test.cb_media_recvd: Media[#%u] ready\n", ts);
+    test_log(("test.cb_media_recvd: Media[#%u] ready\n", ts));
 
     frm = malloc(sizeof(struct subt_frame_s));
     if(!frm)
-	{
+    {
         xthr_unlock(r->lock);
-        printf("< cb_media_recvd: Fail to allocated frame memery >\n");
+        test_log(("cb_media_recvd: Fail to allocated frame memery\n"));
         return XRTP_EMEM;
     }
       
@@ -284,9 +292,9 @@ int spu_sender_run(void * param)
     
     struct xrtp_list_user_s lu;
 
-	xclock_t *sclock = session_clock(recvr.session);
+    xclock_t *sclock = session_clock(recvr.session);
     
-    printf("\nspu_recvr_run: start thread ...\n");
+    test_log(("\nspu_recvr_run: start thread ...\n"));
     
     while(1){
 
@@ -302,21 +310,21 @@ int spu_sender_run(void * param)
 
        if(!f && !recvr.end){
          
-          printf("spu_recvr_run: wait next...\n");
+          test_log(("spu_recvr_run: wait next...\n"));
 
           xthr_cond_wait(recvr.wait, recvr.lock);
 
           f = (subt_frame_t *)xrtp_list_first(recvr.frames, &lu);
-		  printf("spu_recvr_run: play Media[#%d]\n", f->start);
+          test_log(("spu_recvr_run: play Media[#%d]\n", f->start));
        }
 
        now = time_msec_now(sclock);
        
        dt = f->start - now;
-       printf("spu_recvr_run: %dms now, wait %dms\n", now, dt);
+       test_log(("spu_recvr_run: %dms now, wait %dms\n", now, dt));
 
        if(dt > 0)
-	   {
+       {
           /* snap sometime */
           xthr_unlock(recvr.lock);
           time_msec_sleep(sclock, dt, NULL);
@@ -330,7 +338,7 @@ int spu_sender_run(void * param)
        spu_done_frame(f);
     }
 
-    printf("\nspu_recvr_run: end thread ...\n");
+    test_log(("\nspu_recvr_run: end thread ...\n"));
     
     return XRTP_OK;
  }

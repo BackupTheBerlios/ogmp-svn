@@ -15,15 +15,15 @@
  *                                                                         *
  ***************************************************************************/
 
- #ifndef XRTP_SESSION_H
- #include "session.h"
- #endif
+#ifndef XRTP_SESSION_H
+#include "session.h"
+#endif
  
- #include "const.h"
- #include <stdlib.h>
- #include <string.h>
+#include "const.h"
+#include <stdlib.h>
+#include <string.h>
  
- #include "stdio.h"
+#include "stdio.h"
 /*
 #define PIPELINE_LOG
 */
@@ -258,32 +258,33 @@
     xrtp_rtcp_compound_t * rtcp;
     
     pipe_log(("_pipe_step: step->pipe = %u, step->load->packet = %u\n", (int)step->pipe, (int)step->load->packet));
-    if(step->pipe->type == XRTP_RTP){
-
+    if(step->pipe->type == XRTP_RTP)
+    {
        rtp = (xrtp_rtp_packet_t *)(step->load->packet);
 
-       if(step->pipe->direct == XRTP_RECEIVE){
-       
+       if(step->pipe->direct == XRTP_RECEIVE)
+       {
           step->handler_return = step->handler->rtp_in(step->handler, rtp);
           step->load->packet_bytes = step->handler->rtp_size(step->handler, rtp);
-          
-       }else{
-       
+       }
+       else
+       {
           step->handler_return = step->handler->rtp_out(step->handler, rtp);
           step->load->packet_bytes = step->handler->rtp_size(step->handler, rtp);
        }
-       
-    }else{ /* pipe-> type == XRTP_RTCP */
-
+    }
+    else
+    {
+       /* pipe-> type == XRTP_RTCP */
        rtcp = (xrtp_rtcp_compound_t *)(step->load->packet);
 
-       if(step->pipe->direct == XRTP_RECEIVE){
-       
+       if(step->pipe->direct == XRTP_RECEIVE)
+       {
           step->handler_return = step->handler->rtcp_in(step->handler, rtcp);
           step->load->packet_bytes = step->handler->rtcp_size(step->handler, rtcp);
-
-       }else{
-       
+       }
+       else
+       {
           step->handler_return = step->handler->rtcp_out(step->handler, rtcp);
           step->load->packet_bytes = step->handler->rtcp_size(step->handler, rtcp);
        }

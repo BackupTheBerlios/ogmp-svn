@@ -67,15 +67,15 @@
  /**
   * RTP Payload
   */
- struct xrtp_rtp_payload_s {
-
-	/* info for incoming payload, data could be part of the whole incoming packet buffer */
+ struct xrtp_rtp_payload_s
+ {
+   /* info for incoming payload, data could be part of the whole incoming packet buffer */
     char *data;		/* pointer to the data in the buffer */
     int  len;		/* payload bytes */
     int  buf_pos;	/* payload position in buffer if parsed from buffer */
 
-	/* the buffer for outgoing payload */
-	buffer_t *out_buffer;
+   /* the buffer for outgoing payload */
+   buffer_t *out_buffer;
  };
 
  enum xrtp_direct_e{
@@ -89,11 +89,6 @@
   */
  struct xrtp_rtp_packet_s
  {
-    /*
-	int is_sync;
-    uint32 hi_ntp;
-    uint32 lo_ntp;
-	*/
     void * handler;
 
     xrtp_session_t * session;
@@ -148,9 +143,6 @@
     void * handler;
 
     xrtp_session_t * session;
-
-    //rtime_t usec_arrival;  /* used for media sync */
-    //rtime_t msec_arrival;  /* used for lsr_delay */
 
     rtime_t msec,usec,nsec;  /* arrival time */
 
@@ -267,23 +259,23 @@
 
  #define RTCP_SDES_MAX_LEN 256
  
- struct xrtp_rtcp_sdes_item_s{
-
+ struct xrtp_rtcp_sdes_item_s
+ {
     uint8 id    :8;
     uint8 len   :8;
     
-    union{
-       
+    union
+    {
        char value[RTCP_SDES_MAX_LEN];
        
-       struct{
-          
+       struct
+       {
           uint8 len_prefix :8;
           char prefix[RTCP_SDES_MAX_LEN];
           uint8 len_value  :8;
           char value[RTCP_SDES_MAX_LEN];
           
-       } $priv;
+       }$priv;
     };
  };
 

@@ -24,6 +24,7 @@
  #define XRTP_MAX_CHUNK_ITEM      8       /* Max type */
  #define XRTP_MAX_SDES_CHUNK      31      /* 5 bits count */ 
  #define XRTP_MAX_BYE_SRCS        31      /* 5 bits count */
+ #define XRTP_MAX_SDES_BYTES      256
 
  #define XRTP_RTCP_DEFAULTMAXBYTES  1024  /* Default RTCP Packet Length */
  
