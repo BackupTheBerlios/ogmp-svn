@@ -1,4 +1,4 @@
-/**
+/**     
  * josua - Jack's open sip User Agent
  *
  * Copyright (C) 2002,2003   Aymeric Moizard <jack@atosc.org>
@@ -77,11 +77,11 @@ int window_sessions_list_print(gui_t* gui, int wid)
 		call = ocui->sipua->incall;
 			
 		if(call->from)
-			snprintf(buf, x - gui->x0, " In call of From <%s>: %s - %-80.80s",
-						status, call->from, call->subject, call->info);
+			snprintf(buf, x - gui->x0, " In call from <%s>: %s - %-80.80s",
+						call->from, call->subject, call->info);
 		else
 			snprintf(buf, x - gui->x0, " In call of mine: %s - %-80.80s",
-						status, call->subject, call->info);
+						call->subject, call->info);
       
 		attrset(COLOR_PAIR(4));
 	}
@@ -103,7 +103,7 @@ int window_sessions_list_print(gui_t* gui, int wid)
 	{
 		attrset(COLOR_PAIR(1));
 
-		snprintf(buf, x - gui->x0, " %-80.80s", "No call available !");
+		snprintf(buf, x - gui->x0, " %-80.80s", "No call waiting!");
 		mvaddnstr(gui->y0+ntitle+nincall, gui->x0, buf, x-gui->x0);
 
 		gui->gui_draw_commands(gui);
@@ -137,6 +137,7 @@ int window_sessions_list_print(gui_t* gui, int wid)
 		}
 
 		if(line==calllist_line)
+
 		{
 			if(call->from)
 				snprintf(buf, x - gui->x0, " %c%c [%d] (%s) From <%s>: %s - %-80.80s",
@@ -217,6 +218,13 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 		case KEY_DOWN:
 		{
 			int n = 0;
+            
+            if(nbusy == 0)
+            {
+                beep();
+                break;
+            }
+            
 			while(busylines[n] != calllist_line) n++;
 
 			if(n+1==nbusy)
@@ -231,7 +239,14 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 		case KEY_UP:
 		{
 			int n = 0;
-			while(busylines[n] != calllist_line) n++;
+
+            if(nbusy == 0)
+            {
+                beep();
+                break;
+            }
+
+            while(busylines[n] != calllist_line) n++;
 
 			if(n==0)
 			{
