@@ -839,12 +839,20 @@ int main(int argc, char** argv)
     sipua_t* sipua = NULL;
 	sipua_uas_t* uas = NULL;
 	module_catalog_t *mod_cata = NULL;
-	/* phonebook loading test
+
+	int sip_port;
+
+	if(argc < 2)
 	{
-		sipua_load_user("heming", "heming", "hello", 5);
-		exit(0);
+		sip_port = 5060;
 	}
-	*/
+	else
+	{
+		sip_port = strtol(argv[1], NULL, 10);
+	}
+
+	clie_log (("main: sip port is %d\n", sip_port));
+
 	clie_log (("main: modules in dir:'%s'\n", MOD_DIR));
 
 	mod_cata = catalog_new( "mediaformat" );
@@ -855,7 +863,7 @@ int main(int argc, char** argv)
     if(!uas)
         clie_log (("main: fail to create sipua server!\n"));
     
-	if(uas && uas->init(uas, 5070, "IN", "IP4", NULL, NULL) >= UA_OK)
+	if(uas && uas->init(uas, sip_port, "IN", "IP4", NULL, NULL) >= UA_OK)
 	{
 		sipua = client_new("cursesui", uas, mod_cata, 64*1024);
 
