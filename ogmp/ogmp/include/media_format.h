@@ -312,7 +312,7 @@ struct media_receiver_s
 {
    int (*match_type) (media_receiver_t *recvr, char *mime, char *fourcc);
 
-   int (*receive_media) (media_receiver_t *recvr, void * media_packet, int64 samplestamp, int last_packet);
+   int (*receive_media) (media_receiver_t *recvr, media_frame_t * media_packet, int64 samplestamp, int last_packet);
 };
 
 struct media_maker_s

@@ -384,6 +384,7 @@ media_stream_t* pa_new_media_stream(media_device_t *dev, media_receiver_t* recvr
    strm->creater = receiver;
 
    return strm;
+
 }
 #endif
 
@@ -490,6 +491,7 @@ int pa_set_output_media(media_device_t *dev, media_info_t *out_info)
    
    if(pa->ai_output.info.sample_rate > nsample_pulse)
       pa->usec_pulse = (int)(1000000 / (pa->ai_output.info.sample_rate / (double)nsample_pulse));
+
    else
       pa->usec_pulse = (int)((double)nsample_pulse / pa->ai_output.info.sample_rate * 1000000);
       
@@ -576,7 +578,7 @@ int pa_stop (media_device_t * dev)
 	PaError err = 0;
 	portaudio_device_t *pa_dev = (portaudio_device_t *)dev;
 
-	pa_dev->input_stop;
+	pa_dev->input_stop = 1;
 
 	if (!dev->running)
 	{
@@ -723,6 +725,7 @@ module_interface_t* media_new_device () {
 
    /* test speed */
    delay = DELAY_WHILE;
+
 
    hz_start = time_nsec_now(pa->clock);
    while (delay) delay--;

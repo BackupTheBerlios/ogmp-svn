@@ -10,7 +10,9 @@ INCLUDES = -I$(PREFIX)/include
 
 INSTDIR = $(PREFIX)/lib/$(PROGNAME)
 
-AULIBS = -shared -L$(PREFIX)/lib -lrtime -lportaudio
+AULIBS = -shared -L$(PREFIX)/lib -lrtime -lportaudio \
+		 	-L$(PREFIX)/lib/$(PROGNAME) -logmp_ui
+
 AUFILES = timed_pipe.c dev_portaudio.c
 AUOBJ = timed_pipe.o dev_portaudio.o
 

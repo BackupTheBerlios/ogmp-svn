@@ -1,4 +1,4 @@
-# Make Ogmplayer for Linux
+# Make Ogmp for Linux
 
 PROGNAME = ogmp
 
@@ -6,13 +6,15 @@ PREFIX = /home/hling/timedia-project
 
 CC = gcc
 
-LIBS = -L$(PREFIX)/lib -losip2 -losipparser2 -leXosip
+LIBS = -L$(PREFIX)/lib -losip2 -losipparser2 -leXosip \
+		 -L$(PREFIX)/lib/$(PROGNAME) -logmp_ui
 
 INCLUDES = -I$(PREFIX)/include
 
 INSTDIR = $(PREFIX)/lib/$(PROGNAME)
 
 FILES = eXosipua.c jcalls.c jinsubscriptions.c jsubscriptions.c
+OBJFILES = eXosipua.o jcalls.o jinsubscriptions.o jsubscriptions.o
 
 LIBFILES = eXosipua.so
 
@@ -24,7 +26,7 @@ all:	 libs install
 	-$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $*.o
 
 libs: $(FILES:.c=.o)
-	gcc -shared $(LIBS) eXosipua.o jcalls.o jinsubscriptions.o jsubscriptions.o -o $(LIBFILES)
+	gcc -shared $(LIBS) $(OBJFILES) -o $(LIBFILES)
 
 install: $(LIBFILES)
 	-@cp -f $(LIBFILES) $(INSTDIR)

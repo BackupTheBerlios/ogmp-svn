@@ -35,22 +35,9 @@
  #define spxc_debug(fmtargs)
 #endif
 
-#ifndef _V_CLIP_MATH
-#define _V_CLIP_MATH
-
-static ogg_int32_t CLIP_TO_15(ogg_int32_t x)
-{
-      int ret=x;
-      ret-= ((x<=32767)-1)&(x-32767);
-      ret-= ((x>=-32768)-1)&(x+32768);
-      return(ret);
-}
-#endif  /* _V_CLIP_MATH */
-
 media_frame_t* spxc_decode(speex_info_t *spxinfo, media_frame_t *spxf, media_pipe_t *output)
 {
 	int i;
-	int clipflag = 0;
 
 	int nframes;
 	int nchannel;
@@ -126,8 +113,6 @@ media_frame_t* spxc_decode(speex_info_t *spxinfo, media_frame_t *spxf, media_pip
 
 int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcm_bytes, char** encoded)
 {
-	int clipflag = 0;
-
 	int nframes;
 	int nchannel;
 	int frame_size;
@@ -136,8 +121,6 @@ int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcm_
    
 	int spx_bytes;
    
-	int lost=0;
-
 	nframes = spxinfo->nframe_per_packet;
 	frame_size = spxinfo->nsample_per_frame;
 	nchannel = spxinfo->audioinfo.channels;

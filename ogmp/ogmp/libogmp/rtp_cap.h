@@ -102,6 +102,7 @@ struct rtpcap_descript_s
 	sdp_message_t *sdp_message;
 };
 
+
 typedef struct rtpcap_set_s rtpcap_set_t;
 struct rtpcap_set_s
 {

@@ -21,8 +21,8 @@
 #include <timedia/timer.h>
 #include <xrtp/xrtp.h>
 
-#include "../media_format.h"
-#include "../rtp_cap.h"
+#include "media_format.h"
+#include "rtp_cap.h"
 
 #define MP_RTP_NONEFLAG 0x0
 #define MP_RTP_LAST		0x1
