@@ -66,6 +66,7 @@ int rtp_done_format(media_format_t * mf)
       rtp_done_stream((rtp_stream_t*)cur);
       xfree(cur);
       
+
       cur = next;
    }
 
@@ -359,6 +360,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 	if(!strm->session)
 	{
 		xfree(strm);
+        
 		rtp_debug(("rtp_open_stream: no session created\n"));
 
 		return NULL;
@@ -501,6 +503,7 @@ int rtp_nstream (media_format_t * mf)
 const char* rtp_stream_mime (media_format_t * mf, int strmno)
 {
    media_stream_t * ms = rtp_find_stream(mf, strmno);
+
    if(!ms)  return "";
 
    return ms->mime;

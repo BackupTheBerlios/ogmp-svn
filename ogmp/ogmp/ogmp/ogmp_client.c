@@ -38,7 +38,6 @@ extern ogmp_ui_t* global_ui;
 #define MAX_CALL_BANDWIDTH  5000  /* in Bytes */
 
 /****************************************************************************************/
-
 int client_call_ringing(void* gen)
 {
 	int i;
@@ -125,6 +124,7 @@ int client_done(ogmp_client_t *client)
    if(client->sdp_body)
 	   free(client->sdp_body);
 
+
    xfree(client);
 
    return MP_OK;
@@ -147,6 +147,8 @@ int client_register_loop(void *gen)
 	while(user_prof->enable)
 	{
 		user_prof->seconds_left -= intv;
+
+
 
 
 
@@ -173,6 +175,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 	{
 		case(SIPUA_EVENT_REGISTRATION_SUCCEEDED):
 		case(SIPUA_EVENT_UNREGISTRATION_SUCCEEDED):
+
+
 		{
 			sipua_reg_event_t *reg_e = (sipua_reg_event_t*)e;
 			user_profile_t* user_prof = client->reg_profile;
@@ -410,6 +414,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			{
 				sipua_answer(&client->sipua, call, SIPUA_STATUS_DECLINE);
 
+
 				break;
 			}
 
@@ -419,13 +424,21 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		}
 		case(SIPUA_EVENT_ACK):
 		{
+            int bw;
+
 			sipua_set_t *call = e->call_info;
             
 			call->rtpcapset->rtpcap_selection = RTPCAP_ALL_CAPABLES;
 
 			/* Now create rtp sessions of the call */
-			sipua_establish_call(sipua, call, "playback", call->rtpcapset,
+			bw = sipua_establish_call(sipua, call, "playback", call->rtpcapset,
                                 client->format_handlers, client->control, client->pt);
+			if(bw < 0)
+			{
+				sipua_answer(&client->sipua, call, SIPUA_STATUS_REJECT);
+
+				break;
+			}
 
 			call->status = SIPUA_EVENT_ACK;
 
@@ -779,6 +792,7 @@ media_source_t* client_set_background_source(sipua_t* sipua, char* name)
 	} 
 
 	return client->backgroud_source;
+
 }
 
 /* call media attachment */
@@ -892,6 +906,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
 
 	ogmp_client_t *client=NULL;
 
+
 	sipua_t* sipua;
 
 	client = xmalloc(sizeof(ogmp_client_t));
@@ -930,6 +945,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
 	client->control->add_device(client->control, "rtp", client_config_rtp, client->conf);
 	
 	client->format_handlers = xlist_new();
+
 
 	nformat = catalog_create_modules (mod_cata, "format", client->format_handlers);
 	clie_log (("client_new_sipua: %d format module found\n", nformat));
@@ -1000,6 +1016,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
 
 int client_start(sipua_t* sipua)
 {
+
 	ogmp_client_t *clie = (ogmp_client_t*)sipua;
 
 	clie->ogui->ui.show(&clie->ogui->ui);
