@@ -132,12 +132,23 @@ int window_sessions_list_print(gui_t* gui, int wid)
 				strcpy(status, "Ringing"); break;
 			case SIPUA_EVENT_ANSWERED:
 				strcpy(status, "Answered"); break;
+			case SIPUA_EVENT_REQUESTFAILURE:
+				strcpy(status, "Request Fail"); break;
+			case SIPUA_EVENT_SERVERFAILURE:
+				strcpy(status, "Server Fail"); break;
+			case SIPUA_EVENT_GLOBALFAILURE:
+				strcpy(status, "Global Fail"); break;
+			case SIPUA_STATUS_REJECT:
+				strcpy(status, "Rejected"); break;
+			case SIPUA_STATUS_BUSY:
+				strcpy(status, "Busy"); break;
+			case SIPUA_STATUS_DECLINE:
+				strcpy(status, "Declined"); break;
 			default:
 				strcpy(status, "Unknown");
 		}
 
 		if(line==calllist_line)
-
 		{
 			if(call->from)
 				snprintf(buf, x - gui->x0, " %c%c [%d] (%s) From <%s>: %s - %-80.80s",
@@ -182,12 +193,11 @@ void window_sessions_list_draw_commands(gui_t* gui)
 	{
 		"N",  "New" ,
 		"A",  "Answer",
-		"C",  "Hangup" ,
+		"C",  "Bye" ,
 		"D",  "Decline",
 		"R",  "Reject",
 		"B",  "Busy",
-		"H",  "Hold"  ,
-		"U",  "Unhold",
+		"H",  "Hold/Unhold"  ,
 		"O",  "SendOptions",
 		"digit",  "SendInfo",
 		NULL
@@ -257,7 +267,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 			calllist_line = busylines[--n];
 			break;
 		}
-		case 'n':  /* Ctrl-C */
+		case 'n': 
 		{
 			gui_show_window(gui, GUI_NEWCALL, GUI_SESSION);
             
@@ -283,13 +293,9 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 				else
 					calllist_line = -1;
 			}
-/*
-			eXosip_lock();
-			i = eXosip_terminate_call(ca->cid, ca->did);
-			if (i==0) jcall_remove(ca);
-			eXosip_unlock();
-*/
+
 			gui->gui_print(gui, gui->parent);
+
 			break;
 		}
 		case 'a':
@@ -330,13 +336,9 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 				else
 					calllist_line = -1;
 			}
-/*
-			eXosip_lock();
-			i = eXosip_answer_call(ca->did, 480, 0);
-			if (i==0) jcall_remove(ca);
-			eXosip_unlock();
-*/
+
 			gui->gui_print(gui, gui->parent);
+
 			break;
 		}
 		case 'd':
@@ -364,13 +366,9 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 				else
 					calllist_line = -1;
 			}
-/*
-			eXosip_lock();
-			i = eXosip_answer_call(ca->did, 603, 0);
-			if (i==0) jcall_remove(ca);
-			eXosip_unlock();
-*/
+
 			gui->gui_print(gui, gui->parent);
+
 			break;
 		}
 		case 'b':
@@ -398,45 +396,31 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 				else
 					calllist_line = -1;
 			}
-/*
-			eXosip_lock();
-			i = eXosip_answer_call(ca->did, 486, 0);
-			if (i==0) jcall_remove(ca);
-			eXosip_unlock();
-*/
+
 			gui->gui_print(gui, gui->parent);
+
 			break;
 		}
 		case 'h':
 		{
-			calllist_line = ocui->sipua->hold(ocui->sipua);
-/*
-			eXosip_lock();
-			eXosip_on_hold_call(ca->did);
-			eXosip_unlock();
-*/
-			break;
-		}
-		case 'u':
-		{
-			call = ocui->sipua->pick(ocui->sipua, calllist_line);
-			if (!call) 
-			{ 
-				beep(); 
-				break; 
+			if(ocui->sipua->incall)
+				calllist_line = ocui->sipua->hold(ocui->sipua);
+			else
+			{
+				call = ocui->sipua->pick(ocui->sipua, calllist_line);
+				if (!call) 
+				{ 
+					beep(); 
+					break; 
+				}
+
+				ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_ANSWER);
 			}
 
-			ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_ANSWER);
-/*
-			eXosip_lock();
-			eXosip_off_hold_call(ca->did);
-			eXosip_unlock();
-*/
 			break;
 		}
 		case 'o':
 		{
-
 			call = ocui->sipua->pick(ocui->sipua, calllist_line);
 			if (!call) 
 			{ 
@@ -445,11 +429,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 			}
 
 			ocui->sipua->options_call(ocui->sipua, call);
-/*
-			eXosip_lock();
-			eXosip_options_call(ca->did);
-			eXosip_unlock();
-*/
+
 			break;
 		}
 		case '0':
@@ -477,11 +457,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 			snprintf(dtmf_body, 999, "Signal=%c\r\nDuration=250\r\n", c);
 
 			ocui->sipua->info_call(ocui->sipua, call, "application/dtmf-relay", dtmf_body);
-/*
-			eXosip_lock();
-			eXosip_info_call(ca->did, "application/dtmf-relay", dtmf_body);
-			eXosip_unlock();
-*/
+
 			break;
 		}
 		default:

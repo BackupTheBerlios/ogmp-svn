@@ -317,150 +317,98 @@ int jcall_redirected(eXosipua_t *jua, eXosip_event_t *je)
 
 int jcall_requestfailure(eXosipua_t *jua, eXosip_event_t *je)
 {
-  jcall_t *ca;
-  int k;
-
 	/* event back to sipuac */
-	sipua_event_t sip_e;
-	sip_e.call_info = (sipua_set_t*)je->external_reference;
-	sip_e.type = SIPUA_EVENT_REQUESTFAILURE;
+	sipua_call_event_t call_e;
 
-  for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
+	call_e.event.type = SIPUA_EVENT_REQUESTFAILURE;
+	call_e.event.call_info = (sipua_set_t*)je->external_reference;
+
+	call_e.subject = je->subject;
+	call_e.textinfo = je->textinfo;
+    
+	call_e.req_uri = je->req_uri;
+	call_e.local_uri = je->local_uri;
+	call_e.remote_uri = je->remote_uri;
+
+	if (je->reason_phrase[0]!='\0')
     {
-      if (jua->jcalls[k].state != NOT_USED
-	  && jua->jcalls[k].cid==je->cid
-	  && jua->jcalls[k].did==je->did)
-	break;
+		call_e.reason_phrase = je->reason_phrase;
+		call_e.status_code = je->status_code;
     }
-  if (k==MAX_NUMBER_OF_CALLS)
-    return -1;
-
-	sip_e.lineno = k;
-
-  ca = &(jua->jcalls[k]);
-
-#ifdef MEDIASTREAMER_SUPPORT
-  if (ca->enable_audio>0)
+	else
     {
-      ca->enable_audio = -1;
-      os_sound_close(ca);
+		call_e.reason_phrase = NULL;
+		call_e.status_code = SIPUA_STATUS_UNKNOWN;
     }
-#elif defined(XRTP_SUPPORT)
-			
-	if(ca->callin_info)
-	{
-		rtp_capable_done_set(ca->callin_info);
-				
-		ca->callin_info = NULL;
-	}
-
-#endif
-
-  ca->state = NOT_USED;
 
 	/* event notification */
-	jua->sipuas.notify_event(jua->sipuas.lisener, &sip_e);
+	jua->sipuas.notify_event(jua->sipuas.lisener, &call_e.event);
 
-  return 0;
+	return 0;
 }
 
 int jcall_serverfailure(eXosipua_t *jua, eXosip_event_t *je)
 {
-  jcall_t *ca;
-  int k;
-
 	/* event back to sipuac */
-	sipua_event_t sip_e;
-	sip_e.call_info = (sipua_set_t*)je->external_reference;
-	sip_e.type = SIPUA_EVENT_SERVERFAILURE;
+	sipua_call_event_t call_e;
 
-  for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
+	call_e.event.type = SIPUA_EVENT_SERVERFAILURE;
+	call_e.event.call_info = (sipua_set_t*)je->external_reference;
+
+	call_e.subject = je->subject;
+	call_e.textinfo = je->textinfo;
+    
+	call_e.req_uri = je->req_uri;
+	call_e.local_uri = je->local_uri;
+	call_e.remote_uri = je->remote_uri;
+
+	if (je->reason_phrase[0]!='\0')
     {
-      if (jua->jcalls[k].state != NOT_USED
-	  && jua->jcalls[k].cid==je->cid
-	  && jua->jcalls[k].did==je->did)
-	break;
+		call_e.reason_phrase = je->reason_phrase;
+		call_e.status_code = je->status_code;
     }
-  if (k==MAX_NUMBER_OF_CALLS)
-    return -1;
-
-	sip_e.lineno = k;
-
-  ca = &(jua->jcalls[k]);
-
-
-#ifdef MEDIASTREAMER_SUPPORT
-  if (ca->enable_audio>0)
+	else
     {
-      ca->enable_audio = -1;
-      os_sound_close(ca);
+		call_e.reason_phrase = NULL;
+		call_e.status_code = SIPUA_STATUS_UNKNOWN;
     }
-#elif defined(XRTP_SUPPORT)
-			
-	if(ca->callin_info)
-	{
-		rtp_capable_done_set(ca->callin_info);
-				
-		ca->callin_info = NULL;
-	}
-
-#endif
-
-  ca->state = NOT_USED;
 
 	/* event notification */
-	jua->sipuas.notify_event(jua->sipuas.lisener, &sip_e);
+	jua->sipuas.notify_event(jua->sipuas.lisener, &call_e.event);
 
-  return 0;
+	return 0;
 }
 
 int jcall_globalfailure(eXosipua_t *jua, eXosip_event_t *je)
 {
-  jcall_t *ca;
-  int k;
-
 	/* event back to sipuac */
-	sipua_event_t sip_e;
-	sip_e.call_info = (sipua_set_t*)je->external_reference;
-	sip_e.type = SIPUA_EVENT_GLOBALFAILURE;
+	sipua_call_event_t call_e;
 
-  for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
+	call_e.event.type = SIPUA_EVENT_GLOBALFAILURE;
+	call_e.event.call_info = (sipua_set_t*)je->external_reference;
+
+	call_e.subject = je->subject;
+	call_e.textinfo = je->textinfo;
+    
+	call_e.req_uri = je->req_uri;
+	call_e.local_uri = je->local_uri;
+	call_e.remote_uri = je->remote_uri;
+
+	if (je->reason_phrase[0]!='\0')
     {
-      if (jua->jcalls[k].state != NOT_USED
-	  && jua->jcalls[k].cid==je->cid
-	  && jua->jcalls[k].did==je->did)
-	break;
+		call_e.reason_phrase = je->reason_phrase;
+		call_e.status_code = je->status_code;
     }
-  if (k==MAX_NUMBER_OF_CALLS)
-    return -1;
-
-	sip_e.lineno = k;
-
-  ca = &(jua->jcalls[k]);
-
-#ifdef MEDIASTREAMER_SUPPORT
-  if (ca->enable_audio>0)
+	else
     {
-      ca->enable_audio = -1;
-      os_sound_close(ca);
+		call_e.reason_phrase = NULL;
+		call_e.status_code = SIPUA_STATUS_UNKNOWN;
     }
-#elif defined(XRTP_SUPPORT)
-			
-	if(ca->callin_info)
-	{
-		rtp_capable_done_set(ca->callin_info);
-				
-		ca->callin_info = NULL;
-	}
-
-#endif
-
-  ca->state = NOT_USED;
 
 	/* event notification */
-	jua->sipuas.notify_event(jua->sipuas.lisener, &sip_e);
+	jua->sipuas.notify_event(jua->sipuas.lisener, &call_e.event);
 
-  return 0;
+	return 0;
 }
 
 int jcall_closed(eXosipua_t *jua, eXosip_event_t *je)

@@ -120,7 +120,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		{
 			char buf[100];
 
-
 			sipua_reg_event_t *reg_e = (sipua_reg_event_t*)e;
 			user_profile_t* user_prof = client->reg_profile;
 
@@ -282,6 +281,42 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			rtp_capable_done_set(e->call_info->rtpcapset);
 			e->call_info->rtpcapset = NULL;
+
+			break;
+		}
+		case(SIPUA_EVENT_REQUESTFAILURE):
+		{
+			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
+			sipua_set_t *call = e->call_info;
+
+			if(call_e->status_code == SIPUA_STATUS_UNKNOWN)
+				call->status = SIPUA_EVENT_REQUESTFAILURE;
+			else
+				call->status = call_e->status_code;
+
+			break;
+		}
+		case(SIPUA_EVENT_SERVERFAILURE):
+		{
+			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
+			sipua_set_t *call = e->call_info;
+
+			if(call_e->status_code == SIPUA_STATUS_UNKNOWN)
+				call->status = SIPUA_EVENT_SERVERFAILURE;
+			else
+				call->status = call_e->status_code;
+
+			break;
+		}
+		case(SIPUA_EVENT_GLOBALFAILURE):
+		{
+			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
+			sipua_set_t *call = e->call_info;
+
+			if(call_e->status_code == SIPUA_STATUS_UNKNOWN)
+				call->status = SIPUA_EVENT_GLOBALFAILURE;
+			else
+				call->status = call_e->status_code;
 
 			break;
 		}
@@ -797,10 +832,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
 	/* switch current call session */
  	sipua->pick = client_pick;
  	sipua->hold = client_hold;
-	/*
-	sipua->add = sipua_add;
-	sipua->remove = sipua_remove;
-	*/
+
 	sipua->call = sipua_call;
 	sipua->answer = client_answer;
 
