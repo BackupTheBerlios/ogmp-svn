@@ -17,7 +17,7 @@
 #include <string.h> 
 #include <errno.h> 
 
-#include "../dirent.h" 
+#include "dirent.h" 
 
 
 DIR *opendir(char *dir) 

@@ -12,7 +12,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "../dlfcn.h"
+#include "dlfcn.h"
 
 #define snprintf _snprintf
 
