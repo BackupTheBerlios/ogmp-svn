@@ -2111,7 +2111,7 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
     
 	xfree(com);
 
-    packet_debug(("rtcp_compound_done: done\n"));
+    packet_log(("rtcp_compound_done: done\n"));
     
     return XRTP_OK;
  }
