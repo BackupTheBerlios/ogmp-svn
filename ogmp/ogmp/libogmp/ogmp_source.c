@@ -43,11 +43,15 @@ int source_loop(void * gen)
 
    rtime_t itv;
    
+   src_debug (("source_loop: 0\n"));exit(0);
+
    source->finish = 0;
 	
    source->demuxing = 1;
 
    src_debug (("source_loop: start demuxing ...\n"));
+   
+   src_debug (("source_loop: 1\n"));exit(1);
 
    while (1)
    {
@@ -61,6 +65,8 @@ int source_loop(void * gen)
          break;
       }
 
+      src_debug (("source_loop: 2\n"));exit(2);
+      
       itv = source->control->demux_next(source->control, 0);
       if( itv < 0 && itv == MP_EOF)
       {
@@ -68,6 +74,8 @@ int source_loop(void * gen)
 
          break;
       }
+      
+      src_debug (("source_loop: 3\n"));exit(3);
       
       {/*unlock*/ xthr_unlock(source->lock);}
    }
@@ -157,10 +165,6 @@ int source_done_format_handler(void *gen)
 int source_cb_on_player_ready(void *gen, media_player_t *player)
 {
 	ogmp_source_t *src = (ogmp_source_t*)gen;
-
-	src_debug (("source_cb_on_player_ready: player ready\n"));
-
-   getchar();
 
 	source_start(&src->source);
 
@@ -399,7 +403,6 @@ int source_associate_guests(media_source_t* msrc, media_format_t* rtp_fmt)
    if(!rtp_fmt->support_type(rtp_fmt, "mime", "application/sdp"))
    {
       src_debug(("source_associate: Not a rtp format, pause\n"));
-      getchar();
            
       return XRTP_EUNSUP;
    }
@@ -416,16 +419,18 @@ int source_associate_guests(media_source_t* msrc, media_format_t* rtp_fmt)
 
          if(player->match_play_type(player, "netcast") && player->receiver.match_type(&player->receiver, strm->mime, NULL))
          {
-            media_transmit_t *transmit = (media_transmit_t*)player;
+            media_transmit_t *transmit;
+            xrtp_session_t *tr_ses;
+
+            transmit = (media_transmit_t*)player;
+            tr_ses = transmit->session(transmit);
             
-            session_move_all_guests(rtp_strm->session, transmit->session(transmit));
+            session_move_all_guests(rtp_strm->session, tr_ses);
          }
 
          strm = strm->next;
       }
    }
-
-   exit(1);
 
    return 0;
 }

@@ -354,9 +354,10 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				}
 			}
 
-            /* Cannot free here, need for media specific parsing !!!
-            sdp_message_free(sdp_message);
-            */
+         /**
+          * Cannot free here, need for media specific parsing !!!
+          * sdp_message_free(sdp_message);
+          */
 			break;
 		}
 		case(SIPUA_EVENT_PROCEEDING):
@@ -458,6 +459,17 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				sipua_answer(&client->sipua, call, SIPUA_STATUS_REJECT, NULL);
 				break;
 			}
+
+         /**
+          * Find sessions in the format which match cname and mimetype in source
+          * Move_member_from_session_of(call->rtp_format) to_session_of(source->players);
+          */
+         if(call->status == SIPUA_STATUS_QUEUE)
+         {
+            sipua->unsubscribe_bandwidth(sipua, call);
+
+            source_associate_guests(client->background_source, call->rtp_format);
+         }
 
 			call->status = SIPUA_EVENT_ACK;
 
@@ -1030,6 +1042,7 @@ int client_queue(sipua_t *sipua, sipua_set_t* call)
    sdp = client_set_call_source(sipua, call, client->background_source);
 
    call->status = SIPUA_STATUS_QUEUE;
+   
    sipua_answer(&client->sipua, call, SIPUA_STATUS_ANSWER, sdp);
 
    xstr_done_string(sdp);

@@ -180,6 +180,7 @@ char* spxs_media_type(media_player_t * mp)
 
 
 
+
 {
    return global_const.media_type;
 }
@@ -270,8 +271,6 @@ int spxs_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
    speex_sender_t *vs = (speex_sender_t*)gen;
 
    spxs_debug(("spxs_on_member_update: dest[%s] connected\n\n\n", cn));
-   spxs_debug(("spxs_on_member_update: pause(1)\n\n\n"));
-   getchar();
 
    if(vs->callback_on_ready)
       vs->callback_on_ready(vs->callback_on_ready_user, (media_player_t*)vs);
@@ -505,6 +504,11 @@ int spxs_remove_destinate(media_transmit_t *send, char *cname, char *nettype, ch
 	return session_delete_cname(((speex_sender_t*)send)->rtp_session, cname, strlen(cname)+1);
 }
 
+xrtp_session_t* spxs_session(media_transmit_t *send)
+{
+	return ((speex_sender_t*)send)->rtp_session;
+}
+
 module_interface_t * media_new_sender()
 {
    media_player_t *mp = NULL;
@@ -547,6 +551,7 @@ module_interface_t * media_new_sender()
 
    sender->transmit.add_destinate = spxs_add_destinate;
    sender->transmit.remove_destinate = spxs_remove_destinate;
+   sender->transmit.session = spxs_session;
 
    return mp;
 }
