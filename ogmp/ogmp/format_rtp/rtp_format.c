@@ -329,7 +329,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 
 	for(i=0; i<rset->nprofile; i++)
 	{
-		if(strcmp(rset->profiles[i].profile_mime, rtpcap->profile_mime))
+		if(strcmp(rset->profiles[i].profile_mime, rtpcap->profile_mime) == 0)
 		{
 			if(rset->profiles[i].rtp_portno)
 				rtp_portno = rset->profiles[i].rtp_portno;

@@ -32,6 +32,7 @@ int server_config_rtp(void *conf, control_setting_t *setting)
 
    rset->cname = SEND_CNAME;
    rset->cnlen = strlen(SEND_CNAME)+1;
+
    rset->ipaddr = "127.0.0.1";
    rset->default_rtp_portno = 3000;
    rset->default_rtcp_portno = 3001;
@@ -48,6 +49,7 @@ int client_config_rtp(void *conf, control_setting_t *setting)
 
    rset->cname = RECV_CNAME;
    rset->cnlen = strlen(RECV_CNAME)+1;
+
    rset->ipaddr = "127.0.0.1";
    rset->default_rtp_portno = 4000;
    rset->default_rtcp_portno = 4001;

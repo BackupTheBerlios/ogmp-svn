@@ -568,6 +568,7 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
    int applen;
 
    vrtp_handler_t *profile = (vrtp_handler_t*)handler;
+   member_state_t *myself = session_owner(ses);
 
    /* Here is the implementation */
    profile->rtcp_size = rtcp->bytes_received;
@@ -644,10 +645,10 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
    }
 
    /* find out minority report */
-   if(rtcp_report(rtcp, ses->self->ssrc, &frac_lost, &total_lost,
+   if(rtcp_report(rtcp, myself->ssrc, &frac_lost, &total_lost,
                       &full_seqno, &jitter, &lsr_stamp, &lsr_delay) >= XRTP_OK)
    {
-      session_member_check_report(ses->self, frac_lost, total_lost, full_seqno,
+      session_member_check_report(myself, frac_lost, total_lost, full_seqno,
                                 jitter, lsr_stamp, lsr_delay);
    }
    else
@@ -655,7 +656,6 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 
    /* Check SDES */
 
-#if 0
    /* Check APP if carried, vorbis header packet is carried by APP packet */
    applen = rtcp_app(rtcp, src_sender, 0, appname, &appdata);
    if(applen)
@@ -674,7 +674,7 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 		uint32 rtpts_sync, rtpts_h_local;
 
 		vrtp_log(("audio/vorbis.vrtp_rtcp_in:------------------------\n"));
-		vrtp_log(("audio/vorbis.vrtp_rtcp_in: APP[VORB] ver[%x] %d bytes\n", *ver, applen));
+		vrtp_log(("audio/vorbis.vrtp_rtcp_in: APP[VORB] version.%x (%d bytes)\n", *ver, applen));
 		
 		/* mapto local rtpts, rough method */
 		rtpts_h_local = *rtpts_h + session_member_sync_point(sender, &rtpts_sync, &ms_sync, &us_sync, &ns_sync);
@@ -696,11 +696,14 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 
 		if(*ver == 0xFFFFFFFF && vinfo != NULL)
 		{
-			vrtp_log(("audio/vorbis.vrtp_rtcp_in: vorbis info #%d\n", bytes[9]));
 			/* My own vorbis app version */
 			if(signum_vi != signum_now)
 			{
-				vorbis_info_t *exvi = (vorbis_info_t*)session_member_renew_mediainfo(sender, vinfo, rtpts_h_local, signum_now);
+				vorbis_info_t *exvi;
+
+				vrtp_log(("audio/vorbis.vrtp_rtcp_in: newer version vorbis info #%d available\n", bytes[9]));
+				
+				exvi = (vorbis_info_t*)session_member_renew_mediainfo(sender, vinfo, rtpts_h_local, signum_now);
 
 				if(exvi && exvi->header_identification_len)
 				{
@@ -721,7 +724,11 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 				exvi->head_packets = 0;
 			}
 			
-			if(vinfo->head_packets != 3)
+			if(vinfo->head_packets == 3)
+			{
+				vrtp_log(("audio/vorbis.vrtp_rtcp_in: vorbis info #%d already updated\n", bytes[9]));
+			}
+			else
 			{
 				int h1_bytes = bytes[10];
 				int h2_bytes = bytes[12];
@@ -784,7 +791,7 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 			}
 		}
 	}
-#endif
+	
 	rtcp_compound_done(rtcp);
 	vrtp_log(("audio/vorbis.vrtp_rtcp_in:************ RTCP[%u]\n", src_sender));
 
@@ -807,6 +814,8 @@ int vrtp_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
    int signum;
    void *minfo;
 
+   uint8 *app_mi = NULL;
+
    char appname[4] = {'V','O','R','B'};
 
    session_report(h->session, rtcp, h->timestamp_send);
@@ -819,9 +828,10 @@ int vrtp_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 	   
 	   if(applen > 0)
 	   {
-			uint8 *app_mi = malloc(applen);
-			uint8 *app;
 			int nheader=0;
+			uint8 *app;
+
+			app_mi = malloc(applen);
 
 			app_mi[0] = rtpts_h & 0xF000;
 			app_mi[1] = rtpts_h & 0x0F00;
@@ -864,10 +874,10 @@ int vrtp_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 				memcpy(app, vinfo->header_setup, vinfo->header_setup_len);
 				nheader++;
 			}
-
-			vrtp_log(("audio/vorbis.vrtp_rtcp_out: %d packets media info in app packet\n", nheader));
 			
 			rtcp_new_app(rtcp, session_ssrc(ses), 0, appname, applen, app_mi);
+
+			vrtp_log(("audio/vorbis.vrtp_rtcp_out: %d vorbis header in app[VORB][@%d:%d]\n", nheader, app_mi, applen));
 	   }
    }
 
@@ -879,6 +889,13 @@ int vrtp_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
    }
 
    h->rtcp_size = rtcp_length(rtcp);
+
+   /* free app data */
+   if(app_mi)
+   {
+	   free(app_mi);
+	   vrtp_log(("audio/vorbis.vrtp_rtcp_out: app[VORB] freed\n"));
+   }
 
    return XRTP_OK;
 }

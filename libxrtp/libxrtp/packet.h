@@ -48,8 +48,8 @@
  /**
   * RTP Packet head
   */
- struct xrtp_rtp_head_s {
-
+ struct xrtp_rtp_head_s
+ {
     uint8 version  :2;
     uint8 padding  :1;
     uint8 ext      :1;
@@ -78,8 +78,8 @@
    buffer_t *out_buffer;
  };
 
- enum xrtp_direct_e{
-
+ enum xrtp_direct_e
+ {
     RTP_SEND,
     RTP_RECEIVE
  };
@@ -124,8 +124,8 @@
  /**
   * RTP Packet head extension
   */
- struct xrtp_rtp_headext_s {
-
+ struct xrtp_rtp_headext_s
+ {
     uint16 info;         /*:16;*/
     uint16 len;          /*:16;*/
     
@@ -136,8 +136,8 @@
     uint8  len_pad;
  };
  
- struct xrtp_rtcp_compound_s {
-
+ struct xrtp_rtcp_compound_s
+ {
     void * handler;
 
     xrtp_session_t * session;
@@ -156,11 +156,10 @@
 
     xrtp_rtcp_head_t * first_head;
     
+    /* Array of pointer to all rtcp packets head include first */
     int max_packets;
-    /* Point to an array of pointer to all rtcp packets head include first */
-    xrtp_rtcp_head_t* *heads;    
-    /* Number of all packets */
     int n_packet;
+    xrtp_rtcp_head_t* heads[XRTP_MAX_RTCP_PACKETS];    
     
     uint32 bytes;
     //uint len_buffer;
@@ -174,8 +173,8 @@
  /**
   * RTCP packet head, 4 bytes
   */
- struct xrtp_rtcp_head_s {
-
+ struct xrtp_rtcp_head_s
+ {
     uint8 version; /*2 bits*/
     uint8 padding; /*1 bit*/
     uint8 count;    /*5 bits*/
@@ -188,8 +187,8 @@
  /**
   * Report Block, 24 bytes
   */
- struct xrtp_rtcp_report_s{
-
+ struct xrtp_rtcp_report_s
+ {
     uint32 SRC       :32;
     
     uint8 frac_lost  :8;  /* lost/expect * 256 */
@@ -208,8 +207,8 @@
  /**
   * Profile-specific extension for the Report
   */
- struct xrtp_rtcp_ext_s{
-    
+ struct xrtp_rtcp_ext_s
+ {
     int len;
     char * data;
  };
@@ -217,40 +216,40 @@
  /**
   * Sender info Block, 24 bytes
   */
- struct xrtp_rtcp_senderinfo_s{
-
-    uint32 SSRC            :32;
-    uint32 hi_ntp          :32;
-    uint32 lo_ntp          :32;
-    uint32 rtp_stamp       :32;
-    uint32 n_packet_sent   :32;
-    uint32 n_octet_sent    :32;
+ struct xrtp_rtcp_senderinfo_s
+ {
+    uint32 SSRC;
+    uint32 hi_ntp;
+    uint32 lo_ntp;
+    uint32 rtp_stamp;
+    uint32 n_packet_sent;
+    uint32 n_octet_sent;
  };
 
  /**
   * Sender Report
   */
- struct xrtp_rtcp_sr_s {
-    
+ struct xrtp_rtcp_sr_s
+ {
     struct xrtp_rtcp_head_s $head;
     
     struct xrtp_rtcp_senderinfo_s $sender;
     
-    xrtp_rtcp_report_t * reports[XRTP_MAX_REPORTS];
+    xrtp_rtcp_report_t* reports[XRTP_MAX_REPORTS];
 
-    xrtp_rtcp_ext_t * ext;
+    xrtp_rtcp_ext_t *ext;
  };
  
  /**
   * Receiver Report
   */
- struct xrtp_rtcp_rr_s {
-
+ struct xrtp_rtcp_rr_s
+ {
     struct xrtp_rtcp_head_s $head;
     
     uint32 SSRC;
     
-    xrtp_rtcp_report_t * reports[XRTP_MAX_REPORTS];
+    xrtp_rtcp_report_t* reports[XRTP_MAX_REPORTS];
 
     xrtp_rtcp_ext_t *ext;
  };
@@ -259,8 +258,8 @@
  
  struct xrtp_rtcp_sdes_item_s
  {
-    uint8 id    :8;
-    uint8 len   :8;
+    uint8 id;
+    uint8 len;
     
     union
     {
@@ -268,34 +267,36 @@
        
        struct
        {
-          uint8 len_prefix :8;
+          uint8 len_prefix;
           char prefix[RTCP_SDES_MAX_LEN];
-          uint8 len_value  :8;
+
+          uint8 len_value;
           char value[RTCP_SDES_MAX_LEN];
           
        }$priv;
     };
  };
 
- struct xrtp_rtcp_sdes_chunk_s{
-
+ struct xrtp_rtcp_sdes_chunk_s
+ {
     uint32 SRC;
     int n_item;
     int ended;
     uint8 padlen;
     uint max_item;
+
     xrtp_rtcp_sdes_item_t* items[XRTP_MAX_CHUNK_ITEM];
  };
  
- struct xrtp_rtcp_sdes_s{
-
+ struct xrtp_rtcp_sdes_s
+ {
     struct xrtp_rtcp_head_s $head;
 
-    xrtp_rtcp_sdes_chunk_t * chunks[XRTP_MAX_SDES_CHUNK];
+    xrtp_rtcp_sdes_chunk_t* chunks[XRTP_MAX_SDES_CHUNK];
  };
 
- struct xrtp_rtcp_bye_s{
-
+ struct xrtp_rtcp_bye_s
+ {
     struct xrtp_rtcp_head_s $head;
 
     uint32 srcs[XRTP_MAX_BYE_SRCS];
@@ -305,8 +306,8 @@
     char * why;
  };
 
- struct xrtp_rtcp_app_s{
-
+ struct xrtp_rtcp_app_s
+ {
     struct xrtp_rtcp_head_s $head;
 
     uint32 SSRC;
@@ -461,7 +462,7 @@ rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, rtime
   *
   * param in: Session that rtcp belonged to, if npacket = 0, set to default value
   */
- xrtp_rtcp_compound_t * rtcp_new_compound(xrtp_session_t * session, uint npacket, enum xrtp_direct_e dir, session_connect_t * conn
+ xrtp_rtcp_compound_t * rtcp_new_compound(xrtp_session_t * session, enum xrtp_direct_e dir, session_connect_t * conn
 											, rtime_t ms_arrival, rtime_t us_arrival, rtime_t ns_arrival);
 
  /**
@@ -471,14 +472,14 @@ rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, rtime
 
  xrtp_buffer_t * rtcp_buffer(xrtp_rtcp_compound_t * rtcp);
 
- xrtp_rtcp_compound_t * rtcp_sender_report_new(xrtp_session_t * session, int size, int padding);
+ xrtp_rtcp_compound_t * rtcp_sender_report_new(xrtp_session_t * session, int padding);
 
  /**
   * Create a RTCP compound packet used for receiver report.
   *
   * param in: max number of packets allowed
   */
- xrtp_rtcp_compound_t * rtcp_receiver_report_new(xrtp_session_t * session, uint32 SSRC, int size, int padding);
+ xrtp_rtcp_compound_t * rtcp_receiver_report_new(xrtp_session_t * session, uint32 SSRC, int padding);
 
  /**
   * Validate the incoming RTCP packet OK to access data

@@ -85,7 +85,7 @@ int main(int argc, char** argv)
 	rtime_t ms_remain;
 
     /* Init xrtp */
-    if(xrtp_init() < XRTP_OK)
+    if(xrtp_init(NULL) < XRTP_OK)
         return -1;
 
 	sipua = sipua_new(proxy_ip, proxy_port, NULL);

@@ -44,7 +44,7 @@ extern DECLSPEC
 int 
 connect_from_teleport(session_connect_t * conn1, xrtp_teleport_t * tport);
 
-int connect_receive(session_connect_t * conn, char **r_buff, int bufflen, rtime_t *ms, rtime_t *us, rtime_t *ns);
+int connect_receive(session_connect_t * conn, char **r_buff, int *header_bytes, rtime_t *ms, rtime_t *us, rtime_t *ns);
 
 int connect_send(session_connect_t * conn, char *r_buff, int datalen);
 

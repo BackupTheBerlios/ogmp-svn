@@ -250,9 +250,6 @@ int sender_setup(subt_sender_t *send, int8 pt, char *type)
     profile_handler_t * mh = NULL;
     xrtp_media_t * med = NULL;
 
-    xrtp_port_t * sender_rtp_port = NULL;
-    xrtp_port_t * sender_rtcp_port = NULL;
-
 	send_log(("\nsender_setup: FD_SETSIZE = %u\n", FD_SETSIZE));
     send_log(("sender_setup: [%s];pt[%d];cn[%s]\n", type,pt,cname));
     send_log(("sender_setup: rtp[%s:%u]\n", ip,rtp_port));
@@ -265,24 +262,10 @@ int sender_setup(subt_sender_t *send, int8 pt, char *type)
 
     //fclose(f);
     
-    /* Create rtp port */
-    sender_rtp_port = port_new(ip, rtp_port, RTP_PORT);
-    sender_rtcp_port = port_new(ip, rtcp_port, RTCP_PORT);
-
-	if(!sender_rtp_port || !sender_rtcp_port)
-	{
-		send_log(("sender_setup: fail to create ports, exit\n"));
-		return -1;
-	}
-
-    send_log(("Sending tester: rtp_port@%d!\n", (int)sender_rtp_port));
-
     /* Create and initialise the session */
-    ses = session_new(sender_rtp_port, sender_rtcp_port, cname, cnlen, xrtp_catalog()); 
-    if(!ses){
-
-        port_done(sender_rtp_port);
-        port_done(sender_rtcp_port);
+    ses = session_new(cname, cnlen, ip, rtp_port, rtcp_port, xrtp_catalog(), NULL); 
+    if(!ses)
+	{
         send_log(("sender_setup: Session fail to create!\n"));
         return 1;
     }
@@ -375,8 +358,6 @@ int cb_sender_oncall(void *user, char *from_cn, int from_cnlen, capable_t *caps[
 	if(ncap == 1)
 	{
 		rtp_capable_t *rtpcap = (rtp_capable_t*)caps[0];
-		xrtp_teleport_t *rtp_tport = teleport_new(rtpcap->ip, rtpcap->rtp_port);
-		xrtp_teleport_t *rtcp_tport = teleport_new(rtpcap->ip, rtpcap->rtcp_port);
 		send_log(("cb_sender_callin: call from cn[%s]@[%s:%u/%u]\n", from_cn, rtpcap->ip, rtpcap->rtp_port, rtpcap->rtcp_port));
 
 		/* parameter setting stage should be here, eg: rtsp conversation */
@@ -384,7 +365,7 @@ int cb_sender_oncall(void *user, char *from_cn, int from_cnlen, capable_t *caps[
 		/* rtp session establish */
 		sender_setup(send, rtpcap->profile_no, rtpcap->profile_type);
 
-		session_add_cname(send->session, from_cn, from_cnlen, rtp_tport, rtcp_tport, NULL);
+		session_add_cname(send->session, from_cn, from_cnlen, rtpcap->ip, rtpcap->rtp_port, rtpcap->rtcp_port, NULL);
 	
 		return UA_OK;
 	}

@@ -392,15 +392,19 @@ struct xrtp_session_s
 
 	xrtp_clock_t * clock;
 
-    uint  bandwidth;
-    uint  rtp_bw;     /* RTP bandwidth */
-    uint  rtcp_bw;    /* RTCP bandwidth */
-    int rtp_bw_left;  /* unused bandwidth each sending */
+    int  bandwidth;			/* Total bandwidth */
+    int  bandwidth_rtp;     /* RTP bandwidth */
+
+	int  bandwidth_budget;
+    int	 bandwidth_rtp_budget;  /* unused bandwidth each sending */
+    int  bandwidth_rtcp_budget;	/* RTCP bandwidth */
+
+	xthr_lock_t * bandwidth_lock;
 
     rtime_t hrts_last_rtp_sent;
 
     rtime_t usec_period;
-    rtime_t rtcp_interval;
+    rtime_t msec_rtcp_interval;
     
     session_sched_t *sched;
 
@@ -608,6 +612,10 @@ member_state_t *
 session_member_state(xrtp_session_t * session, uint32 member);
 
 extern DECLSPEC
+member_state_t * 
+session_owner(xrtp_session_t * session);
+
+extern DECLSPEC
 int 
 session_member_check_senderinfo(member_state_t * member,
                                 uint32 hi_ntp, uint32 lo_ntp, uint32 rtp_ts,
@@ -707,7 +715,7 @@ session_member_renew_mediainfo(member_state_t *member, void *minfo, uint32 rtpts
 /* session is asked to distribute media info to members */
 extern DECLSPEC
 int 
-session_require_mediainfo(xrtp_session_t *ses, void *minfo, int signum);
+session_issue_mediainfo(xrtp_session_t *ses, void *minfo, int signum);
 
 /* check if need to send media info to member */
 extern DECLSPEC

@@ -46,7 +46,11 @@
 #define UDP_FLAGS 0  /* Refer to man(sendto) */
 
 #define UDP_MAX_LEN   5000
-#define IPV4_BYTES	16 /* 'xxx.xxx.xxx.xxx\0' */	
+
+#define IPV4_BYTES	16 /* 'xxx.xxx.xxx.xxx\0' */
+
+/* bytes for ipv4 udp+ip header */
+#define IPV4_UDPIP_HEADER_BYTES 28
 
  struct session_connect_s
  {
@@ -105,52 +109,54 @@ session_connect_t * connect_new(xrtp_port_t * port, xrtp_teleport_t * tport)
      return udp;   
 }
 
-  int connect_done(session_connect_t * conn){
-
+int connect_done(session_connect_t * conn)
+{
      udp_log(("connect_done: free connect[#%d]\n", connect_io(conn)));
 
      if(conn->data_in) free(conn->data_in);
      free(conn);
 
      return XRTP_OK;
-  }
+}
 
-  int connect_io(session_connect_t * conn){
-
+int connect_io(session_connect_t * conn)
+{
      return conn->port->socket;
-  }
+}
 
-  int connect_match(session_connect_t * conn1, session_connect_t * conn2){
+int connect_match(session_connect_t * conn1, session_connect_t * conn2)
+{
+     return conn1->remote_addr.sin_family == conn2->remote_addr.sin_family &&
+            conn1->remote_addr.sin_addr.s_addr == conn2->remote_addr.sin_addr.s_addr &&
+            conn1->remote_addr.sin_port == conn2->remote_addr.sin_port;
+}
 
-      return conn1->remote_addr.sin_family == conn2->remote_addr.sin_family &&
-             conn1->remote_addr.sin_addr.s_addr == conn2->remote_addr.sin_addr.s_addr &&
-             conn1->remote_addr.sin_port == conn2->remote_addr.sin_port;
-  }
-
-  int connect_from_teleport(session_connect_t * conn, xrtp_teleport_t * tport){
-
+int connect_from_teleport(session_connect_t * conn, xrtp_teleport_t * tport)
+{
       return conn->remote_addr.sin_family == AF_INET &&
              conn->remote_addr.sin_addr.s_addr == tport->addr &&
              conn->remote_addr.sin_port == tport->portno;
-  }
+}
 
-  int connect_receive(session_connect_t * conn, char **r_buff, int bufflen, rtime_t *ms, rtime_t *us, rtime_t *ns){
-
+int connect_receive(session_connect_t * conn, char **r_buff, int *header_bytes, rtime_t *ms, rtime_t *us, rtime_t *ns)
+{
       int datalen = conn->datalen_in;
       *r_buff = conn->data_in;
       
       conn->data_in = NULL;
       conn->datalen_in = 0;
 
+	  *header_bytes = IPV4_UDPIP_HEADER_BYTES;
+
       *ms = conn->msec_arrival;
       *us = conn->usec_arrival;
 	  *ns = conn->nsec_arrival;
       
       return datalen;
-  }
+}
 
-  int connect_send(session_connect_t * conn, char *data, int datalen)
-  {
+int connect_send(session_connect_t * conn, char *data, int datalen)
+{
       int n;
 
 	  /* test */                                                                               
@@ -161,7 +167,7 @@ session_connect_t * connect_new(xrtp_port_t * port, xrtp_teleport_t * tport)
 
       udp_log(("connect_send: send to [%s:%d]\n", inet_ntoa(conn->remote_addr.sin_addr), ntohs(conn->remote_addr.sin_port)));
       return n;
-  }
+}
 
   /* These are for old static port protocol, which is rtcp is rtp + 1, It's NOT suggest to use, Simply for back compatability */
   session_connect_t * connect_rtp_to_rtcp(session_connect_t * rtp_conn){

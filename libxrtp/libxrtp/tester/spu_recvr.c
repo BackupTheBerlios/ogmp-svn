@@ -225,8 +225,8 @@ void test_xthr()
 int recvr_setup(subt_recvr_t *recvr, int8 pt, char *type)
 {
     char ip[] = RECV_IP;
-	uint16 rtp_port = RECV_RTP_PORT;
-	uint16 rtcp_port = RECV_RTCP_PORT;
+	uint16 rtp_portno = RECV_RTP_PORT;
+	uint16 rtcp_portno = RECV_RTCP_PORT;
 
 	char cname[] = RECV_CNAME;
 	int cnlen = strlen(RECV_CNAME);
@@ -238,25 +238,17 @@ int recvr_setup(subt_recvr_t *recvr, int8 pt, char *type)
     profile_handler_t * mh = NULL;
     xrtp_media_t * med = NULL;
 
-	xrtp_port_t * recvr_rtp_port = NULL;
-    xrtp_port_t * recvr_rtcp_port = NULL;
-
     recv_log(("\nrecvr_setup: [%s];pt[%d];cn[%s]\n", type,pt,cname));
     recv_log(("recvr_setup: rtp[%s:%u]\n", ip,rtp_port));
     recv_log(("recvr_setup: rtcp[%s:%u]\n\n", ip,rtcp_port));
 
     /** recvr preparation **/
-    recvr_rtp_port = port_new(ip, rtp_port, RTP_PORT);
-    recvr_rtcp_port = port_new(ip, rtcp_port, RTCP_PORT);
-
     recv_log(("recvr_setup: port pair created!\n"));
 
     /* Create and initialise the session */
-    ses = session_new(recvr_rtp_port, recvr_rtcp_port, cname, strlen(cname), xrtp_catalog());
+    ses = session_new(cname, strlen(cname), ip, rtp_portno, rtcp_portno, xrtp_catalog(), NULL);
     if(!ses)
 	{
-        port_done(recvr_rtp_port);
-        port_done(recvr_rtcp_port);
         recv_log(("recvr_setup: Session fail to create!\n"));
         return 1;
     }
@@ -328,14 +320,11 @@ int cb_recvr_oncall(void *user, char *from_cn, int from_cnlen, capable_t *caps[]
 	{
 		rtp_capable_t *rtpcap = (rtp_capable_t*)caps[0];
 
-		xrtp_teleport_t *rtp_tport = teleport_new(rtpcap->ip, rtpcap->rtp_port);
-		xrtp_teleport_t *rtcp_tport = teleport_new(rtpcap->ip, rtpcap->rtcp_port);
-
 		recv_log(("cb_recvr_callok: cn[%s]@[%s:%u/%u] ok\n", from_cn, rtpcap->ip, rtpcap->rtp_port, rtpcap->rtcp_port));
 
 		recvr_setup(recv, rtpcap->profile_no, rtpcap->profile_type);
 		
-		session_add_cname(recv->session, from_cn, from_cnlen, rtp_tport, rtcp_tport, NULL);
+		session_add_cname(recv->session, from_cn, from_cnlen, rtpcap->ip, rtpcap->rtp_port, rtpcap->rtcp_port, NULL);
 
 		session_start_receipt(recv->session);
 		return UA_OK;

@@ -149,7 +149,7 @@ int vsend_open_stream (media_player_t *mp, media_info_t *media_info)
    
    vs->rtp_media->set_rate(vs->rtp_media, ai.info.sample_rate);
 
-   session_require_mediainfo(vs->rtp_session, vinfo, vs->vorbis_info_signum++);
+   session_issue_mediainfo(vs->rtp_session, vinfo, vs->vorbis_info_signum++);
    
    vsend_log (("vsend_open_stream: vorbis stream opened\n"));
    
@@ -466,8 +466,8 @@ int vsend_set_device (media_player_t *mp, media_control_t *cont, module_catalog_
    vsend_log(("vsend_set_device: need netcast device\n"));
 
    dev = cont->find_device(cont, "rtp");
-
-   if(!dev) return MP_FAIL;
+   if(!dev) 
+	   return MP_FAIL;
 
    dev_rtp = (dev_rtp_t*)dev;
    
@@ -487,10 +487,11 @@ int vsend_set_device (media_player_t *mp, media_control_t *cont, module_catalog_
    
    for(i=0; i<rtpset->nprofile; i++)
    {
-	   if(strcmp(rtpset->profiles[i].profile_mime, PROFILE_MIME))
+	   if(strcmp(PROFILE_MIME, rtpset->profiles[i].profile_mime) == 0)
 	   {
 		   total_bw = rtpset->profiles[i].total_bw;
 		   rtp_bw = rtpset->profiles[i].rtp_bw;
+   
 		   profile_no = rtpset->profiles[i].profile_no;
 
 		   if(rtpset->profiles[i].rtp_portno)

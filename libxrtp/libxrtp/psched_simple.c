@@ -577,7 +577,7 @@ int simple_schedule_rtcp(void * gen)
          break;
 
       now = time_msec_now(ssch->clock);
-      simple_sched_log(("simple_schedule_rtcp: %dms now\n", now));
+	  simple_sched_log(("simple_schedule_rtcp: ssch[@%d] %dms now\n", ssch, now));
 
       /* Scan if some deadline is reached */
 
@@ -676,24 +676,28 @@ int simple_schedule_rtcp(void * gen)
 
             if(ssch->rtcp_queue[i].expired)
 			{
-               unit = ssch->rtcp_queue[i].ssch_unit;
+				char cname[16];
+				memset(cname, 0, 16);
+
+				unit = ssch->rtcp_queue[i].ssch_unit;
+				session_cname(unit->session, cname, 16);
 
                if(unit->rtcp_arrived)
 			   {
-                  simple_sched_log(("simple_schedule_rtcp: Session[%d] receive data before send!\n", session_id(unit->session)));
+                  simple_sched_log(("simple_schedule_rtcp: Session[%s] receive data before send!\n", cname));
                   session_rtcp_to_receive(unit->session);
 
                   unit->rtcp_arrived = 0;
                   n_arrived--;
                }
 
-               simple_sched_log(("simple_schedule_rtcp: Session[%d] send rtcp on @%ums\n", session_id(unit->session), now));
+               simple_sched_log(("simple_schedule_rtcp: Session[%s] send rtcp on @%dms\n", cname, now));
                session_rtcp_to_send(unit->session);
 
                /* calcu the next ts */
                dt = session_rtcp_interval(unit->session);
 
-               simple_sched_log(("simple_schedule_rtcp: session[%d]'s next rtcp in %ums\n", i, dt));
+               simple_sched_log(("simple_schedule_rtcp: Session[%s]'s next rtcp in %dms\n", cname, dt));
 
                ssch->rtcp_queue[i].next_lrts = now + dt;
                
@@ -725,12 +729,11 @@ int simple_schedule_rtcp(void * gen)
       }
 
       /* To detect all ports see if any incoming */
-      simple_sched_log(("simple_schedule_rtcp: scan rtcp ports\n"));
       portman_poll(ssch->rtcp_portman);
 
       xthr_unlock(ssch->rtcp_lock);
 
-      simple_sched_log(("simple_schedule_rtcp: sleep %ums\n", dt_min));
+	  simple_sched_log(("simple_schedule_rtcp: ssch[@%d] sleep %dms\n", ssch, dt_min));
       time_msec_sleep(ssch->clock, dt_min, NULL);
    }
 

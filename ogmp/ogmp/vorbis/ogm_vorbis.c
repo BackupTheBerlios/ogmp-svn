@@ -186,12 +186,12 @@ int ogm_open_vorbis(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *c
 			}
 		 }
 
-         if (vinfo->head_packets == 2) {
-
+         if (vinfo->head_packets == 2)
+		 {
 			/* Cache the header comment */
             vinfo->header_comment = malloc(ogm->packet.bytes);
-            if (!vinfo->header_comment) {
-
+            if (!vinfo->header_comment)
+			{
                ogm_vorbis_log(("ogm_open_vorbis: no memory to cache header setup\n"));
                return MP_EMEM;
             }
@@ -202,8 +202,8 @@ int ogm_open_vorbis(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *c
                               ogm_strm->sno, mf->numstreams, ogm->packet.bytes));
          }
          
-         if (vinfo->head_packets == 3) {
-
+         if (vinfo->head_packets == 3)
+		 {
             /* initialize central decode state */
             vorbis_synthesis_init( &vinfo->vd, &vinfo->vi );
 
@@ -217,8 +217,8 @@ int ogm_open_vorbis(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *c
 			
 			/* Cache the codebook */
             vinfo->header_setup = malloc(ogm->packet.bytes);
-            if (!vinfo->header_setup) {
-
+            if (!vinfo->header_setup)
+			{
                ogm_vorbis_log(("ogm_open_vorbis: no memory to cache header setup\n"));
                return MP_EMEM;
             }
@@ -226,8 +226,8 @@ int ogm_open_vorbis(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *c
             vinfo->header_setup_len = ogm->packet.bytes;
 
             ret = stream->player->open_stream(stream->player, (media_info_t*)vinfo);
-            if( ret < MP_OK) {
-
+            if( ret < MP_OK)
+			{
                stream->playable = -1;
                return ret;
             }
@@ -240,9 +240,9 @@ int ogm_open_vorbis(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *c
 
             ogm_vorbis_log(("ogm_open_vorbis: vorbis_mode_bits: %d\n", vinfo->mode_bits));
          }
-
-      } else{
-
+      }
+	  else
+	  {
          ogm_vorbis_log(("ogm_open_vorbis: (a%d/%d) Vorbis audio stream indicated " \
                            "but no Vorbis stream header found.\n", ogm_strm->sno, mf->numstreams));
 
@@ -254,8 +254,8 @@ int ogm_open_vorbis(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *c
 }
 
 /* Handle Vorbis packet */
-int ogm_process_vorbis(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int hdrlen, int64 lenbytes, int64 samplestamp, int last_packet, int stream_end){
-
+int ogm_process_vorbis(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int hdrlen, int64 lenbytes, int64 samplestamp, int last_packet, int stream_end)
+{
    /* Output the Ogg/Vorbis media */
    media_format_t *mf = (media_format_t *)ogm;
    
