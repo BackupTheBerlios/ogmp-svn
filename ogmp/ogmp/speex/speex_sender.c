@@ -150,9 +150,9 @@ int spxs_open_stream (media_player_t *mp, media_info_t *media_info)
    ai.channels = spxinfo->audioinfo.channels;
          
    ss->rtp_media->set_coding(ss->rtp_media, ai.info.sample_rate, ai.channels);
-
    ss->rtp_media->set_parameter(ss->rtp_media, "nframe_per_packet", (void*)spxinfo->nframe_per_packet);
    
+   spxs_debug (("spxs_open_stream: channels[%d]\n", spxinfo->audioinfo.channels));
    spxs_log (("spxs_open_stream: speex stream opened\n"));
    
    return MP_OK;
@@ -171,17 +171,6 @@ const char* spxs_play_type(media_player_t * mp)
 }
 
 char* spxs_media_type(media_player_t * mp)
-
-
-
-
-
-
-
-
-
-
-
 {
    return global_const.media_type;
 }

@@ -494,7 +494,7 @@ int pa_set_output_media(media_device_t *dev, media_info_t *out_info)
    else
       pa->usec_pulse = (int)((double)nsample_pulse / pa->ai_output.info.sample_rate * 1000000);
       
-   pa_log(("pa_set_output_media: %d channels, %d rate, %d sample per pulse (%dus)\n", 
+   pa_debug(("pa_set_output_media: %d channels, %d rate, %d sample per pulse (%dus)\n", 
 			pa->ai_output.channels, pa->ai_output.info.sample_rate, nsample_pulse, pa->usec_pulse));
    
    pa->ai_output.channels_bytes = pa->ai_output.channels * pa->ai_output.info.sample_bits / OS_BYTE_BITS;

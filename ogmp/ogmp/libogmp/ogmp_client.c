@@ -386,18 +386,18 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			sdp_message_t *sdp_message;
 			char* sdp_body = (char*)e->content;
 
-         int bw;
+			int bw;
 
 			sipua_set_t *call = e->call_info; 
 			call->status = SIPUA_EVENT_ANSWERED;
 
          /*
-         printf("client_sipua_event: call[%s] answered\n", call->subject);
-			printf("client_sipua_event: SDP\n");
-			printf("------------------------\n");
-			printf("%s", sdp_body);
-			printf("------------------------\n");
-         */
+		 printf("client_sipua_event: call[%s] answered\n", call->subject);
+		 printf("client_sipua_event: SDP\n");
+		 printf("------------------------\n");
+		 printf("%s", sdp_body);
+		 printf("------------------------\n");
+		 */
 
          sdp_message_init(&sdp_message);
 
@@ -679,7 +679,7 @@ char* client_set_call_source(sipua_t* sipua, sipua_set_t* call, media_source_t* 
                        clie->default_rtp_ports, clie->default_rtcp_ports,
                        clie->nmedia, source, clie->pt);
 
-   if(sdp)
+	if(sdp)
 	{
       printf("client_set_call_source: sdp\n");
       printf("%s\n", sdp);
@@ -688,7 +688,7 @@ char* client_set_call_source(sipua_t* sipua, sipua_set_t* call, media_source_t* 
 		call->renew_body = sdp;
 	}
 
-   return sdp;
+	return sdp;
 }
 
 int client_set_profile(sipua_t* sipua, user_profile_t* prof)

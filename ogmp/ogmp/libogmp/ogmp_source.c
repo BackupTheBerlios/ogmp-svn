@@ -250,9 +250,6 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
 	format = (media_format_t *) xlist_first (format_handlers, &$lu);
 	while (format)
 	{
-		/* open media source
-		 * mode: "playback"; "netcast"
-		 */
 		osource->nstream = format->open(format, name, osource->control);
 		if (osource->nstream > 0)
 		{

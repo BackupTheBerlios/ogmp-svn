@@ -500,6 +500,8 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
 		{
 			rtp_format_t* rtpfmt = (rtp_format_t*)format;
 
+			printf("sipua_establish_call: call needs bandwidth[%d]\n", call->bandwidth_need);
+
 			bw = rtpfmt->open_capables(format, rtpcapset, control, mode, call->bandwidth_need);
 			if(bw > 0)
 			{
@@ -508,6 +510,7 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
 			else
 			{
 				printf("sipua_establish_call: no enough bandwidth\n");
+				return 0;
 			}
 
 			break;
@@ -519,7 +522,6 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
 	if(call->rtp_format == NULL)
 	{
 		ua_log(("sipua_establish_call: no format support\n"));
-
 		return 0;
 	}
    
@@ -650,29 +652,32 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_set_t* call, int bw_budget, media_con
          /* Cause to ceate a new session instance */
          media_bw = session_new_sdp(cata, nettype, addrtype, netaddr, &rtp_portno, &rtcp_portno, pt, src_strm->media_info->mime, src_strm->media_info->sample_rate, src_strm->media_info->coding_parameter, (bw_budget - call->bandwidth_hold), control, &sdp_info);
 
-         printf("sipua_call_sdp: media_bw[%d]\n", media_bw);
+         printf("sipua_call_sdp: sample_rate[%d]\n", src_strm->media_info->sample_rate);
+         printf("sipua_call_sdp: coding_parameter[%d]\n", src_strm->media_info->coding_parameter);
+         
+		 printf("sipua_call_sdp: media_bw[%d]\n", media_bw);
       }
       else
-      {
-         /* The existed session */
-         rtp_stream_t* rtpstream = (rtp_stream_t*)rtp_strm;
+		{
+			/* The existed session */
+			rtp_stream_t* rtpstream = (rtp_stream_t*)rtp_strm;
 
-         media_bw = session_mediainfo_sdp(rtpstream->session, nettype, addrtype, netaddr, &rtp_portno, &rtcp_portno, rtp_strm->media_info->mime, (bw_budget - call->bandwidth_need), control, &sdp_info, rtp_strm->media_info);
-      }
+			media_bw = session_mediainfo_sdp(rtpstream->session, nettype, addrtype, netaddr, &rtp_portno, &rtcp_portno, rtp_strm->media_info->mime, (bw_budget - call->bandwidth_need), control, &sdp_info, rtp_strm->media_info);
+		}
         
-      printf("sipua_call_sdp: mime[%s]\n", src_strm->media_info->mime);
-      printf("sipua_call_sdp: pt[%d]\n", pt);
+		printf("sipua_call_sdp: mime[%s]\n", src_strm->media_info->mime);
+		printf("sipua_call_sdp: pt[%d]\n", pt);
 
 		if(media_bw > 0 && bw_budget > call->bandwidth_need + media_bw)
 		{
 			call->bandwidth_need += media_bw;
 		}
 		else
-      {
+		{
 			break;
-      }
+		}
 
-      src_strm = src_strm->next;
+		src_strm = src_strm->next;
 	}
 
 	sdp_message_to_str (sdp_info.sdp_message, &sdp_body);

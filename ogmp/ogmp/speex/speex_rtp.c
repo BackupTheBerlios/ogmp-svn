@@ -344,8 +344,10 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 				sender->media_playable = -1;
 				player->done(player);
 			
-				spxrtp_log(("audio/speex.rtp_in: media is not playable\n"));
+				spxrtp_debug(("audio/speex.rtp_in: media is not playable\n"));
 				rtp_packet_done(rtp);
+
+				exit(1);
 			
 				return XRTP_CONSUMED;
 		   }         
@@ -406,8 +408,6 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 int spxrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp)
 {
    spxrtp_handler_t * profile = (spxrtp_handler_t *)handler;
-
-
 
    /* Mark always '0', Audio silent suppression not used */
    rtp_packet_set_mark(rtp, 0);
@@ -562,8 +562,10 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 					sender->media_playable = -1;
 					player->done(player);
 			
-					spxrtp_log(("audio/speex.spxrtp_rtp_in: media is not playable\n"));
+					spxrtp_debug(("audio/speex.spxrtp_rtp_in: media is not playable\n"));
 					rtcp_compound_done(rtcp);
+
+					exit(1);
 			
 					return XRTP_CONSUMED;
 				}         
@@ -571,7 +573,6 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 				explayer = (media_player_t*)session_member_set_player(sender, player);
 				if(explayer)
 					explayer->done(explayer);
-
 
 				sender->media_playable = 1;
 			}

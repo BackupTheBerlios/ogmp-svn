@@ -37,7 +37,7 @@
 #endif 
 
 #ifdef OGM_SPEEX_DEBUG
- #define ogm_speex_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
+ #define ogm_speex_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define ogm_speex_debug(fmtargs)
 #endif
@@ -121,6 +121,7 @@ int speex_open_header(ogg_packet *op, speex_info_t *spxinfo)
    spxinfo->vbr = header->vbr;
 
    ainfo->channels = header->nb_channels;
+   ainfo->info.coding_parameter = ainfo->channels;
 
    if(header->nb_channels == 2)
 	   memcpy(&spxinfo->stereo, &stereo, sizeof(stereo));
@@ -212,11 +213,12 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
             ogm_speex_log(("ogm_open_speex: version[%d]\n", spxinfo->version));
             ogm_speex_log(("ogm_open_speex: bitstream version[%d]\n", spxinfo->bitstream_version));
 
-            ogm_speex_log(("ogm_open_speex: channels[%d]\n", spxinfo->audioinfo.channels));
-            ogm_speex_log(("ogm_open_speex: clockrate[%ld]\n", spxinfo->audioinfo.info.sample_rate));
-            ogm_speex_log(("ogm_open_speex: bitrate[%ld]\n", spxinfo->bitrate_now));
-            ogm_speex_log(("ogm_open_speex: samples/frame[%d]; frames/packet[%d]\n", spxinfo->nsample_per_frame, spxinfo->nframe_per_packet));
-            ogm_speex_log(("ogm_open_speex: headers[%d]\n", spxinfo->nheader));
+            ogm_speex_debug(("ogm_open_speex: channels[%d]\n", spxinfo->audioinfo.channels));
+            ogm_speex_debug(("ogm_open_speex: coding_parameter[%d]\n", spxinfo->audioinfo.info.coding_parameter));
+            ogm_speex_debug(("ogm_open_speex: clockrate[%ld]\n", spxinfo->audioinfo.info.sample_rate));
+            ogm_speex_debug(("ogm_open_speex: bitrate[%ld]\n", spxinfo->bitrate_now));
+            ogm_speex_debug(("ogm_open_speex: samples/frame[%d]; frames/packet[%d]\n", spxinfo->nsample_per_frame, spxinfo->nframe_per_packet));
+            ogm_speex_debug(("ogm_open_speex: headers[%d]\n", spxinfo->nheader));
 
 			ogm_speex_log(("ogm_open_speex: speex info ok\n"));
 		} 
