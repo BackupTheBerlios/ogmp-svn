@@ -168,7 +168,7 @@ int simple_sched_add(session_sched_t * sched, xrtp_session_t * ses)
     xthr_lock(ssch->lock);
 
     if(ssch->n_session == MAX_SCHED_SESSION)
-	{
+    {
        xthr_unlock(ssch->lock);
        return XRTP_EREFUSE;
     }
@@ -176,7 +176,7 @@ int simple_sched_add(session_sched_t * sched, xrtp_session_t * ses)
     session_ports(ses, &rtp_port, &rtcp_port);
 
     if(portman_add_port(ssch->rtp_portman, rtp_port) < XRTP_OK || portman_add_port(ssch->rtcp_portman, rtcp_port) < XRTP_OK)
-	{
+    {
        portman_remove_port(ssch->rtp_portman, rtp_port);
        portman_remove_port(ssch->rtcp_portman, rtcp_port);
        
@@ -185,7 +185,7 @@ int simple_sched_add(session_sched_t * sched, xrtp_session_t * ses)
     }
 
     for(i=0; i<MAX_SCHED_SESSION; i++)
-	{
+    {
        if(!ssch->units[i] && !found_slot)
 	   {
           free_slot = i;

@@ -339,12 +339,12 @@ int session_set_mode(xrtp_session_t * ses, int mode)
     return XRTP_OK;
 
 fail:
-	if(ses->rtp_send_pipe) pipe_done(ses->rtp_send_pipe);
-    if(ses->rtcp_send_pipe) pipe_done(ses->rtcp_send_pipe);
-    if(ses->rtp_recv_pipe) pipe_done(ses->rtp_recv_pipe);
-    if(ses->rtcp_recv_pipe) pipe_done(ses->rtcp_recv_pipe);
+   if(ses->rtp_send_pipe) pipe_done(ses->rtp_send_pipe);
+   if(ses->rtcp_send_pipe) pipe_done(ses->rtcp_send_pipe);
+   if(ses->rtp_recv_pipe) pipe_done(ses->rtp_recv_pipe);
+   if(ses->rtcp_recv_pipe) pipe_done(ses->rtcp_recv_pipe);
 
-    return XRTP_FAIL;   
+   return XRTP_FAIL;   
 }
  
 /**
@@ -427,23 +427,23 @@ xrtp_session_t* session_new(xrtp_set_t* set, char *cname, int clen, char *ip, ui
        return NULL;
     }
 
-    ses->clock = time_start();
+   ses->clock = time_start();
 
-	ses->media_control = media_control;
+   ses->media_control = media_control;
 
-    ses->self->cname = name;
-    ses->self->cname_len = clen;
+   ses->self->cname = name;
+   ses->self->cname_len = clen;
     
-    session_log(("session_new: cname is '%s', validated\n", ses->self->cname));
+   session_log(("session_new: cname is '%s', validated\n", ses->self->cname));
     
-    session_init_seqno(ses->self, (uint16)(65535.0*rand()/RAND_MAX));
+   session_init_seqno(ses->self, (uint16)(65535.0*rand()/RAND_MAX));
 
-    ses->self->valid = XRTP_YES;
-    ses->n_member = 1;
+   ses->self->valid = XRTP_YES;
+   ses->n_member = 1;
 
 	ses->set = set;
     
-    return ses;
+   return ses;
  }
 
  uint32 session_member_max_exseqno(member_state_t * mem)
@@ -1836,7 +1836,7 @@ session_move_all_guests(xrtp_session_t *ses, xrtp_session_t *to_ses)
 
    if(ses->n_member == 1)
    {
-      
+      session_set_scheduler(ses, NULL);  
    }
 
    session_debug(("session_move_all_guests: Session[%s]-->Session[%s]\n", ses->self->cname, to_ses->self->cname));
@@ -1864,7 +1864,6 @@ session_move_member_by_cname(xrtp_session_t *ses, xrtp_session_t *to_ses, char *
    /* FIXME: xthr_lock(ses->senders_lock); */
    if(mem->we_sent && xlist_remove_item(ses->senders, mem) >= OS_OK)
          ses->n_sender--;
-
 
    ses->n_member--;
 
@@ -3762,19 +3761,20 @@ int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 time
  */
 int session_set_scheduler(xrtp_session_t *ses, session_sched_t *sched)
 {
-    if(ses->sched == sched)
+   if(ses->sched == sched)
 		return XRTP_OK;
        
-    if(ses->sched)
-		sched->remove(ses->sched, ses);
+   if(ses->sched)
+		ses->sched->remove(ses->sched, ses);
 
-    ses->sched = sched;
+   ses->sched = sched;
     
-    if(sched)
-	{
+   if(sched)
+   {
 		sched->add(sched, ses);
-    	return xrtp_add_session(ses->set, ses);
-	}
+      
+      return xrtp_add_session(ses->set, ses);
+   }
 
 	return xrtp_remove_session(ses->set, ses);
 }
