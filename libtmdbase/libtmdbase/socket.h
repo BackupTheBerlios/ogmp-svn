@@ -23,17 +23,11 @@
  
 #ifdef WIN32
 
- #include "os.h"
-
  #include <winsock.h>
  #define socket_close closesocket
 
  #define SOCKET_INVALID INVALID_SOCKET
  #define SOCKET_FAIL	SOCKET_ERROR
-
- extern DECLSPEC 
- int 
- socket_init(void);
 
 #else
 
@@ -45,7 +39,10 @@
  #define SOCKET_INVALID -1
  #define SOCKET_FAIL	-1
  
- int 
- socket_init(void) {return OS_OK;}  /* socket ok on posix */
-
 #endif
+
+#include "os.h"
+
+extern DECLSPEC
+int
+socket_init(void);
