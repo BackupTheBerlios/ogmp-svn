@@ -44,9 +44,7 @@ int cursor_subscriptions_list = 0;
 
 int window_subscriptions_list_print(gui_t* gui, int wid)
 {
-  int k, pos;
   int y,x;
-  char buf[250];
 
   gui->parent = wid;
 
@@ -65,6 +63,8 @@ int window_subscriptions_list_print(gui_t* gui, int wid)
 
   attrset(COLOR_PAIR(0));
 #if 0
+  int k, pos;
+  char buf[250];
   pos=1;
   for (k=0;k<MAX_NUMBER_OF_SUBSCRIPTIONS;k++)
     {
@@ -163,7 +163,6 @@ void window_subscriptions_list_draw_commands(gui_t* gui)
 int window_subscriptions_list_run_command(gui_t* gui, int c)
 {
   /*jsubscription_t *js;*/
-  int i;
   int max;
   int y,x;
   curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
@@ -179,8 +178,10 @@ int window_subscriptions_list_run_command(gui_t* gui, int c)
   else
     max = gui_window_subscriptions_list.y1 - gui_window_subscriptions_list.y0+2;
 /*
+  int i;
   i = jsubscription_get_number_of_pending_subscriptions();
-  if (i<max) max=i;
+  if (i<max)
+    max=i;
 */
   if (max==0 && c!='t')
     {

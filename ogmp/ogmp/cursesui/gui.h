@@ -124,6 +124,7 @@ typedef struct coding_s
 } coding_t;
 
 #define MAX_CODING 10
+#define LOG_LEN 256
 
 struct ogmp_curses_s
 {
@@ -152,11 +153,13 @@ struct ogmp_curses_s
 	int codex[MAX_CODING];
 
 	coding_t codings[MAX_CODING];
+    
+    char log_buf[LOG_LEN];
 };
 
-char log_buf3[200];
-char log_buf2[200];
-char log_buf1[200];
+char log_buf3[LOG_LEN];
+char log_buf2[LOG_LEN];
+char log_buf1[LOG_LEN];
 
 xthr_lock_t *log_lock;
 

@@ -286,7 +286,7 @@ int window_new_user_run_command(gui_t* gui, int c)
 		}
 		default:
 		{
-			if(editline_append(edit[cursor_user], &((char)c), 1) == 0)
+			if(editline_append(edit[cursor_user], (char*)&c, 1) == 0)
 				beep();
 	
 			return -1;

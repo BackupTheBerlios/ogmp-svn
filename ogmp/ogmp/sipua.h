@@ -195,12 +195,17 @@ struct sipua_uas_s
 	void* lisener;
 	int (*notify_event)(void* listener, sipua_event_t* e);
 
-	int(*start)(sipua_uas_t* uas);
-	int(*shutdown)(sipua_uas_t* uas);
+	int (*match_type)(sipua_uas_t* uas, char *type);
 
-	int(*address)(sipua_uas_t* uas, char **nettype, char **addrtype, char **netaddr);
+    int (*init)(sipua_uas_t* uas, int portno, char* nettype, char* addrtype, char* firewall, char* proxy);
+	int (*done)(sipua_uas_t* uas);
 
-	int(*set_listener)(sipua_uas_t* uas, void* listener, int(*event_notify)(void*, sipua_event_t*));
+    int (*start)(sipua_uas_t* uas);
+	int (*shutdown)(sipua_uas_t* uas);
+
+	int (*address)(sipua_uas_t* uas, char **nettype, char **addrtype, char **netaddr);
+
+	int (*set_listener)(sipua_uas_t* uas, void* listener, int(*event_notify)(void*, sipua_event_t*));
 
 	int (*add_coding)(sipua_uas_t* uas, int pt, int rtp_portno, int rtcp_portno, char* mime, int clockrate, int param);
 	

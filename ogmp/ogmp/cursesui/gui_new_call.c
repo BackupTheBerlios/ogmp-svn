@@ -41,7 +41,9 @@ gui_t gui_window_new_call =
 	NULL
 };
 
+#ifndef	LINE_MAX
 #define LINE_MAX 128
+#endif
 
 #define NEWCALL_TO		0
 #define NEWCALL_SUBJ	1
@@ -243,7 +245,7 @@ int window_new_call_run_command(gui_t* gui, int c)
 		}
 		default:
 		{
-			if(editline_append(newcall_edit[cursor_newcall], &((char)c), 1) == 0)
+			if(editline_append(newcall_edit[cursor_newcall], (char*)&c, 1) == 0)
 				beep();
 	
 			return -1;

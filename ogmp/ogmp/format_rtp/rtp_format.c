@@ -267,7 +267,7 @@ int rtp_support_type (media_format_t *mf, char *type, char *subtype)
 /**
  * There is no operate on file, return opened player number is Zero
  */
-int rtp_open (media_format_t *mf, char * fname, media_control_t *ctrl, config_t *conf, char *mode, void* extra)
+int rtp_open (media_format_t *mf, char * fname, media_control_t *ctrl)
 {
 	return 0;
 }
@@ -421,7 +421,7 @@ capable_descript_t* rtp_stream_capable(rtp_stream_t *strm)
  */
 int rtp_open_capables(media_format_t *mf, rtpcap_set_t *rtpcapset, media_control_t *ctrl, char *mode, int bandwidth)
 {
-   int c=0, sno=0;
+   int sno=0;
    rtp_stream_t *strm;
 
    rtpcap_descript_t *rtpcap;
@@ -519,7 +519,7 @@ int rtp_players(media_format_t * mf, char *type, media_player_t* players[], int 
 
   while (cur != NULL)
   {
-    if(strcmp(cur->player->play_type(cur->player), type) == 0)
+    if(cur->player->match_play_type(cur->player, type))
 	{
 		/* playtype match */
 		players[n++] = cur->player;

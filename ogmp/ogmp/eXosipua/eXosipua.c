@@ -27,7 +27,7 @@
 #define JUA_LOG
 
 #ifdef JUA_LOG
- #define jua_log(fmtargs)  do{log_printf fmtargs;}while(0)
+ #define jua_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define jua_log(fmtargs)
 #endif
@@ -494,6 +494,8 @@ int uas_start(sipua_uas_t *sipuas)
 {
 	eXosipua_t *jua = (eXosipua_t*)sipuas;
 
+	jua->clock = time_start();
+
 	jua->thread = xthr_new(jua_loop, jua, XTHREAD_NONEFLAGS);
 
 	if(jua->thread == NULL)
@@ -510,23 +512,14 @@ int uas_shutdown(sipua_uas_t *sipuas)
 
 	jua->run = 0;
 
+	time_end(jua->clock);
+
 	if(jua->thread != NULL)
 	{
 		xthr_wait(jua->thread, &th_ret);
 
 		jua->thread = NULL;
 	}
-
-	return UA_OK;
-}
-
-int uas_done(sipua_uas_t *sipuas)
-{
-	eXosipua_t *jua = (eXosipua_t*)sipuas;
-
-	time_end(jua->clock);
-
-	free(jua);
 
 	return UA_OK;
 }
@@ -647,9 +640,9 @@ int uas_unregist(sipua_uas_t *sipuas, char *userloc, char *registrar, char *id)
 {
 	int ret;
 	int regno = -1;
-
+    /*
 	eXosipua_t *jua = (eXosipua_t*)sipuas;
-	
+	*/
 	eXosip_lock();
 
 	regno = eXosip_register_init(userloc, registrar, id);
@@ -730,8 +723,9 @@ int uas_accept(sipua_uas_t* uas, int lineno)
 
 int uas_answer(sipua_uas_t* uas, sipua_set_t* call, int reply, char* reply_type, char* reply_body)
 {
-	eXosipua_t *jua = (eXosipua_t*)uas;
-	
+    /*
+    eXosipua_t *jua = (eXosipua_t*)uas;
+	*/
 	if(reply_body)
 	{
 		if(eXosip_answer_call_with_body(call->did, reply, reply_type, reply_body) == 0)
@@ -748,32 +742,38 @@ int uas_answer(sipua_uas_t* uas, sipua_set_t* call, int reply, char* reply_type,
 
 int uas_bye(sipua_uas_t* uas, sipua_set_t* call)
 {
-	eXosipua_t *jua = (eXosipua_t*)uas;
-	
+    /*
+    eXosipua_t *jua = (eXosipua_t*)uas;
+	*/
 	if(eXosip_terminate_call(call->cid, call->did) == 0)
 		return UA_OK;
 
 	return UA_FAIL;
 }
 
-sipua_uas_t* sipua_uas(int sip_port, char* nettype, char* addrtype, char* firewall, char* proxy)
+int uas_match_type(sipua_uas_t* uas, char *type)
 {
-	eXosipua_t *jua;
+    if(strcmp(type, "eXosipua")==0)
+        return 1;
 
-	sipua_uas_t *uas;
+	return 0;
+}
+
+int uas_init(sipua_uas_t* uas, int sip_port, char* nettype, char* addrtype, char* firewall, char* proxy)
+{
 
 	int ip_family;
 
 	if(strcmp(nettype, "IN") != 0)
 	{
 		jua_log(("sipua_uas: Current, Only IP networking supported\n"));
-		return NULL;
+		return UA_FAIL;
 	}
 
 	if(strcmp(addrtype, "IP4") != 0)
 	{
 		jua_log(("sipua_uas: Current, Only IPv4 networking supported\n"));
-		return NULL;
+		return UA_FAIL;
 	}
 		
 	ip_family = AF_INET;
@@ -781,41 +781,9 @@ sipua_uas_t* sipua_uas(int sip_port, char* nettype, char* addrtype, char* firewa
 	if (eXosip_init(stdin, stdout, sip_port) != 0)
     {
 		jua_log(("sipua_uas: could not initialize eXosip\n"));
-		return NULL;
+		return UA_FAIL;
     }
   
-	jua = xmalloc(sizeof(eXosipua_t));
-	if(!jua)
-	{
-		jua_log(("sipua_new: No memory\n"));
-		return NULL;
-	}
-
-	memset(jua, 0, sizeof(eXosipua_t));
-
-	jua->clock = time_start();
-
-	uas = (sipua_uas_t*)jua;
-
-	uas->start = uas_start;
-	uas->shutdown = uas_shutdown;
-
-	uas->address = uas_address;
-
-	uas->add_coding = uas_add_coding;
-	uas->clear_coding = uas_clear_coding;
-
-	uas->set_listener = uas_set_lisener;
-
-	uas->regist = uas_regist;
-	uas->unregist = uas_unregist;
-
-	uas->accept = uas_accept;
-
-	uas->invite = uas_invite;
-	uas->answer = uas_answer;
-	uas->bye = uas_bye;
-
 	/* detect local address */
 	eXosip_guess_ip_for_via(ip_family, uas->netaddr, 63);
 	if (uas->netaddr[0]=='\0')
@@ -839,9 +807,74 @@ sipua_uas_t* sipua_uas(int sip_port, char* nettype, char* addrtype, char* firewa
 	if(proxy)
 		strcpy(uas->proxy, proxy);
 
+
 	uas->portno = sip_port;
 	
 	jua_log(("sipua_uas: uas ready\n"));
 
+	return UA_OK;
+}
+
+int uas_done(sipua_uas_t *sipuas)
+{
+	xfree(sipuas);
+
+	return UA_OK;
+}
+
+module_interface_t* sipua_new_server()
+{
+	eXosipua_t *jua;
+
+	sipua_uas_t *uas;
+
+	jua = xmalloc(sizeof(eXosipua_t));
+	if(!jua)
+	{
+		jua_log(("sipua_new: No memory\n"));
+		return NULL;
+	}
+	memset(jua, 0, sizeof(eXosipua_t));
+
+	uas = (sipua_uas_t*)jua;
+
+	uas->match_type = uas_match_type;
+
+    uas->init = uas_init;
+	uas->done = uas_done;
+    
+	uas->start = uas_start;
+	uas->shutdown = uas_shutdown;
+
+	uas->address = uas_address;
+
+	uas->add_coding = uas_add_coding;
+	uas->clear_coding = uas_clear_coding;
+
+	uas->set_listener = uas_set_lisener;
+
+	uas->regist = uas_regist;
+	uas->unregist = uas_unregist;
+
+	uas->accept = uas_accept;
+
+	uas->invite = uas_invite;
+	uas->answer = uas_answer;
+	uas->bye = uas_bye;
+
 	return uas;
 }
+
+/**
+ * Loadin Infomation Block
+ */
+extern DECLSPEC module_loadin_t mediaformat =
+{
+   "uas",   /* Label */
+
+   000001,         /* Plugin version */
+   000001,         /* Minimum version of lib API supportted by the module */
+   000001,         /* Maximum version of lib API supportted by the module */
+
+   sipua_new_server   /* Module initializer */
+};

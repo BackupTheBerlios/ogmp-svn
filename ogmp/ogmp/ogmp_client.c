@@ -20,6 +20,11 @@
 
 #include <timedia/xstring.h>
 #include <timedia/xmalloc.h>
+#include <stdarg.h>
+
+#define OGMP_VERSION  1
+
+ogmp_ui_t* global_ui = NULL;
 
 #define CLIE_LOG
 
@@ -190,10 +195,10 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		case(SIPUA_EVENT_ANSWERED):
 		{
 			/* Caller establishs call when callee is answered */
-
-			sipua_set_t *call = e->call_info;
-			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
-
+			sipua_set_t *call = e->call_info; 
+            /*
+            sipua_call_event_t *call_e = (sipua_call_event_t*)e;
+            */
 			rtpcap_set_t* rtpcapset;
 
 			sdp_message_t *sdp_message;
@@ -221,8 +226,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		}
 		case(SIPUA_EVENT_ACK):
 		{
-			/* Callee establishs call after its answer is acked */
-			sipua_set_t *call = e->call_info;
+			/* Callee establishs call after its answer is acked
+			sipua_set_t *call = e->call_info; */
 
 			/* rtp sessions created */
 			sipua_establish_call(sipua, e->call_info, "playback", e->call_info->rtpcapset, client->format_handlers, client->control, client->pt);
@@ -263,12 +268,16 @@ int client_done_call(sipua_t* sipua, sipua_set_t* set)
 	ogmp_client_t *ua = (ogmp_client_t*)sipua;
 
 	if(ua->call != set)
+    {
 		for(i=0; i<MAX_SIPUA_LINES; i++)
+        {
 			if(ua->lines[i] == set)
 			{
 				ua->lines[i] = NULL;
 				break;
 			}
+        }
+    }
 	else
 	{
 		ua->call = NULL;
@@ -380,9 +389,11 @@ int client_set_profile(sipua_t* sipua, user_profile_t* prof)
 }
 
 user_profile_t* client_profile(sipua_t* sipua)
+
 {
 	return ((ogmp_client_t*)sipua)->user_prof;
 }
+
 
 int client_regist(sipua_t *sipua, user_profile_t *user, char * userloc)
 {
@@ -492,10 +503,12 @@ media_source_t* client_open_source(sipua_t* sipua, char* name, char* mode, void*
 	return source_open(name, client->control, mode, param);
 }
 
+
 int client_close_source(sipua_t* sipua, media_source_t* src)
 {
-	ogmp_client_t *client = (ogmp_client_t*)sipua;
-
+    /*
+    ogmp_client_t *client = (ogmp_client_t*)sipua;
+    */
 	return src->done(src);
 }
 
@@ -512,8 +525,11 @@ media_source_t* client_set_background_source(sipua_t* sipua, char* name)
 
 	if(name && name[0])
 	{
-		client->backgroud_source = source_open(name, client->control, "netcast");
+        /*
+        client->backgroud_source = source_open(name, client->control, "netcast", );
+        */
 	} 
+
 
 	return client->backgroud_source;
 }
@@ -626,34 +642,113 @@ int client_answer(sipua_t *sipua, sipua_set_t* call, int reply)
 	return UA_OK;
 }
 
-sipua_t* client_new_sipua(sipua_uas_t* uas, int bandwidth)
+int client_done_ui(void* gen)
+{
+    ogmp_ui_t* ui = (ogmp_ui_t*)gen;
+
+    ui->done(ui);
+    global_ui = NULL;
+
+    return UA_OK;
+}
+
+ogmp_ui_t* client_new_ui(module_catalog_t* mod_cata, char* type)
+{
+    ogmp_ui_t* ui = NULL;
+    
+    xlist_user_t lu;
+    xlist_t* uis  = xlist_new();
+    int found = 0;
+    
+    int nmod = catalog_create_modules (mod_cata, "ui", uis);
+    if(nmod)
+    {
+        ui = (ogmp_ui_t*)xlist_first(uis, &lu);
+        while(ui)
+        {
+            if(ui->match_type(ui, type))
+            {
+                xlist_remove_item(uis, ui);
+                found = 1;
+                break;
+            }
+
+            ui = xlist_next(uis, &lu);
+        }
+    }
+
+    xlist_done(uis, client_done_ui);
+
+    if(!found)
+        return NULL;
+
+    global_ui = ui;
+    
+    return ui;
+}
+
+int log_printf(char *fmt, ...)
+{
+	int ret;
+    int loglen;
+    char* logbuf;
+    
+    va_list ap;
+    
+	va_start (ap, fmt);
+
+    if(global_ui == NULL)
+    {
+        ret = vprintf(fmt, ap);
+        
+        va_end(ap);
+
+        return ret;
+    }
+
+    loglen = global_ui->logbuf(global_ui, &logbuf);
+
+    vsnprintf(logbuf, loglen, fmt, ap);
+
+	va_end(ap);
+
+	ret = global_ui->print_log(global_ui, logbuf);
+
+	return ret;
+}
+
+sipua_t* client_new_sipua(sipua_uas_t* uas, module_catalog_t* mod_cata, int bandwidth)
 {
 	int nmod;
 	int nformat;
 
 	ogmp_client_t *client=NULL;
-	module_catalog_t *mod_cata = NULL;
 
 	sipua_t* sipua;
 
 	client = xmalloc(sizeof(ogmp_client_t));
 	memset(client, 0, sizeof(ogmp_client_t));
 
+	client->ui = client_new_ui(mod_cata, "cursesui");
+    if(client->ui == NULL)
+    {
+        clie_log (("client_new: No cursesui module found!\n"));
+        xfree(client);
+
+        return NULL;
+    }
+    
 	sipua = (sipua_t*)client;
-	client->ui = ogmp_new_ui(sipua);
+
+    client->ui->set_sipua(client->ui, sipua);
 
 	client->control = new_media_control();
 
 	client->course_lock = xthr_new_lock();
 	client->wait_course_finish = xthr_new_cond(XTHREAD_NONEFLAGS);
 
-	clie_log (("client_new: modules in dir:%s\n", MODDIR));
-
 	/* Initialise */
 	client->conf = conf_new ( "ogmprc" );
-   
-	mod_cata = catalog_new( "mediaformat" );
-	catalog_scan_modules ( mod_cata, VERSION, MODDIR );
    
 	client->format_handlers = xlist_new();
 
@@ -747,15 +842,71 @@ int client_start(sipua_t* sipua)
 	return MP_OK;
 }
 
+int client_done_uas(void* gen)
+{
+    sipua_uas_t* uas = (sipua_uas_t*)gen;
+
+    uas->done(uas);
+
+    return UA_OK;
+}
+
+sipua_uas_t* client_new_uas(module_catalog_t* mod_cata, char* type)
+{
+    sipua_uas_t* uas = NULL;
+
+    xlist_user_t lu;
+    xlist_t* uases  = xlist_new();
+    int found = 0;
+
+    int nmod = catalog_create_modules (mod_cata, "uas", uases);
+    if(nmod)
+    {
+        uas = (sipua_uas_t*)xlist_first(uases, &lu);
+        while(uas)
+        {
+            if(uas->match_type(uas, type))
+            {
+                xlist_remove_item(uases, uas);
+                found = 1;
+                break;
+            }
+
+            uas = xlist_next(uases, &lu);
+        }
+    }
+
+    xlist_done(uases, client_done_uas);
+
+    if(!found)
+        return NULL;
+
+    return uas;
+}
+
 int main(int argc, char** argv)
 {
-	sipua_uas_t* uas = sipua_uas(5060, "IN", "IP4", NULL, NULL);
+    sipua_t* sipua = NULL;
+	module_catalog_t *mod_cata = NULL;
+    
+	clie_log (("main: modules in dir:'%s'\n", MOD_DIR));
 
-	if(uas)
+	mod_cata = catalog_new( "mediaformat" );
+    
+	catalog_scan_modules ( mod_cata, OGMP_VERSION, MOD_DIR );
+    
+	sipua_uas_t* uas = client_new_uas(mod_cata, "eXosipua");
+    if(!uas)
+        clie_log (("main: fail to create sipua server!\n"));
+    
+	if(uas && uas->init(uas, 5060, "IN", "IP4", NULL, NULL) >= UA_OK)
 	{
-		sipua_t* sipua = client_new_sipua(uas, 64*1024);
+		sipua = client_new_sipua(uas, mod_cata, 64*1024);
 
-		client_start(sipua);
+        if(sipua)
+            client_start(sipua);
+        else
+            clie_log (("main: fail to create sipua!\n"));
 	}
 
 	return 0;

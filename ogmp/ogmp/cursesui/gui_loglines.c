@@ -54,8 +54,6 @@ int window_loglines_print(gui_t* gui, int wid)
 
 	int ln, n;
 
-	ogmp_curses_t* ocui = gui->topui;
-
 	gui->parent = wid;
   
 	getmaxyx(stdscr,y,x);
@@ -100,8 +98,6 @@ gui_t* window_loglines_new(ogmp_curses_t* topui)
 
 int window_loglines_done(gui_t* gui)
 {
-	ogmp_curses_t* ocui = gui->topui;
-
 	xthr_done_lock(log_lock);
 
 	return 0;

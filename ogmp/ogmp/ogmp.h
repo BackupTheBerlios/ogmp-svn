@@ -28,9 +28,9 @@
 
 #include "sipua.h"
 #include "rtp_cap.h"
-
+/*
 #define VERSION 1
-
+*/
 #define SEND_IP "127.0.0.1"
 #define SIP_SESSION_ID "20040922"
 #define SIP_SESSION_NAME "ogmp voip"
@@ -43,16 +43,13 @@
 
 #define MAX_NCAP 16
 
-#ifndef MODDIR
- #define MODDIR "."
+#ifndef MOD_DIR
+ #define MOD_DIR "."
 #endif
 
-#ifndef MEDDIR
- #define MEDDIR "samples"
+#ifndef MED_DIR
+ #define MED_DIR "samples"
 #endif
-
-//#define FNAME "Dido_LifeForRent.ogg"
-#define FNAME "cairo1.spx"
 
 #define COMMAND_TYPE_GOON			0
 #define COMMAND_TYPE_EXIT			1
@@ -66,14 +63,22 @@ typedef struct ogmp_source_s ogmp_source_t;
 typedef struct ogmp_ui_s ogmp_ui_t;
 struct ogmp_ui_s
 {
+	int (*done)(ogmp_ui_t *ui);
+	int (*match_type)(ogmp_ui_t *ui, char* type);
+    int (*set_sipua)(ogmp_ui_t *ui, sipua_t* sipua);
+    
 	int (*show)(ogmp_ui_t *ui);
+    
+    int (*logbuf)(ogmp_ui_t *ui, char** buf);
+    int (*print_log)(ogmp_ui_t *ui, char* buf);
+    
 	ogmp_command_t*(*wait_command)(ogmp_ui_t *ui);
 };
-
+/*
 extern DECLSPEC
 ogmp_ui_t* 
 ogmp_new_ui(sipua_t* sipua);
-
+*/
 struct ogmp_command_s
 {
 	int type;
@@ -122,6 +127,7 @@ struct ogmp_client_s
 
 	uint16 default_rtp_portno;
 	uint16 default_rtcp_portno;
+
 
 	int pt[MAX_PAYLOAD_TYPE];
 
@@ -177,3 +183,4 @@ int client_call(ogmp_client_t *client, char *regname);
 
 media_source_t* source_open(char* name, media_control_t* control, char* mode, void* extra);
 ogmp_setting_t* source_setting(media_control_t *control);
+

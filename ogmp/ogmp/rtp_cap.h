@@ -37,8 +37,9 @@ struct rtp_coding_s
 {
 	char mime[MAX_MIME_BYTES];
 
-	int clockrate;
+	int clockrate;    
 	int param;
+    
 	int pt;  /* <0 means dyna */
 };
 
@@ -54,7 +55,7 @@ struct rtp_profile_setting_s
 };
 
 typedef struct rtp_profile_set_s rtp_profile_set_t;
-typedef struct rtp_profile_set_s
+struct rtp_profile_set_s
 {
 	int npayload;
 	rtp_coding_t coding[MAX_NPAYLOAD_PRESET];
@@ -132,6 +133,7 @@ struct rtpcap_sdp_s
 {
 	sdp_message_t *sdp_message;
 	int sdp_media_pos;
+
 };
 
 typedef struct transmit_source_s transmit_source_t;

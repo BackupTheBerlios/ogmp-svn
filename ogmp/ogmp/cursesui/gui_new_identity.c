@@ -40,7 +40,9 @@ gui_t gui_window_new_identity =
 	NULL
 };
 
+#ifndef	LINE_MAX
 #define LINE_MAX 128
+#endif
 
 #define NEWID_FULLNAME	0
 #define NEWID_BOOKLOC	1
@@ -231,7 +233,7 @@ int window_new_identity_run_command(gui_t* gui, int c)
 			
 			if(newid_fullname[0] && newid_registary[0] && newid_regname[0])
 			{
-				int n = user_add_profile(ocui->user, newid_fullname, strlen(newid_fullname),
+				user_add_profile(ocui->user, newid_fullname, strlen(newid_fullname),
 											newid_bookloc, newid_registary, 
 											newid_regname, sec);
 				
@@ -254,7 +256,7 @@ int window_new_identity_run_command(gui_t* gui, int c)
 		}
 		default:
 		{
-			if(editline_append(newid_edit[cursor_newid], &((char)c), 1) == 0)
+			if(editline_append(newid_edit[cursor_newid], (char*)&c, 1) == 0)
 				beep();
 	
 			return -1;

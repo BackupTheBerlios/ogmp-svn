@@ -44,9 +44,7 @@ int cursor_insubscriptions_list = 0;
 
 int window_insubscriptions_list_print(gui_t* gui, int wid)
 {
-	int k, pos;
 	int y,x;
-	char buf[250];
 
 	gui->parent = wid;
 
@@ -67,6 +65,8 @@ int window_insubscriptions_list_print(gui_t* gui, int wid)
 
 	attrset(COLOR_PAIR(0));
 #if 0
+	int k, pos;
+	char buf[250];
 	pos=1;
 	for (k=0; k<MAX_NUMBER_OF_INSUBSCRIPTIONS; k++)
     {
@@ -158,12 +158,10 @@ void window_insubscriptions_list_draw_commands(gui_t* gui)
 int window_insubscriptions_list_run_command(gui_t* gui, int c)
 {
 	/*jinsubscription_t *js;*/
-	int i;
 	int max;
 	int y,x;
 
 	int do_notify = 0;
-	int do_allnotify = 0;
 	int online_state;
 	int sub_state;
 
@@ -181,6 +179,8 @@ int window_insubscriptions_list_run_command(gui_t* gui, int c)
 	else
 		max = gui->y1 - gui->y0 + 2;
 #if 0
+	int i;
+	int do_allnotify = 0;
 	i = jinsubscription_get_number_of_pending_insubscriptions();
 	if (i<max) 
 		max=i;

@@ -171,8 +171,6 @@ int ogm_new_all_player(media_format_t *mf, media_control_t* ctrl, char* mode, vo
 
 	while (cur != NULL)
 	{
-		ogm_stream_t* ogm_strm = (ogm_stream_t*)cur;
-
 		cur->player = ctrl->find_player(ctrl, mode, cur->media_info->mime, cur->media_info->fourcc, mode_param);
 			
 		if(!cur->player)
@@ -264,7 +262,7 @@ media_player_t * ogm_new_mime_player(media_format_t * mf, char * mime, media_con
 	return NULL;
 }
 
-int ogm_set_mime_player(media_format_t *mf, const char *mime, media_player_t* player)
+int ogm_set_mime_player(media_format_t *mf, char *mime, media_player_t* player)
 {
 	media_stream_t *cur = mf->first;
 
@@ -417,6 +415,7 @@ int demux_ogm_write_page(ogm_stream_t *stream, ogg_packet *op)
 
    return MP_OK;
 }
+
 
 /* Read ogm packet from file */
 static int ogm_read_page (ogm_format_t * ogm)
@@ -984,6 +983,7 @@ int ogm_demux_next (media_format_t *mf, int stream_end)
 
 		 page_bytes += dual_pack[send]->bytes;
 
+
          ogm->packet_ready = 0;
          
          ogm_log(("ogm_demux_next: %d packet(s) %d bytes found in the #%d:Page[%lld]\n", n_pack, page_bytes, sno, page_granul));
@@ -1075,7 +1075,7 @@ int ogm_set_control (media_format_t * mf, media_control_t * control)
 int ogm_set_player (media_format_t * mf, media_player_t * player)
 {
    int ret;
-   const char * type;
+   char* type;
 
    type = player->media_type(player);
    if ( (ret = ogm_set_mime_player (mf, type, player)) >= MP_OK )

@@ -112,6 +112,7 @@ rtpcap_descript_t* rtp_capable_descript(int payload_no,
 	rtpcap->clockrate = clockrate;
 	rtpcap->coding_param = coding_param;
 
+
 	rtpcap->sdp_message = sdp_message;
 
 	return rtpcap;
@@ -218,10 +219,12 @@ int rtp_capable_to_sdp (rtpcap_descript_t* rtpcap, sdp_message_t *sdp, int pos)
 	p++;
 	strcpy(coding_type, p);
 
-	/* media_port */
-	itoa(rtpcap->rtp_portno, media_port, 10);
-	/* rtpmap no */
-	itoa(rtpcap->profile_no, rtpmapno, 10);
+	/* media_port: itoa(rtpcap->rtp_portno, media_port, 10);
+    */
+    snprintf(media_port, 8, "%d", rtpcap->rtp_portno);
+	/* rtpmap no: itoa(rtpcap->profile_no, rtpmapno, 10);
+    */
+    snprintf(rtpmapno, 4, "%d", rtpcap->profile_no);
 
 	sdp_message_m_media_add (sdp, xstr_clone(media_type), xstr_clone(media_port), xstr_clone("2"), xstr_clone("RTP/AVP"));
 
@@ -239,13 +242,15 @@ int rtp_capable_to_sdp (rtpcap_descript_t* rtpcap, sdp_message_t *sdp, int pos)
 		p++;
 	*p = '/';
 	p++;
-	itoa(rtpcap->clockrate, p, 10);
+	/*itoa(rtpcap->clockrate, p, 10);*/
+    snprintf(p, 64-(p-rtpmap), "%d", rtpcap->clockrate);
 	
 	while(*p)
 		p++;
 	*p = '/';
 	p++;
-	itoa(rtpcap->coding_param, p, 10);
+	/*itoa(rtpcap->coding_param, p, 10);*/
+    snprintf(p, 64-(p-rtpmap), "%d", rtpcap->coding_param);
 
 	sdp_message_a_attribute_add (sdp, pos, xstr_clone("rtpmap"), xstr_clone(rtpmap));
 
@@ -255,11 +260,7 @@ int rtp_capable_to_sdp (rtpcap_descript_t* rtpcap, sdp_message_t *sdp, int pos)
 rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 {
 	/* Retrieve capable from the sdp message */
-	int ncap = 0;
-
 	char *media_type; /* "audio"; "video"; etc */
-
-	int payload_no = 0;
 
 	char *protocol; /* "RTP/AVP" */
 

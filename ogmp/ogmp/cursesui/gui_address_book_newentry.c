@@ -41,7 +41,9 @@ gui_t gui_window_address_book_newentry =
 	NULL
 };
 
+#ifndef	LINE_MAX
 #define LINE_MAX 128
+#endif
 
 #define NEWENTRY_NAME	0
 #define NEWENTRY_MEMO	1
@@ -234,7 +236,7 @@ int window_address_book_newentry_run_command(gui_t* gui, int c)
 		}
 		default:
 		{
-			if(editline_append(newentry_edit[cursor_newentry], &((char)c), 1) == 0)
+			if(editline_append(newentry_edit[cursor_newentry], (char*)&c, 1) == 0)
 				beep();
 	
 			return -1;

@@ -41,9 +41,9 @@
 #include <timedia/os.h>
 #include <timedia/xmalloc.h>
 
-char log_buf3[200] = { '\0' };
-char log_buf2[200] = { '\0' };
-char log_buf1[200] = { '\0' };
+char log_buf3[LOG_LEN] = { '\0' };
+char log_buf2[LOG_LEN] = { '\0' };
+char log_buf1[LOG_LEN] = { '\0' };
 
 xthr_lock_t *log_lock = NULL;
 
@@ -87,6 +87,7 @@ struct colordata color[]=
 	{COLOR_BLACK,        COLOR_BLACK,    0	}, /* 7 help */
 	{COLOR_BLACK,        COLOR_RED,      0	}, /* 7 help */
 	{COLOR_BLACK,        COLOR_GREEN,    0	}, /* 7 help */
+
 	{COLOR_BLACK,        COLOR_YELLOW,   0	}, /* 7 help */
 	{COLOR_BLACK,        COLOR_BLUE,     0	}, /* 7 help */
 	{COLOR_BLACK,        COLOR_MAGENTA,  0	}, /* 7 help */
@@ -159,63 +160,6 @@ void cursesoff()
 	}
   
 	cursesareon=0;
-}
-
-int log_printf(char *chfr, ...)
-{
-	va_list ap;
-	
-	char buf[256], *p;
-	int i=0;
-	int ln;
-
-	int ret;
-  
-	VA_START (ap, chfr);
-
-	ret = vsnprintf(buf, 255, chfr, ap);
-
-	xthr_lock(log_lock);
-
-	p = buf;
-
-	if(log_nline > 0)
-		ln = (log_lnn + 1) % log_maxline;
-	else
-		ln = log_lnn;
-
-	while(1)
-	{
-		if(*p == '\n' || i == log_maxlen-1)
-		{
-			log_buf[ln][i] = '\0';
-			i = 0;
-
-			log_lnn = ln;
-			if(log_lnn == log_ln1)
-				log_ln1 = (log_ln1 + 1) % log_maxline;
-
-			ln = (ln + 1) % log_maxline;
-
-			if(log_nline < log_maxline)
-				log_nline++;
-		}
-		else
-		{
-			log_buf[ln][i++] = *p;
-		
-			if(*p == '\0')
-				break;
-		}
-
-		p++;
-	}
-
-	xthr_unlock(log_lock);
-
-	va_end (ap);
-
-	return ret;
 }
 
 int gui_clear(ogmp_curses_t* ocui)
@@ -586,6 +530,7 @@ gui_show_window(gui_t* gui, int wid, int parent)
 {
 	ogmp_curses_t* ocui = gui->topui;
 
+
 	ocui->active_gui->on_off = GUI_OFF;
 
 	if (ocui->gui_windows[EXTRAGUI] != NULL)
@@ -655,6 +600,7 @@ gui_show(ogmp_ui_t* ogui)
 
 	ocui->quit = 0;
 	while(!ocui->quit)
+
     {
 		int key;
 		int i;
@@ -718,13 +664,9 @@ gui_show(ogmp_ui_t* ogui)
 	return UA_OK;
 }
 
-ogmp_ui_t* ogmp_new_ui(sipua_t* sipua)
+int gui_set_sipua(ogmp_ui_t* ui, sipua_t* sipua)
 {
-	ogmp_ui_t* ogui;
-
-	ogmp_curses_t *ocui = xmalloc(sizeof(ogmp_curses_t));
-
-	memset(ocui, 0, sizeof(ogmp_curses_t));
+	ogmp_curses_t *ocui = (ogmp_curses_t*)ui;
 
 	ocui->gui_windows[TOPGUI] = window_topline_new(ocui);
 	ocui->gui_windows[ICONGUI] = window_icon_new(ocui);
@@ -745,16 +687,122 @@ ogmp_ui_t* ogmp_new_ui(sipua_t* sipua)
 	ocui->gui_windows[GUI_PROFILES] = window_profiles_new(ocui);
 	ocui->gui_windows[GUI_MESSAGE] = window_message_new(ocui);
 	ocui->gui_windows[GUI_AUDIOTEST] = window_audio_test_new(ocui);
-	
+
 	ocui->nwin = 17;
 
 	ocui->gui_windows[GUI_LOGLINES] = ocui->gui_windows[LOGLINESGUI];
 
 	ocui->sipua = sipua;
 
+	return UA_OK;
+}
+
+int gui_match_type(ogmp_ui_t* ui, char *type)
+{
+    if(strcmp(type, "cursesui")==0)
+        return 1;
+
+	return 0;
+}
+
+int gui_logbuf(ogmp_ui_t* ui, char **buf)
+{
+	ogmp_curses_t *ocui = (ogmp_curses_t*)ui;
+
+    *buf = ocui->log_buf;
+
+    return LOG_LEN;
+}
+
+int gui_print_log(ogmp_ui_t* ogui, char *buf)
+{
+	char *p;
+	int i=0;
+	int ln;
+
+	int ret;
+
+	xthr_lock(log_lock);
+
+	p = buf;
+
+	if(log_nline > 0)
+		ln = (log_lnn + 1) % log_maxline;
+	else
+		ln = log_lnn;
+
+	while(1)
+	{
+		if(*p == '\n' || i == log_maxlen-1)
+		{
+			log_buf[ln][i] = '\0';
+			i = 0;
+
+			log_lnn = ln;
+			if(log_lnn == log_ln1)
+				log_ln1 = (log_ln1 + 1) % log_maxline;
+
+			ln = (ln + 1) % log_maxline;
+
+			if(log_nline < log_maxline)
+				log_nline++;
+		}
+		else
+		{
+			log_buf[ln][i++] = *p;
+
+			if(*p == '\0')
+				break;
+		}
+
+		p++;
+	}
+
+	xthr_unlock(log_lock);
+
+	return ret;
+}
+
+int gui_done(ogmp_ui_t* ui)
+{
+    xfree(ui);
+
+	return UA_OK;
+}
+
+module_interface_t* ogmp_new_ui()
+{
+	ogmp_ui_t* ogui;
+
+	ogmp_curses_t *ocui = xmalloc(sizeof(ogmp_curses_t));
+    if(!ocui)
+        return NULL;
+    
+	memset(ocui, 0, sizeof(ogmp_curses_t));
+    
 	ogui = (ogmp_ui_t*)ocui;
 
-	ogui->show = gui_show;
+	ogui->done = gui_done;
+    ogui->match_type = gui_match_type;
+	ogui->set_sipua = gui_set_sipua;
 
-	return (ogmp_ui_t*)ocui;
+	ogui->show = gui_show;
+    ogui->logbuf = gui_logbuf;
+    ogui->print_log = gui_print_log;
+    
+	return ogui;
 }
+
+/**
+ * Loadin Infomation Block
+ */
+extern DECLSPEC module_loadin_t mediaformat =
+{
+   "ui",   /* Label */
+
+   000001,         /* Plugin version */
+   000001,         /* Minimum version of lib API supportted by the module */
+   000001,         /* Maximum version of lib API supportted by the module */
+
+   ogmp_new_ui   /* Module initializer */
+};

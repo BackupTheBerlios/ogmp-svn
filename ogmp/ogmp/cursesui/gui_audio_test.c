@@ -40,12 +40,13 @@ gui_t gui_window_audio_test =
 	NULL
 };
 
+#ifndef	LINE_MAX
 #define LINE_MAX 128
+#endif
 
 #define AUDIOTEST_FILE		0
-#define AUDIOTEST_MIME		1
 
-char audio_test_inputs[2][LINE_MAX];
+char audio_test_inputs[1][LINE_MAX];
 editline_t *audio_test_edit[2];
 
 int cursor_audio_test = 0;
@@ -110,28 +111,12 @@ int window_audio_test_print(gui_t* gui, int wid)
 	snprintf(buf, 25, "%19.19s", "Media File :");
 	mvaddstr(gui->y0+1, gui->x0, buf);
   
-	if(cursor_audio_test == AUDIOTEST_MIME)
-		attrset(COLOR_PAIR(10));
-	else
-		attrset(COLOR_PAIR(1));
-
-	snprintf(buf, 25, "%19.19s", "Media MIME Type :");
-	mvaddstr(gui->y0+2, gui->x0, buf);
-  
 	attrset(COLOR_PAIR(0));
 	mvaddstr(gui->y0+1, gui->x0+20, audio_test_inputs[AUDIOTEST_FILE]);
 	if(cursor_audio_test == AUDIOTEST_FILE)
 	{
 		attrset(COLOR_PAIR(10));
 		mvaddch(gui->y0+1, gui->x0+20+pos, c);
-	}
-
-	attrset(COLOR_PAIR(0));
-	mvaddstr(gui->y0+2, gui->x0+20, audio_test_inputs[AUDIOTEST_MIME]);
-	if(cursor_audio_test == AUDIOTEST_MIME)
-	{
-		attrset(COLOR_PAIR(10));
-		mvaddch(gui->y0+2, gui->x0+20+pos, c);
 	}
 
 	gui->gui_draw_commands(gui);
@@ -172,7 +157,7 @@ int window_audio_test_run_command(gui_t* gui, int c)
 	if(gui->ycursor == -1)
 		gui->ycursor = 0;
 
-	max = 3;
+	max = 1;
 
 	switch (c)
     {
@@ -230,10 +215,9 @@ int window_audio_test_run_command(gui_t* gui, int c)
 		}
 		case 1:  /* Ctrl-A */
 		{
-			if(!audio_test_source && audio_test_inputs[AUDIOTEST_FILE][0] && audio_test_inputs[AUDIOTEST_MIME][0])
+			if(!audio_test_source && audio_test_inputs[AUDIOTEST_FILE][0])
 			{
 				char* fname = audio_test_inputs[AUDIOTEST_FILE];
-				char* mime = audio_test_inputs[AUDIOTEST_MIME];
 
 				audio_test_source = ocui->sipua->open_source(ocui->sipua, fname, "playback", NULL);
 				
@@ -269,10 +253,9 @@ int window_audio_test_run_command(gui_t* gui, int c)
 		}
 		case 18:  /* Ctrl-S */
 		{
-			if(!audio_test_source && audio_test_inputs[AUDIOTEST_FILE][0] && audio_test_inputs[AUDIOTEST_MIME][0])
+			if(!audio_test_source && audio_test_inputs[AUDIOTEST_FILE][0])
 			{
 				char* name = audio_test_inputs[AUDIOTEST_FILE];
-				char* mime = audio_test_inputs[AUDIOTEST_MIME];
 				
 				if(ocui->sipua->set_background_source(ocui->sipua, name)==NULL)
 				{
@@ -287,7 +270,7 @@ int window_audio_test_run_command(gui_t* gui, int c)
 		}
 		default:
 		{
-			if(editline_append(audio_test_edit[cursor_audio_test], &((char)c), 1) == 0)
+			if(editline_append(audio_test_edit[cursor_audio_test], (char*)&c, 1) == 0)
 				beep();
 	
 			return -1;
@@ -304,7 +287,6 @@ gui_t* window_audio_test_new(ogmp_curses_t* topui)
 	memset(audio_test_inputs, 0, sizeof(audio_test_inputs));
 
 	audio_test_edit[AUDIOTEST_FILE] = editline_new(audio_test_inputs[AUDIOTEST_FILE], LINE_MAX);
-	audio_test_edit[AUDIOTEST_MIME] = editline_new(audio_test_inputs[AUDIOTEST_MIME], LINE_MAX);
 
 	return &gui_window_audio_test;
 }
@@ -312,7 +294,6 @@ gui_t* window_audio_test_new(ogmp_curses_t* topui)
 int window_audio_test_done(gui_t* gui)
 {
 	editline_done(audio_test_edit[AUDIOTEST_FILE]);
-	editline_done(audio_test_edit[AUDIOTEST_MIME]);
 
 	return 0;
 }

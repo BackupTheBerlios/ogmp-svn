@@ -49,6 +49,7 @@ int sipua_book_pt(int *pt)
 		}
 	}
 	
+
 	return -1;
 }
 
@@ -150,7 +151,7 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 	/* generate id and version */
 	if(id == NULL)
 	{
-		sprintf(tmp, "%i", time(NULL));
+		sprintf(tmp, "%i", (int)time(NULL));
 		set->setid.id = xstr_clone(tmp);
 	}
 	else
@@ -164,7 +165,7 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 		set->setid.netaddr = xstr_clone(netaddr);
 	}
 
-	sprintf(tmp, "%i", time(NULL));
+	sprintf(tmp, "%i", (int)time(NULL));
 	set->version = xstr_clone(tmp);
 
 	sipua->uas->clear_coding(sipua->uas);
@@ -263,6 +264,7 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 
 /* Create a empty call from incoming sdp, and generate new sdp */
 sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof, 
+
 								rtpcap_set_t* rtpcapset,
 								char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
 								int nmedia, media_control_t* control)
@@ -304,6 +306,7 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 	/* call owner identification */
 	set->setid.id = xstr_clone(rtpcapset->callid);
 	set->setid.username = rtpcapset->username;
+
 	set->setid.nettype = xstr_clone(rtpcapset->nettype);
 	set->setid.addrtype = xstr_clone(rtpcapset->addrtype);
 	set->setid.netaddr = xstr_clone(rtpcapset->netaddr);
@@ -425,10 +428,7 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
 
 	int bw = 0;
 	int bw_budget;
-	int bw_rtp=0;
 	module_catalog_t *cata;
-
-	user_profile_t* user_prof = call->user_prof;
 
 	/* define a player */
 	media_format_t *format;

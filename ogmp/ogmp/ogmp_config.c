@@ -23,7 +23,8 @@ rtp_profile_set_t profile_list =
 	{profile_mime, profile_no, rtp_portno, rtcp_portno, total_bandwidth, rtp_bandwidth}
 	{"audio/vorbis", 97, 0, 0, 256*1024, 128*1024}
 	*/
-	1, {"audio/speex", 8000}
+	1,
+    {{"audio/speex", 8000, 1, PAYLOADTYPE_DYNA}}
 };
 
 /* ui to config rtp module */
@@ -51,14 +52,15 @@ int client_config_rtp(void *conf, control_setting_t *setting)
    return MP_OK;
 }
 
-ogmp_setting_t serv_setting = 
+ogmp_setting_t src_setting = 
 {
 	"IN",		/* nettype */
 	"IP4",		/* addrtype */
 	3004,		/* default rtp portno */
 	3005,		/* default rtcp portno */
 	
-	1, {"audio/speex", 8000, 1, PAYLOADTYPE_DYNA}
+	1,
+    {{"audio/speex", 8000, 1, PAYLOADTYPE_DYNA}}
 };
 
 ogmp_setting_t clie_setting = 
@@ -68,12 +70,13 @@ ogmp_setting_t clie_setting =
 	4004,		/* default rtp portno */
 	4005,		/* default rtcp portno */
 
-	1, {"audio/speex", 8000, 1, PAYLOADTYPE_DYNA}
+	1,
+    {{"audio/speex", 8000, 1, PAYLOADTYPE_DYNA}}
 };
 
 ogmp_setting_t* source_setting(media_control_t *control)
 {
-	return &serv_setting;
+	return &src_setting;
 }
 
 ogmp_setting_t* client_setting(media_control_t *control)
