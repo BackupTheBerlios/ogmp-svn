@@ -557,7 +557,7 @@ uint8 vorbis_rtp_mark_complete(uint8 h, int comp){
 }
 uint8 vorbis_rtp_set_number(uint8 h, uint8 n){
 
-	return (h&0xE0 | n&0x1F);  /* '11100000' '00011111' */
+	return ((h&0xE0) | (n&0x1F));  /* '11100000' '00011111' */
 }
 
 int rtp_vorbis_loop(void *gen){
@@ -624,7 +624,7 @@ int rtp_vorbis_loop(void *gen){
 		xthr_unlock(profile->packets_lock);
 
 		/* Test purpose */
-		vrtp_log(("audio/vorbis.rtp_vorbis_post: process packet %d bytes\n", rtpf->unit_bytes));
+		vrtp_log(("audio/vorbis.rtp_vorbis_post: process packet %ld bytes\n", rtpf->unit_bytes));
 		/* Test end */
 		
 		/* frame is retrieved, process ... */
@@ -792,8 +792,6 @@ int rtp_vorbis_post(xrtp_media_t * media, media_data_t *frame, int len_useless, 
 
    rtp_frame_t *rtpf = (rtp_frame_t*)frame;
 
-   long  media_bytes = rtpf->unit_bytes;
-   
    vrtp_handler_t *profile = ((vrtp_media_t*)media)->vorbis_profile;
 
    xthr_lock(profile->packets_lock);
@@ -951,6 +949,7 @@ int vrtp_done_handler(profile_handler_t * h){
  * Methods for module initializing
  */
 module_interface_t * module_init(){
+
 
    vrtp = (profile_class_t *)malloc(sizeof(profile_class_t));
 

@@ -12,8 +12,8 @@ INCLUDES = -I$(PREFIX)/include
 
 INSTDIR = $(PREFIX)/bin
 
-SRCFILES = ogmp.c media_control.c ogmp_server.c
-OBJFILES = ogmp.o media_control.o ogmp_server.o
+SRCFILES = ogmp.c media_control.c ogmp_server.c fifo.c
+OBJFILES = ogmp.o media_control.o ogmp_server.o fifo.o
 
 BINFILES = ogmp
 

@@ -411,6 +411,7 @@ sample_buffer_t * pout_switch_buffer(timed_pipe_t *pipe) {
 
       recyc->frame_head = f->next;
 
+
       pout_recycle_frame((media_pipe_t*)pipe, f);
 
       f = recyc->frame_head;
@@ -460,7 +461,7 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
    if (!pipe->buffered) {
    
       /* buffer certain number frames before play back */
-      sample_buffer_t * bufw = &(pipe->buffer[pipe->bufn_write]);
+      //sample_buffer_t * bufw = &(pipe->buffer[pipe->bufn_write]);
       
       memset(out, MUTE_VALUE, nraw_once * ai->channels_bytes);
       

@@ -136,7 +136,8 @@ int vorbis_loop(void *gen){
 		output->put_frame (output, auf, auf->eots);
 	}
 
-	while(auf = (media_frame_t*)xlist_remove_first(vd->pending_queue)){
+   auf = (media_frame_t*)xlist_remove_first(vd->pending_queue);
+   while(auf){
 		
 		output->recycle_frame (output, auf);
 	}
@@ -225,6 +226,7 @@ int vorbis_receive_next (media_player_t *mp, void *vorbis_packet, int64 samplest
    vorbis_decoder_t *vp = (vorbis_decoder_t *)mp;
    int sample_rate = vp->vorbis_info->vi.rate;
    
+
    //move decode process into vorbis_loop thread...
    
    if (!mp->device) {
