@@ -1,0 +1,47 @@
+# Make Ogmplayer for Linux
+
+PROGNAME = ogmp
+
+PREFIX = /home/hling/timedia-project
+
+CC = gcc
+
+LIBS = -L$(PREFIX)/lib -ltmdbase \
+		 -L$(PREFIX)/lib/$(PROGNAME) -logmp
+
+INCLUDES = -I$(PREFIX)/include -I../include
+
+INSTDIR = $(PREFIX)/lib/$(PROGNAME)
+
+FILES = ogm_common.c ogm_format.c ogm_video.c ogm_text.c
+
+LIBFILES = fmt_ogm.so ogm_video.so ogm_text.so
+
+CFLAGS = -Wall -fPIC
+
+all:	 libs install
+
+.c.o:
+	-$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $*.o
+
+libs: $(FILES:.c=.o)
+	gcc -shared -logg ogm_common.o ogm_format.o -o fmt_ogm.so
+	gcc -shared ogm_common.o ogm_video.o -o ogm_video.so
+	gcc -shared ogm_common.o ogm_text.o -o ogm_text.so
+
+install: $(LIBFILES)
+	-@cp -f $(LIBFILES) $(INSTDIR)
+
+uninstall:
+	-@rm -f $(INSTDIR)/ogm_format.so
+	-@rm -f $(INSTDIR)/ogm_player.so
+	-@rm -f $(INSTDIR)/ogm_vorbis.so
+	-@rm -f $(INSTDIR)/ogm_video.so
+	-@rm -f $(INSTDIR)/ogm_text.so
+
+clean:
+	-@rm -f *.o
+	-@rm -f *.lo
+	-@rm -f *.so
+
+

@@ -1,0 +1,45 @@
+# Make Ogmp for Linux
+
+PROGNAME = ogmp
+
+PREFIX = /home/hling/timedia-project
+
+CC = gcc
+
+LIBS = -L$(PREFIX)/lib -ltmdbase -lrtime -lxrtp -losip2 -losipparser2 -leXosip \
+			-L$(PREFIX)/lib/$(PROGNAME) -logmp
+
+INCLUDES = -I$(PREFIX)/include -I.. -I../include
+
+INSTDIR = $(PREFIX)/bin
+
+SRCFILES = ogmp_client.c
+
+OBJFILES = ogmp_client.o
+
+
+BINFILES = ogmp
+
+CFLAGS = -Wall
+
+MODULEDIR = $(PREFIX)/lib/$(PROGNAME)
+
+all:	 compile install
+
+.c.o:
+	-$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $*.o
+
+compile: $(SRCFILES:.c=.o)
+	gcc $(OBJFILES) $(LIBS) -o $(PROGNAME)
+
+install: $(LIBFILES)
+	@cp -f $(PROGNAME) $(INSTDIR)
+
+uninstall:
+	-@rm -f $(INSTDIR)/$(PROGNAME)
+
+clean:
+	-@rm -f $(OBJFILES)
+	-@rm -f $(BINFILES)
+
+

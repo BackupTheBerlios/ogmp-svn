@@ -1,0 +1,4 @@
+These are some programs for libxrtp testing preposal.
+
+The most complicated tester is a Ogg Media Player, current can only play back file.ogg or vorbis stream in file.ogm
+the video play back is in plan.

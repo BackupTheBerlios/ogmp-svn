@@ -1,0 +1,6 @@
+Jan. 29, 2004
+- compensate the buffer swith gap, the sound lost quality.
+- xvid stream play back
+
+Jan. 19, 2004
+- add audio play to ogm

@@ -1,0 +1,48 @@
+# Make Ogmplayer for Linux
+
+PROGNAME = ogmp
+
+PREFIX = /home/hling/timedia-project
+
+CC = gcc
+
+INCLUDES = -I$(PREFIX)/include -I.. -I../include
+
+INSTDIR = $(PREFIX)/lib/$(PROGNAME)
+
+AULIBS = -shared -L$(PREFIX)/lib -lrtime -lportaudio \
+		 	-L$(PREFIX)/lib/$(PROGNAME) -logmp
+
+AUFILES = timed_pipe.c dev_portaudio.c
+AUOBJ = timed_pipe.o dev_portaudio.o
+
+RTPLIBS = -shared -L$(PREFIX)/lib -lrtime -lxrtp
+RTPFILES = dev_rtp.c
+RTPOBJ = dev_rtp.o
+
+LIBFILES = dev_portaudio.so dev_rtp.so
+
+CFLAGS = -Wall -fPIC
+
+all:	 libs install
+
+.c.o:
+	-$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $*.o
+
+libs: $(AUFILES:.c=.o) $(RTPFILES:.c=.o)
+	-$(CC) $(AULIBS) $(AUOBJ) -o dev_portaudio.so
+	-$(CC) $(RTPLIBS) $(RTPOBJ) -o dev_rtp.so
+
+install: $(LIBFILES)
+	@cp -f $(LIBFILES) $(INSTDIR)
+
+uninstall:
+	-@rm -f $(INSTDIR)/dev_portaudio.so
+	-@rm -f $(INSTDIR)/dev_rtp.so
+
+clean:
+	-@rm -f *.o
+	-@rm -f *.lo
+	-@rm -f *.so
+
+

@@ -1,0 +1,46 @@
+# Make Speex Module
+
+PROGNAME = ogmp
+
+PREFIX = /home/hling/timedia-project
+
+CC = gcc
+
+LIBS = -L$(PREFIX)/lib -lxrtp -lspeex \
+		 -L$(PREFIX)/lib/$(PROGNAME) -logmp_ui
+
+INCLUDES = -I$(PREFIX)/include -I../include
+
+INSTDIR = $(PREFIX)/lib/$(PROGNAME)
+
+FILES = speex_player.c speex_codec.c ogm_speex.c
+
+LIBFILES = speex_player.so ogm_speex.so
+
+CFLAGS = -Wall -fPIC
+
+all:	 libs install
+
+.c.o:
+	-$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $*.o
+
+libs: $(FILES:.c=.o)
+	gcc -shared -lspeex speex_player.o speex_codec.o  -o speex_player.so
+	gcc -shared -lspeex ogm_speex.o -o ogm_speex.so
+
+install: $(LIBFILES)
+	-@cp -f $(LIBFILES) $(INSTDIR)
+
+uninstall:
+	-@rm -f $(INSTDIR)/speex_player.so
+	-@rm -f $(INSTDIR)/ogm_speex.so
+
+clean:
+	-@rm -f *.o
+	-@rm -f *.lo
+	-@rm -f *.so
+	-@rm -f ../*.o
+	-@rm -f ../*.lo
+	-@rm -f ../*.so
+
+
