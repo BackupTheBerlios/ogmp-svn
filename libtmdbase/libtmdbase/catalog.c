@@ -25,6 +25,7 @@
 #include "catalog.h"
 #include "loader.h"
 #include "xmalloc.h"
+#include "ui.h"
 
 #ifdef WIN32
  #include "win32/dirent.h"
@@ -47,13 +48,13 @@
 #define CATALOG_DEBUG
 
 #ifdef CATALOG_LOG 
- #define catalog_log(fmtargs)  do{printf fmtargs;}while(0)
+ #define catalog_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define catalog_log(fmtargs) 
 #endif
 
 #ifdef CATALOG_DEBUG
- #define catalog_debug(fmtargs)  do{printf fmtargs;}while(0)
+ #define catalog_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define catalog_debug(fmtargs)
 #endif
