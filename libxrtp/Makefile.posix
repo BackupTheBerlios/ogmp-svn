@@ -1,0 +1,111 @@
+# Make RTP
+
+LIBNAME = xrtp
+
+PREFIX = /home/hling/timedia-project
+
+CC = gcc
+
+LIBS = -L$(PREFIX)/lib -ltmdbase -lrtime
+
+INCLUDES = -I$(PREFIX)/include
+
+INSTLIBDIR = $(PREFIX)/lib
+INSTINCDIR = $(PREFIX)/include/xrtp
+INSTPLUGINDIR = $(PREFIX)/lib/$(LIBNAME)
+
+CFLAGS = -Wall -fPIC
+
+SRCDIR = libxrtp
+
+HEADFILES = $(SRCDIR)/xrtp.h $(SRCDIR)/session.h $(SRCDIR)/psched.h \
+				$(SRCDIR)/pipeline.h $(SRCDIR)/handler.h $(SRCDIR)/packet.h \
+				$(SRCDIR)/packet_const.h $(SRCDIR)/connect.h $(SRCDIR)/media.h \
+				$(SRCDIR)/const.h
+
+SRCFILES = $(SRCDIR)/udp.c $(SRCDIR)/media.c $(SRCDIR)/packet.c $(SRCDIR)/pipeline.c \
+				$(SRCDIR)/portman_posix.c $(SRCDIR)/psched_simple.c $(SRCDIR)/session.c \
+				$(SRCDIR)/xrtp.c
+
+OBJFILES = $(SRCDIR)/udp.o $(SRCDIR)/media.o $(SRCDIR)/packet.o $(SRCDIR)/pipeline.o \
+				$(SRCDIR)/portman_posix.o $(SRCDIR)/psched_simple.o $(SRCDIR)/session.o \
+				$(SRCDIR)/xrtp.o
+
+LIBFILE = $(SRCDIR)/libxrtp.so
+
+PLUGINDIR = libxrtp/plugins
+
+PLUGINSRC = $(PLUGINDIR)/plug_text.c
+PLUGINOBJ = $(PLUGINDIR)/plug_text.o
+PLUGINLIB = $(PLUGINDIR)/plug_text.so
+
+TESTDIR = libxrtp/tester
+TBINNAME = subtrans
+
+TLIBS = -L$(PREFIX)/lib -lxrtp
+TINSTDIR = $(PREFIX)/bin
+TSRC = $(TESTDIR)/t_session.c $(TESTDIR)/spu_text.c
+TOBJ = $(TESTDIR)/t_session.o $(TESTDIR)/spu_text.o
+TBIN = $(TESTDIR)/$(TBINNAME)
+
+TCFLAGS = -Wall
+
+all:	 compile-lib compile-plugin
+
+install: install-lib install-plugin
+
+uninstall: uninstall-plugin uninstall-lib
+
+clean: clean-lib clean-plugin clean-test
+
+.c.o:
+	-$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $*.o
+
+compile-lib: $(SRCFILES:.c=.o)
+	gcc -shared $(OBJFILES) $(LIBS) -o $(LIBFILE)
+
+install-lib: $(LIBFILES)
+	@cp -f $(LIBFILE) $(INSTLIBDIR)
+	@cp -f $(HEADFILES) $(INSTINCDIR)
+
+uninstall-lib:
+	@rm -rf $(INSTLIBDIR)/$(LIBNAME)
+	@rm -rf $(INSTINCDIR)
+
+clean-lib:
+	@rm -f $(OBJFILES)
+	@rm -f $(LIBFILE)
+
+compile-plugin: $(PLUGINSRC:.c=.o)
+	gcc -shared $(PLUGINOBJ) $(LIBS) -o $(PLUGINLIB)
+
+install-plugin: $(PLUGINLIB)
+	@cp -f $(PLUGINLIB) $(INSTPLUGINDIR)
+
+uninstall-plugin:
+	@rm -rf $(INSTPLUGINDIR)/$(PLUGINLIB)
+
+clean-plugin:
+	@rm -f $(PLUGINOBJ)
+	@rm -f $(PLUGINLIB)
+
+test: compile-test install-test
+
+compile-test: $(SRCFILES)
+	-$(CC) $(TCFLAGS) $(INCLUDES) -c $(TESTDIR)/t_session.c -o $(TESTDIR)/t_session.o
+	-$(CC) $(TCFLAGS) $(INCLUDES) -c $(TESTDIR)/spu_text.c -o $(TESTDIR)/spu_text.o
+	-$(CC) $(TOBJ) $(TLIBS) -o $(TBIN)
+
+install-test: $(TBIN)
+	@cp -f $(TBIN) $(TINSTDIR)
+
+uninstall-test:
+	@rm -f $(TINSTDIR)/$(TBINNAME)
+
+clean-test:
+	@rm -f $(TBIN)
+	@rm -f $(TOBJ)
+
+
+
+
