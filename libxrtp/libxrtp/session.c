@@ -866,7 +866,7 @@ int member_deliver_media_loop(void *gen)
 	xrtp_session_t *session = mem->session;
 	xlist_user_t lu;
 
-	session_log(("session_rtp_recv_loop: deliver media from seqno[%d], packno[%d]\n", mem->expect_seqno, mem->packetno));
+	session_log(("session_rtp_recv_loop: deliver media from seqno[%d], packno[%lld]\n", mem->expect_seqno, mem->packetno));
 
 	while(1)
 	{
@@ -957,7 +957,7 @@ int session_cmp_media_usec(void *tar, void *pat)
  */
 int session_member_hold_media(member_state_t * mem, void *media, int bytes, uint16 seqno, uint32 rtpts, rtime_t us_ref, rtime_t us, int last, void *memblock)
 {
-	xrtp_session_t *ses = mem->session;
+	/*xrtp_session_t *ses = mem->session;*/
 
 	media_hold_t *hold = xmalloc(sizeof(media_hold_t));
 
@@ -971,6 +971,7 @@ int session_member_hold_media(member_state_t * mem, void *media, int bytes, uint
 	hold->memory = memblock;
 	
 	xthr_lock(mem->delivery_lock);
+
 
 	xlist_addonce_ascent(mem->delivery_buffer, hold, session_cmp_media_usec);
 
@@ -1103,6 +1104,7 @@ uint32 session_hrt2ts(xrtp_session_t * ses, xrtp_hrtime_t hrt)
 {
     return hrt / ses->media->clockrate * ses->media->sampling_instance;
 }
+
 
 /* Convert rtp ts to hrt */
 xrtp_hrtime_t session_ts2hrt(xrtp_session_t * ses, uint32 ts)
@@ -1313,6 +1315,7 @@ int session_member_synchronise(member_state_t *mem, uint32 ts_remote, uint32 hi_
 	
 	mem->nsec_last_sync = mem->nsec_sync;
 	mem->nsec_sync = ns;
+
 
 	xthr_unlock(mem->sync_lock);
 	
@@ -1913,6 +1916,7 @@ rtime_t session_rtcp_interval(xrtp_session_t *ses)
 						ses->self->we_sent,
 						ses->rtcp_avg_size, 
 						ses->rtcp_init);
+
 	/*
     session_log(("session_rtcp_interval: ses->n_member = %d\n", ses->n_member));
     session_log(("session_rtcp_interval: ses->n_sender = %d\n", ses->n_sender));
@@ -2409,6 +2413,7 @@ profile_handler_t * session_add_handler(xrtp_session_t *ses, char *id)
            break;
 
        case(CALLBACK_SESSION_NEED_SIGNATURE):
+
            ses->$callbacks.need_signature = call;
            ses->$callbacks.need_signature_user = user;
            session_log(("session_set_callback: 'need_signature' callback added\n"));
@@ -2447,15 +2452,14 @@ int session_rtp_outgoing(xrtp_session_t * ses, xrtp_rtp_packet_t *rtp, rtime_t u
     uint datalen = 0;
 
     session_connect_t * conn = NULL;
-
-	xclock_t *ses_clock = session_clock(ses);
-
+    /* for log purpose
+    xclock_t *ses_clock = session_clock(ses);
+    */
     buf= rtp_packet_buffer(rtp);
     data = buffer_data(buf);
     datalen = buffer_datalen(buf);
 
     if(port_is_multicast(ses->rtp_port))
-
 	{
         session_log(("session_rtp_outgoing: Multicasting is not implemented yet\n"));
     }
@@ -2471,14 +2475,17 @@ int session_rtp_outgoing(xrtp_session_t * ses, xrtp_rtp_packet_t *rtp, rtime_t u
 		{
             if(mem != ses->self && mem->valid)
 			{
+                /*
                 rtime_t us_now = time_usec_now(ses_clock);
-
+                */
 				conn = mem->rtp_connect;
 
                 connect_send(conn, data, datalen);
                 nsent++;
 
-                //session_log(("session_rtp_outgoing: due in %dus, [%s]=========RTP=>>>>>\n", usec_deadline - us_now, ses->self->cname));
+                /*
+                session_log(("session_rtp_outgoing: due in %dus, [%s]=========RTP=>>>>>\n", usec_deadline - us_now, ses->self->cname));
+                */
             }
 
             mem = xrtp_list_next(ses->members, &ul);
@@ -2956,6 +2963,7 @@ int session_start_reception(xrtp_session_t * ses)
 
     rtcp_tpass = ses->tc - mem->lrt_last_rtcp_sent;
 
+
     if(mem->we_sent){
 
         rtp_tpass = ses->tc - mem->msec_last_rtp_sent;
@@ -3008,6 +3016,7 @@ int session_start_reception(xrtp_session_t * ses)
        }
 
        if(next_report_ssrc_stall)
+
 	   {
           ses->next_report_ssrc = mem->ssrc;
           next_report_ssrc_stall = 0;
@@ -3070,6 +3079,7 @@ int session_start_reception(xrtp_session_t * ses)
 
 int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 timestamp)
 {
+
    uint8 frac_lost; 
    uint32 total_lost;
    uint32 exseqno;
@@ -3094,6 +3104,7 @@ int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 time
    session_log(("session_report: self.ssrc[%u]\n", self->ssrc));
 
    /* Set sender info */
+
    if(self->we_sent)
    {
       uint32 hi_ntp = 0, lo_ntp = 0;
@@ -3218,6 +3229,7 @@ int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 time
       /* Record next report member */
       ses->next_report_ssrc = mem->ssrc;
    }
+
 
    xthr_unlock(ses->members_lock);
 
@@ -3348,7 +3360,8 @@ int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 time
  */
 int session_set_scheduler(xrtp_session_t *ses, session_sched_t *sched)
 {
-    session_log(("session_set_scheduler: sched[%x]\n", sched));
+
+    session_log(("session_set_scheduler: sched[%x]\n", (int)sched));
 
     if(ses->sched == sched)
 		return XRTP_OK;
@@ -3375,6 +3388,7 @@ int session_set_scheduler(xrtp_session_t *ses, session_sched_t *sched)
 
     return XRTP_OK;
  }
+
 
  sched_schedinfo_t * session_schedinfo(xrtp_session_t *ses){
 

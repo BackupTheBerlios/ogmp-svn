@@ -16,7 +16,10 @@
  ***************************************************************************/
 
 #include "xrtp.h"
+
 #include <stdio.h>
+#include <string.h>
+#include <timedia/xmalloc.h>
 
 #include "portman.h"
 
@@ -64,7 +67,7 @@ xrtp_set_t* xrtp_init(module_catalog_t *cata)
 	  return NULL;
    }
 
-   set = malloc(sizeof(xrtp_set_t));
+   set = xmalloc(sizeof(xrtp_set_t));
    if(!set)
 	   return NULL;
 
@@ -127,6 +130,7 @@ int xrtp_done(xrtp_set_t *set)
 
 	return XRTP_OK;
 }
+
 
 module_catalog_t * xrtp_catalog(xrtp_set_t *set)
 {

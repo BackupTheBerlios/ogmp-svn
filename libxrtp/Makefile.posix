@@ -51,13 +51,13 @@ TBIN = $(TESTDIR)/$(TBINNAME)
 
 TCFLAGS = -Wall
 
-all:	 compile-lib compile-plugin
+all:	 compile-lib
 
-install: install-lib install-plugin
+install: install-lib
 
-uninstall: uninstall-plugin uninstall-lib
+uninstall: uninstall-lib
 
-clean: clean-lib clean-plugin clean-test
+clean: clean-lib
 
 .c.o:
 	-$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $*.o

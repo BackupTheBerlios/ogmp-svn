@@ -489,7 +489,7 @@ int simple_schedule_rtp(void * gen)
          if(req->next) req->next->prev = NULL;
          req->next = req->prev = NULL;
             
-         simple_sched_log(("simple_schedule_rtp: session_rtp_send_now() skipped!\n", us_now));
+         simple_sched_log(("simple_schedule_rtp: session_rtp_send_now() skipped!\n"));
 
          //session_rtp_send_now(unit->session);
             
@@ -518,7 +518,7 @@ int simple_schedule_rtcp(void * gen)
 {
    simple_sched_t * ssch = (simple_sched_t *)gen;
 
-   xrtp_lrtime_t now, dt;
+   rtime_t now, dt;
    ssch_unit_t * unit;
 
    int i_locked_ssch = 0;
@@ -570,7 +570,7 @@ int simple_schedule_rtcp(void * gen)
          break;
 
       now = time_msec_now(ssch->clock);
-	  simple_sched_log(("simple_schedule_rtcp: ssch[%x] %dms now\n", ssch, now));
+	  simple_sched_log(("simple_schedule_rtcp: ssch[@%x] %dms now\n", (int)ssch, now));
 
       /* Scan if some deadline is reached */
 
@@ -662,6 +662,7 @@ int simple_schedule_rtcp(void * gen)
          }
       }
 
+
       /* If any session need to send rtcp */
       if(n_expired)
 	  {
@@ -728,7 +729,7 @@ int simple_schedule_rtcp(void * gen)
 
       xthr_unlock(ssch->rtcp_lock);
 
-	  simple_sched_log(("simple_schedule_rtcp: %d incoming, ssch[%x] sleep %dms\n", ins, ssch, dt_min));
+	  simple_sched_log(("simple_schedule_rtcp: %d incoming, ssch[%x] sleep %dms\n", ins, (int)ssch, dt_min));
       time_msec_sleep(ssch->clock, dt_min, NULL);
    }
 
