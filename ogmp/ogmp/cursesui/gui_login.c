@@ -248,7 +248,7 @@ int window_login_run_command(gui_t* gui, int c)
 		{
 			if(uid[0] && pwd[0] && loc[0] && !ocui->user)
 			{
-				ocui->user = sipua_load_user(loc, uid, pwd, strlen(pwd));
+                ocui->user = sipua_load_user(loc, uid, pwd, strlen(pwd));
 				
 				if(ocui->user)
 				{

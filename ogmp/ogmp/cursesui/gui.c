@@ -120,7 +120,7 @@ void curseson()
 			for (i = 1; i < 15; i++) 
 			{
 				if (init_pair(i, (short)color[i].fore, (short)color[i].back) != OK)
-				fprintf(stderr, "failed to allocate colour pair");
+                    fprintf(stderr, "failed to allocate colour pair");
 			}
 		}
 		else

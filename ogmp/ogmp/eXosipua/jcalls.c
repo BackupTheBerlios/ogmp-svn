@@ -22,7 +22,6 @@
 
 #include <timedia/xmalloc.h>
 #include "eXosipua.h"
-#include "../rtp_cap.h"
 
 //jcall_t jcalls[MAX_NUMBER_OF_CALLS];
 //char   _localip[30];
@@ -140,6 +139,7 @@ int jcall_new(eXosipua_t *jua, eXosip_event_t *je)
 	jua->sipuas.notify_event(jua->sipuas.lisener, &call_e.event);
 
 	return 0;
+
 }
 
 int jcall_remove(eXosipua_t *jua, jcall_t *ca)
@@ -213,6 +213,7 @@ int jcall_proceeding(eXosipua_t *jua, eXosip_event_t *je)
 	//osip_strncpy(ca->local_uri,  je->local_uri, 255);
 	osip_strncpy(ca->remote_uri, je->remote_uri, 255);
 	osip_strncpy(ca->subject,    je->subject, 255);
+
 
 #if 0
 	if (ca->remote_sdp_audio_ip[0]=='\0')

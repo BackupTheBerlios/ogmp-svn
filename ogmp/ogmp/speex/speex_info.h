@@ -17,8 +17,8 @@
 
 #define OGM_SPEEX_H
 
-#include "../media_format.h"
-#include "../rtp_cap.h"
+#include "media_format.h"
+#include "rtp_cap.h"
 
 #include <speex/speex.h>
 #include <speex/speex_header.h>
@@ -62,6 +62,7 @@ struct speex_info_s
 	int penh;		/* perceptual enhancement */
 
 	void *dst;		/* decode state */
+
 
 	/* encoding parameters */
 	void *est;		/* encode state */

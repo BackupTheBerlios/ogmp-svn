@@ -18,10 +18,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "../sipua.h"
-#include "../log.h"
-#include "../rtp_cap.h"
+#include "sipua.h"
+#include "rtp_cap.h"
 
+#include <timedia/ui.h>
 #include <eXosip/eXosip.h>
 
 typedef struct eXosipua_s eXosipua_t;

@@ -19,7 +19,6 @@
  */
 
 #include "eXosipua.h"
-#include "../rtp_cap.h"
 
 #include <timedia/xstring.h>
 #include <timedia/xmalloc.h>
@@ -786,6 +785,7 @@ int uas_init(sipua_uas_t* uas, int sip_port, char* nettype, char* addrtype, char
     }
   
 	/* detect local address */
+
 	eXosip_guess_ip_for_via(ip_family, uas->netaddr, 63);
 	if (uas->netaddr[0]=='\0')
     {

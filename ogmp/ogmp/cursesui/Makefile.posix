@@ -8,7 +8,7 @@ CC = gcc
 
 LIBS = -L$(PREFIX)/lib -lncurses
 
-INCLUDES = -I$(PREFIX)/include
+INCLUDES = -I$(PREFIX)/include -I.. -I../include
 
 INSTDIR = $(PREFIX)/lib/$(PROGNAME)
 

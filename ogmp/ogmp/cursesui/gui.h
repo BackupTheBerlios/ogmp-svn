@@ -36,14 +36,14 @@
 #include <ctype.h>
 #include <assert.h>
 
-#include "../ogmp.h"
+#include "ogmp.h"
 #include <timedia/ui.h>
 
 #ifdef MOUSE_MOVED
 #undef MOUSE_MOVED
 #endif
  
-#ifdef NCURSES_SUPPORT
+#ifdef HAVE_NCURSES
 #include <term.h>
 #include <ncurses.h>
 #else

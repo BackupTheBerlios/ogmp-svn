@@ -16,7 +16,7 @@
  ***************************************************************************/
 
 
-#include "../media_format.h"
+#include "media_format.h"
 
 #include <timedia/timer.h>
 

@@ -1,4 +1,4 @@
-# Make Ogmplayer for Linux
+# Make Ogmp for Linux
 
 PROGNAME = ogmp
 
@@ -6,17 +6,17 @@ PREFIX = /home/hling/timedia-project
 
 CC = gcc
 
-LIBS = -L$(PREFIX)/lib -ltmdbase -lrtime -lxrtp -losip2 \
-		 -L$(PREFIX)/lib/$(PROGNAME) -logmp_ui
+LIBS = -L$(PREFIX)/lib -ltmdbase -lrtime -lxrtp -losip2 -losipparser2 -leXosip \
+			-L$(PREFIX)/lib/$(PROGNAME) -logmp
 
-INCLUDES = -I$(PREFIX)/include
+INCLUDES = -I$(PREFIX)/include -I.. -I../include
 
 INSTDIR = $(PREFIX)/bin
 
-SRCFILES = media_control.c ogmp_source.c ogmp_client.c ogmp_config.c \
-				sipua.c rtp_cap.c phonebook.c
-OBJFILES = media_control.o ogmp_source.o ogmp_client.o ogmp_config.o \
-				sipua.o rtp_cap.o phonebook.o
+SRCFILES = ogmp_client.c
+
+OBJFILES = ogmp_client.o
+
 
 BINFILES = ogmp
 

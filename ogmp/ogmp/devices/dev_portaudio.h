@@ -15,7 +15,7 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "../media_format.h"
+#include "media_format.h"
 
 typedef struct pa_setting_s pa_setting_t;
 struct pa_setting_s {

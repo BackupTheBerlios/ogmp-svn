@@ -305,6 +305,9 @@ int sipua_done(sipua_t *sipua)
 
 	xthr_done_lock(ua->lines_lock);
 
+
+
+
 	xfree(ua);
 
 	return UA_OK;
@@ -684,6 +687,7 @@ ogmp_ui_t* client_new_ui(module_catalog_t* mod_cata, char* type)
         return NULL;
 
     global_ui = ui;
+
     
     return ui;
 }
@@ -728,6 +732,8 @@ sipua_t* client_new_sipua(sipua_uas_t* uas, module_catalog_t* mod_cata, int band
 
 	/* set sip client */
 	client->valid = 0;
+
+
 
 	/* player controler */
 	client->control->config(client->control, client->conf, mod_cata);
@@ -860,6 +866,8 @@ int main(int argc, char** argv)
     sipua_t* sipua = NULL;
 	sipua_uas_t* uas = NULL;
 	module_catalog_t *mod_cata = NULL;
+
+    sipua_load_user("heming", "heming", "hello", 5);
     
 	clie_log (("main: modules in dir:'%s'\n", MOD_DIR));
 

@@ -34,7 +34,7 @@
 
 #define OGM_FORMAT_H
 
-#include "../media_format.h"
+#include "media_format.h"
 
 #include <stdio.h>
 #include <ogg/ogg.h>
