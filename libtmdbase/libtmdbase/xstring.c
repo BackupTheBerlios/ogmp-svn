@@ -23,11 +23,16 @@
 	#define xstr_log(fmtargs)  do{printf fmtargs;}while(0)
  #else
 	#define xstr_log(fmtargs)
- #endif
+ #endif 
 
  char * xstr_clone(char *str)
  {
-     char * new_str = (char *)xmalloc(sizeof(char) * strlen(str));
+     char * new_str;
+
+	 if(!str)
+		 return NULL;
+		
+	 new_str = (char *)xmalloc(sizeof(char) * strlen(str));
 
      strcpy(new_str, str);
 
@@ -36,12 +41,18 @@
 
  char * xstr_nclone(char *str, int len)
  {
-     char *new_str = (char *)xmalloc(sizeof(char) * (len+1));
+     char *new_str;
+
+	 if(!str || len == 0)
+		 return NULL;
+
+	 new_str = (char *)xmalloc(sizeof(char) * (len+1));
      if(new_str)
      {
          strncpy(new_str, str, len);
          new_str[len] = '\0';
      }
+
      return new_str;
  }
 
