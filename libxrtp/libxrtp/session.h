@@ -188,12 +188,6 @@ typedef struct member_state_s
 
 	xthread_t *deliver_thread;
 
-#define CALLBACK_ON_MEDIAINFO			0x1
-
-    /* callid: CALLBACK_MEDIAINFO */
-    int (*on_mediainfo)(void *user, uint32 ssrc, void *minfo);
-    void* on_mediainfo_user;
-
 } member_state_t;
 
 typedef struct session_state_s
@@ -509,12 +503,12 @@ session_allow_anonymous(xrtp_session_t * session, int allow);
  */
 extern DECLSPEC
 int
-session_start_receipt(xrtp_session_t * session);
+session_start_reception(xrtp_session_t * session);
  
 /**
  *  From now on, session stop receiving incoming data
  */
-int session_stop_receipt(xrtp_session_t * session);
+int session_stop_reception(xrtp_session_t * session);
 
 /**
  * Get session rtp and rtcp ports

@@ -21,6 +21,7 @@
  
 #define MAX_PRODUCE_TIME  (20 * HRTIME_MILLI)
 #define SESSION_DEFAULT_RTCP_NPACKET  0
+#define USEC_POLLING_TIMEOUT	500000
 
 /* issue 5 times media inf APP */
 #define RENEW_MINFO_LEVEL 5
@@ -2588,7 +2589,7 @@ int session_rtp_send_now(xrtp_session_t *ses)
 
     xrtp_rtp_packet_t * rtp;
 
-    char * pdata = NULL;
+    char *pdata = NULL;
     int datalen;
 
     xrtp_buffer_t * buf;
@@ -2599,13 +2600,15 @@ int session_rtp_send_now(xrtp_session_t *ses)
 
     int packet_bytes;
 
-    session_log(("session_rtp_to_receive: [%s] <<<<<=RTP============\n", ses->self->cname));
-    datalen = connect_receive(ses->rtp_incoming, &pdata, 0, &ms_arrival, &us_arrival, &ns_arrival);
+    session_debug(("session_rtp_to_receive: [%s] <<<<<=RTP============\n", ses->self->cname));
+    
+    session_debug(("session_rtp_to_receive: ses->rtp_incoming@%d\n", ses->rtp_incoming));
+	datalen = connect_receive(ses->rtp_incoming, &pdata, 0, &ms_arrival, &us_arrival, &ns_arrival);
 
     /* New RTP Packet */
     rtp = rtp_new_packet(ses, ses->$state.profile_no, RTP_RECEIVE, ses->rtp_incoming, ms_arrival, us_arrival, ns_arrival);
-    if(!rtp){
-
+    if(!rtp)
+	{
        session_debug(("session_rtp_to_receive: Can't create rtp packet for receiving\n"));
        return XRTP_EMEM;
     }
@@ -2614,8 +2617,10 @@ int session_rtp_send_now(xrtp_session_t *ses)
     buf = buffer_new(0, NET_BYTEORDER);
     buffer_mount(buf, pdata, datalen);
     
+    session_debug(("session_rtp_to_receive: 3\n"));
     rtp_packet_set_buffer(rtp, buf);
     
+    session_debug(("session_rtp_to_receive: 4\n"));
     if(pipe_pump(ses->rtp_recv_pipe, 0, rtp, &packet_bytes) != XRTP_CONSUMED)
     {
         session_log(("session_rtp_to_receive: [%s] ######======RTP=====######\n\n", ses->self->cname));
@@ -2636,10 +2641,10 @@ int session_rtp_send_now(xrtp_session_t *ses)
 
     ses->thread_run = 1;
 
-    session_log(("session_rtp_recv_loop: start receipt, period[%dus]\n", ses->usec_period));
+    session_debug(("session_rtp_recv_loop: [%s] start reception\n", ses->self->cname));
     do
 	{
-        if(port_poll(ses->rtp_port, ses->usec_period) <= 0)
+        if(port_poll(ses->rtp_port, USEC_POLLING_TIMEOUT) <= 0)
 		{
 			/* Should be ONE actually if got incoming */
             /* FIXME: Maybe a little condition racing */
@@ -2664,31 +2669,34 @@ int session_rtp_send_now(xrtp_session_t *ses)
 
     }while(1);
 
+	ses->thr_rtp_recv = NULL;
+
     return XRTP_OK;
  }
 
- int session_start_receipt(xrtp_session_t * ses)
+ int session_start_reception(xrtp_session_t * ses)
  {
-    ses->rtp_recv_lock = xthr_new_lock();
-    if(ses->rtp_recv_lock == NULL)
-	{
-        session_log(("< session_start: fail to create lock >\n"));
-        return XRTP_FAIL;
-    }
-
-    ses->thr_rtp_recv = xthr_new(session_rtp_recv_loop, ses, XTHREAD_NONEFLAGS);
     if(ses->thr_rtp_recv == NULL)
 	{
-        session_log(("session_start: fail to create thread\n"));
-        return XRTP_FAIL;
-    }
+		ses->rtp_recv_lock = xthr_new_lock();
+		if(ses->rtp_recv_lock == NULL)
+		{
+			session_debug(("session_start: fail to create lock\n"));
+			return XRTP_FAIL;
+		}
 
-    session_log(("session_start: Session[%d] ready for receiving\n", session_id(ses)));
+		ses->thr_rtp_recv = xthr_new(session_rtp_recv_loop, ses, XTHREAD_NONEFLAGS);
+		if(ses->thr_rtp_recv == NULL)
+		{
+			session_debug(("session_start: fail to create thread\n"));
+			return XRTP_FAIL;
+		}
+	}
 
     return XRTP_OK;
  }
  
- int session_stop_receipt(xrtp_session_t * ses)
+ int session_stop_reception(xrtp_session_t * ses)
  {
     int th_ret;
     ses->thread_run = 0;

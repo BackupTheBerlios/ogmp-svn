@@ -34,8 +34,13 @@ struct rtp_stream_s
    struct  media_stream_s  stream;
    
    int						sno;
+   char						*source_cname;
+   int						source_cnlen;
+
    rtpcap_descript_t		*rtp_cap;
    xrtp_session_t			*session;
+
+   rtp_format_t				*rtp_format;
 };
 
 struct rtp_format_s

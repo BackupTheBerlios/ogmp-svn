@@ -140,9 +140,15 @@ int connect_from_teleport(session_connect_t * conn, xrtp_teleport_t * tport)
 
 int connect_receive(session_connect_t * conn, char **r_buff, int *header_bytes, rtime_t *ms, rtime_t *us, rtime_t *ns)
 {
-      int datalen = conn->datalen_in;
+      int datalen;
+      
+	  udp_debug(("connect_receive: 1\n"));
+
+      datalen = conn->datalen_in;
       *r_buff = conn->data_in;
       
+	  udp_debug(("connect_receive: 2\n"));
+
       conn->data_in = NULL;
       conn->datalen_in = 0;
 
@@ -152,6 +158,8 @@ int connect_receive(session_connect_t * conn, char **r_buff, int *header_bytes, 
       *us = conn->usec_arrival;
 	  *ns = conn->nsec_arrival;
       
+	  udp_debug(("connect_receive: 3\n"));
+
       return datalen;
 }
 
@@ -340,26 +348,18 @@ int port_match(xrtp_port_t *port, char *ip, uint16 pno)
 
   int port_poll(xrtp_port_t * port, rtime_t timeout_usec)
   {
-      /* Note: if need nanosecond time resolution, use pselect and timespec
-       * Not a little confusion in glibc about its sys/select.h, which related to
-       * __USE_XOPEN2K varible, and pselect is not recognized on my system, Strange!
-       *
-       * Currently use select insteed but only microsecond resolution
-       */
      fd_set io_set;
 
 	 int n;
      
      struct timeval tout;
      tout.tv_sec = timeout_usec / 1000000;     
-     tout.tv_usec = timeout_usec;
+     tout.tv_usec = timeout_usec % 1000000;
 
      FD_ZERO(&io_set);
      FD_SET(port->socket, &io_set);
 
-     /* Warning: High Frequent output 
      udp_log(("port_poll: check incoming and timeout is set to %d seconds %d microseconds\n", (int)(tout.tv_sec), (int)(tout.tv_usec)));
-	 */
 
      n = select(port->socket+1, &io_set, NULL, NULL, &tout);
 

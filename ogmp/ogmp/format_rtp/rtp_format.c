@@ -37,11 +37,14 @@
  #define rtp_debug(fmtargs)  
 #endif
 
-int rtp_done_stream(rtp_stream_t *rtpstrm)
+int rtp_done_stream(rtp_stream_t *strm)
 {
-	rtpstrm->rtp_cap->descript.done((capable_descript_t*)rtpstrm->rtp_cap);
-	session_done(rtpstrm->session);
-	free(rtpstrm);
+	strm->rtp_cap->descript.done((capable_descript_t*)strm->rtp_cap);
+
+	xstr_done_string(strm->source_cname);
+	session_done(strm->session);
+
+	free(strm);
 
 	return MP_OK;
 }
@@ -219,12 +222,10 @@ media_player_t * rtp_fourcc_player(media_format_t * mf, const char *fourcc)
 {
    media_stream_t *cur = mf->first;
 
-   while (cur != NULL) {
-
+   while (cur != NULL)
+   {
       if ( strncmp(cur->fourcc, fourcc, 4) )
-	  {
          return cur->player;
-      }
 
       cur = cur->next;
    }
@@ -260,6 +261,22 @@ int rtp_set_fourcc_player (media_format_t * mf, media_player_t * player, const c
 int rtp_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *conf, char *mode)
 {
 	return MP_NOP;
+}
+
+int rtp_stream_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
+{
+   rtp_stream_t *rtpstrm = (rtp_stream_t*)gen;
+   rtp_format_t *rtpfmt = rtpstrm->rtp_format;
+
+   if(strncmp(rtpstrm->source_cname, cn, rtpstrm->source_cnlen) != 0)
+   {
+	   rtp_log(("rtp_stream_on_member_update: Stream Receiver[%s] discovered\n", cn));
+	   return MP_OK;
+   }
+
+   rtp_log(("rtp_stream_on_member_update: source[%s] connected\n", cn));
+   
+   return MP_OK;
 }
 
 rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, int src_cnlen, capable_descript_t *cap, media_control_t *ctrl, char *mode)
@@ -365,10 +382,20 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 	strm->rtp_cap->rtp_portno = rtp_portno;
 	strm->rtp_cap->rtcp_portno = rtcp_portno;
 
+	strm->rtp_format = rtp_format;
+	rtp_log(("rtp_open_stream: FIXME - stream mime string overflow possible!!\n"));
+	strcpy(strm->stream.mime, rtpcap->profile_mime);
+
 	rtp_add_stream((media_format_t*)rtp_format, (media_stream_t*)strm, sno, stype);
 
 	rtp_log(("rtp_open_stream: for [%s@%s:%u|%u]\n", src_cn, rtpcap->ipaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno));
+	
 	session_add_cname(strm->session, src_cn, src_cnlen, rtpcap->ipaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno, NULL);
+
+	/* waiting to source to be available */
+	strm->source_cname = xstr_nclone(src_cn, src_cnlen);
+	strm->source_cnlen = src_cnlen;
+	session_set_callback(strm->session, CALLBACK_SESSION_MEMBER_UPDATE, rtp_stream_on_member_update, strm);
 
 	return strm;
 }
@@ -397,6 +424,7 @@ int rtp_open_capables(media_format_t *mf, char *src_cn, int src_cnlen, capable_d
    }
 
    strcpy(mf->default_mode, mode);
+   mf->control = ctrl;
 
    rtp->rtp_in = (dev_rtp_t*)ctrl->find_device(ctrl, "rtp");
 

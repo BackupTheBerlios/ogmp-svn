@@ -204,7 +204,9 @@ int vrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 
    if(sender && sender->valid && !connect_match(rtp->connect, sender->rtp_connect))
    {
-      session_solve_collision(sender, src);
+      /* this could be true if sender behind the firewall */
+	  vrtp_debug(("audio/vorbis.vrtp_rtp_in: put NAT in mind\n"));
+	  session_solve_collision(sender, src);
 
       rtp_packet_done(rtp);
 
@@ -324,8 +326,7 @@ int vrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 
    rtpts_toplay = session_member_mapto_local_time(sender, rtpts_payload, rtpts_arrival, JITTER_ADJUSTMENT_LEVEL);
 
-   
-   if(!sender->media_playable)
+   if(!sender->media_playable && sender->media_playable != -1)
    {
 	   uint32 rtpts_mi;
 	   int signum;
@@ -784,9 +785,7 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 				{
 					vrtp_log(("audio/vorbis.vrtp_rtcp_in: ssrc[%u]#ts[%u] vorbis info cached\n", src_sender, rtpts_h_local));
 					
-					/* give a chance to inspect the media info of the participant */
-					if(sender->on_mediainfo)
-						sender->on_mediainfo(sender->on_mediainfo_user, src_sender, vinfo);	
+					session_start_reception(ses);
 				}
 			}
 		}

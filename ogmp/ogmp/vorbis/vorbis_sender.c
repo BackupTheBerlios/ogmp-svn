@@ -63,8 +63,8 @@ struct vorbis_sender_s
    int (*callback_on_ready)();
 
    /*int (*stop_media) (void *user);*/
-   void *stop_media_user;
-   int (*stop_media)();
+   void *callback_on_media_stop;
+   int (*callback_on_media_stop_user)();
 
    vorbis_info_t  *vorbis_info;
    int vorbis_info_signum;
@@ -100,11 +100,11 @@ int vsend_set_callback (media_player_t *mp, int type, int (*call)(), void *user)
          vsend_log(("vorbis_set_callback: 'on_ready' callback added\n"));
          break;
 
-      case (CALLBACK_STOP_MEDIA):
+      case (CALLBACK_MEDIA_STOP):
       
-         playa->stop_media = call;
-         playa->stop_media_user = user;
-         vsend_log(("vorbis_set_callback: 'media_received' callback added\n"));
+         playa->callback_on_media_stop = call;
+         playa->callback_on_media_stop_user = user;
+         vsend_log(("vorbis_set_callback: 'on_media_stopped' callback added\n"));
          break;
          
       default:
@@ -369,8 +369,8 @@ const char* vsend_codec_type(media_player_t * mp)
    return "";
 }
 
-media_pipe_t * vsend_pipe(media_player_t * p) {
-
+media_pipe_t * vsend_pipe(media_player_t * p)
+{
    if (!p->device) return NULL;
 
    return p->device->pipe (p->device);

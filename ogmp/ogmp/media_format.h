@@ -279,7 +279,7 @@ struct media_player_s
    const char* (*codec_type) (media_player_t * playa);
    
    #define CALLBACK_PLAYER_READY  1
-   #define CALLBACK_STOP_MEDIA  2
+   #define CALLBACK_MEDIA_STOP  2
    
    int (*done) (media_player_t * playa);
    

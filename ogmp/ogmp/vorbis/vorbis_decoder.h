@@ -41,15 +41,15 @@ struct vorbis_decoder_s{
     * special process will activated to smooth the effect
 	*
 	* No in use yet.
-    */
    int dad_min_ms;
    int dad_max_ms;
+    */
 
-   int (*callback_on_ready) ();
    void *callback_on_ready_user;
+   int (*callback_on_ready) ();
 
-   int (*stop_media) ();
-   void * stop_media_user;
+   void *callback_on_media_stop_user;
+   int (*callback_on_media_stop) ();
 
    /* parallel with demux thread */
    xthread_t *thread;

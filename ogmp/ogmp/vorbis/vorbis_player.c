@@ -63,14 +63,14 @@ int vorbis_set_callback (media_player_t * mp, int type, int(*call)(), void * use
 
          playa->callback_on_ready = call;
          playa->callback_on_ready = user;
-         vorbis_player_log(("vorbis_set_callback: 'media_sent' callback added\n"));
+         vorbis_player_log(("vorbis_set_callback: 'on_ready' callback added\n"));
          break;
 
-      case (CALLBACK_STOP_MEDIA):
+      case (CALLBACK_MEDIA_STOP):
       
-         playa->stop_media = call;
-         playa->stop_media_user = user;
-         vorbis_player_log(("vorbis_set_callback: 'media_received' callback added\n"));
+         playa->callback_on_media_stop = call;
+         playa->callback_on_media_stop_user = user;
+         vorbis_player_log(("vorbis_set_callback: 'on_media_stop' callback added\n"));
          break;
          
       default:
@@ -318,28 +318,29 @@ int vorbis_done(media_player_t *mp) {
    return MP_OK;
 }
 
-int vorbis_set_options (media_player_t * mp, char *opt, void *value) {
-
+int vorbis_set_options (media_player_t * mp, char *opt, void *value)
+{
     vorbis_decoder_t *vp = (vorbis_decoder_t *)mp;
     
-    if(!value){
-      
+    if(!value)
+	{
         vorbis_player_debug(("vorbis_set_options: param 'value' is NULL point\n"));
         return MP_FAIL;
     }
-    
-    if (strcmp(opt, "dad_min_ms") == 0) { 
-
+    /*
+    if (strcmp(opt, "dad_min_ms") == 0) 
+	{ 
         vorbis_player_log(("vorbis_set_options: %s = %d\n", opt, *((int*)value)));
         vp->dad_min_ms = *((int*)value);
-        
-    } else if(strcmp(opt, "dad_max_ms") == 0) {
-
+    } 
+	else if(strcmp(opt, "dad_max_ms") == 0) 
+	{
         vorbis_player_log(("vorbis_set_options: %s = %d\n", opt, *((int*)value)));
         vp->dad_max_ms = *((int*)value);
-
-    } else {
-
+    } 
+	else
+	*/
+	{
         vorbis_player_log(("vorbis_set_options: the option is not supported\n"));
         return MP_EUNSUP;
     }
@@ -383,8 +384,8 @@ int vorbis_set_device (media_player_t * mp, media_control_t *cont, module_catalo
    return MP_OK;
 }
 
-module_interface_t * media_new_player(){
-
+module_interface_t * media_new_player()
+{
    media_player_t *mp = NULL;
 
    vorbis_decoder_t *playa = malloc(sizeof(struct vorbis_decoder_s));
