@@ -33,161 +33,159 @@
 
 struct portman_s{
 
-    int max_port;
-    int n_port;
+   //int max_port;
+   int maxio;
 
-    xrtp_map_t * ports;
-	xlist_t * iolist; /* used to retrieve all */
+   xlist_t     *portlist; /* used to retrieve all */
 
-    fd_set io_set;
+   fd_set io_set;
 };
 
 portman_t * portman_new(){
 
-    portman_t * man = malloc(sizeof(struct portman_s));
-    if(man){
+   portman_t * man = malloc(sizeof(struct portman_s));
+   if(man){
 
-        FD_ZERO(&(man->io_set));
+      FD_ZERO(&(man->io_set));
         
-        man->n_port = 0;
-        man->max_port = FD_SETSIZE;
-        man->ports = map_new(0);   /* Map default size, which is 1024 in this implement */
-		man->iolist = xlist_new();
-    }
+      man->portlist = xlist_new();
+   }
 
-    return man;
+   return man;
+}
+
+int portman_done_io(void *gen){
+
+   /* No need to free the port */
+   return OS_OK;
 }
 
 int portman_done(portman_t * man){
 
-    map_done(man->ports);
-	xlist_done(man->iolist);
+   //map_done(man->ports);
+   xlist_done(man->portlist, portman_done_io);
 
-    free(man);
+   free(man);
 
-    return XRTP_OK;
+   return XRTP_OK;
 }
 
 int portman_add_port(portman_t * man, xrtp_port_t * port){
 
-    int io;
-    int i;
+   int io;
+   xlist_user_t lu;
+   xrtp_port_t *p;
 
-	if(man->n_port == FD_SETSIZE)
-        return XRTP_EFULL;
+   if(xlist_size(man->portlist) == FD_SETSIZE) return XRTP_EFULL;
         
-    io = port_io(port);
+   io = port_io(port);
+   FD_SET(io, &(man->io_set));
 
-    FD_SET(io, &(man->io_set));
+   man->maxio = man->maxio < io ? io : man->maxio;
+   xlist_addto_first(man->portlist, port);
+   
+   /* DEBUG Start */
+   portman_log(("portman_add_port: port[%d] added\n", io));
+   portman_log(("portman_add_port: ports to detect are:"));    
+   p = xlist_first(man->portlist, &lu);
+   while(p){
 
-    map_add(man->ports, port, io);
-	xlist_add(man->iolist, io);
+      io = port_io(p);
+      if(FD_ISSET(io, &(man->io_set))){
 
-    man->n_port++;
-    
-    /* DEBUG Start */
-    portman_log(("portman_add_port: port[%d] added\n", io));
-    portman_log(("portman_add_port: ports to detect are:"));
-    
-    for(i=0; i<= map_max_key(man->ports); i++){
-      
-       if(FD_ISSET(i, &(man->io_set))){
-
-          portman_log((" [%d]", i));
+          portman_log((" [%d]", io));
           
-       }else{
+      }else{
 
-          portman_log((" (%d)", i));
-       }
-    }
-    portman_log(("\n"));
-    /* DEBUG End */
+          portman_log((" (%d)", io));
+      }
 
-    return XRTP_OK;
+      p = xlist_next(man->portlist, &lu);
+   }
+   portman_log(("\n"));
+   /* DEBUG End */
+
+   return XRTP_OK;
 }
 
 int portman_remove_port(portman_t * man, xrtp_port_t * port){
 
-    uint io;
-    int i;
+   int io;
+   xlist_user_t lu;   
+   xrtp_port_t * p;
 
-    if(man->n_port == 0)
-        return XRTP_OK;
+   if(xlist_size(man->portlist) == 0) return XRTP_OK;
 
-    io = port_io(port);
-    
-    FD_CLR(io, &(man->io_set));
-    map_remove(man->ports, io);
-	xlist_remove_item(man->iolist, io);
-    man->n_port--;
+   io = port_io(port);
+   FD_CLR(io, &(man->io_set));
+   xlist_remove_item(man->portlist, port);
 
-    /* DEBUG Start */
-    for(i=0; i<= map_max_key(man->ports); i++){
-       if(FD_ISSET(i, &(man->io_set))){
+   /* DEBUG Start */
+   portman_log(("portman_remove_port: port[%d] removed\n", io));
+   portman_log(("portman_remove_port: ports to detect are:"));
+   p = xlist_first(man->portlist, &lu);
+   while(p){
 
-          portman_log((" [%d]", i));
-       }
-    }
-    portman_log(("\n"));
-    /* DEBUG End */
+      io = port_io(p);
+      if(FD_ISSET(io, &(man->io_set))){
 
-    return XRTP_OK;
-}
+          portman_log((" [%d]", io));
+      }
 
-int portman_free_ioitem(void *gen){
-	
-	return OS_OK;
+      p = xlist_next(man->portlist, &lu);
+   }
+   portman_log(("\n"));
+   /* DEBUG End */
+
+   return XRTP_OK;
 }
 
 int portman_clear_ports(portman_t * man){
 
-    if(man->n_port == 0)
-        return XRTP_OK;
+   if(xlist_size(man->portlist) == 0) return XRTP_OK;
 
-    FD_ZERO(&(man->io_set));
-    map_blank(man->ports);
-	xlist_reset(man->iolist, port_free_ioitem);
+   FD_ZERO(&(man->io_set));
+   xlist_reset(man->portlist, portman_done_io);
 
-    man->n_port = 0;
-
-    return XRTP_OK;
+   return XRTP_OK;
 }
 
 int portman_maximum(portman_t * man){
 
-    return man->max_port;
+    return FD_SETSIZE;
 }
 
 int portman_poll(portman_t * man){
 
-    xrtp_port_t * port;
+   xrtp_port_t * port;
+   xlist_user_t lu;
     
-    struct timeval tv = {0,0}; /* No block */
+   struct timeval tv = {0,0}; /* No block */
 
-    fd_set io_mask = man->io_set;
+   fd_set io_mask = man->io_set;
     
-    int c = 0;
-    int i;
+   int io;
+   int c = 0;
     
-    int maxio = map_max_key(man->ports);
-    int n = select(maxio+1, &io_mask, NULL, NULL, &tv);
-    if(!n) return n;
+   int n = select(man->maxio+1, &io_mask, NULL, NULL, &tv);
+   if(!n) return n;
     
-    portman_log(("portman_poll: maxio = %d, %d incoming on sockets\n", maxio, n));
+   portman_log(("portman_poll: maxio = %d, %d incoming on sockets\n", man->maxio, n));
 
-    /* retrieve port io which readable */
+   /* retrieve port io which readable */
+   port = xlist_first(man->portlist, &lu);
+   while(port){
 
-	for(i=0; i<=maxio; i++){
+      io = port_io(port);
+      if(FD_ISSET(io, &io_mask)){
 
-       if(FD_ISSET(i, &io_mask)){
+         portman_log(("portman_poll: socket[%d] incoming detected !\n", port_io(port)));
 
-          port = (xrtp_port_t *)map_item(man->ports, i);
+         if(port_incoming(port) >= XRTP_OK) c++;
+      }
 
-          portman_log(("portman_poll: socket[%d] incoming detected !\n", port_io(port)));
+      port = xlist_next(man->portlist, &lu);
+   }
 
-          if(port_incoming(port) >= XRTP_OK) c++;
-       }
-    }
-
-    return c;
+   return c;
 }

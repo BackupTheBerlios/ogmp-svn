@@ -24,11 +24,11 @@ HEADFILES = $(SRCDIR)/xrtp.h $(SRCDIR)/session.h $(SRCDIR)/psched.h \
 				$(SRCDIR)/const.h
 
 SRCFILES = $(SRCDIR)/udp.c $(SRCDIR)/media.c $(SRCDIR)/packet.c $(SRCDIR)/pipeline.c \
-				$(SRCDIR)/portman_posix.c $(SRCDIR)/psched_simple.c $(SRCDIR)/session.c \
+				$(SRCDIR)/portman.c $(SRCDIR)/psched_simple.c $(SRCDIR)/session.c \
 				$(SRCDIR)/xrtp.c
 
 OBJFILES = $(SRCDIR)/udp.o $(SRCDIR)/media.o $(SRCDIR)/packet.o $(SRCDIR)/pipeline.o \
-				$(SRCDIR)/portman_posix.o $(SRCDIR)/psched_simple.o $(SRCDIR)/session.o \
+				$(SRCDIR)/portman.o $(SRCDIR)/psched_simple.o $(SRCDIR)/session.o \
 				$(SRCDIR)/xrtp.o
 
 LIBFILE = $(SRCDIR)/libxrtp.so

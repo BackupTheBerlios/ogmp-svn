@@ -244,7 +244,7 @@
      port->type = type;
 
      port->socket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	 if(port->socket == SOCKET_INVALID){
+      if(port->socket == SOCKET_INVALID){
 	 
 		 udp_debug(("port_new: fail to create  socket\n"));
 		 return NULL;
@@ -267,9 +267,9 @@
      
      if(bind(port->socket, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) == SOCKET_FAIL){
 
-        udp_debug(("port_new: Fail to name socket '%s:%d', errno=%d\n", local_addr, local_portno, WSAGetLastError()));
+        udp_debug(("port_new: Fail to name socket '%s:%d'\n", local_addr, local_portno));
         socket_close(port->socket);
-		port->socket = 0;
+        port->socket = 0;
         free(port);
            
         return NULL;
@@ -323,6 +323,7 @@
        * Currently use select insteed but only microsecond resolution
        */
      fd_set io_set;
+
 	 int n;
      
      struct timeval tout;
