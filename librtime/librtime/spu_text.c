@@ -24,6 +24,8 @@
 #include <string.h>
 #include <ctype.h>
 
+#define SPU_TEXT_LOG
+
 #ifdef SPU_TEXT_LOG
    const int spu_text_log = 1;
 #else

@@ -128,7 +128,24 @@ int time_adjust(xrtp_clock_t * clock, int dmsec, int dusec, int dnsec){
    return OS_OK;
 }
 
-int time_ritghtnow(xrtp_clock_t * clock, int *msec, int *usec, int *nsec){
+int time_spent(xrtp_clock_t * clock, rtime_t ms_then, rtime_t us_then, rtime_t ns_then, rtime_t *ms_spent, rtime_t *us_spent, rtime_t *ns_spent){
+
+    rtime_t ms_now, us_now, ns_now;
+
+    xthr_lock(clock->lock);
+    ns_now = clock->hrtime_now(clock);
+    us_now = clock->usec;
+    ms_now = clock->msec;
+    xthr_unlock(clock->lock);
+
+    *ms_spent = ms_now - ms_then;
+    *us_spent = us_now - us_then;
+    *ns_spent = ns_now - ns_then;
+
+    return OS_OK;
+}
+
+int time_rightnow(xrtp_clock_t * clock, int *msec, int *usec, int *nsec){
 
     xthr_lock(clock->lock);
 
