@@ -21,7 +21,10 @@
  
 extern DECLSPEC  char * xstr_clone(char *str);
 
-extern DECLSPEC  int xstr_ncomp(char *src, char *des, uint len);
+/* against buffer overflow */
+extern DECLSPEC  char * xstr_nclone(char *str, int len);
+
+extern DECLSPEC  int xstr_ncomp(char *src, char *des, int len);
 
 extern DECLSPEC  char * xstr_new_string(char str[]);
 

@@ -26,8 +26,8 @@
  #endif
  #define xstr_log(fmtargs)  do{if(xstring_log) printf fmtargs;}while(0)
 
- char * xstr_clone(char *str){
-   
+ char * xstr_clone(char *str)
+ {
      char * new_str = (char *)malloc(sizeof(char) * strlen(str));
 
      strcpy(new_str, str);
@@ -35,8 +35,18 @@
      return new_str;
  }
 
- int xstr_ncomp(char *src, char *des, uint len){
+ char * xstr_nclone(char *str, int len)
+ {
+     char * new_str = (char *)malloc(sizeof(char) * (len+1));
 
+     strncpy(new_str, str, len);
+	 new_str[len] = '\0';
+
+     return new_str;
+ }
+
+ int xstr_ncomp(char *src, char *des, int len)
+ {
     return memcmp(src, des, len);
  }
 
