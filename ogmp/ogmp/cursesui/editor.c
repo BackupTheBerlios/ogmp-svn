@@ -24,6 +24,7 @@
 #include <timedia/xmalloc.h>
 
 #include "editor.h"
+#include <stdio.h>
 
 editline_t* editline_new(char* buf, int bsize)
 {
@@ -181,7 +182,7 @@ int editline_remove_char(editline_t* edl)
 
 int editline_clear(editline_t* edl)
 {
-	memset(edl->line, 0, edl->max);
+    memset(edl->line, 0, edl->max);
 
 	edl->num = 0;
 	edl->pos = 0;

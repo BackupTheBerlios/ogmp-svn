@@ -22,8 +22,8 @@
 
 #include "editor.h"
 
-#ifndef	LINE_MAX
-#define LINE_MAX 128
+#ifndef	OCUI_LINE_MAX
+ #define OCUI_LINE_MAX 128
 #endif
 
 #define NEWID_FULLNAME	0
@@ -31,6 +31,7 @@
 #define NEWID_REGISTARY	2
 #define NEWID_REGNAME	3
 #define NEWID_REGSEC	4
+
 
 char newid_fullname[128];
 char newid_bookloc[128];
@@ -141,6 +142,7 @@ int window_new_identity_print(gui_t* gui, int wid)
 	else if(ocui->clear_profile)
 	{
 		editline_clear(newid_edit[NEWID_FULLNAME]);
+        
 		editline_clear(newid_edit[NEWID_BOOKLOC]);
 		editline_clear(newid_edit[NEWID_REGISTARY]);
 		editline_clear(newid_edit[NEWID_REGNAME]);
@@ -308,11 +310,11 @@ gui_t* window_new_identity_new(ogmp_curses_t* topui)
 
 	memset(newid_inputs, 0, sizeof(newid_inputs));
 
-	newid_edit[NEWID_FULLNAME] = editline_new(newid_fullname, LINE_MAX);
-	newid_edit[NEWID_BOOKLOC] = editline_new(newid_bookloc, LINE_MAX);
-	newid_edit[NEWID_REGISTARY] = editline_new(newid_registary, LINE_MAX);
-	newid_edit[NEWID_REGNAME] = editline_new(newid_regname, LINE_MAX);
-	newid_edit[NEWID_REGSEC] = editline_new(newid_regsec, LINE_MAX);
+	newid_edit[NEWID_FULLNAME] = editline_new(newid_fullname, OCUI_LINE_MAX);
+	newid_edit[NEWID_BOOKLOC] = editline_new(newid_bookloc, OCUI_LINE_MAX);
+	newid_edit[NEWID_REGISTARY] = editline_new(newid_registary, OCUI_LINE_MAX);
+	newid_edit[NEWID_REGNAME] = editline_new(newid_regname, OCUI_LINE_MAX);
+	newid_edit[NEWID_REGSEC] = editline_new(newid_regsec, OCUI_LINE_MAX);
 
 	newid_inputs[NEWID_FULLNAME] = newid_fullname;
 	newid_inputs[NEWID_BOOKLOC] = newid_bookloc;
