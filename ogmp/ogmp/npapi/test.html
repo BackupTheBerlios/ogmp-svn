@@ -1,104 +1,153 @@
 <HTML>
-<HEAD>
-<TITLE>Simple Plug-in Test</TITLE>
-<script type="text/javascript">
+  <HEAD>
+    <TITLE>RealmTel Mozilla Phone Test</TITLE>
 
-  function get_ip(sipua)
-  {
-	 document.sipua.get_ip();
-  }
+    <script type="text/javascript">
+      <!--
+         function get_ip_return(result)
+         {
+	    document.controlpanel.status.value=result;
+	    alert(result);
+         }
 
-  function get_ip_return(result)
-  {
-	 document.formname.status.value=result;
-	 alert(result);
-  }
+         function load_user_return(result, reason)
+         {
+	    document.controlpanel.status.value=result;
+	    alert(result);
+         }
 
-  function regist_return(result, reason)
-  {
-	 document.formname.status.value=result;
-	 alert(result);
-  }
+         function regist_return(result, reason)
+         {
+	    document.controlpanel.status.value=result;
+	    alert(result);
+         }
+      //-->
+    </script>
 
-  function load_user_return(result)
-  {
-	 document.formname.status.value=result;
-	 alert(result);
-  }
-</script>
+  </HEAD>
+  <BODY>
+    <center>
+      <h1> Scriptable VOIP Client </h1>
+    </center>
 
-</HEAD>
-<BODY>
+    <p>
+      This page contains a testcase which demonstrates the work of Mozilla scriptable VOIP Client. 
+      This example plug-in has no native GUI and does not draw anything in the plugin window. 
+      Clicking on the button will result in calling native plugin method from JavaScript. 
+      The callback functions defined in this page header for handler the client event.
+    </p>
 
-<center>
-<h1> XPConnect Scriptable Sample Plug-in </h1>
-</center>
+    <p>Get_IP will instruct the plug-in to retrieve the VOIP user agent IP address and return it to JavaScript.</p>
+    <p>Load_User will instruct the plugin to set the given user as current VOIP user.</p>
+    <p>Register will instruct the plugin to register current user to the SIP Domain/Realm.</p>
 
-This page contains a testcase which demonstrates the work of scriptable 
-plug-in with Mozilla. This example plug-in has no native GUI and does not 
-draw anything in the plugin window. Clicking on the button will result in calling 
-native plugin method from JavaScript. Show Version will instruct the plug-in 
-to retrieve the Mozilla user agent string and return it to JavaScript to show
-in the alert box.
+    <p>How to show the result is up to web page designer, this give the VOIP client a scriptable user-interface.</p>
+    <p> - Following is the javascript API of this plugin:</p>
 
-<br><br>
+   <pre>
+     /******************************************
+      * Some read-only attribute of the plugin *
+      ******************************************/
+     document.sipua.useragent;  // Get the name of the SIP useragent.
+     document.sipua.lience;     // Get the lience of the plugin.
+     document.sipua.version;    // Get the version of the plugin.
+     
+     /******************
+      * Plugin Methods *
+      ******************/
+     // Load user with userid('bin1') with the length of userid
+     document.sipua.load_user(userid, userid.length);
 
-<center>
+     // Register user with user fullname('Bin Zhang'), the length of fullname, home_sip_router('hubble.realmtel.net'),
+     // user_sipid('bin1@realmtel.net'), expire_seconds(1800)
+     document.sipua.regist(user_fullname, user_fullname.length, home_router, user_at_domain, expire_seconds);
 
-<embed name="sipua" type="application/x-vnd-realmtel-sipua" width=1 height=1 hidden="true" />
+     // Unregister home_sip_router('hubble.realmtel.net') user('bin1@realmtel.net')
+     document.sipua.unregist(home_router, user_at_domain);
 
-<br>
+     // Create a call with title('Hello') and description('Discuss tech issue with you')
+     document.sipua.new_call(title, description);
 
-<!--
+     // Call destination('bin8@realmtel.net')
+     document.sipua.call(callee_at_dest_domain);
 
-//Load user with userid('bin1').
-document.sipua.load_user(userid);
+     // Answer call on lineno(2)
+     document.sipua.answer(lineno);
 
-//register user with user fullname('Bin Zhang'), strlen(fullname), home_sip_router('hubble.realmtel.net'), user_sipid('bin1@realmtel.net'), expire_seconds(1800)
-document.sipua.regist(user_fullname, user_fnsz, home_router, user_at_domain, expire_seconds);
+     // Hangup call on lineno(3)
+     document.sipua.bye(lineno);
+     
+     /*********************************************************
+      * Callback functions used to handle Mozilla Phone event *
+      *********************************************************/
+     // your action when got ip 
+     function get_ip_return(ip)
+     {...}
+     
+     // your action when even load user ok or not
+     // @param result - 'loaduser_ok' if succeed, 'loaduser_fail' if failure.
+     // @param reason - the reason of the result.
+     function load_user_return(result, reason)
+     {...}
+     
+     // your action when even register ok or not
+     // @param result - 'reg_ok' if succeed, 'reg_fail' if failure.
+     // @param reason - the reason of the result.
+     function register_return(result, reason)
+     {...}
+     
+  </pre>
+  <hr/>
 
-//unregister home_sip_router('hubble.realmtel.net') user('bin1@realmtel.net')
-document.sipua.unregist(home_router, user_at_domain);
+  <!-- embed the plugin into this page //-->
+  <embed name="sipua" type="application/x-vnd-realmtel-sipua" width=1 height=1 hidden="true" />
 
-//Create a call with title('Hello') and description('Discuss tech issue with you')
-document.sipua.new_call(title, description);
+  <center>
 
-//call destination('bin8@realmtel.net')
-document.sipua.call(callee_at_dest_domain);
+    <script language="javascript">
+      <!--
+      if (!document.sipua)
+      {
+         document.write('<p>No VOIP Client Found</p>');
+      }
+      else
+      {
+	 //Get Plugin Attribute(UserAgent)
+         document.write('<p>UserAgent: ', document.sipua.useragent, '</p>');
 
-//answer call on lineno(2)
-document.sipua.answer(lineno);
+	 //Get Plugin Attribute(Licence)
+	 document.write('<p>Licence: ', document.sipua.licence, '</p>');
 
-//hangup call on lineno(3)
-document.sipua.bye(lineno);
+	 //Get Plugin Attribute(Version)
+	 document.write('<p>Version: ', document.sipua.version, '</p>');
+      }
+      //-->
+    </script>
 
-//-->
+    <form name="controlpanel">
+      <!-- Apply a text box as status bar //-->
+      <input type="text" name="status" value="idle"/>
 
-<script language="javascript">
-<!--
-  if (document.sipua)
-  {
-	document.write(document.sipua.useragent);
-	document.write(document.sipua.licence);
-	document.write(document.sipua.version);
-  }
-  else
-  {
-    alert("No plugin");
-  }
-//-->
-</script>
+      <!--  
+        When mouse click, call plugin's get_ip() method to retrieve IP address, the address send to function
+        get_ip_return() in this page header. 
+      //-->
+      <input type="button" value="get ip" onclick='document.sipua.get_ip()'/>
 
-<br>
+      <!-- 
+        When click the button['load_user'], call plugin's load_user() method to set current user, the result will
+        be sent to function load_user_return() in this page header. 
+      //-->
+      <input type="button" value="load_user" onclick='document.sipua.load_user("hling", "hling".length)'/>
 
-<form name="formname">
-<input type="text" name="status" value="idle">
-<input type="button" value="get ip" onclick='get_ip(sipua)'>
-<input type="button" value="load_user" onclick='document.sipua.load_user("hling", "hling".length)'>
-<input type="button" value="register" onclick='document.sipua.regist("Heming Ling", "Heming Ling".length, "rosella.timedia.org", "heming@timedia.org", 1800)'>
-</form>
+      <!-- 
+        Click Button['register'] to call plugin's regist() method to register this user, result will be sent to
+        function regist_return(), in this page header.  
+      //-->
+      <input type="button" value="register" onclick='document.sipua.regist("Heming Ling", "Heming Ling".length, "rosella.timedia.org", "heming@timedia.org", 1800)'/>
+    </form>
 
-</center>
+  </center>
 
 </BODY>
 </HTML>
