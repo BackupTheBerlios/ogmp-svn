@@ -363,9 +363,6 @@ struct media_player_s
    int (*match_capable)(media_player_t *playa, capable_descript_t *cap);
 
    int (*stop) (media_player_t * playa);
-   
-   //int (*match_type) (media_player_t * playa, char *mime, char *fourcc);
-   //int (*receive_media) (media_player_t *playa, media_frame_t* frame, int64 samplestamp, int last_packet);
 };
 
 /* media is drived by source */

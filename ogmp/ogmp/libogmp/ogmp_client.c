@@ -43,6 +43,8 @@ extern ogmp_ui_t* global_ui;
 #define SIPUA_MAX_RING 6
 
 
+
+
 #define MAX_CALL_BANDWIDTH  20480  /* in Bytes */
 
 /****************************************************************************************/
@@ -183,6 +185,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
                 user_prof->reg_reason_phrase = xstr_clone(reg_e->server_info);
 
             if(user_prof->reg_status == SIPUA_STATUS_REG_DOING)
+
 			{
 				user_prof->reg_server = xstr_clone(reg_e->server);
 
@@ -237,6 +240,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
             if(!user_prof)
                 break;
+
                 
             snprintf(buf, 99, "Register %s Error[%i]: %s",
 					reg_e->server, reg_e->status_code, reg_e->server_info);
@@ -576,30 +580,8 @@ int client_done_call(sipua_t* sipua, sipua_set_t* set)
 
 	ua->control->release_bandwidth(ua->control, set->bandwidth_need);
 
-
-
-
-	return sipua_done_sip_session(set);
+   return sipua_done_sip_session(set);
 }
-
-/*
-int client_done(ogmp_client_t *client)
-{
-   client->rtp_format->close(client->rtp_format);
-
-   xlist_done(client->format_handlers, client_done_format_handler);
-
-   xthr_done_lock(client->nring_lock);
-   conf_done(client->conf);
-
-   if(client->sdp_body)
-	   free(client->sdp_body);
-
-   xfree(client);
-
-   return MP_OK;
-}
-*/
 
 int sipua_done(sipua_t *sipua)
 {
@@ -760,9 +742,7 @@ int client_unregist(sipua_t *sipua, user_profile_t *user)
 		xthr_wait(user->thread_register, &ret);
 	}
 
-
 	ret = sipua_unregist(sipua, user);
-
 
 	if(ret < UA_OK)
         client->reg_profile = NULL;
@@ -841,12 +821,10 @@ media_source_t* client_open_source(sipua_t* sipua, char* name, char* mode, void*
 	return source_open(name, client->control, mode, param);
 }
 
-
 int client_close_source(sipua_t* sipua, media_source_t* src)
 {
     /*
     ogmp_client_t *client = (ogmp_client_t*)sipua;
-
     */
 	return src->done(src);
 }
@@ -863,9 +841,9 @@ media_source_t* client_set_background_source(sipua_t* sipua, char* name, char *s
 
 	if(client->background_source)
    {
-        client->background_source->stop(client->background_source);
-        client->background_source->done(client->background_source);
-        client->background_source = NULL;
+      client->background_source->stop(client->background_source);
+      client->background_source->done(client->background_source);
+      client->background_source = NULL;
 
 		if(client->background_source_subject)
 			xstr_done_string(client->background_source_subject);
@@ -874,18 +852,17 @@ media_source_t* client_set_background_source(sipua_t* sipua, char* name, char *s
 
 		client->background_source_subject = NULL;
 		client->background_source_info = NULL;
-    }
+   }
 
-    if(name && name[0])
+   if(name && name[0])
 	{
-        netcast_parameter_t np;
+      netcast_parameter_t np;
 
 		np.subject = client->background_source_subject;
 		np.info = client->background_source_info;
 		np.user_profile = client->sipua.user_profile;
 
-		client->background_source = source_open(name, client->control, "netcast", &np);
-		
+		client->background_source = source_open(name, client->control, "netcast", &np);		
 		client->background_source_subject = xstr_clone(subject);
 		client->background_source_info = xstr_clone(info);
 	}
@@ -900,8 +877,6 @@ int client_attach_source(sipua_t* sipua, sipua_set_t* call, transmit_source_t* t
 	char *cname = call->rtpcapset->cname;
 	/*
 	where are you?
-
-
 	int bw_budget = clie->control->book_bandwidth(clie->control, MAX_CALL_BANDWIDTH);
 	*/
 	rtpcap_descript_t *rtpcap = xlist_first(call->rtpcapset->rtpcaps, &lu);
@@ -1161,6 +1136,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
 	client->format_handlers = xlist_new();
 
 	nmod = catalog_create_modules (mod_cata, "format", client->format_handlers);
+   
 	printf("client_new: %d format module found\n", nmod);
 
 	/* set sip client */

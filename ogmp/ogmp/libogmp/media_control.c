@@ -35,7 +35,7 @@
 #endif             
 
 #ifdef MEDIA_CONTROL_DEBUG
- #define cont_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
+ #define cont_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define cont_debug(fmtargs)
 #endif
@@ -70,7 +70,6 @@ typedef struct control_impl_s
    rtime_t period_us;
 
    rtime_t prev_period_start;
-
 
    rtime_t prev_period_us;
 
@@ -489,10 +488,15 @@ int cont_seek_millisec (media_control_t * cont, int msec)
 int cont_demux_next (media_control_t * cont, int strm_end)
 {
 	rtime_t demux_us;
+	control_impl_t *impl;
 
-	control_impl_t *impl = (control_impl_t *)cont;
+   cont_debug(("cont_demux_next: 1\n\n\n"));
 
-	if(impl->demuxing != 0)
+	return -1;
+
+	impl = (control_impl_t *)cont;
+   
+   if(impl->demuxing != 0)
 	{
 	   cont_log(("cont_demux_next: %dus period, last sleep %dus(need catchup %dus)\n", impl->period_us, impl->sleep_us, impl->catchup_us));
 
@@ -593,7 +597,7 @@ int cont_reset_bandwidth(media_control_t * cont)
 	return impl->bandwidth;
 }
 
-module_interface_t* new_media_control ()
+module_interface_t* new_media_control()
 {
    media_control_t * cont;
 
@@ -618,6 +622,7 @@ module_interface_t* new_media_control ()
    }
 
    impl->setting_calls = xlist_new();
+   
    if(!impl->setting_calls){
 
       cont_debug (("media_new_control: No memory for setting list\n"));
@@ -658,4 +663,3 @@ module_interface_t* new_media_control ()
 
    return cont;
 }
-

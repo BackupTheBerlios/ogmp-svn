@@ -39,50 +39,42 @@
 
 int source_loop(void * gen)
 {
-   ogmp_source_t * source = (ogmp_source_t *)gen;
+   ogmp_source_t * osource = (ogmp_source_t *)gen;
 
    rtime_t itv;
    
-   src_debug (("source_loop: 0\n"));exit(0);
-
-   source->finish = 0;
-	
-   source->demuxing = 1;
+   osource->finish = 0;
+   osource->demuxing = 1;
 
    src_debug (("source_loop: start demuxing ...\n"));
-   
-   src_debug (("source_loop: 1\n"));exit(1);
 
    while (1)
    {
-	   {/*lock*/ xthr_lock(source->lock);}
+	   {/*lock*/ xthr_lock(osource->lock);}
       
-      if (source->finish)
+      if (osource->finish)
       {
          src_log (("\nogmplyer: Last demux and quit\n"));
-         source->control->demux_next(source->control, 1);
-         
+         osource->control->demux_next(osource->control, 1);         
          break;
       }
 
-      src_debug (("source_loop: 2\n"));exit(2);
-      
-      itv = source->control->demux_next(source->control, 0);
+      itv = osource->control->demux_next(osource->control, 0);
+            
       if( itv < 0 && itv == MP_EOF)
       {
          src_log(("(source_loop: stop demux)\n"));
-
          break;
       }
       
-      src_debug (("source_loop: 3\n"));exit(3);
-      
-      {/*unlock*/ xthr_unlock(source->lock);}
+      src_debug (("source_loop: 3\n"));
+
+      {/*unlock*/ xthr_unlock(osource->lock);}
    }
    
-   source->demuxing = 0;
+   osource->demuxing = 0;
 
-   {/*unlock*/ xthr_unlock(source->lock);}
+   {/*unlock*/ xthr_unlock(osource->lock);}
 
    src_log (("\n(ogmplyer: source stopped\n"));
    
@@ -91,9 +83,9 @@ int source_loop(void * gen)
 
 int source_start (media_source_t *msrc)
 {
-	ogmp_source_t *source = (ogmp_source_t*)msrc;
+	ogmp_source_t *osource = (ogmp_source_t*)msrc;
 
-	if(source->demuxing)
+	if(osource->demuxing)
 	{
 		src_debug (("source_start: source already running\n"));
 
@@ -101,7 +93,7 @@ int source_start (media_source_t *msrc)
 	}
 		
 	/* start thread */
-	if(source->nstream == 0)
+	if(osource->nstream == 0)
 	{
 		src_debug (("source_start: no source stream available\n"));
 
@@ -110,7 +102,7 @@ int source_start (media_source_t *msrc)
 
 	src_debug (("source_start: start\n"));
 
-	source->demuxer = xthr_new(source_loop, source, XTHREAD_NONEFLAGS);
+	osource->demuxer = xthr_new(source_loop, osource, XTHREAD_NONEFLAGS);
    
 	return MP_OK;
 }
@@ -166,7 +158,7 @@ int source_cb_on_player_ready(void *gen, media_player_t *player)
 {
 	ogmp_source_t *src = (ogmp_source_t*)gen;
 
-	source_start(&src->source);
+	source_start(&src->tsource.source);
 
 	return MP_OK;
 }
@@ -214,7 +206,7 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
 {
 	media_source_t *msrc;
 	transmit_source_t *tsrc;
-	ogmp_source_t* source;
+	ogmp_source_t* osource;
 
 	xlist_t* format_handlers;
 	media_format_t *format = NULL;
@@ -238,18 +230,18 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
       return NULL;
    }
     
-	source = xmalloc(sizeof(ogmp_source_t));
-	if(!source)
+	osource = xmalloc(sizeof(ogmp_source_t));
+	if(!osource)
    {
       src_debug(("source_open: no memory!\n"));
 	   return NULL;
    }
 
-	memset(source, 0, sizeof(ogmp_source_t));
+	memset(osource, 0, sizeof(ogmp_source_t));
 
 	/* player controler */
-	source->control = control;
-   
+	osource->control = control;
+
 	mod_cata = control->modules(control);
    
 	format_handlers = xlist_new();
@@ -263,14 +255,15 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
 		/* open media source
 		 * mode: "playback"; "netcast"
 		 */
-		source->nstream = format->open(format, name, source->control);
-		if (source->nstream > 0)
+		osource->nstream = format->open(format, name, osource->control);
+		if (osource->nstream > 0)
 		{
-			src_log (("source_open: %d streams\n", source->nstream));
+			src_log (("source_open: %d streams\n", osource->nstream));
 
-			source->source.format = format;
+			osource->tsource.source.format = format;
 
 			xlist_remove_item(format_handlers, format);
+         
 			break;
 		}
       
@@ -279,19 +272,19 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
 
 	xlist_done(format_handlers, source_done_format_handler);
 
-	if (source->nstream == 0)
+	if (osource->nstream == 0)
 	{
 		src_log(("source_setup: no format can open '%s'\n", name));
 
-		xfree(source);
+		xfree(osource);
 
 		return NULL;
 	}
 
 	/* set audio source */
-	source->control->set_format (source->control, "av", format);
+	osource->control->set_format (osource->control, "av", format);
 
-	msrc = (media_source_t*)source;
+	msrc = (media_source_t*)osource;
 
 	msrc->done = source_done;
 	msrc->start = source_start;
@@ -299,10 +292,9 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
 
    if(0 == strcmp(mode, "playback"))
 	{
-		if(0 == format->new_all_player(format, source->control, "playback", mode_param))
+		if(0 == format->new_all_player(format, osource->control, "playback", mode_param))
 		{
 			source_done(msrc);
-
 			return NULL;
 		}
 	}
@@ -312,31 +304,34 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
 		
 		rtpcap_set_t* rtpcapset = rtp_capable_from_format(format, np->subject, np->info, np->user_profile);
 
-		if(0 == format->new_all_player(format, source->control, "netcast", rtpcapset))
+		if(0 == format->new_all_player(format, osource->control, "netcast", rtpcapset))
 		{
 			source_done(msrc);
-
 			return NULL;
 		}
 
       /* In "netcast" mode */
-      tsrc = (transmit_source_t*)source;
+      tsrc = (transmit_source_t*)osource;
       tsrc->add_destinate = source_add_destinate;
       tsrc->remove_destinate = source_remove_destinate;
-
+      
       /* collect the players of the file */
-      nplayer = format->players(format, "netcast", source->players, MAX_NCAP);
+      nplayer = format->players(format, "netcast", osource->players, MAX_NCAP);
+
       src_log(("source_setup: '%s' opened by %d players\n", name, nplayer));
 
       for(i=0; i<nplayer; i++)
       {
          src_log(("source_setup: source_cb_on_player_ready@%x\n", (int)source_cb_on_player_ready));
-         source->players[i]->set_callback(source->players[i], CALLBACK_PLAYER_READY, source_cb_on_player_ready, source);
+         osource->players[i]->set_callback(osource->players[i], CALLBACK_PLAYER_READY, source_cb_on_player_ready, osource);
       }
    }
     
-   source->lock = xthr_new_lock();
-   source->wait_request = xthr_new_cond(XTHREAD_NONEFLAGS);
+   osource->lock = xthr_new_lock();
+   osource->wait_request = xthr_new_cond(XTHREAD_NONEFLAGS);
+   
+   //test
+   osource->control->demux_next(osource->control, 0);
 
    return msrc;
 }

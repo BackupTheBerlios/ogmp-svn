@@ -125,8 +125,6 @@ struct ogmp_client_s
 	xthr_cond_t* wait_unregistered;
 
 
-
-
 	/* below is sipua related */
 	user_profile_t* reg_profile;
 
@@ -173,7 +171,7 @@ struct ogmp_client_s
 
 struct ogmp_source_s
 {
-   struct media_source_s source;
+   struct transmit_source_s tsource;
 
    int finish;
 
