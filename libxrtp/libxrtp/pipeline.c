@@ -29,10 +29,18 @@
 /*
 #define PIPELINE_LOG
 */
+#define PIPELINE_DEBUG
+
 #ifdef PIPELINE_LOG
  #define pipe_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define pipe_log(fmtargs)
+#endif
+
+#ifdef PIPELINE_DEBUG
+ #define pipe_debug(fmtargs)  do{printf fmtargs;}while(0)
+#else
+ #define pipe_debug(fmtargs)
 #endif
 
  #define TIME_NEWER(x,y) (((x) - (y)) >> (HRTIME_BITS - 1))
@@ -452,20 +460,22 @@
     return npacket;
  }
 
- int pipe_pump(packet_pipe_t * pipe, rtime_t max_usec, void * pac, int * packet_bytes){
-
-    pipe_load_t * load;
-    pipe_step_t * step = NULL;
+ int pipe_pump(packet_pipe_t *pipe, rtime_t max_usec, void *pac, int *packet_bytes)
+ {
+    pipe_load_t *load;
+    pipe_step_t *step = NULL;
     
     *packet_bytes = 0;
     
     pipe_log(("pipe_pump: start proccess ...\n"));
+    
     load = (pipe_load_t *)xmalloc(sizeof(struct pipe_load_s));
-    if(!load){
-
+    if(!load)
+    {
+       pipe_debug(("pipe_pump: No memory!\n"));
        return XRTP_EMEM;
     }
-    
+
     load->packet = pac;
     load->max_usec = max_usec;
 
@@ -473,15 +483,16 @@
 
     load->nextstep = pipe_first_step(pipe);
     
-    while( load->nextstep >= 0 ){
-         
+    while( load->nextstep >= 0 )
+    {
        pipe_log(("pipe_pump: in step[%d]\n", load->nextstep));
        step = pipe->steps[load->nextstep];
 
        step->load = load;
 
-       if(_pipe_step(step) == XRTP_CONSUMED){    /* pipe step */
-
+       if(_pipe_step(step) == XRTP_CONSUMED)
+       {
+          /* pipe step */
           xfree(step->load);
           step->load = NULL;
 
@@ -489,11 +500,9 @@
        }
 
        step->load = NULL;
-          
-       if(pipe->stop){
 
+       if(pipe->stop)
           break;
-       }
 
        load->nextstep = pipe_next_step(pipe, load->nextstep);
     }
@@ -503,6 +512,7 @@
        /* return with the RTP packet for scheduling */
        pipe_log(("pipe_pump: rtp packet ready for scheduling\n"));
     }
+
 
     if(!pipe->stop && pipe->type == XRTP_RTCP){   /* Produce the rtcp packet successfully */
 
@@ -531,9 +541,10 @@
        *packet_bytes = load->packet_bytes;
 
 
-    xfree(step->load);
     step->load = NULL;
 
+    xfree(load);
+    
     pipe_log(("pipe_pump: packet produced.\n"));
     
     return XRTP_OK;
@@ -581,6 +592,7 @@
           *ret_callback = _pipe_callback_step_idel;
           *ret_data = step;
           break;
+
           
        case(PIPE_CALLBACK_STEP_UNLOAD):
           pipe_log(("pipe_get_step_callback: Found callback.step_unload(step@%d)\n", (int)step));
