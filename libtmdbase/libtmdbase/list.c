@@ -53,14 +53,12 @@ xlist_t * xlist_new(){
 
    return list;
 }
-xrtp_list_t * xrtp_list_new(){return xlist_new();}
 
 int xlist_done(xlist_t *list, int(*free_item)(void *)){
 
-    xrtp_list_node_t *curr = NULL;
+   xrtp_list_node_t *curr = NULL;
 
-	if(list == NULL)
-      return OS_OK;
+   if(list == NULL) return OS_OK;
 
    curr = list->head;
    
@@ -78,71 +76,58 @@ int xlist_done(xlist_t *list, int(*free_item)(void *)){
    free(list);
    return OS_OK;
 }
-int xrtp_list_free(xrtp_list_t *list, int(*free_item)(void *)){
-  return xlist_done(list, free_item);
-}
 
 int xlist_reset(xlist_t *list, int(*free_item)(void *)){
 
-	 xrtp_list_node_t *curr = NULL;
-	 xrtp_list_node_t *next = NULL;
-   
-   if(list == NULL)
-	   return OS_OK;
+   xrtp_list_node_t *curr = NULL;
 
-	 curr = list->head;
+   xrtp_list_node_t *next = NULL;
    
-	 while(curr != NULL){
+   if(list == NULL) return OS_OK;
+
+   curr = list->head;
+   
+   while(curr != NULL){
      
-     next = curr->next;
-	   list->head = next;
-		 list->num--;
-     free_item(curr->data);
-		 _xrtp_list_freenode(curr);
-		 curr = next;
-	 }
+      next = curr->next;
+      list->head = next;
+      list->num--;
+      free_item(curr->data);
+      _xrtp_list_freenode(curr);
+      curr = next;
+   }
 
-	 list->head = list->end = NULL;
-	 list->num = 0;
+   list->head = list->end = NULL;
+   list->num = 0;
    
-	 return OS_OK;
-}
-int xrtp_list_reset(xrtp_list_t *list, int(*free_item)(void *)){
-   return xlist_reset(list, free_item);
+   return OS_OK;
 }
 
 xrtp_list_user_t * xlist_new_user(xlist_t * list){
    xrtp_list_user_t * user;
 
    /* Current arg list is not used
-   if(list == NULL)
-	   return NULL;
+   if(list == NULL) return NULL;
    */
 
-	user = (xrtp_list_user_t *)malloc(sizeof(xrtp_list_user_t));
+   user = (xrtp_list_user_t *)malloc(sizeof(xrtp_list_user_t));
    if(user != NULL){
-		user->curr = user->prev = user->next = NULL;
-	}
+      user->curr = user->prev = user->next = NULL;
+   }
 
-	return user;
-}
-xrtp_list_user_t * xrtp_list_newuser(xrtp_list_t * list){
-   return xlist_new_user(list);
+   return user;
 }
 
 int xlist_done_user(xlist_user_t * user){
    free(user);
 	return OS_OK;
 }
-int xrtp_list_freeuser(xrtp_list_user_t * user){
-   return xlist_done_user(user);
-}
 
-void * xrtp_list_first(xrtp_list_t * list, xrtp_list_user_t * u){
+void * xlist_first(xlist_t * list, xlist_user_t * u){
   
-    xrtp_list_node_t * n = NULL;
-	
-	if(list->num == 0) return NULL;
+   xrtp_list_node_t * n = NULL;
+
+   if(list->num == 0) return NULL;
   
    n = list->head;
 
@@ -154,7 +139,7 @@ void * xrtp_list_first(xrtp_list_t * list, xrtp_list_user_t * u){
    return n->data;
 }
 
-void * xrtp_list_next(xrtp_list_t * list, xrtp_list_user_t * u){
+void * xlist_next(xlist_t * list, xlist_user_t * u){
   
    xrtp_list_node_t * curr = u->curr;
 
@@ -169,7 +154,7 @@ void * xrtp_list_next(xrtp_list_t * list, xrtp_list_user_t * u){
    return curr->data;
 }
 
-void * xrtp_list_current(xrtp_list_t * list, xrtp_list_user_t * u){
+void * xlist_current(xlist_t * list, xlist_user_t * u){
 
    if(u->curr)
       return u->curr->data;
@@ -177,7 +162,7 @@ void * xrtp_list_current(xrtp_list_t * list, xrtp_list_user_t * u){
       return NULL;
 }
 
-int xrtp_list_size(xrtp_list_t * list){
+int xlist_size(xlist_t * list){
    return list->num;
 }
 
@@ -204,7 +189,7 @@ int _xrtp_list_freenode(xrtp_list_node_t * node){
 	return OS_OK;
 }
 
-int xrtp_list_add_first(xrtp_list_t * list, void * data){
+int xlist_addto_first(xlist_t * list, void * item){
   
    xrtp_list_node_t * node;
 
@@ -215,15 +200,16 @@ int xrtp_list_add_first(xrtp_list_t * list, void * data){
    if(!node) return OS_EMEM;
 
    node->next = list->head;
-   node->data = data;
+   node->data = item;
    list->head = node;
    
    list->num++;
 
+
    return OS_OK;
 }
 
-int xrtp_list_add_last(xrtp_list_t * list, void * data){
+int xlist_addto_last(xlist_t * list, void * data){
 
    xrtp_list_node_t * node;
 
@@ -252,7 +238,7 @@ int xrtp_list_add_last(xrtp_list_t * list, void * data){
 	return OS_OK;
 }
 
-int xrtp_list_add_ascent_once(xrtp_list_t * list, void * ndata, int cmp(void *, void *)){
+int xlist_addonce_ascent(xlist_t * list, void * ndata, int cmp(void *, void *)){
 
    int ret;
    xrtp_list_node_t * node = NULL;
@@ -322,7 +308,7 @@ int xrtp_list_add_ascent_once(xrtp_list_t * list, void * ndata, int cmp(void *, 
    return OS_OK;
 }
 
-void * xrtp_list_remove_first(xrtp_list_t * list){
+void * xlist_remove_first(xlist_t * list){
   
    xrtp_list_node_t * node;
    void * data;
@@ -341,7 +327,7 @@ void * xrtp_list_remove_first(xrtp_list_t * list){
    return data;
 }
 
-int xrtp_list_remove_item (xrtp_list_t * list, void *data) {
+int xlist_remove_item (xlist_t *list, void *data) {
 
    xrtp_list_node_t * curr = NULL;
    xrtp_list_node_t * prev = NULL;
@@ -380,7 +366,7 @@ int xrtp_list_remove_item (xrtp_list_t * list, void *data) {
    return OS_INVALID;
 }
 
-void * xrtp_list_remove(xrtp_list_t * list, void *data, int (*match)(void*, void*)){
+void * xlist_remove(xrtp_list_t * list, void *data, int (*match)(void*, void*)){
 
    xrtp_list_node_t * curr = NULL;
    xrtp_list_node_t * prev = NULL;
@@ -418,9 +404,7 @@ void * xrtp_list_remove(xrtp_list_t * list, void *data, int (*match)(void*, void
    return NULL;
 }
 
-int xrtp_list_delete_if(xrtp_list_t * list, void * cdata,
-                          int(*condition)(void*, void*),
-                          int(*freeman)(void*)){
+int xlist_delete_if(xlist_t * list, void * cdata, int(*condition)(void*, void*), int(*free_item)(void*)){
 
    void * data;
    
@@ -451,7 +435,7 @@ int xrtp_list_delete_if(xrtp_list_t * list, void * cdata,
          list->num--;
          _xrtp_list_freenode(curr);
          
-         freeman(data);
+         free_item(data);
       }
       
       prev = curr;
@@ -461,7 +445,7 @@ int xrtp_list_delete_if(xrtp_list_t * list, void * cdata,
    return OS_OK;
 }
 
-void * xrtp_list_find(xrtp_list_t * list, void * data, int (*match)(void*, void*), xrtp_list_user_t * u){
+void * xlist_find(xlist_t * list, void * data, int (*match)(void*, void*), xlist_user_t * u){
 
    if(!list || list->num == 0)
       return NULL;
@@ -484,27 +468,7 @@ void * xrtp_list_find(xrtp_list_t * list, void * data, int (*match)(void*, void*
    return NULL;
 }
 
-void * xlist_find(xrtp_list_t * list, void * data, int (*match)(void*, void*)){
-
-   xrtp_list_node_t *cur;
-
-   if(!list || list->num == 0)
-      return NULL;
-
-   cur = list->head;
-
-   while(cur){
-
-      if( match(cur->data, data) == 0 )/* match */
-         return cur->data;
-
-      cur = cur->next;
-   }
-
-   return NULL;
-}
-
-int xrtp_list_visit(xrtp_list_t * list, int(*visitor)(void*, void*), void * vdata){
+int xlist_visit(xlist_t * list, int(*visit)(void*, void*), void *visitor){
                            
    int ret = OS_OK;
    xrtp_list_node_t * curr = NULL;
@@ -520,7 +484,7 @@ int xrtp_list_visit(xrtp_list_t * list, int(*visitor)(void*, void*), void * vdat
 
       next = curr->next;
 
-      ret = visitor(curr->data, vdata);  /* visit node */
+      ret = visit(curr->data, visitor);  /* visit node */
       
       if(ret < OS_OK) return ret; 
 
@@ -529,5 +493,45 @@ int xrtp_list_visit(xrtp_list_t * list, int(*visitor)(void*, void*), void * vdat
 
    return ret;
 }
+
+/*old api, not use anymore*/
+xrtp_list_t * xrtp_list_new(){return xlist_new();}
+
+int xrtp_list_free(xrtp_list_t *list, int(*free_item)(void *)){return xlist_done(list, free_item);}
+
+int xrtp_list_reset(xrtp_list_t *list, int(*free_item)(void *)){return xlist_reset(list, free_item);}
+
+xrtp_list_user_t * xrtp_list_newuser(xrtp_list_t * list){return xlist_new_user(list);}
+
+int xrtp_list_freeuser(xrtp_list_user_t * user){return xlist_done_user(user);}
+
+void * xrtp_list_first(xrtp_list_t * list, xrtp_list_user_t * u){return xlist_first(list, u);}
+
+void * xrtp_list_next(xrtp_list_t * list, xrtp_list_user_t * u){return xlist_next(list,u);}
+
+void * xrtp_list_current(xrtp_list_t * list, xrtp_list_user_t * u){return xlist_current(list,u);}
+
+int xrtp_list_size(xrtp_list_t * list){return xlist_size(list);}
+
+int xrtp_list_add_first(xrtp_list_t * list, void * item){return xlist_addto_first(list,item);}
+
+int xrtp_list_add_last(xrtp_list_t * list, void * item){return xlist_addto_last(list,item);}
+
+int xrtp_list_add_ascent_once(xrtp_list_t * list, void * item, int cmp(void *, void *)){return xlist_addonce_ascent(list, item, cmp);}
+
+void * xrtp_list_remove_first(xrtp_list_t * list){return xlist_remove_first(list);}
+
+int xrtp_list_remove_item (xrtp_list_t * list, void *data) {return xlist_remove_item(list,data);}
+
+void * xrtp_list_remove(xrtp_list_t * list, void *item, int (*match)(void*, void*)){return xlist_remove(list,item,match);}
+
+int xrtp_list_delete_if(xrtp_list_t * list, void * cdata, int(*condition)(void*, void*), int(*free_item)(void*))
+{return xlist_delete_if(list, cdata, condition, free_item);}
+
+void * xrtp_list_find(xrtp_list_t * list, void * data, int (*match)(void*, void*), xrtp_list_user_t *u)
+{return xlist_find(list,data,match,u);}
+
+int xrtp_list_visit(xrtp_list_t * list, int(*visit)(void*, void*), void *visitor)
+{return xlist_visit(list,visit,visitor);}
 
 
