@@ -125,6 +125,9 @@ int jcall_new(eXosipua_t *jua, eXosip_event_t *je)
 	/* event notification */
 	jua->sipuas.notify_event(jua->sipuas.lisener, &call_e.event);
 
+	/* set create call reference */
+	je->jc->external_reference = call_e.event.call_info;
+
 	return 0;
 }
 

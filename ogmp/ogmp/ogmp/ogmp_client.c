@@ -302,6 +302,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				break;
 			}
 
+			call_e->event.call_info = call;
+
 			call->cid = call_e->cid;
 
 			call->did = call_e->did;
@@ -320,7 +322,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			while(*q != '>') q++;
 
 			call->from = xstr_nclone(p, q-p);
-            
 
 			for(i=0; i<MAX_SIPUA_LINES; i++)
 			{
