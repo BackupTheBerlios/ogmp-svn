@@ -103,6 +103,7 @@
     step->enable = enable;
 
     pipe->steps[pipe->num_step] = step;
+
     step->step_no = pipe->num_step;
     pipe->num_step++;
 
@@ -153,7 +154,7 @@
     return step;
  }
 
- pipe_step_t * pipe_replace(packet_pipe_t *pipe, const char * oldid, profile_handler_t *handler){
+ pipe_step_t * pipe_replace(packet_pipe_t *pipe, char *oldid, profile_handler_t *handler){
 
     pipe_step_t * step, * oldstep = NULL;
     profile_handler_t * hand = NULL;
@@ -180,8 +181,8 @@
 
        hand = pipe->steps[i]->handler;
        modu = hand->module(hand);
-       if(!strcmp(oldid, modu->id(modu))){
-
+       if(modu->match_id(modu, oldid))
+       {
           oldstep = pipe->steps[i];
           pipe->steps[i] = step;
           step->enable = oldstep->enable;
@@ -390,6 +391,7 @@
     }else{
 
        *r_nextts = pipe->next_us = HRTIME_INFINITY;
+
     }
 
     if(pipe->pipe_complete_cb)

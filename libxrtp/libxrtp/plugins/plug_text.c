@@ -369,6 +369,7 @@ int tm_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
          sender->lsr_msec = ms;
          sender->lsr_usec = us;
 
+
 		 tm_log(("text/rtp-test.tm_rtcp_in:========================\n"));
 		 tm_log(("text/rtp-test.tm_rtcp_in: [%s] SR report\n", sender->cname));
 		 tm_log(("text/rtp-test.tm_rtcp_in: ssrc[%u]\n", sender->ssrc));
@@ -592,6 +593,11 @@ xrtp_media_t * tm_media(profile_handler_t *handler)
 const char * tm_id(profile_class_t * clazz)
 {
     return tm_mime;
+}
+
+int tm_match_id)(profile_class_t *class, char *id)
+{
+   return !strncmp(tm_mime, id);
 }
 
 int tm_type(profile_class_t * clazz)

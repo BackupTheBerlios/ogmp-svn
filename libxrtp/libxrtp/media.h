@@ -22,40 +22,41 @@ typedef uint64 media_time_t;
 
 struct xrtp_media_s
 {
-	char * type; /* identical to handler id */
-    xrtp_session_t *session;
+   char * type; /* identical to handler id */
+   xrtp_session_t *session;
 
-    uint clockrate;
-    uint sampling_instance;
+   uint clockrate;
+   uint sampling_instance;
      
-    const char* (*mime)(xrtp_media_t * media);
+   //char* (*mime)(xrtp_media_t * media);
+   int (*match_mime)(xrtp_media_t * media, char *mime);
 
-    int (*done)(xrtp_media_t *media);
+   int (*done)(xrtp_media_t *media);
 
-    int (*set_parameter)(xrtp_media_t *media, char *key, void *param);
-	void* (*parameter)(xrtp_media_t *media, char *key);
+   int (*set_parameter)(xrtp_media_t *media, char *key, void *param);
+   void* (*parameter)(xrtp_media_t *media, char *key);
 
-	int (*set_callback)(xrtp_media_t *media, int type, int(*cb)(), void *user);
+   int (*set_callback)(xrtp_media_t *media, int type, int(*cb)(), void *user);
      
-    int (*set_rate)(xrtp_media_t *media, int rate);
-    int (*rate)(xrtp_media_t *media);
+   int (*set_rate)(xrtp_media_t *media, int rate);
+   int (*rate)(xrtp_media_t *media);
      
-    uint32 (*sign)(xrtp_media_t * media);
+   uint32 (*sign)(xrtp_media_t * media);
 
-    /* For media, this means the time to display
-     * xrtp will schedule the time to send media by this parameter.
-     */
-    int (*post)(xrtp_media_t * media, media_data_t *data, int bytes, uint32 timestamp);
-	int (*play)(void *play, media_data_t *data, int64 count, int ts_last, int eos);
-	int (*sync)(void *play, uint32 stamp, uint32 hi_ntp, uint32 lo_ntp);
-	
-	/**
-	 * retrieve current media timestamp;
-	 */
-	uint32 (*timestamp)(xrtp_media_t *media);
+   /* For media, this means the time to display
+    * xrtp will schedule the time to send media by this parameter.
+    */
+   int (*post)(xrtp_media_t * media, media_data_t *data, int bytes, uint32 timestamp);
+   int (*play)(void *play, media_data_t *data, int64 count, int ts_last, int eos);
+   int (*sync)(void *play, uint32 stamp, uint32 hi_ntp, uint32 lo_ntp);
+   
+   /**
+    * retrieve current media timestamp;
+    */
+    uint32 (*timestamp)(xrtp_media_t *media);
 
-    struct media_callbacks_s
-	{
+   struct media_callbacks_s
+   {
         #define CALLBACK_RTPMEDIA_ON_MEMBER_UPDATE      0x1
         #define CALLBACK_RTPMEDIA_ON_REPORT				0x2
         

@@ -52,10 +52,8 @@ int initialized = 0;
 
 char * plugins_dir = ".";
 
-int xrtp_init()
+int xrtp_init(module_catalog_t *cata)
 {
-   int nplug;  
-
    if(socket_init()!=OS_OK)
    {
 	  xrtp_debug(("xrtp_init: network down\n"));
@@ -64,9 +62,10 @@ int xrtp_init()
 
    sessions_lock = xthr_new_lock();
 
-   module_catalog = catalog_new("mediaformat");
-   nplug = catalog_scan_modules(module_catalog, XRTP_VERSION, plugins_dir);
-
+   module_catalog = cata;
+   
+   /*
+   int nplug = catalog_scan_modules(cata, XRTP_VERSION, plugins_dir);
    if(nplug < 0)
    {
       xrtp_log(("xrtp_init: No modules found !\n"));
@@ -76,8 +75,8 @@ int xrtp_init()
 
       return XRTP_FAIL;
    }
-
    xrtp_log(("xrtp_init: Found %d module(s).\n", nplug));
+   */
 
    sessions = xrtp_list_new();
    if(!sessions)

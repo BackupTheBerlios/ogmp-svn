@@ -27,7 +27,7 @@
 
 extern DECLSPEC 
 int 
-xrtp_init();
+xrtp_init(module_catalog_t *cata);
 
 extern DECLSPEC
 int 

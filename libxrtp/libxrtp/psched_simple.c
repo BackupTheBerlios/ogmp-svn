@@ -204,7 +204,7 @@ struct ssch_unit_s{
     
     unit = (ssch_unit_t *)malloc(sizeof(struct ssch_unit_s));
     if(!unit)
-	{
+    {
        portman_remove_port(ssch->rtp_portman, rtp_port);
        portman_remove_port(ssch->rtcp_portman, rtcp_port);
 
@@ -575,7 +575,7 @@ int simple_schedule_rtcp(void * gen)
          break;
 
       now = time_msec_now(ssch->clock);
-      simple_sched_log(("simple_schedule_rtcp: %dms now\n", (int)(ssch->clock), now));
+      simple_sched_log(("simple_schedule_rtcp: %dms now\n", now));
 
       /* Scan if some deadline is reached */
 
