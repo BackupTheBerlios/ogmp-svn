@@ -76,12 +76,43 @@ int window_sessions_list_print(gui_t* gui, int wid)
 	{
 		call = ocui->sipua->incall;
 			
+		switch(call->status)
+		{
+			case SIPUA_EVENT_NEW_CALL:
+				strcpy(status, "Incoming"); break;
+			case SIPUA_EVENT_PROCEEDING:
+				strcpy(status, "Proceeding"); break;
+			case SIPUA_EVENT_RINGING:
+				strcpy(status, "Ringing"); break;
+			case SIPUA_EVENT_ANSWERED:
+				strcpy(status, "Answered"); break;
+			case SIPUA_EVENT_REQUESTFAILURE:
+				strcpy(status, "Request Fail"); break;
+			case SIPUA_EVENT_SERVERFAILURE:
+				strcpy(status, "Server Fail"); break;
+			case SIPUA_EVENT_GLOBALFAILURE:
+				strcpy(status, "Global Fail"); break;
+			case SIPUA_EVENT_ONHOLD:
+				strcpy(status, "On hold"); break;
+
+			case SIPUA_STATUS_REJECT:
+				strcpy(status, "Rejected"); break;
+			case SIPUA_STATUS_BUSY:
+				strcpy(status, "Busy"); break;
+			case SIPUA_STATUS_DECLINE:
+				strcpy(status, "Declined"); break;
+			case SIPUA_EVENT_ACK:
+				strcpy(status, "Established"); break;
+			default:
+				strcpy(status, "Unknown");
+		}
+        
 		if(call->from)
-			snprintf(buf, x - gui->x0, " In call from <%s>: %s - %-80.80s",
-						call->from, call->subject, call->info);
+			snprintf(buf, x - gui->x0, " In call from <%s>: (%s) %s - %-80.80s",
+						call->from, status, call->subject, call->info);
 		else
-			snprintf(buf, x - gui->x0, " In call of mine: %s - %-80.80s",
-						call->subject, call->info);
+			snprintf(buf, x - gui->x0, " In call of mine: (%s) %s - %-80.80s",
+						status, call->subject, call->info);
       
 		attrset(COLOR_PAIR(4));
 	}
@@ -147,6 +178,8 @@ int window_sessions_list_print(gui_t* gui, int wid)
 				strcpy(status, "Busy"); break;
 			case SIPUA_STATUS_DECLINE:
 				strcpy(status, "Declined"); break;
+			case SIPUA_EVENT_ACK:
+				strcpy(status, "Established"); break;
 			default:
 				strcpy(status, "Unknown");
 		}
@@ -193,6 +226,8 @@ void window_sessions_list_draw_commands(gui_t* gui)
 {
 	int x,y;
 	char *sessions_list_commands[] = 
+
+
 
 
 	{
@@ -317,7 +352,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 				break; 
 			}
 
-			ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_ANSWER);
+            ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_ANSWER);
 
 			break;
 		}
@@ -425,7 +460,10 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 					break; 
 				}
 
-				ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_ANSWER);
+                /* Issue: hold call signal to participant, may release bandwidth or something.
+                 * can not simple annswer that cause reestablish call.
+                ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_ANSWER);
+                */
 			}
 
 			break;

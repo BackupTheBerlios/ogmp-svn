@@ -93,6 +93,7 @@ struct sipua_setid_s
 };
 
 typedef struct sipua_set_s sipua_set_t;
+
 struct sipua_set_s
 {
 	sipua_setid_t setid;

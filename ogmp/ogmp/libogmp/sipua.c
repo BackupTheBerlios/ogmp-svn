@@ -637,6 +637,7 @@ int sipua_unregist(sipua_t *sipua, user_profile_t *user)
 	{
 		user->cname = NULL;
 
+
 		user->reg_status = SIPUA_STATUS_UNREG_DOING;
 	}
 

@@ -148,6 +148,7 @@ int client_register_loop(void *gen)
 	{
 		user_prof->seconds_left -= intv;
 
+
 		if(user_prof->seconds_left <= 0)
 			client_regist(&client->sipua, user_prof, user_prof->cname);
 
@@ -373,6 +374,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			sdp_message_t *sdp_message;
 			char* sdp_body = (char*)e->content;
 
+            int bw;
+
 			sipua_set_t *call = e->call_info; 
 			call->status = SIPUA_EVENT_ANSWERED;
 
@@ -396,7 +399,14 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			rtpcapset = rtp_capable_from_sdp(sdp_message);
 
 			/* rtp sessions created */
-			sipua_establish_call(sipua, call, "playback", rtpcapset, client->format_handlers, client->control, client->pt);
+			bw = sipua_establish_call(sipua, call, "playback", rtpcapset,
+                                    client->format_handlers, client->control, client->pt);
+			if(bw < 0)
+			{
+				sipua_answer(&client->sipua, call, SIPUA_STATUS_DECLINE);
+
+				break;
+			}
 
 			rtp_capable_done_set(rtpcapset);
 			sdp_message_free(sdp_message);
@@ -405,15 +415,16 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		}
 		case(SIPUA_EVENT_ACK):
 		{
-			/* rtp sessions created */
-			sipua_establish_call(sipua, e->call_info, "playback", e->call_info->rtpcapset, client->format_handlers, client->control, client->pt);
+			sipua_set_t *call = e->call_info;
+            
+			/* Now create rtp sessions of the call */
+			sipua_establish_call(sipua, call, "playback", call->rtpcapset,
+                                client->format_handlers, client->control, client->pt);
 
-			rtp_capable_done_set(e->call_info->rtpcapset);
-			e->call_info->rtpcapset = NULL;
+			call->status = SIPUA_EVENT_ACK;
 
 			break;
 		}
-
 		case(SIPUA_EVENT_REQUESTFAILURE):
 		{
 			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
@@ -471,6 +482,7 @@ int sipua_done_sip_session(void* gen)
 	if(set->setid.nettype) xfree(set->setid.nettype);
 
 
+
 	if(set->setid.addrtype) xfree(set->setid.addrtype);
 	if(set->setid.netaddr) xfree(set->setid.netaddr);
 
@@ -484,6 +496,7 @@ int sipua_done_sip_session(void* gen)
     xstr_done_string(set->from);
 
 	set->rtp_format->done(set->rtp_format);
+	rtp_capable_done_set(set->rtpcapset);
 
 	xfree(set);
 	
@@ -842,20 +855,6 @@ int client_answer(sipua_t *sipua, sipua_set_t* call, int reply)
 	{
 		case SIPUA_STATUS_ANSWER:
 		{
-			/* establish rtp sessions */
-			int bw;
-
-			/* Now create rtp sessions of the call */
-			bw = sipua_establish_call(sipua, call, "playback", call->rtpcapset, 
-							client->format_handlers, client->control, client->pt);
-
-			if(bw < 0)
-			{
-				sipua_answer(&client->sipua, call, SIPUA_STATUS_REJECT);
-
-				return UA_FAIL;
-			}
-
 			/* Anser the call */
 			sipua_answer(&client->sipua, call, reply);
 
