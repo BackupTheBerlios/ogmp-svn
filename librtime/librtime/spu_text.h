@@ -34,8 +34,8 @@ typedef struct {
 
   int lines;
 
-  long start; /* csecs = 10 millisec */
-  long end;   /* csecs */
+  long start; /* in millisec */
+  long end;   /* in millisec */
 
   char *text[SUB_MAX_TEXT];        /* Maximum 5 lines */
 

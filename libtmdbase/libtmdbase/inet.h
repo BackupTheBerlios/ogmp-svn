@@ -20,10 +20,11 @@
  * $Id: list.h,v 0.1 11/12/2002 15:47:39 heming$
  *
  */
- 
+#include "os.h" 
+
 #ifdef WIN32
  #include <winsock.h>
- int inet_aton(const char *cp, struct in_addr *inp);
+ extern DECLSPEC int inet_aton(const char *cp, struct in_addr *inp);
 #else
  #include <netinet/in.h>
  #include <arpa/inet.h>

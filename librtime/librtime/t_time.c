@@ -15,15 +15,15 @@
  *                                                                         *
  ***************************************************************************/
 
- #include "spu_text.h"
+#include "spu_text.h"
  
- #include "timer.h"
- #include "xthread.h"
+#include "timer.h"
+#include "xthread.h"
  
- #include <string.h>
- #include <stdlib.h>
+#include <string.h>
+#include <stdlib.h>
 
- typedef struct subtitle_show_s{
+typedef struct subtitle_show_s{
 
     xrtp_lrtime_t seek;
     int adjusted;
@@ -40,11 +40,11 @@
     xthr_cond_t * ready_to_show;
     xrtp_clock_t * clock;
     
- } subtitle_show_t;
+} subtitle_show_t;
 
- subtitle_show_t show;
+subtitle_show_t show;
 
- int recv_loop(void * param){
+int recv_loop(void * param){
 
     xrtp_lrtime_t end;
     xrtp_lrtime_t delt;
@@ -63,7 +63,7 @@
        printf("\n%s\n\n", show.texts);
        end = show.end;
        
-       lrnow = lrtime_now(show.clock);
+       lrnow = time_msec_now(show.clock);
        delt = end - lrnow;       
        if(delt > 0){
 
@@ -80,7 +80,7 @@
     xthr_unlock(show.lock);
 
     return OS_OK;
- }
+}
  
  int send_loop(void * param){
 
@@ -148,32 +148,32 @@
        
        if(!show.adjusted){
 
-          time_adjust(show.clock, subt->start*10, 0);
+          time_adjust(show.clock, show.seek, 0, 0);
           show.adjusted = 1;
        }
 
        
-       s1 = subt->start / 360000;
-       r = subt->start % 360000;
-       s2 = r / 6000;
-       r = r % 6000;
-       s3 = r / 100;
-       r = r % 100;
-       s4 = r * 10;
+       s1 = subt->start / 3600000;
+       r = subt->start % 3600000;
+       s2 = r / 60000;
+       r = r % 60000;
+       s3 = r / 1000;
+       r = r % 1000;
+       s4 = r;
        
-       e1 = subt->end / 360000;
-       r = subt->end % 360000;
-       e2 = r / 6000;
-       r = r % 6000;
-       e3 = r / 100;
-       r = r % 100;
-       e4 = r * 10;
+       e1 = subt->end / 3600000;
+       r = subt->end % 3600000;
+       e2 = r / 60000;
+       r = r % 60000;
+       e3 = r / 1000;
+       r = r % 1000;
+       e4 = r;
        printf("[%d:%d:%d,%d --> %d:%d:%d,%d]\n", s1,s2,s3,s4,e1,e2,e3,e4);
 
        slen = 0;
        
-       show.start = subt->start*10;
-       show.end = subt->end*10;
+       show.start = subt->start;
+       show.end = subt->end;
 
        for (line = 0; line < subt->lines; line++) {
 
@@ -189,7 +189,7 @@
        printf("send_loop: subtitle len = %d, subtitle:%s\n", show.text_len, show.texts);
   
        
-       lrnow = lrtime_now(show.clock);
+       lrnow = time_msec_now(show.clock);
        delt = show.start - lrnow;  /* to millisec */
 
        if(delt > 0){
@@ -221,12 +221,12 @@
 	xrtp_thread_t * th_send = NULL;
     xrtp_thread_t * th_recv = NULL;
     
-    show.clock = time_begin(0,0);
+    show.clock = time_start();
     show.lock = xthr_new_lock();
     show.ready_to_show = xthr_new_cond(XTHREAD_NONEFLAGS);
     show.finish = 0;
     
-    show.seek = 60000;
+    show.seek = 1000000;
     show.adjusted = 0;   
 	
     th_send = xthr_new(send_loop, NULL, XTHREAD_NONEFLAGS);

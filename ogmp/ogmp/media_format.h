@@ -64,7 +64,7 @@ struct media_control_s {
 
    media_player_t* (*find_player) (media_control_t *cont, char *mime, char *fourcc);
 
-   int (*put_configer)(media_control_t *cont, char *name, control_setting_call_t call, void*user);
+   int (*put_configer)(media_control_t *cont, char *name, control_setting_call_t *call, void*user);
    control_setting_t* (*fetch_setting)(media_control_t *cont, char *name, media_device_t *dev);
 
    int (*set_format) (media_control_t * cont, char *format_id, media_format_t * format);
@@ -265,7 +265,7 @@ struct media_player_s {
    int (*open_stream) (media_player_t *playa, media_info_t *media_info);
    int (*close_stream) (media_player_t *playa);
 
-   int (*receive_media) (media_player_t *playa, void * media_packet, int samplestamp, int last_packet);
+   int (*receive_media) (media_player_t *playa, void * media_packet, int64 samplestamp, int last_packet);
 
    int (*stop) (media_player_t * playa);
 };

@@ -105,7 +105,7 @@ int ogm_open_video(ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *s
 }
 
 /* Handle Audio packet */
-int ogm_process_video(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int hdrlen, int64 lenbytes, int ustamp, int last_packet, int stream_end){
+int ogm_process_video(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int hdrlen, int64 lenbytes, int64 samplestamp, int last_packet, int stream_end){
 
       /* Video packet */
       if ((*pack->packet & 3) == PACKET_TYPE_HEADER){
@@ -131,7 +131,7 @@ int ogm_process_video(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page
                   pack->bytes - 1 - hdrlen);
 
       */
-      //demux_ogm_log("demux_ogm_handle_packet: Video Stream[%d:v%d]-data %ld bytes\n", stream->serial, stream->sno, pack->bytes);
+      //ogm_video_log("demux_ogm_handle_packet: Video Stream[%d:v%d]-data %ld bytes\n", stream->serial, stream->sno, pack->bytes);
 
    return MP_OK;
 }

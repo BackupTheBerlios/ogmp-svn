@@ -91,7 +91,7 @@ int vrtp_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
    vrtp_media_t *vmedia = vh->vorbis_media;
    xrtp_media_t *rtpmedia = (xrtp_media_t*)vmedia;
 
-   uint32 seqno, src, rtpts;
+   uint16 seqno, src, rtpts;
    
    member_state_t * sender = NULL;
    session_connect_t *rtp_conn = NULL;
@@ -99,6 +99,7 @@ int vrtp_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
 
    char *media_data;
    int media_dlen;
+   xrtp_hrtime_t later = 0;
 
    rtp_unpack(rtp);
 
@@ -212,7 +213,7 @@ int vrtp_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
    session_member_update_rtp(sender, rtp);
 
    /* Calculate local playtime */
-   xrtp_hrtime_t later = hrtime_now(vh->session->clock) - session_member_mapto_local_time(sender, rtp);
+   later = hrtime_now(vh->session->clock) - session_member_mapto_local_time(sender, rtp);
 
    /* FIXME: Bug if packet lost */
    while(seqno == vh->seqno_next_unit){
@@ -487,12 +488,12 @@ int rtp_vorbis_post(xrtp_media_t * media, media_data_t *data, int mlen, int in_u
    long  unit_bytes = ((rtp_frame_t*)data)->unit_bytes;
    int samplestamp = ((rtp_frame_t*)data)->samplestamp;
 
+   int ret = MP_OK;
+
    vorbis_info_t *vinfo = (vorbis_info_t*)((rtp_frame_t*)data)->media_info;
 
    media_unit = ((rtp_frame_t*)data)->media_unit;
    
-   int ret = MP_OK;
-
    if (in_usec < 0)
       vrtp_log(("rtp_vorbis_post: ready to post the last %ld bytes vorbis packet[@%d]\n", unit_bytes, samplestamp));
    else

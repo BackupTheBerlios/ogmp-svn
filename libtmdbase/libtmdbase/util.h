@@ -15,4 +15,4 @@
  *                                                                         *
  ***************************************************************************/
 
- uint32 util_create_ssrc();
+extern DECLSPEC  uint32 util_create_ssrc();

@@ -15,9 +15,7 @@
  *                                                                         *
  ***************************************************************************/
 
- #ifndef OS_H
  #include "os.h"
- #endif
 
  typedef struct spin_queue_s spin_queue_t;
 
@@ -34,17 +32,17 @@
 
  spin_queue_t * queue_new(int size);
 
- int queue_done(spin_queue_t * queue);
+extern DECLSPEC  int queue_done(spin_queue_t * queue);
 
  /* Add to the queue end */
- int queue_wait(spin_queue_t * queue, void * data);
+extern DECLSPEC  int queue_wait(spin_queue_t * queue, void * data);
 
  /* Remove first from the queue */
- void * queue_serve(spin_queue_t * queue);
+extern DECLSPEC  void * queue_serve(spin_queue_t * queue);
  
  /* Only peek the first but not remove from the queue */
- void * queue_head(spin_queue_t * queue);
+extern DECLSPEC  void * queue_head(spin_queue_t * queue);
 
- int queue_length(spin_queue_t * queue);
- int queue_is_full(spin_queue_t * queue);
- int queue_is_empty(spin_queue_t * queue);
+extern DECLSPEC  int queue_length(spin_queue_t * queue);
+extern DECLSPEC  int queue_is_full(spin_queue_t * queue);
+extern DECLSPEC  int queue_is_empty(spin_queue_t * queue);

@@ -8,13 +8,15 @@
  *
  * Structures and types used to implement opendir/readdir/closedir 
  * on Windows 95/NT. 
- */ 
+ */
+ 
+#include "../os.h"
+
 #include <io.h> 
 #include <stdio.h> 
 #include <stdlib.h> 
-#include <sys/types.h> 
-
-
+#include <sys/types.h>
+ 
 /* struct dirent - same as Unix */ 
 struct dirent 
 {
@@ -38,9 +40,9 @@ typedef struct
 
 
 /* Function prototypes */ 
-DIR *opendir(char *); 
-struct dirent *readdir(DIR *); 
-int closedir(DIR *);
+extern DECLSPEC DIR *opendir(char *); 
+extern DECLSPEC struct dirent *readdir(DIR *); 
+extern DECLSPEC int closedir(DIR *);
 
 
 #define __S_ISTYPE(mode, mask)  (((mode) & _S_IFMT) == (mask))

@@ -22,10 +22,12 @@
 #include <timedia/xstring.h>
 #include <timedia/list.h>
 
-#define VORBIS_CONTROL_LOG
-#define VORBIS_CONTROL_DEBUG
+/*
+#define MEDIA_CONTROL_LOG
+#define MEDIA_CONTROL_DEBUG
+*/
 
-#ifdef VORBIS_CONTROL_LOG
+#ifdef MEDIA_CONTROL_LOG
    const int media_ctrl_log = 1;
 #else
    const int media_ctrl_log = 0;
@@ -33,7 +35,7 @@
 
 #define cont_log(fmtargs)  do{if(media_ctrl_log) printf fmtargs;}while(0)
 
-#ifdef VORBIS_CONTROL_DEBUG
+#ifdef MEDIA_CONTROL_DEBUG
    const int media_ctrl_debug = 1;
 #else
    const int media_ctrl_debug = 0;
@@ -171,6 +173,8 @@ control_setting_t* cont_fetch_setting(media_control_t *cont, char *name, media_d
    
    control_impl_t *impl = (control_impl_t*)cont;
 
+   control_setting_item_t *item = NULL;
+
    if(!dev->new_setting){
 
       cont_log(("cont_fetch_setting: No need to set device\n"));
@@ -178,7 +182,7 @@ control_setting_t* cont_fetch_setting(media_control_t *cont, char *name, media_d
       return NULL;
    }
    
-   control_setting_item_t *item = list_find(impl->setting_calls, name, cont_match_call);
+   item = list_find(impl->setting_calls, name, cont_match_call);
    
    if(item) {
    
@@ -256,7 +260,7 @@ int cont_demux_next (media_control_t * cont, int strm_end) {
 
    control_impl_t *impl = (control_impl_t *)cont;
 
-   real_period = time_usec_passed(impl->clock, impl->prev_period_start);
+   real_period = time_usec_spent(impl->clock, impl->prev_period_start);
    demux_start = time_usec_now(impl->clock);
 
    if (impl->started == 0) {
@@ -277,7 +281,7 @@ int cont_demux_next (media_control_t * cont, int strm_end) {
 
    if (period_us < 0) return period_us;   /* errno < 0 */
       
-   demux_us = time_usec_passed(impl->clock, demux_start);
+   demux_us = time_usec_spent(impl->clock, demux_start);
    
    cont_log(("cont_demux_next: %dus period, demux cost %dus, wait %dus, adjust %dus\n", period_us, demux_us, period_us - demux_us, period_adjust));
    time_usec_sleep(impl->clock, period_us - demux_us - period_adjust, NULL);
@@ -309,7 +313,7 @@ module_interface_t* new_media_control () {
 
    memset(impl, 0, sizeof(struct media_control_s));
 
-   impl->clock = time_begin(0,0);
+   impl->clock = time_start();
 
    impl->setting_calls = xrtp_list_new();
    if(!impl->setting_calls){
@@ -327,6 +331,7 @@ module_interface_t* new_media_control () {
    cont->find_player = cont_find_player;
 
    cont->put_configer = cont_put_configer;
+
    cont->fetch_setting = cont_fetch_setting;
    
    cont->set_format = cont_set_format;

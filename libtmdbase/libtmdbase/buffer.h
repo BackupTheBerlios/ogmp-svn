@@ -46,62 +46,62 @@
     char * data;
  };
 
- xrtp_buffer_t * buffer_new(uint size, enum byte_order_e order);
+extern DECLSPEC xrtp_buffer_t* buffer_new(uint size, enum byte_order_e order);
 
- int buffer_done(xrtp_buffer_t * buf);
+extern DECLSPEC  int buffer_done(xrtp_buffer_t * buf);
 
- int buffer_mount(xrtp_buffer_t * buf, char * data, int len);
+extern DECLSPEC  int buffer_mount(xrtp_buffer_t * buf, char * data, int len);
 
- char * buffer_umount(xrtp_buffer_t * buf, int *r_len);
+extern DECLSPEC  char* buffer_umount(xrtp_buffer_t * buf, int *r_len);
 
- xrtp_buffer_t * buffer_clone(xrtp_buffer_t * buf);
+extern DECLSPEC  xrtp_buffer_t* buffer_clone(xrtp_buffer_t * buf);
 
- xrtp_buffer_t * buffer_newsize(xrtp_buffer_t * buf, uint size);
+extern DECLSPEC  xrtp_buffer_t* buffer_newsize(xrtp_buffer_t * buf, uint size);
 
- char * buffer_data(xrtp_buffer_t * buf);
+extern DECLSPEC  char* buffer_data(xrtp_buffer_t * buf);
 
- uint buffer_maxlen(xrtp_buffer_t * buf);
+extern DECLSPEC  uint buffer_maxlen(xrtp_buffer_t * buf);
 
- uint buffer_datalen(xrtp_buffer_t * buf);
+extern DECLSPEC  uint buffer_datalen(xrtp_buffer_t * buf);
 
- int buffer_copy(xrtp_buffer_t * src, uint pos1, uint len1, xrtp_buffer_t * des, uint pos2);
+extern DECLSPEC  int buffer_copy(xrtp_buffer_t * src, uint pos1, uint len1, xrtp_buffer_t * des, uint pos2);
 
- int buffer_fill_value(xrtp_buffer_t * buf, char val, uint run);
+extern DECLSPEC  int buffer_fill_value(xrtp_buffer_t * buf, char val, uint run);
 
- int buffer_fill_data(xrtp_buffer_t * buf, char *val, uint run);
+extern DECLSPEC  int buffer_fill_data(xrtp_buffer_t * buf, char *val, uint run);
  
- int buffer_add_data(xrtp_buffer_t * buf, char * data, uint len);
+extern DECLSPEC  int buffer_add_data(xrtp_buffer_t * buf, char * data, uint len);
 
- int buffer_add_uint8(xrtp_buffer_t * buf, uint8 byte);
+extern DECLSPEC  int buffer_add_uint8(xrtp_buffer_t * buf, uint8 byte);
 
- int buffer_add_uint16(xrtp_buffer_t * buf, uint16 word);
+extern DECLSPEC  int buffer_add_uint16(xrtp_buffer_t * buf, uint16 word);
 
- int buffer_add_uint32(xrtp_buffer_t * buf, uint32 dword);
+extern DECLSPEC  int buffer_add_uint32(xrtp_buffer_t * buf, uint32 dword);
 
- int buffer_add_int8(xrtp_buffer_t * buf, int8 byte);
+extern DECLSPEC  int buffer_add_int8(xrtp_buffer_t * buf, int8 byte);
 
- int buffer_add_int16(xrtp_buffer_t * buf, int16 word);
+extern DECLSPEC  int buffer_add_int16(xrtp_buffer_t * buf, int16 word);
 
- int buffer_add_int32(xrtp_buffer_t * buf, int32 dword);
+extern DECLSPEC  int buffer_add_int32(xrtp_buffer_t * buf, int32 dword);
 
- int buffer_seek(xrtp_buffer_t * buf, uint pos);
+extern DECLSPEC  int buffer_seek(xrtp_buffer_t * buf, uint pos);
 
- int buffer_skip(xrtp_buffer_t * buf, int step);
+extern DECLSPEC  int buffer_skip(xrtp_buffer_t * buf, int step);
 
- void * buffer_address(xrtp_buffer_t * buf);
+extern DECLSPEC  void* buffer_address(xrtp_buffer_t * buf);
  
- uint buffer_position(xrtp_buffer_t * buf);
+extern DECLSPEC  uint buffer_position(xrtp_buffer_t * buf);
  
- int buffer_next_uint8(xrtp_buffer_t * buf, uint8 * ret);
+extern DECLSPEC  int buffer_next_uint8(xrtp_buffer_t * buf, uint8 * ret);
 
- int buffer_next_uint16(xrtp_buffer_t * buf, uint16 * ret);
+extern DECLSPEC  int buffer_next_uint16(xrtp_buffer_t * buf, uint16 * ret);
 
- int buffer_next_uint32(xrtp_buffer_t * buf, uint32 * ret);
+extern DECLSPEC  int buffer_next_uint32(xrtp_buffer_t * buf, uint32 * ret);
 
- int buffer_next_int8(xrtp_buffer_t * buf, int8 * ret);
+extern DECLSPEC  int buffer_next_int8(xrtp_buffer_t * buf, int8 * ret);
 
- int buffer_next_int16(xrtp_buffer_t * buf, int16 * ret);
+extern DECLSPEC  int buffer_next_int16(xrtp_buffer_t * buf, int16 * ret);
 
- int buffer_next_int32(xrtp_buffer_t * buf, int32 * ret);
+extern DECLSPEC  int buffer_next_int32(xrtp_buffer_t * buf, int32 * ret);
 
- int buffer_next_data(xrtp_buffer_t * buf, char * data, uint len);
+extern DECLSPEC  int buffer_next_data(xrtp_buffer_t * buf, char * data, uint len);

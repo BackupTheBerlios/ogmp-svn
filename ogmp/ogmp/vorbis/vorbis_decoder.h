@@ -31,7 +31,7 @@ struct vorbis_decoder_s{
    int stream_opened;
 
    int ts_usec_now;
-   int last_samplestamp;
+   int64 last_samplestamp;
 
    /* Failure occurred */
    int fail;

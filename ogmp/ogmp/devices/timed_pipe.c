@@ -19,23 +19,22 @@
 
 #include <string.h>
 
+/*
 #define PIPE_LOG
 #define PIPE_DEBUG
-
+*/
 #ifdef PIPE_LOG
-   const int pipe_log_flag = 1;
+ #define pout_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int pipe_log_flag = 0;
+ #define pout_log(fmtargs)  
 #endif
 
-#define pout_log(fmtargs)  do{if(pipe_log_flag) printf fmtargs;}while(0)
 
 #ifdef PIPE_DEBUG
-   const int pipe_debug_flag = 1;
+ #define pout_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int pipe_debug_flag = 0;
+ #define pout_debug(fmtargs) 
 #endif
-#define pout_debug(fmtargs)  do{if(pipe_debug_flag) printf fmtargs;}while(0)
 
 #define USEC_JUMP 100
 
@@ -512,7 +511,7 @@ int pout_pick_frame(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_onc
             pipe->lts_last = pipe->frame_read_now->ts;
             
             nsample_total = pipe->nsample_write_left + pipe->nsample_read_left;
-            usec_inbuf = (double)nsample_total / pipe->sample_rate * 1000000;
+            usec_inbuf = (int)((double)nsample_total / pipe->sample_rate * 1000000);
 
             pout_log(("pout_pick_frame: Total %d samples (%dus) in the buffer\n", nsample_total, usec_inbuf));
             pout_log(("************************ END OF TIMESTAMP *********************\n\n"));
@@ -758,8 +757,8 @@ media_pipe_t * timed_pipe_new(int sample_rate, int usec_pulse, int ms_min, int m
    pout->usec_per_buf = DEFAULT_USEC_PER_BUF;
    
    pout->sample_rate = sample_rate;
-   pout->dad_min_nsample = (double)ms_min / 1000 * sample_rate;
-   pout->dad_max_nsample = (double)ms_max / 1000 * sample_rate;
+   pout->dad_min_nsample = (int)((double)ms_min / 1000 * sample_rate);
+   pout->dad_max_nsample = (int)((double)ms_max / 1000 * sample_rate);
 
    pout_log(("timed_pipe_new: delay adapt detect b/w [%d...%d] samples\n"
         , pout->dad_min_nsample, pout->dad_max_nsample));

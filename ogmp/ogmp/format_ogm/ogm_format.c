@@ -20,22 +20,22 @@
 #define CATALOG_VERSION  0x0001
 #define DIRNAME_MAXLEN  128
 
+/*
 #define DEMUX_OGM_LOG
 #define DEMUX_OGM_DEBUG
+*/
 
 #ifdef DEMUX_OGM_LOG
-   const int log = 1;
+ #define ogm_log(fmtargs)  //do{printf fmtargs;}while(0)
 #else
-   const int log = 0;
+ #define ogm_log(fmtargs)  
 #endif
-#define demux_ogm_log(fmtargs)  do{if(log) printf fmtargs;}while(0)
 
 #ifdef DEMUX_OGM_DEBUG
-   const int ogm_debug = 1;
+ #define ogm_debug(fmtargs)  //do{printf fmtargs;}while(0)
 #else
-   const int ogm_debug = 0;
+ #define ogm_debug(fmtargs)  
 #endif
-#define demux_ogm_debug(fmtargs)  do{if(ogm_debug) printf fmtargs;}while(0)
 
 int done_stream_handler(void *gen){
 
@@ -99,7 +99,7 @@ int ogm_add_stream(media_format_t * ogm, media_stream_t *strm, int strmno, unsig
                /* default first audio stream as time reference */
                if (ogm->nastreams == 1) {
                  
-                  demux_ogm_log(("ogm_set_mime_player: stream #%d as default time stream\n", ogm->numstreams));
+                  ogm_log(("ogm_set_mime_player: stream #%d as default time stream\n", ogm->numstreams));
                   ogm->time_ref = strmno;
                }
                   
@@ -193,7 +193,7 @@ int ogm_set_mime_player (media_format_t * mf, media_player_t * player, const cha
       cur = cur->next;
    }
 
-   demux_ogm_log(("ogm_set_mime_player: stream '%s' not exist\n", mime));
+   ogm_log(("ogm_set_mime_player: stream '%s' not exist\n", mime));
    
    return MP_FAIL;
 }
@@ -248,7 +248,7 @@ int ogm_set_fourcc_player (media_format_t * mf, media_player_t * player, const c
       cur = cur->next;
    }
 
-   demux_ogm_log(("ogm_set_fourcc_player: stream [%c%c%c%c] not exist\n"
+   ogm_log(("ogm_set_fourcc_player: stream [%c%c%c%c] not exist\n"
                   , fourcc[0], fourcc[1], fourcc[2], fourcc[3]));
 
    return MP_FAIL;
@@ -293,14 +293,14 @@ int demux_ogm_flush_page(ogm_stream_t *stream, ogg_packet *op) {
 
       if(!page_data){
 
-         demux_ogm_log(("ogm_flush_page: Fail to allocate memery\n"));
+         ogm_log(("ogm_flush_page: Fail to allocate memery\n"));
          return MP_EMEM;
       }
 
       memcpy(page_data, page.header, page.header_len);
       memcpy(page_data + page.header_len, page.body, page.body_len);
 
-      demux_ogm_log(("ogm_flush_page: x/a%d: %ld + %ld written, sending rtp simulated\n", stream->sno,
+      ogm_log(("ogm_flush_page: x/a%d: %ld + %ld written, sending rtp simulated\n", stream->sno,
               page.header_len, page.body_len));
 
       free(page_data);
@@ -321,14 +321,14 @@ int demux_ogm_write_page(ogm_stream_t *stream, ogg_packet *op) {
 
       if(!page_data){
 
-         demux_ogm_log(("ogm_write_page: Fail to allocate memery\n"));
+         ogm_log(("ogm_write_page: Fail to allocate memery\n"));
          return MP_EMEM;
       }
 
       memcpy(page_data, page.header, page.header_len);
       memcpy(page_data + page.header_len, page.body, page.body_len);
       
-      demux_ogm_log(("ogm_write_page: x/a%d: %ld + %ld written, send to rtp channel\n", stream->sno,
+      ogm_log(("ogm_write_page: x/a%d: %ld + %ld written, send to rtp channel\n", stream->sno,
               page.header_len, page.body_len));
 
       free(page_data);
@@ -346,25 +346,25 @@ static int ogm_read_page (ogm_format_t * ogm) {
    int sync = ogg_sync_pageout(&(ogm->sync), &(ogm->page));
    while ( sync != 1 ) {
 
-      if( sync == 0 ) demux_ogm_log(("(ogm_read_page: page need more data)\n"));
-      if( sync == -1 ) demux_ogm_log(("ogm_read_page: page out of sync, skipping...\n"));
+      if( sync == 0 ) ogm_log(("(ogm_read_page: page need more data)\n"));
+      if( sync == -1 ) ogm_log(("ogm_read_page: page out of sync, skipping...\n"));
 
       buffer = ogg_sync_buffer(&(ogm->sync), CHUNKSIZE);
 
       if( feof(ogm->format.fdin) ){
 
-         demux_ogm_log(("ogm_read_page: End of file\n"));
+         ogm_log(("ogm_read_page: End of file\n"));
          return 0;
       }
 
       bytes = fread(buffer, 1, CHUNKSIZE, ogm->format.fdin);
-      demux_ogm_log(("ogm_read_page: %ld bytes read\n", bytes));
+      ogm_log(("ogm_read_page: %ld bytes read\n", bytes));
       ogg_sync_wrote(&(ogm->sync), bytes);
 
       sync = ogg_sync_pageout(&(ogm->sync), &(ogm->page));
    }
 
-   demux_ogm_log(("\n(ogm_read_page: read Page[%ld:%d])\n", ogg_page_pageno(&(ogm->page)), ogg_page_serialno(&(ogm->page))));
+   ogm_log(("\n(ogm_read_page: read Page[%ld:%d])\n", ogg_page_pageno(&(ogm->page)), ogg_page_serialno(&(ogm->page))));
    ogm->page_ready = 1;
 
    return 1;
@@ -425,10 +425,10 @@ int ogm_open(media_format_t *mf, char * fname, module_catalog_t *cata, config_t 
 
    ogm_format_t *ogm = (ogm_format_t *)mf;
 
-   mf->fdin = fopen(fname, "r");
+   mf->fdin = fopen(fname, "rb");
    if (mf->fdin == NULL) {
 
-      demux_ogm_log(("ogm_open_file: Could not open \"%s\".\n", fname));
+      ogm_log(("ogm_open_file: Could not open \"%s\".\n", fname));
       return MP_FAIL;
    }
 
@@ -438,14 +438,14 @@ int ogm_open(media_format_t *mf, char * fname, module_catalog_t *cata, config_t 
 
    ogg_sync_init(&(ogm->sync));
 
-   demux_ogm_log(("\n=================================================\n"));
-   demux_ogm_log(("(ogm_open_file: stream heads begin)\n"));
+   ogm_log(("\n=================================================\n"));
+   ogm_log(("(ogm_open_file: stream heads begin)\n"));
    
    while (!end) {
 
       if ( !ogm_read_page(ogm) ) {
 
-         demux_ogm_log(("ogm_open_file: No more pages, scan finish\n"));
+         ogm_log(("ogm_open_file: No more pages, scan finish\n"));
          break;
       }
 
@@ -453,11 +453,11 @@ int ogm_open(media_format_t *mf, char * fname, module_catalog_t *cata, config_t 
 
          ogm->page_ready = 1;
 
-         demux_ogm_log(("----------------------------------------------------\n"));
-         demux_ogm_log(("ogm_open_file: total %d stream(s) found in '%s' by now\n", mf->numstreams, fname));
+         ogm_log(("----------------------------------------------------\n"));
+         ogm_log(("ogm_open_file: total %d stream(s) found in '%s' by now\n", mf->numstreams, fname));
 
-         demux_ogm_log(("\n=================================================\n"));
-         demux_ogm_log(("(ogm_open_file: stream heads finish, bodys begin)\n\n"));
+         ogm_log(("\n=================================================\n"));
+         ogm_log(("(ogm_open_file: stream heads finish, bodys begin)\n\n"));
 
          /* End of stream head parsing */
          break;
@@ -467,7 +467,7 @@ int ogm_open(media_format_t *mf, char * fname, module_catalog_t *cata, config_t 
          ogg_stream_state *sstate = malloc(sizeof(ogg_stream_state));
          if(!sstate){
 
-            demux_ogm_log(("ogm_open_file: No memery for stream allocation\n"));
+            ogm_log(("ogm_open_file: No memery for stream allocation\n"));
             return MP_EMEM;
          }
 
@@ -475,7 +475,7 @@ int ogm_open(media_format_t *mf, char * fname, module_catalog_t *cata, config_t 
 
          if (ogg_stream_init(sstate, sno) != 0) {
 
-            demux_ogm_log(("ogm_open_file: ogg_stream_init failed\n"));
+            ogm_log(("ogm_open_file: ogg_stream_init failed\n"));
             free(sstate);
             return MP_FAIL;
          }
@@ -488,7 +488,7 @@ int ogm_open(media_format_t *mf, char * fname, module_catalog_t *cata, config_t 
 
             if (head_parsed) {
 
-               demux_ogm_log(("ogm_open_file: stream header parsed, the packet untouched yet\n"));
+               ogm_log(("ogm_open_file: stream header parsed, the packet untouched yet\n"));
                ogm->packet_ready = 1;
                end = 1;
                break;
@@ -496,7 +496,7 @@ int ogm_open(media_format_t *mf, char * fname, module_catalog_t *cata, config_t 
 
             if ( mf->stream_handlers == NULL && ogm_set_handlers(ogm, cata) < MP_OK ) {
 
-               demux_ogm_log(("ogm_open_file: No stream handler found\n"));
+               ogm_log(("ogm_open_file: No stream handler found\n"));
                return MP_FAIL;
             }
             
@@ -504,7 +504,7 @@ int ogm_open(media_format_t *mf, char * fname, module_catalog_t *cata, config_t 
 
          }/* while (more packet in the page) */
 
-         demux_ogm_log(("ogm_open_file: %d packet(s) foun in the page\n", n_pack));
+         ogm_log(("ogm_open_file: %d packet(s) foun in the page\n", n_pack));
       }
    }
 
@@ -625,8 +625,8 @@ int ogm_seek_millisecond (media_format_t *mf, int millis) {
         hasn` changed its length, otherwise no seek to "new" data is possible
        */
 
-      demux_ogm_log (("ogm_seek_millisecond: seek to Second[%d] called\n", millis));
-      demux_ogm_log (("ogm_seek_millisecond: current is Second[%d]\n", current_sec));
+      ogm_log (("ogm_seek_millisecond: seek to Second[%d] called\n", millis));
+      ogm_log (("ogm_seek_millisecond: current is Second[%d]\n", current_sec));
 
       if (current_sec > start_sec) {
 
@@ -646,8 +646,8 @@ int ogm_seek_millisecond (media_format_t *mf, int millis) {
                   ( (mf->time_length / 1000) - current_sec);
       }
 
-      demux_ogm_log (("ogm_seek_millisecond: current_pos is%ld\n", current_pos));
-      demux_ogm_log (("ogm_seek_millisecond: new_pos is %ld\n", start_pos));
+      ogm_log (("ogm_seek_millisecond: current_pos is%ld\n", current_pos));
+      ogm_log (("ogm_seek_millisecond: new_pos is %ld\n", start_pos));
 
    } else {
 
@@ -655,7 +655,7 @@ int ogm_seek_millisecond (media_format_t *mf, int millis) {
       start_pos = start_sec * mf->avg_bitrate/8;
    }
 
-   demux_ogm_log (("ogm_seek_millisecond: seeking to %d seconds => %ld bytes\n",
+   ogm_log (("ogm_seek_millisecond: seeking to %d seconds => %ld bytes\n",
                      start_sec, start_pos));
 
    ogg_sync_reset(&ogm->sync);
@@ -671,7 +671,7 @@ int ogm_seek_millisecond (media_format_t *mf, int millis) {
    if (start_pos == 0) this->keyframe_needed = 0;
     */
 
-   demux_ogm_log (("ogm_seek_millisecond: seek to %ld called\n",start_pos));
+   ogm_log (("ogm_seek_millisecond: seek to %ld called\n",start_pos));
 
    fseek (mf->fdin, start_pos, SEEK_SET);
 
@@ -717,7 +717,7 @@ int ogm_seek_millisecond (media_format_t *mf, int millis) {
    */
 }
 
-int demux_ogm_process_packet(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int samplestamp, int last_packet, int stream_end) {
+int demux_ogm_process_packet(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int64 samplestamp, int last_packet, int stream_end) {
 
    int i, hdrlen;
    int64 lenbytes;
@@ -731,9 +731,9 @@ int demux_ogm_process_packet(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_pag
    if (pack->b_o_s) {
      
       stream->eos = 0;
-      demux_ogm_log(("__________________________________________________________\n"));
-      demux_ogm_log(("demux_ogm_process_packet: Beginning of the Stream[%d:%c%d]\n", ogm_strm->serial, ogm_strm->stype, ogm_strm->sno));
-      demux_ogm_log(("----------------------------------------------------------\n"));
+      ogm_log(("__________________________________________________________\n"));
+      ogm_log(("demux_ogm_process_packet: Beginning of the Stream[%d:%c%d]\n", ogm_strm->serial, ogm_strm->stype, ogm_strm->sno));
+      ogm_log(("----------------------------------------------------------\n"));
    }
 
    if (pack->e_o_s) {
@@ -761,9 +761,9 @@ int demux_ogm_process_packet(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_pag
    
    if (stream->eos) {
      
-      demux_ogm_log(("----------------------------------------------------\n"));
-      demux_ogm_log(("demux_ogm_process_packet: End of the Stream[%d:%c%d]\n", ogm_strm->serial, ogm_strm->stype, ogm_strm->sno));
-      demux_ogm_log(("____________________________________________________\n"));
+      ogm_log(("----------------------------------------------------\n"));
+      ogm_log(("demux_ogm_process_packet: End of the Stream[%d:%c%d]\n", ogm_strm->serial, ogm_strm->stype, ogm_strm->sno));
+      ogm_log(("____________________________________________________\n"));
    }
 
    return ret;
@@ -804,10 +804,10 @@ int ogm_demux_next (media_format_t *mf, int stream_end) {
 
       if(!ogm->page_ready){
 
-         demux_ogm_log(("ogm_demux_next: No valid page yet, reading...\n"));
+         ogm_log(("ogm_demux_next: No valid page yet, reading...\n"));
          if( !ogm_read_page (ogm) ) {
 
-            demux_ogm_log(("ogm_demux_next: No more page to read\n"));
+            ogm_log(("ogm_demux_next: No more page to read\n"));
             return MP_EOF;
          }
          
@@ -826,8 +826,8 @@ int ogm_demux_next (media_format_t *mf, int stream_end) {
       
          xrtp_hrtime_t us_interval = (int)(1000000 * (page_granul - ogm->sync_granulepos) / stream->sample_rate);
 
-         demux_ogm_log(("............................................................................\n"));
-         demux_ogm_log(("(ogm_demux_next: demux break point at %dms, next Page[%lld] in %dus)\n\n", ogm->sync_msec, page_granul, us_interval));
+         ogm_log(("............................................................................\n"));
+         ogm_log(("(ogm_demux_next: demux break point at %dms, next Page[%lld] in %dus)\n\n", ogm->sync_msec, page_granul, us_interval));
 
          ogm->sync_granulepos = page_granul;
          ogm->sync_msec += us_interval / 1000;
@@ -837,10 +837,10 @@ int ogm_demux_next (media_format_t *mf, int stream_end) {
 
       if (stream == NULL) {
 
-         demux_ogm_log(("ogm_demux_next: Encountered packet for an unknown serial %d !?\n", sno));
+         ogm_log(("ogm_demux_next: Encountered packet for an unknown serial %d !?\n", sno));
          if(!ogg_sync_pageseek(&(ogm->sync), &(ogm->page))){
 
-            demux_ogm_log(("ogm_demux_next: No more page to skip\n"));
+            ogm_log(("ogm_demux_next: No more page to skip\n"));
             ogm->page_ready = 0;
 
             return 0;
@@ -881,7 +881,7 @@ int ogm_demux_next (media_format_t *mf, int stream_end) {
          ret = demux_ogm_process_packet(ogm, ogm_strm, &(ogm->page), dual_pack[send], page_granul, 1, stream_end);
          if(ret < 0) {
 
-            demux_ogm_log(("ogm_demux_next: Need resync stream(%d) when fail process\n", sno));
+            ogm_log(("ogm_demux_next: Need resync stream(%d) when fail process\n", sno));
             return ret;
          }
 
@@ -892,7 +892,7 @@ int ogm_demux_next (media_format_t *mf, int stream_end) {
 
          ogm->last_granulepos = page_granul;
          
-         demux_ogm_log(("ogm_demux_next: %d packet(s) found in the Page[%d:%lld] at %dus\n", n_pack, sno, page_granul, us_page));
+         ogm_log(("ogm_demux_next: %d packet(s) found in the Page[%d:%lld] at %dus\n", n_pack, sno, page_granul, us_page));
 
          if( !ogm_read_page (ogm) ) {
 
@@ -956,18 +956,18 @@ int ogm_set_player (media_format_t * mf, media_player_t * player) {
    type = player->media_type(player);
    if ( (ret = ogm_set_mime_player (mf, player, type)) >= MP_OK ) {
 
-      demux_ogm_log (("ogm_set_player: '%s' stream playable\n", type));
+      ogm_log (("ogm_set_player: '%s' stream playable\n", type));
       return ret;
    }
    
    type = player->codec_type(player);
    if ( (ret = ogm_set_mime_player (mf, player, type)) >= MP_OK ) {
 
-      demux_ogm_log (("ogm_set_player: play '%s' stream\n", type));
+      ogm_log (("ogm_set_player: play '%s' stream\n", type));
       return ret;
    }
 
-   demux_ogm_debug(("ogm_set_player: can't play the media with player\n"));
+   ogm_debug(("ogm_set_player: can't play the media with player\n"));
 
    return ret;
 }
@@ -979,7 +979,7 @@ module_interface_t * media_new_format() {
    ogm_format_t * ogm = malloc(sizeof(struct ogm_format_s));
    if(!ogm){
 
-      demux_ogm_log(("ogm_new_rtp_group: No memery to allocate\n"));
+      ogm_log(("ogm_new_rtp_group: No memery to allocate\n"));
       return NULL;
    }
 
@@ -1024,7 +1024,7 @@ module_interface_t * media_new_format() {
 /**
  * Loadin Infomation Block
  */
-module_loadin_t mediaformat = {
+extern DECLSPEC module_loadin_t mediaformat = {
 
    "format",   /* Label */
 

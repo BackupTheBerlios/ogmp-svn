@@ -23,7 +23,7 @@
  
 #define XRTP_DLFLAGS RTLD_LAZY
  
-void* modu_dlopen(char *fn, int flag);
-int modu_dlclose(void * lib);
-void* modu_dlsym(void *h, char *name);
-const char * modu_dlerror(void);
+extern DECLSPEC void* modu_dlopen(char *fn, int flag);
+extern DECLSPEC int modu_dlclose(void * lib);
+extern DECLSPEC void* modu_dlsym(void *h, char *name);
+extern DECLSPEC const char * modu_dlerror(void);

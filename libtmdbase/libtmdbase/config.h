@@ -23,15 +23,15 @@
 
 typedef struct config_s config_t;
 
-config_t * conf_new (char *fname);
+extern DECLSPEC config_t * conf_new (char *fname);
 
-int conf_done(config_t *conf);
+extern DECLSPEC int conf_done(config_t *conf);
 
 /* If fname is NOT NULL, save as new file name */
-int conf_save(config_t *conf, char * fname);
+extern DECLSPEC int conf_save(config_t *conf, char * fname);
 
-int conf_set(config_t *conf, char *key, int klen, char *value, int vlen);
+extern DECLSPEC int conf_set(config_t *conf, char *key, int klen, char *value, int vlen);
 
-int conf_get(config_t *conf, char *key, int klen, char *buf, int blen);
+extern DECLSPEC int conf_get(config_t *conf, char *key, int klen, char *buf, int blen);
 
 #endif

@@ -15,22 +15,20 @@
  *                                                                         *
  ***************************************************************************/
 
- #ifndef OS_H
  #include "os.h"
- #endif
 
  typedef struct xrtp_map_s xrtp_map_t;
 
- xrtp_map_t * map_new(int size);
+extern DECLSPEC  xrtp_map_t * map_new(int size);
 
- int map_done(xrtp_map_t * map);
+extern DECLSPEC  int map_done(xrtp_map_t * map);
 
- int map_add(xrtp_map_t * map, void * item, int key);
+extern DECLSPEC  int map_add(xrtp_map_t * map, void * item, int key);
 
- void * map_remove(xrtp_map_t * map, int key);
+extern DECLSPEC  void * map_remove(xrtp_map_t * map, int key);
 
- int map_blank(xrtp_map_t * map);
+extern DECLSPEC  int map_blank(xrtp_map_t * map);
 
- void * map_item(xrtp_map_t * map, int key);
+extern DECLSPEC  void * map_item(xrtp_map_t * map, int key);
 
- int map_max_key(xrtp_map_t * map);
+extern DECLSPEC  int map_max_key(xrtp_map_t * map);

@@ -23,7 +23,7 @@
  #include <string.h>
 
  #include <timedia/socket.h> 
- #include <timedia/inet.h>
+ #include <timedia/inet.h> 
 
  #ifdef UDP_LOG
    const int udp_log = 1;

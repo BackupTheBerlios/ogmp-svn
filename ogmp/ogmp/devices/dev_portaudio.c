@@ -85,13 +85,13 @@ static int pa_callback( void *inbuf, void *outbuf,
 
    int pick_us_start = time_usec_now(pa->clock);
    int ret = pa->out->pick_frame(pa->out, (media_info_t*)&pa->ai, outbuf, npcm_once);
-   int pick_us = time_usec_passed(pa->clock, pick_us_start);
+   int pick_us = time_usec_spent(pa->clock, pick_us_start);
 
    if (pa->dev.running == 0) pa->dev.running = 1;
    else {
 
       /* time adjustment */
-      pulse_us = time_usec_passed(pa->clock, pa->last_pick);
+      pulse_us = time_usec_spent(pa->clock, pa->last_pick);
    
       if (!pa->time_match) {
 
@@ -112,7 +112,7 @@ static int pa_callback( void *inbuf, void *outbuf,
             while (delay) delay--;
          }
 
-         itval = time_usec_passed(pa->clock, pa->last_pick);
+         itval = time_usec_spent(pa->clock, pa->last_pick);
          pa_log(("pa_callback: %dus match %dus audio\n", itval, pa->usec_pulse));
       }
 
@@ -130,7 +130,7 @@ int pa_done_setting(control_setting_t *gen){
    return MP_OK;
 }
 
-control_setting_t* pa_new_setting(){
+control_setting_t* pa_new_setting(media_device_t *dev){
 
    pa_setting_t * set = malloc(sizeof(struct pa_setting_s));
    if(!set){
@@ -367,7 +367,7 @@ int pa_match_type(media_device_t *dev, char *type) {
 
    pa_log(("portaudio.pa_match_type: I am audio device\n"));
 
-   if( !strcasecmp("audio", type) ) return 1;
+   if( !strcmp("audio", type) ) return 1;
    
    return 0;
 }
@@ -429,7 +429,7 @@ module_interface_t* media_new_device () {
 /**
  * Loadin Infomation Block
  */
-module_loadin_t mediaformat = {
+extern DECLSPEC module_loadin_t mediaformat = {
 
    "device",   /* Label */
 

@@ -73,7 +73,7 @@ int ogm_detect_directshow (ogg_packet *packet) {
 }
 
 /* Handle DirectShow packet */
-int ogm_process_directshow(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int hdrlen, int64 lenbytes, int ustamp, int last_packet, int stream_end){
+int ogm_process_directshow(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int hdrlen, int64 lenbytes, int64 samplestamp, int last_packet, int stream_end){
 
    return MP_EIMPL;
 }

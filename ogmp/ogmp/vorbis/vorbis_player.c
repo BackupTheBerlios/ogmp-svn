@@ -77,7 +77,8 @@ int vorbis_set_callback (media_player_t * mp, int type, int(*call)(void*), void 
 
 int vorbis_match_type (media_player_t * mp, char *mime, char *fourcc) {
 
-   if (mime && strncasecmp(mime, "audio/vorbis", 12) == 0) {
+    /* FIXME: due to no strncasecmp on win32 mime is case sensitive */
+	if (mime && strncmp(mime, "audio/vorbis", 12) == 0) {
 
       vorbis_player_log(("vorbis_match_type: mime = 'audio/vorbis'\n"));
       return 1;
@@ -139,7 +140,7 @@ int vorbis_stop (media_player_t *mp) {
    return MP_OK;
 }
 
-int vorbis_receive_next (media_player_t *mp, void *vorbis_packet, int samplestamp, int last_packet) {
+int vorbis_receive_next (media_player_t *mp, void *vorbis_packet, int64 samplestamp, int last_packet) {
 
    media_pipe_t * output = NULL;
    media_frame_t * auf = NULL;
@@ -171,7 +172,7 @@ int vorbis_receive_next (media_player_t *mp, void *vorbis_packet, int samplestam
 
    if (vp->last_samplestamp != samplestamp) {
 
-      vp->ts_usec_now += (samplestamp - vp->last_samplestamp) / (double)sample_rate * 1000000;
+      vp->ts_usec_now += (int)((samplestamp - vp->last_samplestamp) / (double)sample_rate * 1000000);
       vp->last_samplestamp = samplestamp;
    }
    
@@ -353,7 +354,7 @@ module_interface_t * media_new_player(){
 /**
  * Loadin Infomation Block
  */
-module_loadin_t mediaformat = {
+extern DECLSPEC module_loadin_t mediaformat = {
 
    "playback",   /* Label */
 

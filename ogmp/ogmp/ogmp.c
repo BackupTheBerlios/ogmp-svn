@@ -19,8 +19,8 @@
 
 #define VERSION 1
 
-#ifndef MODULEDIR
-#define MODULEDIR "/home/hling/timedia-project/lib/ogmp"
+#ifndef MODDIR
+ #define MODDIR "."
 #endif
 
 #define PLAYER_LOG
@@ -180,13 +180,13 @@ int main(int argc, char** argv){
    
    module_catalog_t * mod_cata = NULL;
    
-   player_log (("\nogmplyer: play '%s'\n", fname));
+   player_log (("\nogmplyer: play '%s', with modules in dir:%s\n", fname, MODDIR));
    
    /* Initialise */
    conf = conf_new ( "ogmprc" );
    
    mod_cata = catalog_new( "mediaformat" );
-   num = catalog_scan_modules ( mod_cata, VERSION, MODULEDIR );
+   num = catalog_scan_modules ( mod_cata, VERSION, MODDIR );
    
    player_log (("\nogmplyer: %d modules found\n", num));
    
@@ -241,10 +241,10 @@ int main(int argc, char** argv){
    
    sender_start (&sender);
 
-   clock_main = time_begin(0,0);
+   clock_main = time_start();
    
-   /* play 200 seconds audio */
-   lrtime_sleep (clock_main, 300000, &remain);
+   /* play 300 seconds audio */
+   time_msec_sleep (clock_main, 300000, &remain);
    
    sender_stop (&sender);
    

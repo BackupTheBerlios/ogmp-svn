@@ -132,14 +132,15 @@ int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* pat
       return OS_EPARAM;
    }
 
+   catalog_log(("catalog_scan_modules: open dir:%s\n", path));
+
    dir = opendir(path); /* POSIX call */
    if(!dir){
 
       catalog_log(("< catalog_scan_modules: Fail to open dir:%s >\n", path));
       return OS_EPARAM;
    }      
-
-    
+          
    list_u = xrtp_list_newuser(catalog->infos);
 
    while((entry = readdir(dir)) != NULL){

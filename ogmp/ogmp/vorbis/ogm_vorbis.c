@@ -27,23 +27,21 @@
 #else
    #include <vorbis/codec.h>
 #endif
-
+/*
 #define OGM_VORBIS_LOG
 #define OGM_VORBIS_DEBUG
-
+*/
 #ifdef OGM_VORBIS_LOG
-   const int vorbis_log = 1;
+ #define ogm_vorbis_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int vorbis_log = 0;
+ #define ogm_vorbis_log(fmtargs)  
 #endif 
-#define ogm_vorbis_log(fmtargs)  do{if(vorbis_log) printf fmtargs;}while(0)
 
 #ifdef OGM_VORBIS_DEBUG
-   const int ogm_vorbis_debug = 1;
+ #define ogm_vorbis_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int ogm_vorbis_debug = 0;
+ #define ogm_vorbis_debug(fmtargs)
 #endif
-#define ogm_vorbis_debug(fmtargs)  do{if(ogm_vorbis_debug) printf fmtargs;}while(0)
 
 int ogm_detect_vorbis(ogg_packet * packet){
 
@@ -211,7 +209,7 @@ int ogm_open_vorbis(ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *
 }
 
 /* Handle Vorbis packet */
-int ogm_process_vorbis(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int hdrlen, int64 lenbytes, int samplestamp, int last_packet, int stream_end){
+int ogm_process_vorbis(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int hdrlen, int64 lenbytes, int64 samplestamp, int last_packet, int stream_end){
 
    /* Output the Ogg/Vorbis media */
    media_format_t *mf = (media_format_t *)ogm;
@@ -353,7 +351,7 @@ module_interface_t * ogm_new_media() {
 /**
  * Loadin Infomation Block
  */
-module_loadin_t mediaformat = {
+extern DECLSPEC module_loadin_t mediaformat = {
 
    "ogm",   /* Label */
 

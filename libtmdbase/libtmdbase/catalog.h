@@ -73,12 +73,12 @@ typedef struct module_catalog_s {
 /*
  * Create a new catalog structure
  */
-module_catalog_t * catalog_new( char * type );
+extern DECLSPEC module_catalog_t * catalog_new( char * type );
 
 /*
  * Finalize the catalog.
  */
-int catalog_done(module_catalog_t *catalog);
+extern DECLSPEC int catalog_done(module_catalog_t *catalog);
 
 /*
  * Scan directory to collect information of all the plugins
@@ -86,23 +86,23 @@ int catalog_done(module_catalog_t *catalog);
  *   The number of available plugins, or
  *   Minus value for error.
  */
-int catalog_scan_modules(module_catalog_t *catalog, unsigned int ver, char *dir);
+extern DECLSPEC int catalog_scan_modules(module_catalog_t *catalog, unsigned int ver, char *dir);
 
 /*
  * Dispose all the handler info in the catalog, reset the catalog.
  */
-int catalog_reset(module_catalog_t *catalog);
+extern DECLSPEC int catalog_reset(module_catalog_t *catalog);
 
 /*
  * Create a new handler instance from the handler catalog
  *
  * Fail, return null.
  */
-module_interface_t * catalog_new_module(module_catalog_t *catalog, char* id);
+extern DECLSPEC module_interface_t * catalog_new_module(module_catalog_t *catalog, char* id);
 
 /*
  * Create all modules from source, return numbers of module created
  */
-int catalog_create_modules(module_catalog_t *catalog, char *label, xrtp_list_t *list);
+extern DECLSPEC int catalog_create_modules(module_catalog_t *catalog, char *label, xrtp_list_t *list);
 
 #endif

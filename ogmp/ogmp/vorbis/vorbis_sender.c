@@ -111,7 +111,8 @@ int vsend_set_callback (media_player_t * mp, int type, int(*call)(void*), void *
 
 int vsend_match_type (media_player_t * mp, char *mime, char *fourcc) {
 
-   if (mime && strncasecmp(mime, "audio/vorbis", 12) == 0)
+   /* FIXME: Due to no strncasecmp on win32 mime is case sensitive */
+   if (mime && strncmp(mime, "audio/vorbis", 12) == 0)
       return 1;
 
    return 0;
@@ -168,7 +169,7 @@ int vsend_stop (media_player_t *mp) {
    return MP_OK;
 }
 
-int vsend_receive_next (media_player_t *mp, void * vorbis_packet, int samplestamp, int last_packet) {
+int vsend_receive_next (media_player_t *mp, void * vorbis_packet, int64 samplestamp, int last_packet) {
 
    media_pipe_t * output = NULL;
    rtp_frame_t * rtpf = NULL;
@@ -187,7 +188,8 @@ int vsend_receive_next (media_player_t *mp, void * vorbis_packet, int samplestam
    /* send rtp */
    rtpf = (rtp_frame_t *)output->new_frame(output, pack->bytes);
 
-   rtpf->samplestamp = samplestamp;
+   /* FIXME: when int64 wrap off to negetive value, what happen ? */
+   rtpf->samplestamp = (int32)(samplestamp % 0xFFFF); 
    rtpf->media_info = vs->vorbis_info;
    rtpf->unit_bytes = pack->bytes;
    memcpy(rtpf->media_unit, pack->packet, pack->bytes);

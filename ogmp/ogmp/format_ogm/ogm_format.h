@@ -129,7 +129,7 @@ struct ogm_media_s {
 
    int (*open_media) (ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *sstate, int sno, stream_header *sth);
 
-   int (*process_media) (ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int hdrlen, int64 lenbytes, int ustamp, int last_packet, int stream_end);
+   int (*process_media) (ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int hdrlen, int64 lenbytes, int64 samplestamp, int last_packet, int stream_end);
 
 };
 

@@ -136,14 +136,14 @@ void put_uint64(void *buf, uint64 val) {
 
   tmp = (unsigned char *) buf;
 
-  tmp[0] = val & 0xff;
-  tmp[1] = (val >>= 8) & 0xff;
-  tmp[2] = (val >>= 8) & 0xff;
-  tmp[3] = (val >>= 8) & 0xff;
-  tmp[4] = (val >>= 8) & 0xff;
-  tmp[5] = (val >>= 8) & 0xff;
-  tmp[6] = (val >>= 8) & 0xff;
-  tmp[7] = (val >>= 8) & 0xff;
+  tmp[0] = (unsigned char)(val & 0xff);
+  tmp[1] = (unsigned char)((val >>= 8) & 0xff);
+  tmp[2] = (unsigned char)((val >>= 8) & 0xff);
+  tmp[3] = (unsigned char)((val >>= 8) & 0xff);
+  tmp[4] = (unsigned char)((val >>= 8) & 0xff);
+  tmp[5] = (unsigned char)((val >>= 8) & 0xff);
+  tmp[6] = (unsigned char)((val >>= 8) & 0xff);
+  tmp[7] = (unsigned char)((val >>= 8) & 0xff);
 }
 
 #ifdef NEED_FSEEKO

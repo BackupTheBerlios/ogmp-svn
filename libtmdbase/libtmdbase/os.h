@@ -52,6 +52,10 @@
 #define HOST_BYTEORDER LITTLEEND_ORDER
 #define NET_BYTEORDER BIGEND_ORDER
 
+/* Make sure the correct platform symbols are defined */
+#if !defined(WIN32) && defined(_WIN32)
+#define WIN32
+#endif /* Windows */
 
 #ifdef _MSC_VER
  typedef unsigned __int64  uint64;
@@ -75,5 +79,47 @@ typedef unsigned int   uint;
 typedef int   int32;
 typedef short int16;
 typedef char  int8;
+
+/* Some compilers use a special export keyword 
+ * Copy from SDL (www.libsdl.org)
+ */
+#ifndef DECLSPEC
+# ifdef __BEOS__
+#  if defined(__GNUC__)
+#   define DECLSPEC	__declspec(dllexport)
+#  else
+#   define DECLSPEC	__declspec(export)
+#  endif
+# else
+# ifdef WIN32
+#  ifdef __BORLANDC__
+#   ifdef BUILD_SDL
+#    define DECLSPEC 
+#   else
+#    define DECLSPEC __declspec(dllimport)
+#   endif
+#  else
+#   define DECLSPEC	__declspec(dllexport)
+#  endif
+# else
+#  define DECLSPEC
+# endif
+# endif
+#endif
+
+/* By default SDL uses the C calling convention */
+#ifndef SDLCALL
+#ifdef WIN32
+#define SDLCALL __cdecl
+#else
+#define SDLCALL
+#endif
+#endif /* SDLCALL */
+
+/* Removed DECLSPEC on Symbian OS because SDL cannot be a DLL in EPOC */
+#ifdef __SYMBIAN32__ 
+#undef DECLSPEC
+#define DECLSPEC
+#endif /* __SYMBIAN32__ */
 
 #endif

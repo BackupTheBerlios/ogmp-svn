@@ -48,6 +48,7 @@ void trail_space(char *s) {
  * Read local file.
  */
 static char *read_line(demux_sputext_t *this, char *line, off_t len) {
+
   off_t nread = 0;
   char *s;
   int linelen;
@@ -116,8 +117,8 @@ static subtitle_t *sub_read_line_subrip(demux_sputext_t *this, subtitle_t *curre
     if ((len=sscanf (line, "%d:%d:%d,%d --> %d:%d:%d,%d",&a1,&a2,&a3,&a4,&b1,&b2,&b3,&b4)) < 8)
       continue;
       
-    current->start = a1*360000+a2*6000+a3*100+a4/10;   /* to lrtime */
-    current->end   = b1*360000+b2*6000+b3*100+b4/10;
+    current->start = a1*3600000+a2*60000+a3*1000+a4;   /* to millisec */
+    current->end   = b1*3600000+b2*60000+b3*1000+b4;
     
     for (i=0; i<SUB_MAX_TEXT;) {
       
@@ -337,21 +338,21 @@ void demux_sputext_show_title(subtitle_t * subt){
   int r; 
   int i;
 
-  s1 = subt->start / 360000;
-  r = subt->start % 360000;
-  s2 = r / 6000; 
-  r = r % 6000;
-  s3 = r / 100;
-  r = r % 100;
-  s4 = r * 10;
+  s1 = subt->start / 3600000;  /* millisec per hour */
+  r = subt->start % 3600000;
+  s2 = r / 60000;			   /* millisec per minute */
+  r = r % 60000;
+  s3 = r / 1000;
+  r = r % 1000;
+  s4 = r;
 
-  e1 = subt->end / 360000;
-  r = subt->end % 360000;
-  e2 = r / 6000;
-  r = r % 6000;
-  e3 = r / 100;
-  r = r % 100;
-  e4 = r * 10;
+  e1 = subt->end / 3600000;
+  r = subt->end % 3600000;
+  e2 = r / 60000;
+  r = r % 60000;
+  e3 = r / 1000;
+  r = r % 1000;
+  e4 = r;
 
   sputext_log(("demux_sputext_show_title: Timestamp[%d:%d:%d,%d --> %d:%d:%d,%d]\n", s1,s2,s3,s4,e1,e2,e3,e4));
   
@@ -363,8 +364,7 @@ void demux_sputext_show_title(subtitle_t * subt){
 
 subtitle_t * demux_sputext_next_subtitle(demux_sputext_t *this) {
   
-  if (this->cur >= this->num)
-    return NULL;
+  if (this->cur >= this->num) return NULL;
 
   return &this->subtitles[this->cur++];
 }

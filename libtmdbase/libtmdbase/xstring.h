@@ -15,16 +15,14 @@
  *                                                                         *
  ***************************************************************************/
 
- #ifndef OS_H
  #include "os.h"
- #endif
  
  #include <string.h>
  
- char * xstr_clone(char *str);
+extern DECLSPEC  char * xstr_clone(char *str);
 
- int xstr_ncomp(char *src, char *des, uint len);
+extern DECLSPEC  int xstr_ncomp(char *src, char *des, uint len);
 
- char * xstr_new_string(char str[]);
+extern DECLSPEC  char * xstr_new_string(char str[]);
 
- int xstr_done_string(char * str);
+extern DECLSPEC  int xstr_done_string(char * str);

@@ -87,7 +87,7 @@ int ogm_open_text(ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *ss
 }
 
 /* Handle Text packet */
-int ogm_process_text(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int hdrlen, int64 lenbytes, int ustamp, int last_packet, int stream_end){
+int ogm_process_text(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int hdrlen, int64 lenbytes, int64 samplestamp, int last_packet, int stream_end){
 
    char *sub;
 
@@ -116,7 +116,7 @@ int ogm_process_text(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page,
       i = write(stream->fd, (char *)&pack->packet[hdrlen + 1],
                   pack->bytes - 1 - hdrlen);
 
-      demux_ogm_log("handle_packet: x/t%d: %d written\n",
+      ogm_text_log("handle_packet: x/t%d: %d written\n",
                   stream->sno, i);
 
       return XRTP_OK;

@@ -51,47 +51,47 @@ typedef struct xrtp_list_user_s{
 	xrtp_list_node_t *next;
 }xrtp_list_user_t;
 
-xrtp_list_t * xrtp_list_new();
+extern DECLSPEC xrtp_list_t * xrtp_list_new();
 
-int xrtp_list_free(xrtp_list_t *list, int(*free_data)(void *));
+extern DECLSPEC int xrtp_list_free(xrtp_list_t *list, int(*free_data)(void *));
 
-int xrtp_list_reset(xrtp_list_t *list, int(*free_data)(void *));
+extern DECLSPEC int xrtp_list_reset(xrtp_list_t *list, int(*free_data)(void *));
 
-xrtp_list_user_t * xrtp_list_newuser(xrtp_list_t *list);
+extern DECLSPEC xrtp_list_user_t * xrtp_list_newuser(xrtp_list_t *list);
 
-int xrtp_list_freeuser(xrtp_list_user_t *user);
+extern DECLSPEC int xrtp_list_freeuser(xrtp_list_user_t *user);
 
-void * xrtp_list_first(xrtp_list_t *list, xrtp_list_user_t *u);
+extern DECLSPEC void * xrtp_list_first(xrtp_list_t *list, xrtp_list_user_t *u);
 
-void * xrtp_list_next(xrtp_list_t * list, xrtp_list_user_t * u);
+extern DECLSPEC void * xrtp_list_next(xrtp_list_t * list, xrtp_list_user_t * u);
 
-void * xrtp_list_current(xrtp_list_t * list, xrtp_list_user_t * u);
+extern DECLSPEC void * xrtp_list_current(xrtp_list_t * list, xrtp_list_user_t * u);
 
-int xrtp_list_size(xrtp_list_t * list);
+extern DECLSPEC int xrtp_list_size(xrtp_list_t * list);
 
-int xrtp_list_add_first(xrtp_list_t * list, void * data);
+extern DECLSPEC int xrtp_list_add_first(xrtp_list_t * list, void * data);
 
-int xrtp_list_add_last(xrtp_list_t * list, void * data);
+extern DECLSPEC int xrtp_list_add_last(xrtp_list_t * list, void * data);
 
 /* If item with same value, no addition occurred */
-int xrtp_list_add_ascent_once(xrtp_list_t * list, void * data, int cmp(void *, void *));
+extern DECLSPEC int xrtp_list_add_ascent_once(xrtp_list_t * list, void * data, int cmp(void *, void *));
 
-void * xrtp_list_remove_first(xrtp_list_t * list);
+extern DECLSPEC void * xrtp_list_remove_first(xrtp_list_t * list);
 
-int xrtp_list_remove_item(xrtp_list_t * list, void *item);
+extern DECLSPEC int xrtp_list_remove_item(xrtp_list_t * list, void *item);
 
-void * xrtp_list_remove(xrtp_list_t * list, void * data, int(*match)(void*, void*));
+extern DECLSPEC void * xrtp_list_remove(xrtp_list_t * list, void * data, int(*match)(void*, void*));
 
-int xrtp_list_delete_if(xrtp_list_t * list, void * cdata,
+extern DECLSPEC int xrtp_list_delete_if(xrtp_list_t * list, void * cdata,
                           int(*condition)(void*, void*),
                           int(*freeman)(void*));
 
-void * xrtp_list_find(xrtp_list_t * list, void * data, int(*match)(void*, void*), xrtp_list_user_t * u);
-void * list_find(xrtp_list_t * list, void * data, int (*match)(void*, void*));
+extern DECLSPEC void * xrtp_list_find(xrtp_list_t * list, void * data, int(*match)(void*, void*), xrtp_list_user_t * u);
+extern DECLSPEC void * list_find(xrtp_list_t * list, void * data, int (*match)(void*, void*));
 
 /**
  * Traverse the list by a function, if function return error, abort.
  */
-int xrtp_list_visit(xrtp_list_t * list, int(*visitor)(void*, void*),
+extern DECLSPEC int xrtp_list_visit(xrtp_list_t * list, int(*visitor)(void*, void*),
                     void * v);
 #endif
