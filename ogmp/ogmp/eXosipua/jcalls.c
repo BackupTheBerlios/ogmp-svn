@@ -24,12 +24,8 @@
 #include "eXosipua.h"
 #include "eXosip2.h"
 
-//jcall_t jcalls[MAX_NUMBER_OF_CALLS];
-//char   _localip[30];
-
-//static int ___call_init = 0;
-
 int jcall_init(eXosipua_t *jua)
+
 {
 	int k;
 	for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
@@ -191,6 +187,7 @@ int jcall_ringing(eXosipua_t *jua, eXosip_event_t *je)
 	call_e.event.call_info = (sipua_set_t*)je->external_reference;
 
 	call_e.subject = je->subject;
+
 	call_e.textinfo = je->textinfo;
     
 	call_e.req_uri = je->req_uri;
@@ -214,6 +211,7 @@ int jcall_ringing(eXosipua_t *jua, eXosip_event_t *je)
 int jcall_answered(eXosipua_t *jua, eXosip_event_t *je)
 {
 	sipua_call_event_t call_e;
+
 
 	/* event back to sipuac */
 	memset(&call_e, 0, sizeof(sipua_call_event_t));
@@ -278,9 +276,7 @@ int jcall_ack(eXosipua_t *jua, eXosip_event_t *je)
 	sipua_event_t e;
 	sipua_set_t* call;
 
-	printf("jcall_ack: 1\n");
-
-	/* event back to sipuac */
+    /* event back to sipuac */
 	memset(&e, 0, sizeof(sipua_event_t));
 
 	call = e.call_info = (sipua_set_t*)je->external_reference;
@@ -545,6 +541,7 @@ int jcall_offhold(eXosipua_t *jua, eXosip_event_t *je)
   int k;
 
 	/* event back to sipuac */
+
 	sipua_event_t sip_e;
 	sip_e.call_info = (sipua_set_t*)je->external_reference;
 	sip_e.type = SIPUA_EVENT_OFFHOLD;

@@ -435,7 +435,7 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
      * But why?
 	sdp_message_free(sdp_info.sdp_message);
     */
-    
+
     /*
 	printf("sipua_negotiate_call:\n");
 	printf("-------Reply SDP----------\n");
@@ -636,6 +636,7 @@ int sipua_unregist(sipua_t *sipua, user_profile_t *user)
 	else
 	{
 		user->cname = NULL;
+
 
 
 		user->reg_status = SIPUA_STATUS_UNREG_DOING;

@@ -109,25 +109,19 @@ int jua_process_event(eXosipua_t *jua)
 		}
 		else if (je->type==EXOSIP_CALL_ACK)
 		{
-			/*
-			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
-					je->cid, je->did, je->status_code,
-					je->reason_phrase, je->remote_uri);
-	  
-            jua_log(buf);
-            */
-			jcall_ack(jua, je);
+            jcall_ack(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_PROCEEDING)
 		{
-			/*
-			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
+            /*
+            snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
                     
-			jua_log(buf);
-			*/
-			jcall_proceeding(jua, je);
+			printf("%s\n", buf);
+            */
+
+            jcall_proceeding(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_RINGING)
 		{
@@ -229,6 +223,7 @@ int jua_process_event(eXosipua_t *jua)
 			eXosip_reg_t *jr;
 
 			reg_e.event.call_info = NULL;
+
 
 			reg_e.event.type = SIPUA_EVENT_REGISTRATION_SUCCEEDED;
 			reg_e.status_code = je->status_code;	/* eg: 200*/
@@ -562,6 +557,7 @@ int jua_process_event(eXosipua_t *jua)
 	  
             josua_printf(buf);
             */
+
 		}
 	
 		eXosip_event_free(je);

@@ -149,6 +149,7 @@ int client_register_loop(void *gen)
 		user_prof->seconds_left -= intv;
 
 
+
 		if(user_prof->seconds_left <= 0)
 			client_regist(&client->sipua, user_prof, user_prof->cname);
 
@@ -327,6 +328,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			{
 				if(client->lines[i] == NULL)
 				{
+
 					call->ring_num = SIPUA_MAX_RING;
 
 					client->lines[i] = call;
@@ -495,6 +497,7 @@ int sipua_done_sip_session(void* gen)
 
     xstr_done_string(set->proto);
     xstr_done_string(set->from);
+
 
 	set->rtp_format->done(set->rtp_format);
 	rtp_capable_done_set(set->rtpcapset);
@@ -859,7 +862,8 @@ int client_answer(sipua_t *sipua, sipua_set_t* call, int reply)
 			/* Anser the call */
 			sipua_answer(&client->sipua, call, reply);
 
-			if(client->backgroud_source)
+            /* FIXME: Shouldn't be here */
+            if(client->backgroud_source)
 				client_attach_source(sipua, call, (transmit_source_t*)client->backgroud_source);
 
 			xfree(call->reply_body);
