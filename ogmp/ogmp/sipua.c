@@ -16,6 +16,7 @@
  ***************************************************************************/
 
 #include <timedia/xmalloc.h>
+#include <timedia/ui.h>
 
 #include "sipua.h"
 #include <stdlib.h>
@@ -27,7 +28,7 @@
 
 #ifdef UA_LOG
  #include <stdio.h>
- #define ua_log(fmtargs)  do{log_printf fmtargs;}while(0)
+ #define ua_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define ua_log(fmtargs)
 #endif

@@ -215,8 +215,6 @@ int window_address_book_newentry_run_command(gui_t* gui, int c)
 				
 				int n = sipua_add_contact(ocui->phonebook, contact);
 
-				log_printf("%d contacts in phonebook\n", n);
-				
 				gui_hide_window(gui);
 			}
 

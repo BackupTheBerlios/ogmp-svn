@@ -17,19 +17,20 @@
  
 #include <timedia/xmalloc.h>
 #include "speex_codec.h"
+#include <timedia/ui.h>
 /*
 */
 #define SPEEX_CODEC_LOG
 #define SPEEX_CODEC_DEBUG
 
 #ifdef SPEEX_CODEC_LOG
- #define spxc_log(fmtargs)  do{printf fmtargs;}while(0)
+ #define spxc_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else                     
  #define spxc_log(fmtargs)
 #endif
 
 #ifdef SPEEX_CODEC_DEBUG
- #define spxc_debug(fmtargs)  do{printf fmtargs;}while(0)
+ #define spxc_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else                
  #define spxc_debug(fmtargs)
 #endif

@@ -23,11 +23,12 @@
 
 #include <timedia/xstring.h>
 #include <timedia/xmalloc.h>
+#include <timedia/ui.h>
 
 #define JUA_LOG
 
 #ifdef JUA_LOG
- #define jua_log(fmtargs)  do{printf fmtargs;}while(0)
+ #define jua_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define jua_log(fmtargs)
 #endif

@@ -16,8 +16,8 @@
  ***************************************************************************/
 
 #include "timed_pipe.h"
-#include "../log.h"
 
+#include <timedia/ui.h>
 #include <timedia/xmalloc.h>
 #include <string.h>
 /*
@@ -26,14 +26,14 @@
 #define PIPE_DEBUG
 
 #ifdef PIPE_LOG
- #define pout_log(fmtargs)  do{log_printf fmtargs;}while(0)
+ #define pout_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pout_log(fmtargs)  
 #endif
 
 
 #ifdef PIPE_DEBUG
- #define pout_debug(fmtargs)  do{log_printf fmtargs;}while(0)
+ #define pout_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pout_debug(fmtargs) 
 #endif

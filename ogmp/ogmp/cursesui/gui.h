@@ -37,7 +37,7 @@
 #include <assert.h>
 
 #include "../ogmp.h"
-#include "../log.h"
+#include <timedia/ui.h>
 
 #ifdef MOUSE_MOVED
 #undef MOUSE_MOVED

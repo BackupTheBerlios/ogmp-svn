@@ -21,6 +21,7 @@
 
 #include <timedia/xmalloc.h>
 #include <timedia/xstring.h>
+#include <timedia/ui.h>
 
 #include "../format_ogm/ogm_format.h"
 
@@ -30,13 +31,13 @@
 #define OGM_SPEEX_DEBUG
 
 #ifdef OGM_SPEEX_LOG
- #define ogm_speex_log(fmtargs)  do{printf fmtargs;}while(0)
+ #define ogm_speex_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define ogm_speex_log(fmtargs)  
 #endif 
 
 #ifdef OGM_SPEEX_DEBUG
- #define ogm_speex_debug(fmtargs)  do{printf fmtargs;}while(0)
+ #define ogm_speex_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define ogm_speex_debug(fmtargs)
 #endif

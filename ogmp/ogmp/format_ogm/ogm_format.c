@@ -14,8 +14,8 @@
 */      
 
 #include "ogm_format.h"
-#include "../log.h"
 
+#include <timedia/ui.h>
 #include <timedia/xmalloc.h>
 #include <string.h>
 
@@ -27,13 +27,13 @@
 #define DEMUX_OGM_DEBUG
 
 #ifdef DEMUX_OGM_LOG
- #define ogm_log(fmtargs)  do{log_printf fmtargs;}while(0)
+ #define ogm_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define ogm_log(fmtargs)  
 #endif
 
 #ifdef DEMUX_OGM_DEBUG
- #define ogm_debug(fmtargs)  do{log_printf fmtargs;}while(0)
+ #define ogm_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define ogm_debug(fmtargs)  
 #endif

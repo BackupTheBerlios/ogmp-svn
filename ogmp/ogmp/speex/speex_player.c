@@ -17,6 +17,7 @@
  
 #include "speex_codec.h"
 
+#include <timedia/ui.h>
 #include <timedia/xmalloc.h>
 #include <string.h>
 #include <stdlib.h>
@@ -25,22 +26,22 @@
 #define SPEEX_PLAYER_DEBUG
 
 #ifdef SPEEX_PLAYER_LOG
- #define spxp_log(fmtargs)  do{printf fmtargs;}while(0)
+ #define spxp_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define spxp_log(fmtargs)
 #endif
 
 #ifdef SPEEX_PLAYER_DEBUG
- #define spxp_debug(fmtargs)  do{printf fmtargs;}while(0)
+ #define spxp_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define spxp_debug(fmtargs)
 #endif
 
 struct global_const_s
 {
-   const char media_type[6];
-   const char mime_type[13];
-   const char play_type[6];
+   char media_type[6];
+   char mime_type[13];
+   char play_type[6];
 
 } global_const = {"audio", "audio/speex", "local"};
 
@@ -221,12 +222,12 @@ int spxp_stop (media_player_t *mp)
    return MP_OK;
 }
 
-const char* spxp_media_type(media_player_t * mp)
+char* spxp_media_type(media_player_t * mp)
 {
    return global_const.media_type;
 }
 
-const char* spxp_play_type(media_player_t * mp)
+char* spxp_play_type(media_player_t * mp)
 {
    return global_const.play_type;
 }

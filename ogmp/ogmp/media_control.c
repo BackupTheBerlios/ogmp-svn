@@ -17,26 +17,26 @@
 
  
 #include "media_format.h"
-#include "log.h"
 
 #include <timedia/timer.h>
 #include <timedia/xmalloc.h>
 #include <timedia/xstring.h>
 #include <timedia/xthread.h>
 #include <timedia/list.h>
+#include <timedia/ui.h>
 
 #define MEDIA_CONTROL_LOG
 #define MEDIA_CONTROL_DEBUG
 
 #ifdef MEDIA_CONTROL_LOG
- #define cont_log(fmtargs)  do{log_printf fmtargs;}while(0)
+ #define cont_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define cont_log(fmtargs)
 #endif             
 
 
 #ifdef MEDIA_CONTROL_DEBUG
- #define cont_debug(fmtargs)  do{log_printf fmtargs;}while(0)
+ #define cont_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define cont_debug(fmtargs)
 #endif

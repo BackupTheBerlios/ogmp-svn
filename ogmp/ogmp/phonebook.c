@@ -16,15 +16,15 @@
  ***************************************************************************/
 
 #include "phonebook.h"
-#include "log.h"
 
 #include <stdio.h>
 #include <timedia/xmalloc.h>
 #include <timedia/xstring.h>
+#include <timedia/ui.h>
 
 #ifdef PBK_LOG
  #include <stdio.h>
- #define pbk_log(fmtargs)  do{log_printf fmtargs;}while(0)
+ #define pbk_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pbk_log(fmtargs)
 #endif

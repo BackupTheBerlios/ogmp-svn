@@ -17,11 +17,11 @@
  
 #include "dev_portaudio.h"
 #include "timed_pipe.h"
-#include "../log.h"
 
 #include <portaudio.h>
 
 #include <timedia/os.h>
+#include <timedia/ui.h>
 #include <timedia/xthread.h>
 #include <timedia/xmalloc.h>
 #include <string.h>
@@ -38,13 +38,13 @@
 #define PORTAUDIO_DEBUG
 
 #ifdef PORTAUDIO_LOG
- #define pa_log(fmtargs)  do{log_printf fmtargs;}while(0)
+ #define pa_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pa_log(fmtargs)
 #endif
 
 #ifdef PORTAUDIO_DEBUG
- #define pa_debug(fmtargs)  do{log_printf fmtargs;}while(0)
+ #define pa_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pa_debug(fmtargs)
 #endif

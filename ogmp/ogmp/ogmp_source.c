@@ -20,11 +20,12 @@
 
 #include <timedia/xstring.h>
 #include <timedia/xmalloc.h>
+#include <timedia/ui.h>
 
 #define SOURCE_LOG
 
 #ifdef SOURCE_LOG
- #define src_log(fmtargs)  do{printf fmtargs;}while(0)
+ #define src_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define src_log(fmtargs)
 #endif

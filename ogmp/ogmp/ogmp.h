@@ -15,6 +15,9 @@
  *                                                                         *
  ***************************************************************************/
 
+#ifndef OGMP_H
+#define OGMP_H
+
 #include "media_format.h"
 
 #include <timedia/timer.h>
@@ -184,3 +187,4 @@ int client_call(ogmp_client_t *client, char *regname);
 media_source_t* source_open(char* name, media_control_t* control, char* mode, void* extra);
 ogmp_setting_t* source_setting(media_control_t *control);
 
+#endif

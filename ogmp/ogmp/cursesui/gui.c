@@ -714,13 +714,14 @@ int gui_logbuf(ogmp_ui_t* ui, char **buf)
     return LOG_LEN;
 }
 
+/* return actual line number output */
 int gui_print_log(ogmp_ui_t* ogui, char *buf)
 {
 	char *p;
 	int i=0;
 	int ln;
 
-	int ret;
+	int l = 0;
 
 	xthr_lock(log_lock);
 
@@ -743,6 +744,7 @@ int gui_print_log(ogmp_ui_t* ogui, char *buf)
 				log_ln1 = (log_ln1 + 1) % log_maxline;
 
 			ln = (ln + 1) % log_maxline;
+			l++;
 
 			if(log_nline < log_maxline)
 				log_nline++;
@@ -760,7 +762,7 @@ int gui_print_log(ogmp_ui_t* ogui, char *buf)
 
 	xthr_unlock(log_lock);
 
-	return ret;
+	return l;
 }
 
 int gui_done(ogmp_ui_t* ui)

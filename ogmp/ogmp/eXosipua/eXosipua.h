@@ -19,6 +19,7 @@
  */
 
 #include "../sipua.h"
+#include "../log.h"
 #include "../rtp_cap.h"
 
 #include <eXosip/eXosip.h>

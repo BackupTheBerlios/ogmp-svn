@@ -1,7 +1,7 @@
 /***************************************************************************
-                          ogmp_log.h  -  log output
+                          ogmp_ui.c
                              -------------------
-    begin                : Wed May 19 2004
+    begin                : Tue Jul 20 2004
     copyright            : (C) 2004 by Heming
     email                : heming@bigfoot.com; heming@timedia.org
  ***************************************************************************/
@@ -15,12 +15,39 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef OS_GUI_H
-#define OS_GUI_H
+#include <timedia/ui.h>
+#include "ogmp.h"
 
-#include <timedia/os.h>
+#include <stdarg.h>
 
-extern DECLSPEC
-int log_printf(char *chfr, ...);
+extern ogmp_ui_t* global_ui;
 
-#endif
+int ui_print_log(char *fmt, ...)
+{
+	int ret;
+    int loglen;
+    char* logbuf;
+    
+    va_list ap;
+    
+	va_start (ap, fmt);
+
+    if(global_ui == NULL)
+    {
+        ret = vprintf(fmt, ap);
+        
+        va_end(ap);
+
+        return ret;
+    }
+
+    loglen = global_ui->logbuf(global_ui, &logbuf);
+
+    vsnprintf(logbuf, loglen, fmt, ap);
+
+	va_end(ap);
+
+	ret = global_ui->print_log(global_ui, logbuf);
+
+	return ret;
+}

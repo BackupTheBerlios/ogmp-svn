@@ -22,7 +22,6 @@
 #include <timedia/xstring.h>
 #include <xrtp/xrtp.h>
 
-#include "log.h"
 #include "format_rtp/rtp_format.h"
 #include "devices/dev_rtp.h"
 #include "eXosipua/eXutils.h"

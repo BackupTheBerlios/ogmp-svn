@@ -20,16 +20,17 @@
 
 #include <timedia/xstring.h>
 #include <timedia/xmalloc.h>
+#include <timedia/ui.h>
 #include <stdarg.h>
 
 #define OGMP_VERSION  1
 
-ogmp_ui_t* global_ui = NULL;
+extern DECLSPEC ogmp_ui_t* global_ui = NULL;
 
 #define CLIE_LOG
 
 #ifdef CLIE_LOG
- #define clie_log(fmtargs)  do{log_printf fmtargs;}while(0)
+ #define clie_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define clie_log(fmtargs)
 #endif
@@ -112,7 +113,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			snprintf(buf, 99, "Register %s Error[%i]: %s",
 					reg_e->server, reg_e->status_code, reg_e->server_info);
 
-			log_printf("client_sipua_event: %s\n", buf);
+			clie_log(("client_sipua_event: %s\n", buf));
 
 			user_prof->reg_status = SIPUA_STATUS_REG_FAIL;
 
@@ -687,36 +688,6 @@ ogmp_ui_t* client_new_ui(module_catalog_t* mod_cata, char* type)
     return ui;
 }
 
-int log_printf(char *fmt, ...)
-{
-	int ret;
-    int loglen;
-    char* logbuf;
-    
-    va_list ap;
-    
-	va_start (ap, fmt);
-
-    if(global_ui == NULL)
-    {
-        ret = vprintf(fmt, ap);
-        
-        va_end(ap);
-
-        return ret;
-    }
-
-    loglen = global_ui->logbuf(global_ui, &logbuf);
-
-    vsnprintf(logbuf, loglen, fmt, ap);
-
-	va_end(ap);
-
-	ret = global_ui->print_log(global_ui, logbuf);
-
-	return ret;
-}
-
 sipua_t* client_new_sipua(sipua_uas_t* uas, module_catalog_t* mod_cata, int bandwidth)
 {
 	int nmod;
@@ -887,6 +858,7 @@ sipua_uas_t* client_new_uas(module_catalog_t* mod_cata, char* type)
 int main(int argc, char** argv)
 {
     sipua_t* sipua = NULL;
+	sipua_uas_t* uas = NULL;
 	module_catalog_t *mod_cata = NULL;
     
 	clie_log (("main: modules in dir:'%s'\n", MOD_DIR));
@@ -895,7 +867,7 @@ int main(int argc, char** argv)
     
 	catalog_scan_modules ( mod_cata, OGMP_VERSION, MOD_DIR );
     
-	sipua_uas_t* uas = client_new_uas(mod_cata, "eXosipua");
+	uas = client_new_uas(mod_cata, "eXosipua");
     if(!uas)
         clie_log (("main: fail to create sipua server!\n"));
     
