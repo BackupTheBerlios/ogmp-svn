@@ -6,8 +6,7 @@ PREFIX = /home/hling/timedia-project
 
 CC = gcc
 
-LIBS = -L$(PREFIX)/lib -ltmdbase \
-		 -L$(PREFIX)/lib/$(PROGNAME) -logmp
+LIBS = -shared -logg -L$(PREFIX)/lib -ltmdbase -logmp
 
 INCLUDES = -I$(PREFIX)/include -I../include
 
@@ -25,9 +24,9 @@ all:	 libs install
 	-$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $*.o
 
 libs: $(FILES:.c=.o)
-	gcc -shared -logg ogm_common.o ogm_format.o -o fmt_ogm.so
-	gcc -shared ogm_common.o ogm_video.o -o ogm_video.so
-	gcc -shared ogm_common.o ogm_text.o -o ogm_text.so
+	gcc $(LIBS) ogm_common.o ogm_format.o -o fmt_ogm.so
+	gcc $(LIBS) ogm_common.o ogm_video.o -o ogm_video.so
+	gcc $(LIBS) ogm_common.o ogm_text.o -o ogm_text.so
 
 install: $(LIBFILES)
 	-@cp -f $(LIBFILES) $(INSTDIR)

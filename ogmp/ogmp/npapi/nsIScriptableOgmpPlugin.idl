@@ -12,17 +12,17 @@ interface nsIScriptableOgmpPlugin : nsISupports
 {
 	void get_ip();
 
-    /* SIP UA interface */
+	/* SIP UA interface */
 	void load_user(in string uid, in long uidsz);
-   void regist(in string fullname, in long fnsz, in string home_router,
-					in string user_at_domain, in long seconds);
-   void unregist(in string home_router, in string user_at_domain);
-   void new_call(in string subject, in string info);
-   void call(in string callee_at_domain);
-   void answer(in long lineno);
-   void bye(in long lineno);
+	void regist(in string fullname, in long fnsz, in string home_router,
+			in string user_at_domain, in long seconds);
+	void unregist(in string home_router, in string user_at_domain);
+	void new_call(in string subject, in string info);
+	void call(in string callee_at_domain);
+	void answer(in long lineno);
+	void bye(in long lineno);
     
-    /* SIP UA attributes */
+	/* SIP UA attributes */
 	readonly attribute string useragent;
 	readonly attribute string version;
 	readonly attribute string licence;
@@ -45,5 +45,5 @@ interface acmeJSObject : nsISupports
 [scriptable, uuid(f728830e-1dd1-4444-6666-fb9f414f2465)]
 interface acmeScriptablePlugin : nsISupports
 {
-	attribute acmeJSObject document;
+	readonly attribute acmeJSObject document;
 };

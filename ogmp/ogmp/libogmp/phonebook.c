@@ -24,7 +24,7 @@
 
 #ifdef PBK_LOG
  #include <stdio.h>
- #define pbk_log(fmtargs)  do{ui_share.print_log fmtargs;}while(0)
+ #define pbk_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define pbk_log(fmtargs)
 #endif
@@ -544,8 +544,6 @@ int sipua_save_user_file(user_t* user, FILE* f, char* tok, int tsz)
 
 		if(prof->book_location)
 			fwrite(prof->book_location, 1, strlen(prof->book_location), f);
-
-
 	
 		fwrite("\n", 1, 1, f);
 

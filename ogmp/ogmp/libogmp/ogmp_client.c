@@ -1049,7 +1049,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
 	client->ogui = (ogmp_ui_t*)client_new_ui(client, mod_cata, uitype);
     if(client->ogui == NULL)
     {
-        clie_log (("client_new: No ui module found!\n"));
+        clie_debug (("client_new: No %s module found!\n", uitype));
         xfree(client);
 
         return NULL;

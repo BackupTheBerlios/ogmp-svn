@@ -48,8 +48,8 @@
 #include "nsIScriptableOgmpPlugin.h"
 #include "nsIClassInfo.h"
 
-#define OGMP_CONTRACTID "@mydomain.com/XPCOMSample/MyComponent;1"
-#define OGMP_CLASSNAME "A Simple XPCOM Sample"
+#define OGMP_CONTRACTID "@realmtel.net/ogmp/npplugin;1"
+#define OGMP_CLASSNAME "RealmTel SIP UserAgent"
 #define OGMP_CID  { 0x597a60b0, 0x5272, 0x4284, { 0x90, 0xf6, 0xe9, 0x6c, 0x24, 0x2d, 0x74, 0x6 }
 
 class nsPluginInstance;
@@ -109,7 +109,7 @@ class nsControlsScriptablePeer:public nsIScriptableWMPPlugin,
     // native methods callable from JavaScript
     NS_DECL_NSISCRIPTABLEWMPPLUGIN
 
-	 void SetInstance(nsPluginInstance * plugin);
+    void SetInstance(nsPluginInstance * plugin);
 	 
   protected:
      nsPluginInstance * mPlugin;
@@ -134,12 +134,12 @@ class nsScriptablePeer:public nsIScriptableOgmpPlugin,
     // native methods callable from JavaScript
     NS_DECL_NSISCRIPTABLEOGMPPLUGIN
 
-	 void SetInstance(nsPluginInstance * plugin);
+    void SetInstance(nsPluginInstance * plugin);
     void InitControls(nsControlsScriptablePeer *aControls);
 
   protected:
-     nsPluginInstance * mPlugin;
-     nsControlsScriptablePeer *mControls;
+    nsPluginInstance * mPlugin;
+    nsControlsScriptablePeer *mControls;
 };
 
 #endif

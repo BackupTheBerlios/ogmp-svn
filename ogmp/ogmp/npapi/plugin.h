@@ -81,8 +81,7 @@ class nsPluginInstance:public nsPluginInstanceBase
     NPBool init(NPWindow * aWindow);
     void shut();
     NPBool isInitialized();
-    NPError NewStream(NPMIMEType type, NPStream * stream, NPBool seekable,
-		      uint16 * stype);
+    NPError NewStream(NPMIMEType type, NPStream * stream, NPBool seekable, uint16 * stype);
     NPError SetWindow(NPWindow * aWindow);
     NPError DestroyStream(NPStream * stream, NPError reason);
     int32 WriteReady(NPStream * stream);
@@ -103,8 +102,8 @@ class nsPluginInstance:public nsPluginInstanceBase
     /*********************/
     /* SIP UA Attritudes */
     /*********************/
-    void getUseragent(char * *aUseragent);
-    void getLicence(char * *aLicence);
+    void getUseragent(char* *aUseragent);
+    void getLicence(char* *aLicence);
     void getNetaddr(char* *addr);
     
     /********************/

@@ -170,7 +170,7 @@ void window_profiles_draw_commands(gui_t* gui)
 									"^R",	"Register",
 									"^U",	"Unregister",
 									"^F",	"Refresh",
-									"^S",	"Save List",
+									"S",	"Save List",
 									"CR",	"Select",
 									NULL
 								};
@@ -334,7 +334,8 @@ int window_profiles_run_command(gui_t* gui, int c)
 
 			break;
 		}
-		case 19:  /* Ctrl-S */
+		case 's':  /* Save */
+		case 'S':  
 		{
 			/* Save profiles list to storage */
 			user_t* user = ocui->user;
@@ -345,7 +346,6 @@ int window_profiles_run_command(gui_t* gui, int c)
 			if(user->tok)
 			{
 				/* tok prompt gui */
-
 				sipua_save_user(user, user->loc, user->tok, user->tok_bytes);
 			}
 
@@ -414,6 +414,8 @@ int window_profiles_run_command(gui_t* gui, int c)
 		}
 		default:
 		{
+         printf("window_profiles_run_command: unknown command\n");
+         
 			beep();
 
 			return -1;

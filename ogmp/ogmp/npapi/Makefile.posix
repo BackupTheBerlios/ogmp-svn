@@ -21,8 +21,8 @@ CXX= g++
 GECKO_SDK=/home/hling/timedia-project/gecko-sdk
 
 CFLAGS= -DOGMP_CPLUSPLUS -Wall -g -O2  -I/usr/X11R6/include  -g -O2  -DMOZ_X11\
-			-I$(GECKO_SDK) -I$(GECKO_SDK)/include -Iinclude \
-			-fPIC -DMOZILLA_STRICT_API $(OGMPCFLAGS)
+	-DXP_UNIX -I$(GECKO_SDK)/include -Iinclude \
+	-fPIC -DMOZILLA_STRICT_API $(OGMPCFLAGS)
 
 LDFLAGS=    -L/usr/X11R6/lib  -lX11 -lSM -lICE -lXext -lX11 -lXpm -lXt \
 				-L$(GECKO_SDK)/lib -lxpcomglue -lnspr4 -lplds4 \

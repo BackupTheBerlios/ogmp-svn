@@ -160,6 +160,8 @@ int source_cb_on_player_ready(void *gen, media_player_t *player)
 
 	src_debug (("source_cb_on_player_ready: player ready\n"));
 
+   getchar();
+
 	source_start(&src->source);
 
 	return MP_OK;

@@ -75,15 +75,24 @@ void nsScriptablePeer::InitControls(nsControlsScriptablePeer * aControls)
 NS_IMETHODIMP_(nsrefcnt) nsScriptablePeer::AddRef()
 {
    ++mRefCnt;
+   
+   printf("nsScriptablePeer::AddRef: refno[%d]\n", mRefCnt);
+
    return mRefCnt;
 }
 
 NS_IMETHODIMP_(nsrefcnt) nsScriptablePeer::Release()
 {
    --mRefCnt;
+
+   printf("nsScriptablePeer::Release: refno[%d]\n", mRefCnt);
+
    if (mRefCnt == 0)
-	{
+   {
 		delete this;
+   
+		printf("nsScriptablePeer::Release: deleted\n");
+
 		return 0;
    }
 
@@ -99,26 +108,34 @@ NS_IMETHODIMP nsScriptablePeer::QueryInterface(const nsIID & aIID,
 	return NS_ERROR_NULL_POINTER;
 
    if (aIID.Equals(kIScriptableOgmpPluginIID))
-	{
+   {
+   		printf("nsScriptablePeer::QueryInterface: nsIScriptableOgmpPlugin\n");
+
 		*aInstancePtr = NS_STATIC_CAST(nsIScriptableOgmpPlugin *, this);
 		AddRef();
 		return NS_OK;
    }
 
    if (aIID.Equals(kIClassInfoIID))
-	{
+   {
+   		printf("nsScriptablePeer::QueryInterface: nsIClassInfo\n");
+
 		*aInstancePtr = NS_STATIC_CAST(nsIClassInfo *, this);
 		AddRef();
 		return NS_OK;
    }
 
    if (aIID.Equals(kISupportsIID))
-	{
+   {
+   		printf("nsScriptablePeer::QueryInterface: nsISupports\n");
+
 		*aInstancePtr = NS_STATIC_CAST(nsISupports *, (NS_STATIC_CAST(nsIScriptableOgmpPlugin *, this)));
 
 		AddRef();
 		return NS_OK;
    }
+
+   printf("nsScriptablePeer::QueryInterface: No interface\n");
 
    return NS_NOINTERFACE;
 }

@@ -72,7 +72,6 @@ nsIServiceManager *gServiceManager = NULL;
 
 // Unix needs this
 #ifdef XP_UNIX
-
 char *NPP_GetMIMEDescription(void)
 {
     return GetMIMEDescription();
@@ -91,6 +90,8 @@ NPError NS_PluginGetValue(NPPVariable aVariable, void *aValue)
 //
 NPError NS_PluginInitialize()
 {
+    clie_log(("NS_PluginInitialize: begin\n"));
+
     // this is probably a good place to get the service manager
     // note that Mozilla will add reference, so do not forget to release
     nsISupports *sm = NULL;
@@ -106,6 +107,8 @@ NPError NS_PluginInitialize()
                             (void **) &gServiceManager);
         NS_RELEASE(sm);
     }
+
+    clie_log(("NS_PluginInitialize: end\n"));
 
     return NPERR_NO_ERROR;
 }
@@ -123,12 +126,16 @@ void NS_PluginShutdown()
 //
 nsPluginInstanceBase *NS_NewPluginInstance(nsPluginCreateData *aCreateDataStruct)
 {
+    clie_log(("NS_NewPluginInstance: begin\n"));
+
     if(!aCreateDataStruct)
 		return NULL;
 
     nsPluginInstance *plugin = new nsPluginInstance(aCreateDataStruct->instance);
 
     New(plugin, aCreateDataStruct);
+
+    clie_log(("NS_NewPluginInstance: end\n"));
 
     return plugin;
 }
@@ -249,8 +256,6 @@ void nsPluginInstance::getUseragent(char * *aUseragent)
 	// for illustration purposed we use the service manager to access
 	// the memory service provided by Mozilla
 	nsIMemory * nsMemoryService = NULL;
-
-    clie_log (("nsPluginInstance::getUseragent: Hi\n"));
 
 	if (gServiceManager)
     {
@@ -442,13 +447,13 @@ NPError nsPluginInstance::sipua_init()
 		return NPERR_MODULE_LOAD_FAILED_ERROR;
     }
     
-	this->sipua = client_new("dummyui", this->uas, this->mod_cata, 64*1024);
+    this->sipua = client_new("dummyui", this->uas, this->mod_cata, 64*1024);
 
-	if(!this->sipua)
-	{
+    if(!this->sipua)
+    {
         clie_log(("plugin.sipua_init: fail to create sipua!\n"));
         return NPERR_MODULE_LOAD_FAILED_ERROR;
-	}
+    }
 
     this->sipua->set_register_callback(this->sipua, nsPluginInstance::callback_on_register, this);
     this->sipua->set_newcall_callback(this->sipua, nsPluginInstance::callback_on_newcall, this);
@@ -456,7 +461,7 @@ NPError nsPluginInstance::sipua_init()
     this->sipua->set_conversation_end_callback(this->sipua, nsPluginInstance::callback_on_conversation_end, this);
     this->sipua->set_bye_callback(this->sipua, nsPluginInstance::callback_on_bye, this);
     
-	client_start(this->sipua);
+    client_start(this->sipua);
 
     clie_log(("plugin.sipua_init: ok!\n"));
     
@@ -487,8 +492,6 @@ void nsPluginInstance::regist(const char *fullname, PRInt32 fnsz, const char *ho
 
     user_profile_t* prof;
 
-    clie_log (("nsPluginInstance::regist: 1\n"));
-    
     if(!this->user)
     {
         clie_log (("nsPluginInstance::regist: Must load user first!\n"));
@@ -505,8 +508,6 @@ void nsPluginInstance::regist(const char *fullname, PRInt32 fnsz, const char *ho
 
         return;
     }
-
-    clie_log (("nsPluginInstance::regist: 2\n"));
 
     this->sipua->regist(this->sipua, prof, this->user->userloc);
     
@@ -537,41 +538,85 @@ void nsPluginInstance::bye(PRInt32 lineno)
 // in the bin/components folder
 NPError nsPluginInstance::GetValue(NPPVariable aVariable, void *aValue)
 {
-    NPError rv = NPERR_NO_ERROR;
+    	NPError rv = NPERR_NO_ERROR;
 
-    switch (aVariable)
-    {
-    	case NPPVpluginScriptableInstance:
-        {
-	    	// addref happens in getter, so we don't addref here
-	    	nsIScriptableOgmpPlugin *scriptablePeer =
-			getScriptablePeer();
-	    	if (scriptablePeer)
-            {
+    	switch (aVariable)
+    	{
+    		case NPPVpluginScriptableInstance:
+        	{
+			clie_log(("nsPluginInstance::GetValue: NPPVpluginScriptableInstance\n"));
+	    		// addref happens in getter, so we don't addref here
+	    		nsIScriptableOgmpPlugin *scriptablePeer = getScriptablePeer();
+
+	    		if (scriptablePeer)
+            		{
+				clie_log(("nsPluginInstance::GetValue: NPPVpluginScriptableInstance[@%x]\n", (int)scriptablePeer));
+
 				*(nsISupports **) aValue = scriptablePeer;
-	    	} else
+	    		} else
 				rv = NPERR_OUT_OF_MEMORY_ERROR;
 		}
-		break;
+			break;
 
-    	case NPPVpluginScriptableIID:
-        {
-	    	static nsIID scriptableIID = NS_ISCRIPTABLEOGMPPLUGIN_IID;
-	    	nsIID *ptr = (nsIID *) NPN_MemAlloc(sizeof(nsIID));
-	    	if (ptr)
-            {
+    		case NPPVpluginScriptableIID:
+        	{
+			clie_log(("nsPluginInstance::GetValue: NPPVpluginScriptableIID = %s\n",
+ 					NS_ISCRIPTABLEOGMPPLUGIN_IID_STR));
+
+	    		static nsIID scriptableIID = NS_ISCRIPTABLEOGMPPLUGIN_IID;
+
+	    		nsIID *ptr = (nsIID *) NPN_MemAlloc(sizeof(nsIID));
+	    		if (ptr)
+            		{
 				*ptr = scriptableIID;
 				*(nsIID **) aValue = ptr;
-	    	} else
+	    		} else
 				rv = NPERR_OUT_OF_MEMORY_ERROR;
 		}
-		break;
-
-    	default:
 			break;
-	}
 
-	return rv;
+    		case NPPVpluginNameString:
+			clie_log(("nsPluginInstance::GetValue: NPPVpluginNameString\n")); 
+			break;
+     		case NPPVpluginDescriptionString:
+			clie_log(("nsPluginInstance::GetValue: NPPVpluginDescriptionString\n"));
+			break;
+     		case NPPVpluginWindowBool:
+			clie_log(("nsPluginInstance::GetValue: NPPVpluginWindowBool\n"));
+			break;
+     		case NPPVpluginTransparentBool:
+			clie_log(("nsPluginInstance::GetValue: NPPVpluginTransparentBool\n"));
+			break;
+     		case NPPVjavaClass: /* Not implemented in Mozilla 1.0 */
+			clie_log(("nsPluginInstance::GetValue: NPPVjavaClass\n"));
+			break;
+     		case NPPVpluginWindowSize:
+ 			clie_log(("nsPluginInstance::GetValue: NPPVpluginWindowSize\n"));
+			break;
+    		case NPPVpluginTimerInterval:
+			clie_log(("nsPluginInstance::GetValue: NPPVpluginTimerInterval\n"));
+			break;
+
+   		/* following are available on Mozilla builds starting with 0.9.9 */
+
+    		case NPPVjavascriptPushCallerBool:
+			clie_log(("nsPluginInstance::GetValue: NPPVjavascriptPushCallerBool\n"));
+			break;
+     		case NPPVpluginKeepLibraryInMemory: /* available in Mozilla 1.0 */
+			clie_log(("nsPluginInstance::GetValue: NPPVpluginKeepLibraryInMemory\n"));
+			break;
+     		case NPPVpluginNeedsXEmbed:
+			clie_log(("nsPluginInstance::GetValue: NPPVpluginNeedsXEmbed\n"));
+			break;
+    		case NPPVpluginScriptableNPObject: /* Get the NPObject for scripting the plugin. */
+			clie_log(("nsPluginInstance::GetValue: NPPVpluginScriptableNPObject\n"));
+			break;
+     		default:
+			clie_log(("nsPluginInstance::GetValue: Unknown\n"));
+			break;
+    	}
+
+    	return rv;
 }
 
 // ==============================
@@ -602,8 +647,6 @@ nsScriptablePeer *nsPluginInstance::getScriptablePeer()
 
     // add reference for the caller requesting the object
     NS_ADDREF(mScriptablePeer);
-   
-    clie_log(("nsPluginInstance::getScriptablePeer: ref ok!\n"));
     
     return mScriptablePeer;
 }
