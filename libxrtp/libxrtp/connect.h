@@ -36,21 +36,34 @@
 
   int connect_io(session_connect_t * conn);
   
-  int connect_match(session_connect_t * conn1, session_connect_t * conn2);
+extern DECLSPEC
+int 
+connect_match(session_connect_t * conn1, session_connect_t * conn2);
 
-  int connect_from_teleport(session_connect_t * conn1, xrtp_teleport_t * tport);
+extern DECLSPEC
+int 
+connect_from_teleport(session_connect_t * conn1, xrtp_teleport_t * tport);
 
   int connect_receive(session_connect_t * conn, char **r_buff, int bufflen, xrtp_hrtime_t *r_hrts, xrtp_lrtime_t *r_lrts);
 
   int connect_send(session_connect_t * conn, char *r_buff, int datalen);
 
-  /* These are for old static port protocol, which is rtcp is rtp + 1, It's NOT suggest to use, Simply for back compatability */
-  session_connect_t * connect_rtp_to_rtcp(session_connect_t * rtp_conn);
-  session_connect_t * connect_rtcp_to_rtp(session_connect_t * rtcp_conn);
-  
-  xrtp_port_t * port_new(char * addr, uint16 portno, enum port_type_e type);
+/* These are for old static port protocol, which is rtcp is rtp + 1, It's NOT suggest to use, Simply for back compatability */
+extern DECLSPEC
+session_connect_t *
+connect_rtp_to_rtcp(session_connect_t * rtp_conn);
 
-  int port_done(xrtp_port_t * port);
+extern DECLSPEC
+session_connect_t *
+connect_rtcp_to_rtp(session_connect_t * rtcp_conn);
+  
+extern DECLSPEC 
+xrtp_port_t*
+port_new(char * addr, uint16 portno, enum port_type_e type);
+
+extern DECLSPEC 
+int 
+port_done(xrtp_port_t * port);
 
   int port_set_session(xrtp_port_t * port, xrtp_session_t * session);
 
@@ -64,9 +77,11 @@
   
   int port_incoming(xrtp_port_t * port);
   
-  xrtp_teleport_t * teleport_new(char * addr, uint16 portno);
+extern DECLSPEC xrtp_teleport_t*
+teleport_new(char * addr, uint16 portno);
 
-  int teleport_done(xrtp_teleport_t * tport);
+extern DECLSPEC int
+teleport_done(xrtp_teleport_t * tport);
 
   char * teleport_name(xrtp_teleport_t * tport);
 

@@ -20,8 +20,10 @@
 #include <string.h>
 #include <stdlib.h>
 
+/*
 #define VORBIS_PLAYER_LOG
 #define VORBIS_PLAYER_DEBUG
+*/
 
 #ifdef VORBIS_PLAYER_LOG
    const int vorbis_pa_log = 1;
@@ -189,12 +191,12 @@ int vorbis_receive_next (media_player_t *mp, void *vorbis_packet, int64 samplest
    return MP_OK;
 }
 
-char* vorbis_media_type(media_player_t * mp){
+const char* vorbis_media_type(media_player_t * mp){
 
    return global_const.media_type;
 }
 
-char* vorbis_play_type(media_player_t * mp){
+const char* vorbis_play_type(media_player_t * mp){
 
    return global_const.play_type;
 }
@@ -294,9 +296,7 @@ int vorbis_set_device (media_player_t * mp, media_control_t *cont, module_catalo
 
    if(!dev) return MP_FAIL;
 
-   vorbis_player_log(("vorbis_set_device: here\n"));
    setting = cont->fetch_setting(cont, "audio", dev);
-   vorbis_player_log(("vorbis_set_device: here2\n"));
    if(!setting){
      
       vorbis_player_log(("vorbis_set_device: use default setting for audio device\n"));

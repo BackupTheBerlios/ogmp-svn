@@ -199,12 +199,12 @@ int vsend_receive_next (media_player_t *mp, void * vorbis_packet, int64 samplest
    return MP_OK;
 }
 
-char* vsend_play_type(media_player_t * mp){
+const char* vsend_play_type(media_player_t * mp){
 
    return global_const.play_type;
 }
 
-char* vsend_media_type(media_player_t * mp){
+const char* vsend_media_type(media_player_t * mp){
 
    return global_const.media_type;
 }

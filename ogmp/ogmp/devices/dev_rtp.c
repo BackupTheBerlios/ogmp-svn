@@ -44,7 +44,7 @@ int rtp_done_setting(control_setting_t *gen){
    return MP_OK;
 }
 
-control_setting_t* rtp_new_setting(){
+control_setting_t* rtp_new_setting(media_device_t *dev){
 
    rtp_setting_t * set = malloc(sizeof(struct rtp_setting_s));
    if(!set){
@@ -53,6 +53,7 @@ control_setting_t* rtp_new_setting(){
 
       return NULL;
    }
+
    memset(set, 0, sizeof(struct rtp_setting_s));
 
    set->setting.done = rtp_done_setting;
@@ -131,6 +132,8 @@ int rtp_pipe_done (media_pipe_t *pipe){
 
 rtp_pipe_t * rtp_pipe_new() {
 
+   media_pipe_t *mp = NULL;
+
    rtp_pipe_t *rp = (rtp_pipe_t*)malloc(sizeof(struct rtp_pipe_s));
    if(!rp){
 
@@ -139,7 +142,7 @@ rtp_pipe_t * rtp_pipe_new() {
    }
    memset(rp, 0, sizeof(struct rtp_pipe_s));
 
-   media_pipe_t *mp = (media_pipe_t *)rp;
+   mp = (media_pipe_t *)rp;
 
    mp->new_frame = rtp_new_frame;
    mp->recycle_frame = rtp_recycle_frame;
@@ -235,7 +238,7 @@ int rtp_match_type(media_device_t *dev, char *type) {
 
    rtp_log(("rtp.rtp_match_type: I am rtp device\n"));
 
-   if( !strcasecmp("rtp", type) ) return 1;
+   if( !strcmp("rtp", type) ) return 1;
 
    return 0;
 }

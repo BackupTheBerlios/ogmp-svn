@@ -354,10 +354,12 @@ extern "C"
   */
  int rtp_packet_set_buffer(xrtp_rtp_packet_t * packet, xrtp_buffer_t * buffer);
 
- /**
-  * Release the packet resource.
-  */
- int rtp_packet_done(xrtp_rtp_packet_t * packet);
+/**
+ * Release the packet resource.
+ */
+extern DECLSPEC
+int 
+rtp_packet_done(xrtp_rtp_packet_t * packet);
 
  /**
   * Set head info related to the given RTP packet.
@@ -365,7 +367,9 @@ extern "C"
  xrtp_rtp_head_t * rtp_packet_set_head(xrtp_rtp_packet_t * packet, uint32 ssrc,
                                        uint16 seqno, uint32 ts);
 
- uint32 rtp_packet_ssrc(xrtp_rtp_packet_t * packet);
+extern DECLSPEC
+uint32 
+rtp_packet_ssrc(xrtp_rtp_packet_t * packet);
  
  /**
   * Specify the maximum length of a rtp packet 
@@ -376,21 +380,33 @@ extern "C"
  uint rtp_packet_maxlen(xrtp_rtp_packet_t * packet);
  uint rtp_packet_payload_maxlen(xrtp_rtp_packet_t * packet);
  
- uint rtp_packet_length(xrtp_rtp_packet_t * packet);
+extern DECLSPEC
+uint 
+rtp_packet_length(xrtp_rtp_packet_t * packet);
  
  /* Validate the incoming packet is OK to access data */
  int rtp_packet_validate(xrtp_rtp_packet_t * pac);
  /* Check the incoming packet is valid to access data */
  int rtp_packet_valid(xrtp_rtp_packet_t * pac);
 
- int rtp_packet_set_mark(xrtp_rtp_packet_t * packet, int boolen);
- int rtp_packet_mark(xrtp_rtp_packet_t * packet);
+extern DECLSPEC
+int 
+rtp_packet_set_mark(xrtp_rtp_packet_t * packet, int boolen);
 
- int rtp_packet_set_seqno(xrtp_rtp_packet_t * packet, uint16 seqno);
- uint16 rtp_packet_seqno(xrtp_rtp_packet_t * packet);
+int rtp_packet_mark(xrtp_rtp_packet_t * packet);
 
- int rtp_packet_set_timestamp(xrtp_rtp_packet_t * packet, uint32 ts);
- uint32 rtp_packet_timestamp(xrtp_rtp_packet_t * packet);
+int rtp_packet_set_seqno(xrtp_rtp_packet_t * packet, uint16 seqno);
+
+extern DECLSPEC
+uint16 
+rtp_packet_seqno(xrtp_rtp_packet_t * packet);
+
+int 
+rtp_packet_set_timestamp(xrtp_rtp_packet_t * packet, uint32 ts);
+
+extern DECLSPEC
+uint32
+rtp_packet_timestamp(xrtp_rtp_packet_t * packet);
 
  /**
   * Add a CSRC and return num of CSRC in the packet.
@@ -409,15 +425,19 @@ extern "C"
  /* Just point payload to source data, no copying involved */
  int rtp_packet_set_payload(xrtp_rtp_packet_t * packet, int len, char * payload);
 
- /* Copy payload data from source */
- xrtp_rtp_payload_t * rtp_packet_new_payload(xrtp_rtp_packet_t * pac, int len, char * pay);
+/* Copy payload data from source */
+extern DECLSPEC
+xrtp_rtp_payload_t * 
+rtp_packet_new_payload(xrtp_rtp_packet_t * pac, int len, char * pay);
  
  /**
   * Get payload data.
   */
  uint rtp_packet_payload(xrtp_rtp_packet_t * packet, char **ret_payload);
 
- uint rtp_packet_dump_payload(xrtp_rtp_packet_t * packet, char **ret_payload);
+extern DECLSPEC
+uint 
+rtp_packet_dump_payload(xrtp_rtp_packet_t * packet, char **ret_payload);
 
  uint rtp_packet_payload_bytes(xrtp_rtp_packet_t * packet);
 
@@ -474,24 +494,33 @@ extern "C"
  /**
   * Get the RTCP Packet length
   */
- uint rtcp_length(xrtp_rtcp_compound_t * compound);
- int rtcp_set_maxlen(xrtp_rtp_packet_t * packet, uint maxlen);
+extern DECLSPEC
+uint 
+rtcp_length(xrtp_rtcp_compound_t * compound);
+ 
+int rtcp_set_maxlen(xrtp_rtp_packet_t * packet, uint maxlen);
 
  int rtcp_set_sender_info(xrtp_rtcp_compound_t * compound, uint32 SSRC,
                           uint32 hi_ntp, uint32 lo_ntp, uint32 rtp_ts,
                           uint32 packet_sent, uint32 octet_sent);
 
- int rtcp_sender_info(xrtp_rtcp_compound_t * compound, uint32 * r_SSRC,
+extern DECLSPEC
+int 
+rtcp_sender_info(xrtp_rtcp_compound_t * compound, uint32 * r_SSRC,
                           uint32 * r_hi_ntp, uint32 * r_lo_ntp, uint32 * r_rtp_ts,
                           uint32 * r_packet_sent, uint32 * r_octet_sent);
 
- uint32 rtcp_sender(xrtp_rtcp_compound_t * compound);
+extern DECLSPEC
+uint32 
+rtcp_sender(xrtp_rtcp_compound_t * compound);
 
  int rtcp_add_report(xrtp_rtcp_compound_t * compound, uint32 SSRC,
                      uint8 frac_lost, uint32 total_lost, uint32 seqn_ext,
                      uint32 jitter, uint32 lsr_stamp,uint32 delay_lsr);
 
- int rtcp_report(xrtp_rtcp_compound_t * compound, uint32 SRC,
+extern DECLSPEC
+int 
+rtcp_report(xrtp_rtcp_compound_t * compound, uint32 SRC,
                      uint8 * ret_frac_lost, uint32 * ret_total_lost,
                      uint32 * ret_full_seqno, uint32 * ret_jitter,
                      uint32 * ret_lsr_stamp, uint32 * ret_lsr_delay);
@@ -523,7 +552,9 @@ extern "C"
  /**
   * Release the compound packet
   */
- int rtcp_compound_done(xrtp_rtcp_compound_t * compound);
+extern DECLSPEC
+int 
+rtcp_compound_done(xrtp_rtcp_compound_t * compound);
 
  /**
   * Display content of RTP Packet
@@ -532,20 +563,28 @@ extern "C"
  /**
   * Pack RTP Packet to byte stream for send, invoken by Profile Handler
   */
- xrtp_buffer_t * rtp_pack(xrtp_rtp_packet_t * packet);
+extern DECLSPEC
+xrtp_buffer_t * 
+rtp_pack(xrtp_rtp_packet_t * packet);
  /**
   * Unpack RTP Packet to memory for parsing, invoken by Profile Handler
   */
- int rtp_unpack(xrtp_rtp_packet_t * packet);
+extern DECLSPEC
+int 
+rtp_unpack(xrtp_rtp_packet_t * packet);
 
  /**
   * Pack RTCP Compound to byte stream for send, invoken by Profile Handler
   */
- xrtp_buffer_t * rtcp_pack(xrtp_rtcp_compound_t * compound);
+extern DECLSPEC
+xrtp_buffer_t * 
+rtcp_pack(xrtp_rtcp_compound_t * compound);
  /**
   * Unpack RTCP Compound to memory for parsing, invoken by Profile Handler
   */
- int rtcp_unpack(xrtp_rtcp_compound_t * compound);
+extern DECLSPEC
+int 
+rtcp_unpack(xrtp_rtcp_compound_t * compound);
  /**
   * Unpack RTCP Packet Head
   */

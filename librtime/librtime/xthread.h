@@ -23,9 +23,9 @@
 
 #define XTHREAD_NONEFLAGS 0 
  
- typedef struct xrtp_thread_s xrtp_thread_t;
- typedef struct xrtp_lock_s xthr_lock_t;
- typedef struct xrtp_cond_s xthr_cond_t;
+typedef struct xrtp_thread_s xrtp_thread_t;
+typedef struct xrtp_lock_s xthr_lock_t;
+typedef struct xrtp_cond_s xthr_cond_t;
 
 extern DECLSPEC  xrtp_thread_t * xthr_new(int (*fn)(void *), void *, int flag);
 

@@ -49,32 +49,6 @@
  
  #define TIME_NEWER(x,y) (((x) - (y)) >> (HRTIME_BITS - 1))
 
-extern DECLSPEC  xrtp_clock_t* 
-time_begin(xrtp_lrtime_t lrt, xrtp_hrtime_t hrt);
-
-/**
- * Adjust the clock forward if positive int, backward if negitive int or nochange if zero
- * Note: hrt value MUST fall in the range of the ONE unit of lrt value
- */
-extern DECLSPEC int 
-time_adjust(xrtp_clock_t * clock, int dmsec, int dusec, int dnsec);
-
-extern DECLSPEC int 
-time_now(xrtp_clock_t * clock, xrtp_lrtime_t *lrt, xrtp_hrtime_t *hrt);
-
-extern DECLSPEC int 
-time_passed(xrtp_clock_t * clock, int lrts_then, int hrts_then, int *lrt_passed, int *hrt_passed);
-
-extern DECLSPEC  xrtp_hrtime_t hrtime_now(xrtp_clock_t * clock);
-extern DECLSPEC  xrtp_hrtime_t hrtime_passed(xrtp_clock_t * clock, xrtp_hrtime_t hrts_then);
-extern DECLSPEC  xrtp_hrtime_t hrtime_checkpass(xrtp_clock_t * clock, xrtp_hrtime_t *then);
-extern DECLSPEC  int hrtime_sleep(xrtp_clock_t * clock, xrtp_hrtime_t howlong, xrtp_hrtime_t *remain);
-
-extern DECLSPEC  xrtp_lrtime_t lrtime_now(xrtp_clock_t * clock);
-extern DECLSPEC  xrtp_lrtime_t lrtime_passed(xrtp_clock_t * clock, xrtp_lrtime_t then); 
-extern DECLSPEC  xrtp_lrtime_t lrtime_checkpass(xrtp_clock_t * clock, xrtp_lrtime_t *then);
-extern DECLSPEC  int lrtime_sleep(xrtp_clock_t * clock, xrtp_lrtime_t howlong, xrtp_lrtime_t *remain);
-
 /* new api */
 /* start timer at (0,0,0), time_begin will be replace by this */
 extern DECLSPEC xrtp_clock_t* 
@@ -82,6 +56,12 @@ time_start();
 extern DECLSPEC int 
 time_end(xrtp_clock_t * clock);
 
+/**
+ * Adjust the clock forward if positive int, backward if negitive int or nochange if zero
+ * Note: hrt value MUST fall in the range of the ONE unit of lrt value
+ */
+extern DECLSPEC int 
+time_adjust(xrtp_clock_t * clock, int dmsec, int dusec, int dnsec);
 
 extern DECLSPEC int 
 time_rightnow(xrtp_clock_t * clock, int *msec, int *usec, int *nsec); 

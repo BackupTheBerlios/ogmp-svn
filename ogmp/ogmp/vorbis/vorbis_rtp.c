@@ -213,7 +213,7 @@ int vrtp_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
    session_member_update_rtp(sender, rtp);
 
    /* Calculate local playtime */
-   later = hrtime_now(vh->session->clock) - session_member_mapto_local_time(sender, rtp);
+   later = time_nsec_now(vh->session->clock) - session_member_mapto_local_time(sender, rtp);
 
    /* FIXME: Bug if packet lost */
    while(seqno == vh->seqno_next_unit){

@@ -17,8 +17,10 @@
  
 #include "vorbis_decoder.h"
 
+/*
 #define VORBIS_CODEC_LOG
 #define VORBIS_CODEC_DEBUG
+*/
 
 #ifdef VORBIS_CODEC_LOG
    const int vorbis_codec_log = 1;

@@ -244,9 +244,9 @@ struct media_player_s {
 
    media_device_t * device;
 
-   char* (*play_type) (media_player_t * playa);
-   char* (*media_type) (media_player_t * playa);
-   char* (*codec_type) (media_player_t * playa);
+   const char* (*play_type) (media_player_t * playa);
+   const char* (*media_type) (media_player_t * playa);
+   const char* (*codec_type) (media_player_t * playa);
    
    #define CALLBACK_PLAY_MEDIA  1
    #define CALLBACK_STOP_MEDIA  2

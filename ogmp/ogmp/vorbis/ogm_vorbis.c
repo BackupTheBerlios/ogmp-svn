@@ -27,17 +27,19 @@
 #else
    #include <vorbis/codec.h>
 #endif
+
 /*
-#define OGM_VORBIS_LOG
-#define OGM_VORBIS_DEBUG
+#define OGM_VORBIS_LOG_FLAG
+#define OGM_VORBIS_DEBUG_FLAG
 */
-#ifdef OGM_VORBIS_LOG
+
+#ifdef OGM_VORBIS_LOG_FLAG
  #define ogm_vorbis_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define ogm_vorbis_log(fmtargs)  
 #endif 
 
-#ifdef OGM_VORBIS_DEBUG
+#ifdef OGM_VORBIS_DEBUG_FLAG
  #define ogm_vorbis_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define ogm_vorbis_debug(fmtargs)

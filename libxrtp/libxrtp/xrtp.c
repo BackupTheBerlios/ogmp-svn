@@ -20,14 +20,17 @@
 
 #include "portman.h"
 
+#ifndef MODDIR
+#define MODDIR "module"
+#endif
+
 #define XRTP_LOG
  
 #ifdef XRTP_LOG
-   const int xrtp_log = 1;
+ #define xrtp_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int xrtp_log = 0;
+ #define xrtp_log(fmtargs)
 #endif
-#define xrtp_log(fmtargs)  do{if(xrtp_log) printf fmtargs;}while(0)
 
 module_catalog_t * module_catalog = NULL;
 
@@ -37,7 +40,7 @@ session_sched_t * main_scheduler = NULL;
 
 portman_t * xrtp_portman;
 
-char * plugins_dir = "/home/hling/timedia-project/lib/xrtp";
+char * plugins_dir = ".";
 
 int xrtp_init(){
 
@@ -56,7 +59,7 @@ int xrtp_init(){
       return XRTP_FAIL;
    }
 
-   xrtp_log(("xrtp_init: Found %d plugin(s).\n", nplug));
+   xrtp_log(("xrtp_init: Found %d module(s).\n", nplug));
 
    sessions = xrtp_list_new();
    if(!sessions){

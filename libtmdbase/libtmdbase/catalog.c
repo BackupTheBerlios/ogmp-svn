@@ -40,18 +40,16 @@
 #define CATALOG_DEBUG
  
 #ifdef CATALOG_LOG 
-   const int catalog_log = 1;
+ #define catalog_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int catalog_log = 0;
+ #define catalog_log(fmtargs) 
 #endif
-#define catalog_log(fmtargs)  do{if(catalog_log) printf fmtargs;}while(0)
 
 #ifdef CATALOG_DEBUG
-   const int catalog_debug = 1;
+ #define catalog_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int catalog_debug = 0;
+ #define catalog_debug(fmtargs)
 #endif
-#define catalog_debug(fmtargs)  do{if(catalog_debug) printf fmtargs;}while(0)
 
 module_catalog_t* catalog_new( char * type ){
    

@@ -28,14 +28,15 @@
 
 #include <stdio.h>
 
+/*
 #define XLIST_LOG
+*/
 
 #ifdef XLIST_LOG
-   const int xlist_log = 1;
+ #define xlist_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int xlist_log = 0;
+ #define xlist_log(fmtargs)
 #endif
-#define xlist_log(fmtargs)  do{if(xlist_log) printf fmtargs;}while(0)
 
 int _xrtp_list_freenode(xrtp_list_node_t * node);
 

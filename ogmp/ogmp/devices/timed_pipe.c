@@ -23,6 +23,7 @@
 #define PIPE_LOG
 #define PIPE_DEBUG
 */
+
 #ifdef PIPE_LOG
  #define pout_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -233,8 +234,8 @@ int pout_put_frame (media_pipe_t *mp, media_frame_t *f, int last) {
 
       /* check if the last signal is ackno'd before trigger next one */
       
-      jump_start = hrtime_now(pipe->clock);
-      while (pipe->switch_buffer) hrtime_sleep( pipe->clock, 1000 * USEC_JUMP, NULL);
+      jump_start = time_nsec_now(pipe->clock);
+      while (pipe->switch_buffer) time_nsec_sleep( pipe->clock, 1000 * USEC_JUMP, NULL);
 
       /* trigger switch signal */
       pipe->switch_buffer = pipe->bufn_write + 1;  /* avoid zero */
@@ -750,7 +751,7 @@ media_pipe_t * timed_pipe_new(int sample_rate, int usec_pulse, int ms_min, int m
    }             
    memset(pout, 0, sizeof(struct timed_pipe_s));
 
-   pout->clock = time_begin(0,0);
+   pout->clock = time_start();
    
    pout->usec_pulse = usec_pulse;
 

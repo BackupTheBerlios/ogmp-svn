@@ -100,7 +100,7 @@
 
  pipe_step_t * pipe_add_before(packet_pipe_t *pipe, profile_handler_t *handler, int enable);
 
- pipe_step_t * pipe_replace(packet_pipe_t *pipe, char *oldid, profile_handler_t *handler);
+ pipe_step_t * pipe_replace(packet_pipe_t *pipe, const char *oldid, profile_handler_t *handler);
 
  pipe_step_t * pipe_set_enter(packet_pipe_t *pipe, profile_handler_t *handler);
 

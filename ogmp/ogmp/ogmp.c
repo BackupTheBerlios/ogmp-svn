@@ -188,8 +188,6 @@ int main(int argc, char** argv){
    mod_cata = catalog_new( "mediaformat" );
    num = catalog_scan_modules ( mod_cata, VERSION, MODDIR );
    
-   player_log (("\nogmplyer: %d modules found\n", num));
-   
    num = catalog_create_modules ( mod_cata, "format", format_handlers);
    player_log (("\nogmplyer: %d format module found\n", num));
 

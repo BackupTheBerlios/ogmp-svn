@@ -24,12 +24,11 @@
  #define TEXT_CLOCKRATE 1000    /* 1000Hz, RFC 2793 */
  #define TEXT_SAMPLING_INSTANCE  1  /* One sample per sampling */
 
- #ifdef PLUG_TEXT_LOG
-   const int plug_text_log = 1;
- #else
-   const int plug_text_log = 0;
- #endif
- #define tm_log(fmt, args...)  do{if(plug_text_log) printf(fmt, ##args);}while(0)
+#ifdef PLUG_TEXT_LOG
+ #define tm_log(fmtargs)  do{printf fmtargs;}while(0)
+#else
+ #define tm_log(fmtargs)
+#endif
 
  const char tm_mime[] = "text/rtp-test";
  
@@ -37,7 +36,8 @@
 
  int num_handler;
 
- module_loadin_t xrtp_handler;
+extern DECLSPEC
+module_loadin_t xrtp_handler;
  
  profile_class_t * text;
 
@@ -84,15 +84,24 @@ int tm_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
    tm_handler_t * h = (tm_handler_t *)handler;
    xrtp_media_t * media = (xrtp_media_t *)h->media;
 
+   uint16 seqno;
+   uint32 src;
+   uint32 rtpts;
+
+   member_state_t * sender = NULL;
+   xrtp_hrtime_t later = 0;    
+   char *media_data;
+   int media_dlen;
+
    rtp_unpack(rtp);
     
-   uint32 seqno = rtp_packet_seqno(rtp);
-   uint32 src = rtp_packet_ssrc(rtp);
-   uint32 rtpts = rtp_packet_timestamp(rtp);
+   seqno = rtp_packet_seqno(rtp);
+   src = rtp_packet_ssrc(rtp);
+   rtpts = rtp_packet_timestamp(rtp);
 
-   tm_log("text/rtp-test.tm_rtp_in: packet ssrc=%u, seqno=%u, timestamp=%u, rtp->connect=%d\n", src, seqno, rtpts, (int)rtp->connect);
+   tm_log(("text/rtp-test.tm_rtp_in: packet ssrc=%u, seqno=%u, timestamp=%u, rtp->connect=%d\n", src, seqno, rtpts, (int)rtp->connect));
     
-   member_state_t * sender = session_member_state(rtp->session, src);
+   sender = session_member_state(rtp->session, src);
 
    if(sender && sender->valid && !connect_match(rtp->connect, sender->rtp_connect)){
 
@@ -105,18 +114,19 @@ int tm_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
 
    if(!sender){
 
+      session_connect_t *rtp_conn = NULL;
+      session_connect_t *rtcp_conn = NULL;
+
       /* The rtp packet is recieved before rtcp arrived, so the participant is not identified yet */
       if(!h->session->$state.receive_from_anonymous){
 
-         tm_log("text/rtp-test.tm_rtp_in: participant waiting for identifed before receiving media\n");
+         tm_log(("text/rtp-test.tm_rtp_in: participant waiting for identifed before receiving media\n"));
          rtp_packet_done(rtp);
          return XRTP_CONSUMED;
       }
         
       /* Get connect of the participant */
-      session_connect_t *rtp_conn = rtp->connect;
-
-      session_connect_t *rtcp_conn = NULL;
+      rtp_conn = rtp->connect;
       rtp->connect = NULL; /* Dump the connect from rtcp packet */
 
       sender = session_new_member(h->session, src, NULL);
@@ -154,7 +164,7 @@ int tm_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
       /* The rtp packet is recieved before rtcp arrived, so the participant is not identified yet */
       if(!h->session->$state.receive_from_anonymous){
 
-         tm_log("text/rtp-test.tm_rtp_in: participant waiting for validated before receiving media\n");
+         tm_log(("text/rtp-test.tm_rtp_in: participant waiting for validated before receiving media\n"));
          rtp_packet_done(rtp);
          return XRTP_CONSUMED;
       }
@@ -196,10 +206,7 @@ int tm_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
    session_member_update_rtp(sender, rtp);
 
    /* Calculate local playtime */    
-   xrtp_hrtime_t later = hrtime_now(h->session->clock) - session_member_mapto_local_time(sender, rtp);
-     
-   char *media_data;
-   int media_dlen;
+   later = time_nsec_now(h->session->clock) - session_member_mapto_local_time(sender, rtp);
 
    /* FIXME: Bug if packet lost */
    while(seqno == h->seqno_next_unit){
@@ -217,7 +224,7 @@ int tm_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
 
       }else{
 
-         tm_log("text/rtp-test.tm_rtp_in: media data assembled, deliver\n");
+         tm_log(("text/rtp-test.tm_rtp_in: media data assembled, deliver\n"));
          media_dlen = rtp_packet_dump_payload(rtp, &media_data);
         
          if(media->$callbacks.media_arrived)
@@ -257,7 +264,7 @@ int tm_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
         return XRTP_FAIL;
     }
 
-    tm_log("text/rtp-test.tm_rtp_out: new payload %d bytes\n", ((tm_handler_t *)handler)->media->dolen);
+    tm_log(("text/rtp-test.tm_rtp_out: new payload %d bytes\n", ((tm_handler_t *)handler)->media->dolen));
 
     if(!rtp_pack(rtp)){
 
@@ -267,7 +274,7 @@ int tm_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
     }
     
     h->rtp_size = rtp_packet_length(rtp);
-    tm_log("text/rtp-test.tm_rtp_out: rtp size = %u\n", h->rtp_size);
+    tm_log(("text/rtp-test.tm_rtp_out: rtp size = %u\n", h->rtp_size));
 
     return XRTP_OK;
  }
@@ -288,11 +295,9 @@ int tm_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp){
    uint32 lsr_stamp = 0, lsr_delay = 0;
     
    member_state_t * sender = NULL;
-
-   tm_log("text/rtp-test.tm_rtcp_in: here\n");
    xrtp_session_t * ses = rtcp->session;
-    
-   tm_log("text/rtp-test.tm_rtcp_in: rtcp size = %u\n", rtcp->bytes_received);
+
+   tm_log(("text/rtp-test.tm_rtcp_in: rtcp size = %u\n", rtcp->bytes_received));
     
    /* Here is the implementation */
    ((tm_handler_t *)handler)->rtcp_size = rtcp->bytes_received;
@@ -308,7 +313,7 @@ int tm_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp){
    session_count_rtcp(ses, rtcp);
     
    src_sender = rtcp_sender(rtcp);
-   tm_log("text/rtp-test.tm_rtcp_in: packet sender ssrc is %d\n", src_sender);
+   tm_log(("text/rtp-test.tm_rtcp_in: packet sender ssrc is %d\n", src_sender));
 
    /* rtp_conn and rtcp_conn will be uncertain after this call */
    sender = session_update_member_by_rtcp(rtcp->session, rtcp);
@@ -317,20 +322,20 @@ int tm_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp){
 
       rtcp_compound_done(rtcp);
 
-      tm_log("text/rtp-test.tm_rtcp_in: Ssrc[%d] refused\n", src_sender);
+      tm_log(("text/rtp-test.tm_rtcp_in: Ssrc[%d] refused\n", src_sender));
       return XRTP_CONSUMED;
    }
 
    if(!sender->valid){
 
-      tm_log("text/rtp-test.tm_rtcp_in: Member[%d] is not valid yet\n", src_sender);
+      tm_log(("text/rtp-test.tm_rtcp_in: Member[%d] is not valid yet\n", src_sender));
       rtcp_compound_done(rtcp);
 
       return XRTP_CONSUMED;
         
    }else{
 
-      tm_log("text/rtp-test.tm_rtcp_in: Member[%d] is valid now, check report\n", src_sender);
+      tm_log(("text/rtp-test.tm_rtcp_in: Member[%d] is valid now, check report\n", src_sender));
       if(rtcp_sender_info(rtcp, &src_sender, &hintp_sender, &lontp_sender,
                         &rtpts_sender, &packet_sent, &octet_sent) >= XRTP_OK){
                           
@@ -378,12 +383,12 @@ int tm_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp){
     
     /* Profile specified */
     if(!rtcp_pack(rtcp)){
-       tm_log("text/rtp-test.tm_rtcp_out: Fail to pack rtcp data\n");
+       tm_log(("text/rtp-test.tm_rtcp_out: Fail to pack rtcp data\n"));
        return XRTP_FAIL;
     }
     
     h->rtcp_size = rtcp_length(rtcp);
-    tm_log("text/rtp-test.tm_rtcp_out: rtcp size = %u\n", h->rtcp_size);
+    tm_log(("text/rtp-test.tm_rtcp_out: rtcp size = %u\n", h->rtcp_size));
 
     return XRTP_OK;
  }
@@ -421,7 +426,7 @@ int tm_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp){
     return _h->master;
  }
 
- char * tm_media_mime(xrtp_media_t * media){
+ const char * tm_media_mime(xrtp_media_t * media){
 
     return tm_mime;
  }
@@ -443,7 +448,7 @@ int tm_media_set_parameter(xrtp_media_t * media, int key, void * val){
 
 int tm_media_set_rate(xrtp_media_t * media, int rate){
 
-   tm_log("text/rtp-test.tm_media_set_rate: Always be %d Hz\n", TEXT_CLOCKRATE);
+   tm_log(("text/rtp-test.tm_media_set_rate: Always be %d Hz\n", TEXT_CLOCKRATE));
 
    return XRTP_OK;
 }
@@ -483,7 +488,7 @@ int tm_media_rate(xrtp_media_t * media){
      */
 
     /* invoke the Session.rtp_to_send() */
-    tm_log("text/rtp-test.tm_media_go: %d bytes media data need to go\n", len);
+    tm_log(("text/rtp-test.tm_media_go: %d bytes media data need to go\n", len));
     return session_rtp_to_send(media->session, TEXT_MAX_DELAY, is_last_pack);  /* '0' means the quickness decided by xrtp */
  }
 
@@ -491,15 +496,15 @@ int tm_media_rate(xrtp_media_t * media){
 
     tm_handler_t * h = (tm_handler_t *)handler;
 
-    tm_log("text/rtp-test.tm_media: create media handler\n");
+    tm_log(("text/rtp-test.tm_media: create media handler\n"));
 
     h->media = (tm_media_t *)malloc(sizeof(struct tm_media_s));
     if(h->media){
 
-        bzero(h->media, sizeof(struct tm_media_s));
-        
         xrtp_media_t * media = ((xrtp_media_t*)(h->media));
-        
+
+        memset(media, 0, sizeof(struct tm_media_s));
+                
         h->media->handler = h;
         media->session = h->session;
 
@@ -518,13 +523,13 @@ int tm_media_rate(xrtp_media_t * media){
 
         session_set_rtp_rate(h->session, TEXT_CLOCKRATE);
 
-        tm_log("text/rtp-test.tm_media: media handler created\n");
+        tm_log(("text/rtp-test.tm_media: media handler created\n"));
     }
 
     return (xrtp_media_t *)h->media;
  }
 
- char * tm_id(profile_class_t * clazz){
+ const char * tm_id(profile_class_t * clazz){
    
     return tm_mime;
  }
@@ -563,7 +568,7 @@ int tm_media_rate(xrtp_media_t * media){
 
     h = (profile_handler_t *)_h;
 
-    tm_log("plug_text.tm_new_handler: New handler created\n");
+    tm_log(("plug_text.tm_new_handler: New handler created\n"));
 
     h->module = tm_module;
 
@@ -613,7 +618,7 @@ int tm_media_rate(xrtp_media_t * media){
 
     num_handler = 0;
 
-    tm_log("plug_text.module_init: Module['text/rtp-test'] loaded.\n");
+    tm_log(("plug_text.module_init: Module['text/rtp-test'] loaded.\n"));
 
     return text;
  }

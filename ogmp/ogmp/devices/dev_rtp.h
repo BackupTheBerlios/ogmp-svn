@@ -41,8 +41,8 @@ struct rtp_setting_s {
    
    char *ipaddr;
    
-   int rtp_portno;
-   int rtcp_portno;
+   uint16 rtp_portno;
+   uint16 rtcp_portno;
 
    int total_bw;
    int rtp_bw;
@@ -50,12 +50,12 @@ struct rtp_setting_s {
    int ncallback;
    rtp_callback_t *callbacks;
 
-   int profile_no;
+   uint8 profile_no;
 
    char *profile_mime;
 };
 
-control_setting_t *rtp_new_setting();
+//control_setting_t *rtp_new_setting();
 
 struct rtp_frame_s {
 

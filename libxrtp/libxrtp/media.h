@@ -28,7 +28,7 @@
      uint clockrate;
      uint sampling_instance;
      
-     char* (*mime)(xrtp_media_t * media);
+     const char* (*mime)(xrtp_media_t * media);
 
      int (*done)(xrtp_media_t *media);
 
@@ -68,4 +68,5 @@
   /* Convert realtime to rtp ts */
   uint32 media_realtime_to_rtpts(xrtp_media_t * media, xrtp_lrtime_t lrt, xrtp_hrtime_t hrt);
 
-  int media_set_callback(xrtp_media_t *media, int type, void* call, void* user);
+extern DECLSPEC int
+media_set_callback(xrtp_media_t *media, int type, void* call, void* user);

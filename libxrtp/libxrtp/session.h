@@ -458,26 +458,37 @@ struct xrtp_session_s {
 /**
  * Create a new Session
  */
-xrtp_session_t * session_new(xrtp_port_t *rtp_port, xrtp_port_t *rtcp_port, char * cname, int clen, module_catalog_t * cata);
+extern DECLSPEC
+xrtp_session_t * 
+session_new(xrtp_port_t *rtp_port, xrtp_port_t *rtcp_port, char * cname, int clen, module_catalog_t * cata);
 
 /**
  * Release the Session
  */
-int session_done(xrtp_session_t * session);
+extern DECLSPEC
+int
+session_done(xrtp_session_t * session);
 
-int session_set_id(xrtp_session_t * session, int id);
+extern DECLSPEC
+int
+session_set_id(xrtp_session_t * session, int id);
 
-int session_id(xrtp_session_t * session);
+int 
+session_id(xrtp_session_t * session);
 
 int session_cname(xrtp_session_t * session, char * cname, int clen);
 
 /* set if an anonymous participant allowed in the session */
-int session_allow_anonymous(xrtp_session_t * session, int allow);
+extern DECLSPEC
+int 
+session_allow_anonymous(xrtp_session_t * session, int allow);
 
 /**
  *  From now on, session can receive incoming data
  */
-int session_start_receipt(xrtp_session_t * session);
+extern DECLSPEC
+int
+session_start_receipt(xrtp_session_t * session);
  
 /**
  *  From now on, session stop receiving incoming data
@@ -501,13 +512,17 @@ uint session_mode(xrtp_session_t * session);
  * Retrieve a Media handler associated with the session and allocate a payload type to
  * this session to packet transfer. so send/receive packets with this pt.
  */
-xrtp_media_t * session_new_media(xrtp_session_t * ses, char * id, uint8 payload_type);
+extern DECLSPEC
+xrtp_media_t * 
+session_new_media(xrtp_session_t * ses, char * id, uint8 payload_type);
 
 /**
  * The middle process b/w import and export, order in addition
  * Can be compress module and crypo module, number of module less than MAX_PIPE_STEP
  */
-profile_handler_t * session_add_handler(xrtp_session_t * session, char * id);
+extern DECLSPEC
+profile_handler_t * 
+session_add_handler(xrtp_session_t * session, char * id);
 
 /**
  * Get the packet process of the session
@@ -533,7 +548,9 @@ uint32 session_ssrc(xrtp_session_t * session);
 /**
  * Set bandwidth for this session, REMEMBER: multiuser need share the bandwidth!!!
  */
-int session_set_bandwidth(xrtp_session_t * session, int32 total_bw, int32 rtp_bw);
+extern DECLSPEC
+int 
+session_set_bandwidth(xrtp_session_t * session, int32 total_bw, int32 rtp_bw);
 
 uint32 session_rtp_bandwidth(xrtp_session_t * session);
  
@@ -545,43 +562,73 @@ uint32 session_rtp_bandwidth_budget(xrtp_session_t * session);
  * To join to a remote connection destinate, this is a chance to
  * contact a new participant of the session.
  */
-int session_join(xrtp_session_t * session, xrtp_teleport_t * rtp_port, xrtp_teleport_t * rtcp_port);
+extern DECLSPEC
+int 
+session_join(xrtp_session_t * session, xrtp_teleport_t * rtp_port, xrtp_teleport_t * rtcp_port);
 
 /**
  * Session memeber management:
  * session_add_member for adding new coming member
  * session_set_member for setting all member, some left member can be removed in this way.
  */
-member_state_t * session_new_member(xrtp_session_t * session, uint32 src, void * extra_info);
+extern DECLSPEC
+member_state_t * 
+session_new_member(xrtp_session_t * session, uint32 src, void * extra_info);
+
 int session_active_members(xrtp_session_t * session, uint32 srcs[], uint n_src);
-member_state_t * session_member_state(xrtp_session_t * session, uint32 member);
 
-int session_member_check_senderinfo(member_state_t * member,
-                                      uint32 hi_ntp, uint32 lo_ntp, uint32 rtp_ts,
-                                      uint32 packet_sent, uint32 octet_sent);
+extern DECLSPEC
+member_state_t * 
+session_member_state(xrtp_session_t * session, uint32 member);
 
-int session_member_check_report(member_state_t * member, uint8 frac_lost, uint32 total_lost,
+extern DECLSPEC
+int 
+session_member_check_senderinfo(member_state_t * member,
+                                uint32 hi_ntp, uint32 lo_ntp, uint32 rtp_ts,
+                                uint32 packet_sent, uint32 octet_sent);
+
+extern DECLSPEC
+int 
+session_member_check_report(member_state_t * member, uint8 frac_lost, uint32 total_lost,
                                  uint32 full_seqno, uint32 jitter,
                                  uint32 lsr_stamp, uint32 lsr_delay);
 
-member_state_t * session_update_member_by_rtcp(xrtp_session_t * session, xrtp_rtcp_compound_t * rtcp);
+extern DECLSPEC
+member_state_t * 
+session_update_member_by_rtcp(xrtp_session_t * session, xrtp_rtcp_compound_t * rtcp);
 
-int session_member_set_connects(member_state_t * member, session_connect_t * rtp_conn, session_connect_t * rtcp_conn);
+extern DECLSPEC
+int 
+session_member_set_connects(member_state_t * member, session_connect_t * rtp_conn, session_connect_t * rtcp_conn);
 int session_member_connects(member_state_t * member, session_connect_t **rtp_conn, session_connect_t **rtcp_conn);
 
 int session_quit(xrtp_session_t * session, int silently);
 
-int session_member_update_rtp(member_state_t * mem, xrtp_rtp_packet_t * rtp);
-int session_member_hold_rtp(member_state_t * member, xrtp_rtp_packet_t * rtp); 
-xrtp_rtp_packet_t * session_member_next_rtp_withhold(member_state_t * member);
+extern DECLSPEC
+int 
+session_member_update_rtp(member_state_t * mem, xrtp_rtp_packet_t * rtp);
+
+extern DECLSPEC
+int 
+session_member_hold_rtp(member_state_t * member, xrtp_rtp_packet_t * rtp);
+ 
+extern DECLSPEC
+xrtp_rtp_packet_t*
+session_member_next_rtp_withhold(member_state_t * member);
  
 media_time_t session_hrt2mt(xrtp_session_t * session, xrtp_hrtime_t hrt);
 xrtp_hrtime_t session_mt2hrt(xrtp_session_t * session, media_time_t mt);
 
-xrtp_hrtime_t session_member_mapto_local_time(member_state_t * member, xrtp_rtp_packet_t * rtp);
-uint32 session_signature(xrtp_session_t * session);
+extern DECLSPEC
+xrtp_hrtime_t 
+session_member_mapto_local_time(member_state_t * member, xrtp_rtp_packet_t * rtp);
 
-int session_solve_collision(member_state_t * member, uint32 ssrc);
+uint32
+session_signature(xrtp_session_t * session);
+
+extern DECLSPEC
+int
+session_solve_collision(member_state_t * member, uint32 ssrc);
 
 /* Notify the session a rtp arrival and schedule the process */
 int session_rtp_arrived(xrtp_session_t * session, session_connect_t * connect);
@@ -594,13 +641,19 @@ int session_rtcp_arrival_notified(xrtp_session_t * session, session_connect_t * 
  *
  * return value: 1 if the seqno is a valid number, otherwise return 0.
  */
-int session_update_seqno(member_state_t * mem, uint16 seqno);
+extern DECLSPEC
+int 
+session_update_seqno(member_state_t * mem, uint16 seqno);
+
 uint32 session_member_max_exseqno(member_state_t * mem);
 
 int session_nmember(xrtp_session_t * session);
 int session_nsender(xrtp_session_t * session);
 
-int session_set_rtp_rate(xrtp_session_t *session, int rate);
+extern DECLSPEC
+int 
+session_set_rtp_rate(xrtp_session_t *session, int rate);
+
 rtime_t session_rtp_period(xrtp_session_t *session);
 /* How long is allow to delay the rtp sending, used as a sched window */
 xrtp_hrtime_t session_rtp_delay(xrtp_session_t *session);
@@ -609,21 +662,28 @@ xrtp_lrtime_t session_rtcp_interval(xrtp_session_t *session);
 /* How long is allow to delay the rtcp sending, used as a sched window */
 xrtp_lrtime_t session_rtcp_delay(xrtp_session_t *session);
  
-int session_count_rtcp(xrtp_session_t * ses, xrtp_rtcp_compound_t * rtcp);
+extern DECLSPEC
+int 
+session_count_rtcp(xrtp_session_t * ses, xrtp_rtcp_compound_t * rtcp);
  
 int session_notify_delay(xrtp_session_t * session, xrtp_hrtime_t howlate);
  
 /**
  * Set callback of some event arised.
  */
-int session_set_callback(xrtp_session_t *session, int type, void* callback, void* user);
+extern DECLSPEC
+int
+session_set_callback(xrtp_session_t *session, int type, void* callback, void* user);
+
 int session_set_callbacks(xrtp_session_t *session, session_call_t cbs[], int n);
 
 /**
  * send rtp packet to send pipeline
  * return the packet size after the pipeline
  */
-int session_rtp_to_send(xrtp_session_t *session, xrtp_hrtime_t ts, int last);
+extern DECLSPEC
+int 
+session_rtp_to_send(xrtp_session_t *session, xrtp_hrtime_t ts, int last);
 int session_cancel_rtp_sending(xrtp_session_t *session, xrtp_hrtime_t ts);
  
 /**
@@ -654,7 +714,9 @@ int session_rtcp_to_receive(xrtp_session_t *session);
 /**
  * Need a scheduler to schedule the packet piping according timer
  */
-int session_set_scheduler(xrtp_session_t *session, session_sched_t *sched);
+extern DECLSPEC
+int 
+session_set_scheduler(xrtp_session_t *session, session_sched_t *sched);
  
 int session_set_schedinfo(xrtp_session_t *session, sched_schedinfo_t * si);
 sched_schedinfo_t * session_schedinfo(xrtp_session_t * session);

@@ -56,7 +56,7 @@
 
  struct profile_class_s {
 
-	 char* (*id)(profile_class_t *class);
+	const char* (*id)(profile_class_t *class);
 
    int (*type)(profile_class_t *class);
 

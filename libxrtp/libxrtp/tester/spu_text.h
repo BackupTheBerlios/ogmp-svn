@@ -27,6 +27,7 @@
 #define ERR (void *)-1
 #define SUB_MAX_TEXT  5
 #define SUB_BUFSIZE 1024
+#define SUB_MAXLEN  512
 
 typedef struct {
 

@@ -378,7 +378,7 @@
     }
     
     /* Calc the new ts and request number to catch up the delay */
-    hrt_now = hrtime_now(ssch->clock);
+    hrt_now = time_nsec_now(ssch->clock);
     dl = hrt_now + hrt_allow;
     
     if(!rtp_req->prev && !rtp_req->next && ssch->rtp_queue_head != rtp_req){
@@ -464,7 +464,7 @@ int simple_schedule_rtp(void * gen){
       }
 
       /* got the lock */
-      now = hrtime_now(ssch->clock);
+      now = time_nsec_now(ssch->clock);
 
       /* get a nearest future deadline
        * if a future already passed, what to do with it
@@ -518,7 +518,7 @@ int simple_schedule_rtp(void * gen){
       */
          
       simple_sched_log(("simple_schedule_rtp: sleep %d nanosecs\n", hrt_sleep));         
-      hrtime_sleep(ssch->clock, hrt_sleep, &hrt_remain);            
+      time_nsec_sleep(ssch->clock, hrt_sleep, &hrt_remain);            
    }
 
    xthr_unlock(ssch->lock);
@@ -576,7 +576,7 @@ int simple_schedule_rtcp(void * gen){
          i_locked_ssch = 0;
       }
 
-      now = lrtime_now(ssch->clock);
+      now = time_msec_now(ssch->clock);
       simple_sched_log(("simple_schedule_rtcp: clock[@%u] is %d csec now\n", (int)(ssch->clock), now));
 
       /* Scan if some deadline is reached */
@@ -737,7 +737,7 @@ int simple_schedule_rtcp(void * gen){
       xthr_unlock(ssch->rtcp_lock);
 
       simple_sched_log(("simple_schedule_rtcp: sleep %u msec\n", dt_min));
-      lrtime_sleep(ssch->clock, dt_min, NULL);
+      time_msec_sleep(ssch->clock, dt_min, NULL);
    }
 
    return XRTP_OK;
@@ -751,7 +751,7 @@ session_sched_t * sched_new(){
 
    memset(ssch, 0, sizeof(struct simple_sched_s));  /* zeroed */
 
-   ssch->clock = time_begin(0,0);
+   ssch->clock = time_start();
 
    if(!ssch->clock){
 

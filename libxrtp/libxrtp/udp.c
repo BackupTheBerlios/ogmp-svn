@@ -329,6 +329,8 @@
      int addrlen, datalen;
      session_connect_t * conn = NULL;
 
+	 int msec_dummy = 0; /* no use, just satisfy the api */
+
      udp_log(("port_incoming: incoming\n"));
      
      /* Determine the incoming packet address from recvfrom return */
@@ -377,7 +379,7 @@
      if(conn->datalen_in > 0)
         memcpy(conn->data_in, data, datalen);
 
-     time_now(port->session->clock, &(conn->lrt_arrival), &(conn->hrt_arrival));
+     time_rightnow(port->session->clock, &(conn->lrt_arrival), &msec_dummy, &(conn->hrt_arrival));
      
      udp_log(("port_incoming: socket[%d] received %d bytes data by connect_io[%d] from [%s:%d] on lrt[%d]:hrt[%d]\n", conn->port->socket, datalen, (int)(conn), inet_ntoa(conn->remote_addr.sin_addr), ntohs(conn->remote_addr.sin_port), conn->lrt_arrival, conn->hrt_arrival));
 

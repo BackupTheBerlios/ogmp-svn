@@ -393,7 +393,7 @@ module_interface_t* media_new_device () {
 
    pa->sample_factor = DEFAULT_SAMPLE_FACTOR;
 
-   pa->clock = time_begin(0,0);
+   pa->clock = time_start();
 
    dev = (media_device_t *)pa;
 
@@ -413,9 +413,9 @@ module_interface_t* media_new_device () {
 
    delay = DELAY_WHILE;
 
-   hz_start = hrtime_now(pa->clock);
+   hz_start = time_nsec_now(pa->clock);
    while (delay) delay--;
-   hz_passed = hrtime_passed(pa->clock, hz_start);
+   hz_passed = time_nsec_spent(pa->clock, hz_start);
 
    pa->while_ns = hz_passed / DELAY_WHILE;
 

@@ -25,11 +25,10 @@
 #include "spu_text.h"
 
 #ifdef SPU_TEXT_LOG
-   const int spu_text_log = 1;
+ #define sputext_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int spu_text_log = 0;
+ #define sputext_log(fmtargs)
 #endif
-#define sputext_log(fmtargs)  do{if(spu_text_log) printf fmtargs;}while(0)
 
 static int eol(char p) {
   return (p=='\r' || p=='\n' || p=='\0');
@@ -48,6 +47,7 @@ void trail_space(char *s) {
  * Read local file.
  */
 static char *read_line(demux_sputext_t *this, char *line, off_t len) {
+
   off_t nread = 0;
   char *s;
   int linelen;
@@ -79,6 +79,7 @@ static char *read_line(demux_sputext_t *this, char *line, off_t len) {
 }
 
 char *sub_readtext(char *source, char **dest) {
+
   int len=0;
   char *p=source;
 
@@ -102,7 +103,7 @@ char *sub_readtext(char *source, char **dest) {
 
 /* parsing the subrip format */
 static subtitle_t *sub_read_line_subrip(demux_sputext_t *this, subtitle_t *current) {
-  char line[1001];
+  char line[SUB_MAXLEN+1];
   int a1,a2,a3,a4,b1,b2,b3,b4;
   char *p=NULL;
   int i,len;
@@ -111,7 +112,7 @@ static subtitle_t *sub_read_line_subrip(demux_sputext_t *this, subtitle_t *curre
 
   while (!current->text[0]) {
     
-    if (!read_line(this, line, 1000))  return NULL;
+    if (!read_line(this, line, SUB_MAXLEN))  return NULL;
     
     if ((len=sscanf (line, "%d:%d:%d,%d --> %d:%d:%d,%d",&a1,&a2,&a3,&a4,&b1,&b2,&b3,&b4)) < 8)
       continue;

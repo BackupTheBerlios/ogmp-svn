@@ -164,7 +164,7 @@
     ses->rtcp_port = rtcp_port;
     port_set_session(rtcp_port, ses);
     
-    ses->clock = time_begin(0,0);
+    ses->clock = time_start();
 
     ses->members = xrtp_list_new();
     ses->senders = xrtp_list_new();
@@ -861,7 +861,7 @@
               mem->playout_adapt = 1;
            }
            
-           lrts_now = lrtime_now(mem->session->clock);
+           lrts_now = time_msec_now(mem->session->clock);
            if((lrts_now - mem->lrts_last_heard) > INACTIVE_THRESHOLD){
               /* Silent source restartted, network condition maybe changed */
               mem->playout_adapt = 1 ;
@@ -1335,7 +1335,7 @@ int session_done_module(void *gen) {
 
 xrtp_media_t * session_new_media(xrtp_session_t * ses, char * id, uint8 payload_type){
 
-   char * mid = NULL;
+   const char * mid = NULL;
     
    profile_class_t * modu = NULL;    
    xrtp_list_user_t $lu; 
@@ -1735,11 +1735,11 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
     session_log(("session_rtp_to_send: Session[%d] ssrc is %d\n", session_id(ses), ses->self->ssrc));
 
     /* Check time */
-    hrts_start = hrtime_now(ses->clock);
+    hrts_start = time_nsec_now(ses->clock);
     if(ses->$state.n_pack_sent == 0){
 
        ses->$state.hrts_start_send = hrts_start;
-       ses->$state.lrts_start_send = lrtime_now(ses->clock);
+       ses->$state.lrts_start_send = time_msec_now(ses->clock);
     }
 
     /* Test Time Atom
@@ -1778,7 +1778,7 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
 
     if(pump_ret >= XRTP_OK){
 
-       xrtp_hrtime_t hrt_pass = hrtime_passed(ses->clock, hrts_start);  /* Get the making time */
+       xrtp_hrtime_t hrt_pass = time_nsec_spent(ses->clock, hrts_start);  /* Get the making time */
        session_log(("session_rtp_to_send: rtp packet production spent %d nanoseconds, while allowed processing time is %d nsecs\n", hrt_pass, hrt_allow));
 
        rtp_packet_set_info(rtp, packet_bytes);
@@ -1909,11 +1909,12 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
     int bw_per_recvr = 0;   /* bandwidth per member to receive media per period */
     int packet_bytes = 0;
 
-    xrtp_lrtime_t lrt_now = lrtime_now(ses->clock);
-    xrtp_hrtime_t hrt_now = hrtime_now(ses->clock);
+    xrtp_lrtime_t lrt_now = time_msec_now(ses->clock);
+    xrtp_hrtime_t hrt_now = time_nsec_now(ses->clock);
 
     xrtp_hrtime_t hrt_passed = 0;
     xrtp_lrtime_t lrt_passed = 0;
+	int msec_dummy = 0; /* just satisfy the api */
 
     xrtp_rtp_packet_t *rtp = (xrtp_rtp_packet_t *)queue_head(ses->packets_in_sched);
 
@@ -1925,7 +1926,7 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
 
         int rtp_bw = session_receiver_rtp_bw(ses);
         
-        time_passed(ses->clock, ses->self->lrts_last_rtp_sent, ses->self->hrts_last_rtp_sent, &lrt_passed, &hrt_passed);
+        time_spent(ses->clock, ses->self->lrts_last_rtp_sent, 0, ses->self->hrts_last_rtp_sent, &lrt_passed, &msec_dummy, &hrt_passed);
         
         bw_per_recvr += (int)(rtp_bw * lrt_passed / ((double)ses->period / LRT_HRT_DIVISOR));
         bw_per_recvr += rtp_bw * hrt_passed / ses->period;
@@ -1937,7 +1938,7 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
 
     }else{
 
-        time_passed(ses->clock, ses->$state.lrts_start_send, ses->$state.hrts_start_send, &lrt_passed, &hrt_passed);
+        time_spent(ses->clock, ses->$state.lrts_start_send, 0, ses->$state.hrts_start_send, &lrt_passed, &msec_dummy, &hrt_passed);
 
         bw_per_recvr = session_receiver_rtp_bw(ses);    /* minus self */
         
@@ -2276,8 +2277,9 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
     xrtp_lrtime_t lrt_pass;
 
     int rtcp_bytes;
+	int msec_dummy = 0; /* Just satisfy the api */
 
-    time_now(ses->clock, &lrt_now, &hrt_now);
+    time_rightnow(ses->clock, &lrt_now, &msec_dummy, &hrt_now);
 
     while(self->ssrc == 0){
 

@@ -20,19 +20,17 @@
 #define CATALOG_VERSION  0x0001
 #define DIRNAME_MAXLEN  128
 
-/*
 #define DEMUX_OGM_LOG
 #define DEMUX_OGM_DEBUG
-*/
 
 #ifdef DEMUX_OGM_LOG
- #define ogm_log(fmtargs)  //do{printf fmtargs;}while(0)
+ #define ogm_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define ogm_log(fmtargs)  
 #endif
 
 #ifdef DEMUX_OGM_DEBUG
- #define ogm_debug(fmtargs)  //do{printf fmtargs;}while(0)
+ #define ogm_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define ogm_debug(fmtargs)  
 #endif
