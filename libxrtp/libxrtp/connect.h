@@ -15,6 +15,9 @@
  *                                                                         *
  ***************************************************************************/
 
+#ifndef XRTP_CONNECT_H
+#define XRTP_CONNECT_H
+
 #define	DEFAULT_PORTNO	0
 
 typedef struct xrtp_port_s xrtp_port_t;
@@ -92,3 +95,5 @@ teleport_done(xrtp_teleport_t * tport);
 char * teleport_name(xrtp_teleport_t * tport);
 
 uint32 teleport_portno(xrtp_teleport_t * tport);
+
+#endif

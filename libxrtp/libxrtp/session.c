@@ -1279,9 +1279,9 @@ xrtp_hrtime_t session_ts2hrt(xrtp_session_t * ses, uint32 ts)
      
      /* Adjust due to jitter */
      delta_transit = transit - mem->last_transit;
-     if (delta_transit < 0) delta_transit = -delta_transit;     /* abs(x) */
+     if (delta_transit < 0)
+		 delta_transit = -delta_transit;     /* abs(x) */
 
-     
      session_log(("session_member_mapto_local_time: |delay[%u]-last[%u]|=delta[%d]\n", transit, mem->last_transit, delta_transit));
 
      mem->last_last_transit = mem->last_transit;
@@ -2180,7 +2180,6 @@ xrtp_media_t * session_new_media(xrtp_session_t * ses, uint8 profile_no, char *p
 			ses->media->parameter(ses->media, "rtcp_portno", &rtcp_portno);
 
 			session_log(("session_new_media: rtp[#%d]/rtcp[#%d] for [%s]", rtp_portno, rtcp_portno, profile_type));
-			session_log(("session_new_media: NOTE! New port pair allocation implement later\n"));
 			/* 
 			if(rtp_portno == 0)
 			{
@@ -2298,8 +2297,19 @@ xrtp_media_t * session_new_media(xrtp_session_t * ses, uint8 profile_no, char *p
 		ses->rtp_port = port_new(ses->ip, (uint16)rtp_portno, RTP_PORT);
 		ses->rtcp_port = port_new(ses->ip, (uint16)rtcp_portno, RTCP_PORT);
     
-		port_set_session(ses->rtp_port, ses);
-		port_set_session(ses->rtcp_port, ses);
+		if(!ses->rtp_port)
+		{
+			session_debug(("session_new_media: No rtp port[%d] available\n", ses->rtp_port));
+		}
+		else if(!ses->rtcp_port)
+		{
+			session_debug(("session_new_media: No rtcp port[%d] available\n", ses->rtcp_port));
+		}
+		else
+		{
+			port_set_session(ses->rtp_port, ses);
+			port_set_session(ses->rtcp_port, ses);
+		}
 	}
 
 
@@ -2334,7 +2344,6 @@ session_media(xrtp_session_t *ses)
 }
 
 /**
-
  * The middle process b/w import and export, order in addition
  * Can be compress module and crypo module, number of module less than MAX_PIPE_STEP
  * and be can enabled/disabled.

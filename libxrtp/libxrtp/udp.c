@@ -27,8 +27,8 @@
 #include <timedia/inet.h> 
 /*
 #define UDP_LOG
-#define UDP_DEBUG
 */
+#define UDP_DEBUG
 #ifdef UDP_LOG
 	#define udp_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -95,7 +95,8 @@ session_connect_t * connect_new(xrtp_port_t * port, xrtp_teleport_t * tport)
 	 {
 		udp_debug(("connect_new: No memory\n"));
         return NULL;
-     }   
+     }
+	 
      memset(udp, 0, sizeof(struct session_connect_s));
     
      udp->port = port;
@@ -114,8 +115,10 @@ int connect_done(session_connect_t * conn)
 {
      udp_log(("connect_done: free connect[#%d]\n", connect_io(conn)));
 
-     if(conn->data_in) xfree(conn->data_in);
-     xfree(conn);
+     if(conn->data_in) 
+		 xfree(conn->data_in);
+     
+	 xfree(conn);
 
      return XRTP_OK;
 }
@@ -245,25 +248,33 @@ xrtp_port_t * port_new(char *local_addr,  uint16 local_portno, enum port_type_e 
      xrtp_port_t * port = NULL;
 
      struct sockaddr_in sin;
+	 int so_reuseaddr = 1;
 
-     if(!local_addr) return NULL;
+     if(!local_addr)
+	 {
+		udp_debug(("port_new: MUST give local address!\n"));
+		return NULL;
+	 }
 
 	 udp_log(("port_new: %s:%d\n", local_addr, local_portno));
 
      port = (xrtp_port_t *)xmalloc(sizeof(struct xrtp_port_s));
 
-     if(!port) return NULL;
+     if(!port) 
+	 {
+		udp_debug(("port_new: No memory for port structure\n"));
+		return NULL;
+	 }
 
      port->session = NULL;
      port->type = type;
 
      port->socket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-      if(port->socket == SOCKET_INVALID){
-	 
+     if(port->socket == SOCKET_INVALID)
+	 {
 		 udp_debug(("port_new: fail to create  socket\n"));
 		 return NULL;
 	 }
-
 	
      /*
      setsockopt(port->socket, SOL_IP, IP_PKTINFO, (void *)1, sizeof(int));
@@ -271,19 +282,50 @@ xrtp_port_t * port_new(char *local_addr,  uint16 local_portno, enum port_type_e 
               
      sin.sin_family = AF_INET;
      sin.sin_port = htons(local_portno);
+
      if(inet_aton(local_addr, &(sin.sin_addr)) == 0) /* string to int addr */
 	 {
         udp_debug(("port_new: Illegal ip address\n"));
-        socket_close(port->socket);
+        
+		socket_close(port->socket);
         xfree(port);
         
         return NULL;
      }
+
+	 setsockopt(port->socket, SOL_SOCKET, SO_REUSEADDR, (char*)&so_reuseaddr, sizeof(so_reuseaddr));
      
      if(bind(port->socket, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) == SOCKET_FAIL)
 	 {
-        udp_debug(("port_new: Fail to name socket '%s:%d'\n", local_addr, local_portno));
-        socket_close(port->socket);
+        /* Win32 debug *
+		int err_no = WSAGetLastError();
+		
+		udp_debug(("port_new: Fail to name socket '%s:%d'\n", local_addr, local_portno));
+		
+		switch(err_no)
+		{
+		case WSANOTINITIALISED :
+			udp_debug(("port_new: WSANOTINITIALISED\n")); break;
+		case WSAENETDOWN :
+			udp_debug(("port_new: WSAENETDOWN\n")); break;
+		case WSAEADDRINUSE :
+			udp_debug(("port_new: WSAEADDRINUSE\n")); break;
+		case WSAEADDRNOTAVAIL :
+			udp_debug(("port_new: WSAEADDRNOTAVAIL\n")); break;
+		case WSAEFAULT:
+			udp_debug(("port_new: WSAEFAULT\n")); break;
+		case WSAEINPROGRESS:
+			udp_debug(("port_new: WSAEINPROGRESS\n")); break;
+		case WSAEINVAL:
+			udp_debug(("port_new: WSAEINVAL\n")); break;
+		case WSAENOBUFS:
+			udp_debug(("port_new: WSAENOBUFS\n")); break;
+		case WSAENOTSOCK:
+			udp_debug(("port_new: WSAENOTSOCK\n")); break;
+		}
+		* end of win32 debug */
+        
+		socket_close(port->socket);
         port->socket = 0;
         xfree(port);
            
@@ -298,33 +340,33 @@ xrtp_port_t * port_new(char *local_addr,  uint16 local_portno, enum port_type_e 
      udp_log(("port_new: socket[%d] opened as local ip[%u]:%u\n", port->socket, sin.sin_addr.s_addr, ntohs(sin.sin_port)));
 
      return port;
-  }
+}
 
-  int port_set_session(xrtp_port_t * port, xrtp_session_t * ses){
-
+int port_set_session(xrtp_port_t * port, xrtp_session_t * ses)
+{
      port->session = ses;
 
      return XRTP_OK;
-  }
+}
 
-  int port_done(xrtp_port_t * port){
-
+int port_done(xrtp_port_t * port)
+{
      socket_close(port->socket);
      xthr_done_lock(port->lock);
      xfree(port);
 
      return XRTP_OK;
-  }
+}
 
-  int port_io(xrtp_port_t * port){
-
+int port_io(xrtp_port_t * port)
+{
      return port->socket;
-  }
+}
 
-  int port_match_io(xrtp_port_t * port, int io){
-
+int port_match_io(xrtp_port_t * port, int io)
+{
      return port->socket == io;
-  }
+}
 
 /* Not implemented multicast yet */
 int port_is_multicast(xrtp_port_t * port)
@@ -348,8 +390,8 @@ int port_portno(xrtp_port_t* port)
 	return port->portno;
 }
 
-  int port_poll(xrtp_port_t * port, rtime_t timeout_usec)
-  {
+int port_poll(xrtp_port_t * port, rtime_t timeout_usec)
+{
      fd_set io_set;
 
 	 int n;
@@ -369,10 +411,10 @@ int port_portno(xrtp_port_t* port)
         port_incoming(port);
 
      return n;
-  } 
+} 
 
-  int port_incoming(xrtp_port_t * port)
-  {
+int port_incoming(xrtp_port_t * port)
+{
      char data[UDP_MAX_LEN];
      struct sockaddr_in remote_addr;
 
@@ -436,9 +478,9 @@ int port_portno(xrtp_port_t* port)
      }
         
      return XRTP_OK;
-  }
+}
 
-  xrtp_teleport_t * teleport_new(char * addr_str, uint16 pno){
+xrtp_teleport_t * teleport_new(char * addr_str, uint16 pno){
 
      xrtp_teleport_t * tp = xmalloc(sizeof(struct xrtp_teleport_s));
      if(tp){
@@ -457,24 +499,24 @@ int port_portno(xrtp_port_t* port)
      udp_log(("teleport_new: new remote port is ip[%u]:%u\n", tp->addr, ntohs(tp->portno)));
 
      return tp;
-  }
+}
 
-  int teleport_done(xrtp_teleport_t * tport){
+int teleport_done(xrtp_teleport_t * tport){
 
      xfree(tport);
      return XRTP_OK;
-  }
+}
 
-  char * teleport_name(xrtp_teleport_t * tport){
+char * teleport_name(xrtp_teleport_t * tport){
 
      struct in_addr addr;
      addr.s_addr = tport->addr;
      
 
      return inet_ntoa(addr);
-  }
+}
 
-  uint32 teleport_portno(xrtp_teleport_t * tport){
+uint32 teleport_portno(xrtp_teleport_t * tport){
 
      return ntohs(tport->portno);
-  }
+}
