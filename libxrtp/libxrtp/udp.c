@@ -142,13 +142,9 @@ int connect_receive(session_connect_t * conn, char **r_buff, int *header_bytes, 
 {
       int datalen;
       
-	  udp_debug(("connect_receive: 1\n"));
-
       datalen = conn->datalen_in;
       *r_buff = conn->data_in;
       
-	  udp_debug(("connect_receive: 2\n"));
-
       conn->data_in = NULL;
       conn->datalen_in = 0;
 
@@ -158,8 +154,6 @@ int connect_receive(session_connect_t * conn, char **r_buff, int *header_bytes, 
       *us = conn->usec_arrival;
 	  *ns = conn->nsec_arrival;
       
-	  udp_debug(("connect_receive: 3\n"));
-
       return datalen;
 }
 
@@ -169,7 +163,8 @@ int connect_send(session_connect_t * conn, char *data, int datalen)
 
 	  /* test */                                                                               
       n = sendto(conn->port->socket, data, datalen, 0, (struct sockaddr *)&(conn->remote_addr), sizeof(struct sockaddr_in));
-	  if(n<0){
+	  if(n<0)
+	  {
 		udp_debug(("connect_send: sending fail\n"));
 	  }
 
@@ -177,9 +172,9 @@ int connect_send(session_connect_t * conn, char *data, int datalen)
       return n;
 }
 
-  /* These are for old static port protocol, which is rtcp is rtp + 1, It's NOT suggest to use, Simply for back compatability */
-  session_connect_t * connect_rtp_to_rtcp(session_connect_t * rtp_conn){
-
+/* These are for old static port protocol, which is rtcp is rtp + 1, It's NOT suggest to use, Simply for back compatability */
+session_connect_t * connect_rtp_to_rtcp(session_connect_t * rtp_conn)
+{
       xrtp_port_t *rtp_port, *rtcp_port;
       xrtp_session_t * ses = NULL;
 
@@ -207,7 +202,7 @@ int connect_send(session_connect_t * conn, char *data, int datalen)
       udp_log(("connect_rtp_to_rtcp: rtcp connect is ip[%s:%u] at socket[%d]\n", inet_ntoa(rtcp_conn->remote_addr.sin_addr), ntohs(rtcp_conn->remote_addr.sin_port), rtcp_conn->port->socket));
 
       return rtcp_conn;
-  }
+}
   
 session_connect_t * connect_rtcp_to_rtp(session_connect_t * rtcp_conn)
 {

@@ -27,8 +27,8 @@
 #define RENEW_MINFO_LEVEL 5
 #define BUDGET_PERIOD_MSEC	1000  /* reset budget when large than one second */
 /*
-#define SESSION_LOG
 */
+#define SESSION_LOG
 #define SESSION_DEBUG
 
 #ifdef SESSION_LOG
@@ -242,6 +242,7 @@ int session_done(xrtp_session_t * ses)
 	xthr_done_lock(ses->members_lock);
 	xthr_done_lock(ses->senders_lock);
 	xthr_done_lock(ses->bandwidth_lock);
+	xthr_done_lock(ses->rtp_incoming_lock);
 
     xlist_done(ses->senders, NULL);
     xlist_done(ses->members, session_done_member);
@@ -320,6 +321,7 @@ xrtp_session_t* session_new(char *cname, int clen, char *ip, uint16 rtp_portno, 
 	ses->members_lock = xthr_new_lock();
 	ses->senders_lock = xthr_new_lock();
 	ses->bandwidth_lock = xthr_new_lock();
+	ses->rtp_incoming_lock = xthr_new_lock();
 
     ses->rtp_send_pipe = pipe_new(ses, XRTP_RTP, XRTP_SEND);
     ses->rtcp_send_pipe = pipe_new(ses, XRTP_RTCP, XRTP_SEND);
@@ -2503,13 +2505,7 @@ int session_rtp_send_now(xrtp_session_t *ses)
     int bw_per_recvr = 0;   //bandwidth per member to receive media per period
     int packet_bytes = 0;
 
-    rtime_t lrt_now = time_msec_now(ses->clock);
     rtime_t us_now = time_usec_now(ses->clock);
-
-    rtime_t us_passed = 0;
-    rtime_t lrt_passed = 0;
-
-	rtime_t ns_dummy = 0; //just satisfy the api
 
     xrtp_rtp_packet_t *rtp = (xrtp_rtp_packet_t *)queue_head(ses->packets_in_sched);
 
@@ -2585,12 +2581,13 @@ int session_rtp_send_now(xrtp_session_t *ses)
 
 #endif
 
- int session_rtp_to_receive(xrtp_session_t *ses){
-
+int session_rtp_to_receive(xrtp_session_t *ses)
+{
     xrtp_rtp_packet_t * rtp;
 
     char *pdata = NULL;
     int datalen;
+	int packet_header_bytes;
 
     xrtp_buffer_t * buf;
     
@@ -2599,11 +2596,25 @@ int session_rtp_send_now(xrtp_session_t *ses)
     rtime_t ns_arrival;
 
     int packet_bytes;
+	session_connect_t *in;
 
     session_debug(("session_rtp_to_receive: [%s] <<<<<=RTP============\n", ses->self->cname));
     
-    session_debug(("session_rtp_to_receive: ses->rtp_incoming@%d\n", ses->rtp_incoming));
-	datalen = connect_receive(ses->rtp_incoming, &pdata, 0, &ms_arrival, &us_arrival, &ns_arrival);
+	/* retrieve incoming */
+	xthr_lock(ses->rtp_incoming_lock);
+
+	in = ses->rtp_incoming;
+    ses->rtp_incoming = NULL;
+
+	xthr_unlock(ses->rtp_incoming_lock);
+
+	if(in == NULL)
+	{
+       session_log(("session_rtp_to_receive: incoming packet lost\n"));
+       return XRTP_FAIL;
+	}
+
+	datalen = connect_receive(in, &pdata, &packet_header_bytes, &ms_arrival, &us_arrival, &ns_arrival);
 
     /* New RTP Packet */
     rtp = rtp_new_packet(ses, ses->$state.profile_no, RTP_RECEIVE, ses->rtp_incoming, ms_arrival, us_arrival, ns_arrival);
@@ -2612,15 +2623,12 @@ int session_rtp_send_now(xrtp_session_t *ses)
        session_debug(("session_rtp_to_receive: Can't create rtp packet for receiving\n"));
        return XRTP_EMEM;
     }
-    ses->rtp_incoming = NULL;
 
     buf = buffer_new(0, NET_BYTEORDER);
     buffer_mount(buf, pdata, datalen);
     
-    session_debug(("session_rtp_to_receive: 3\n"));
     rtp_packet_set_buffer(rtp, buf);
     
-    session_debug(("session_rtp_to_receive: 4\n"));
     if(pipe_pump(ses->rtp_recv_pipe, 0, rtp, &packet_bytes) != XRTP_CONSUMED)
     {
         session_log(("session_rtp_to_receive: [%s] ######======RTP=====######\n\n", ses->self->cname));
@@ -2632,11 +2640,11 @@ int session_rtp_send_now(xrtp_session_t *ses)
     }
     
     return XRTP_OK;
- }
+}
  
- /* Seperate thread for rtp receiving */
- int session_rtp_recv_loop(void * gen)
- {
+/* Seperate thread for rtp receiving */
+int session_rtp_recv_loop(void * gen)
+{
     xrtp_session_t * ses = (xrtp_session_t *)gen;
 
     ses->thread_run = 1;
@@ -2672,10 +2680,10 @@ int session_rtp_send_now(xrtp_session_t *ses)
 	ses->thr_rtp_recv = NULL;
 
     return XRTP_OK;
- }
+}
 
- int session_start_reception(xrtp_session_t * ses)
- {
+int session_start_reception(xrtp_session_t * ses)
+{
     if(ses->thr_rtp_recv == NULL)
 	{
 		ses->rtp_recv_lock = xthr_new_lock();
@@ -2694,7 +2702,7 @@ int session_rtp_send_now(xrtp_session_t *ses)
 	}
 
     return XRTP_OK;
- }
+}
  
  int session_stop_reception(xrtp_session_t * ses)
  {
@@ -3170,9 +3178,12 @@ int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 time
  }
 
  /* Notify the session a rtp arrival and schedule the process */
- int session_rtp_arrived(xrtp_session_t * ses, session_connect_t * conn){
+ int session_rtp_arrived(xrtp_session_t * ses, session_connect_t * conn)
+ {
 
-    ses->rtp_incoming = conn;
+    xthr_lock(ses->rtp_incoming_lock);
+	ses->rtp_incoming = conn;
+    xthr_unlock(ses->rtp_incoming_lock);
 
     return XRTP_OK;
  }

@@ -57,6 +57,11 @@
 #define WIN32
 #endif /* Windows */
 
+#ifdef WIN32
+#define vsnprintf _vsnprintf
+#define snprintf _snprintf
+#endif
+
 #ifdef _MSC_VER
  typedef unsigned __int64  uint64;
  typedef __int64           int64;

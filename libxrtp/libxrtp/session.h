@@ -428,7 +428,8 @@ struct xrtp_session_s
     xrtp_port_t *rtp_port;
     xrtp_port_t *rtcp_port;
 
-    session_connect_t * rtp_incoming;
+    xthr_lock_t *rtp_incoming_lock;
+	session_connect_t * rtp_incoming;
     session_connect_t * rtcp_incoming;
 
     session_connect_t * outgoing_rtcp[XRTP_MAX_REPORTS]; /* Only send to member on the report once a time */
