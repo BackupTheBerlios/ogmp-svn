@@ -77,7 +77,7 @@
 
    profile_class_t* (*module)(profile_handler_t *handler);
 
-   xrtp_media_t* (*media)(profile_handler_t *handler);
+   xrtp_media_t* (*media)(profile_handler_t *handler, int clockrate, int coding_param);
 
 	 //int (*clockrate)(profile_handler_t *handler);
 

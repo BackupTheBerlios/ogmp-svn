@@ -40,20 +40,35 @@ gui_t gui_window_topline =
 	NULL
 };
 
-int window_topline_print(gui_t* gui)
+int window_topline_print(gui_t* gui, int wid)
 {
 	int y,x;
 	char buf[250];
 
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
 
-	sprintf(buf,"Josua 0.6.2 \\\\//                                     Powered by eXosip/osip2. %-50.50s"," ");
+	gui->parent = wid;
+
+	sprintf(buf,"Josua evolution 0.0.1 - by Heming Ling %-50.50s"," ");
   
 	getmaxyx(stdscr,y,x);
   
 	attrset(A_NORMAL);
 	attrset(COLOR_PAIR(1));
-	mvaddnstr(gui->y0, gui->x0, buf, x-1);
+	mvaddnstr(gui->y0, gui->x0, buf, x);
   
 	return 0;
 }
+
+gui_t* window_topline_new(ogmp_curses_t* topui)
+{
+	gui_window_topline.topui = topui;
+
+	return &gui_window_topline;
+}
+
+int window_topline_done(gui_t* gui)
+{
+	return 0;
+}
+

@@ -508,6 +508,9 @@ xclock_t* session_clock(xrtp_session_t *session)
 	return session->clock;
 }
 
+/**
+ * Set bandwidth for this session, REMEMBER: multiuser need share the bandwidth!!!
+ */
 int session_set_bandwidth(xrtp_session_t * ses, int total_bw, int rtp_bw)
 {
     ses->bandwidth = total_bw;
@@ -519,9 +522,6 @@ int session_set_bandwidth(xrtp_session_t * ses, int total_bw, int rtp_bw)
     return XRTP_OK;
 }
 
-/**
- * Set bandwidth for this session, REMEMBER: multiuser need share the bandwidth!!!
- */
 int session_bandwidth(xrtp_session_t * ses)
 {
     session_debug(("session_bandwidth: bandwidth[%dB/s]\n", ses->bandwidth));
@@ -529,13 +529,13 @@ int session_bandwidth(xrtp_session_t * ses)
 	return ses->bandwidth;
 }
 
- /*
- int session_set_rtp_bandwidth(xrtp_session_t * ses, int bw){
-
+/*
+ int session_set_rtp_bandwidth(xrtp_session_t * ses, int bw)
+ {
     if(bw > ses->bandwidth) return XRTP_INVALID;
     
-    if(ses->media == NULL){
-      
+    if(ses->media == NULL)
+	{
         ses->rtp_bw = bw;
         ses->rtcp_bw = ses->bandwidth - bw;
         return XRTP_OK;
@@ -544,7 +544,8 @@ int session_bandwidth(xrtp_session_t * ses)
     ses->rtp_bw = bw / ses->media->clockrate;
     ses->rtcp_bw = ses->bandwidth - bw;
     return XRTP_OK;
- }*/
+ }
+*/
 
 uint32 session_rtp_bandwidth(xrtp_session_t * ses)
 {
@@ -2000,7 +2001,7 @@ int session_done_module(void *gen)
    return OS_OK;
 }
 
-xrtp_media_t * session_new_media(xrtp_session_t * ses, char *profile_type, uint8 profile_no)
+xrtp_media_t * session_new_media(xrtp_session_t * ses, uint8 profile_no, char *profile_type, int clockrate, int coding_param)
 {
 	profile_class_t * modu = NULL;    
 	profile_handler_t * med = NULL;
@@ -2116,7 +2117,7 @@ xrtp_media_t * session_new_media(xrtp_session_t * ses, char *profile_type, uint8
 	if(ses->media) 
 		ses->media->done(ses->media);
     
-	ses->media = med->media(med);
+	ses->media = med->media(med, clockrate, coding_param);
 
 	if(!ses->rtp_port && !ses->rtcp_port)
 	{
@@ -2143,7 +2144,6 @@ xrtp_media_t * session_new_media(xrtp_session_t * ses, char *profile_type, uint8
 	*/
 	if(ses->bandwidth != 0)
 	{
-		/* bandwidth per clock period */
 		ses->bandwidth_budget = ses->bandwidth;
 		ses->bandwidth_rtp_budget = ses->bandwidth_rtp;
 
@@ -2233,14 +2233,9 @@ profile_handler_t * session_add_handler(xrtp_session_t *ses, char *id)
    session_log(("session_add_handler: '%s' handler created.\n", id));
    if(mtype == XRTP_HANDLER_TYPE_MEDIA)
    {
-      if(!ses->media)
-      {
-         session_log(("session_add_handler: create media handler\n"));
+		session_log(("session_add_handler: call session_new_media() insteed to add media handler\n"));
 
-         ses->media_handler = hand;
-
-         ses->media = hand->media(hand);
-      }
+		return NULL;
    }
 
    pipe_add(ses->rtp_send_pipe, hand, XRTP_ENABLE);

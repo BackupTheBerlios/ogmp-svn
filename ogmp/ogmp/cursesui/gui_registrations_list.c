@@ -66,33 +66,39 @@ void window_registrations_list_draw_commands(gui_t* gui)
 	josua_print_command(registrations_list_commands, y-5, 0);
 }
 
-int window_registrations_list_print(gui_t* gui)
+int window_registrations_list_print(gui_t* gui, int wid)
 {
 	int y,x;
 	char buf[250];
 	int pos;
 	int pos_id;
 
-	user_profile_t* user;
+	user_profile_t* prof;
+
+	ogmp_curses_t* ocui = gui->topui;
+
+	xlist_t* profiles = ocui->user->profiles;
 	xlist_user_t u;
   
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
+
+	gui->parent = wid;
   
 	getmaxyx(stdscr,y,x);
 	
 	pos_id = 0;
-	user = (user_profile_t*)xlist_first(profiles, &u);
-	while(user)
+	prof = (user_profile_t*)xlist_first(profiles, &u);
+	while(prof)
     {
 		if (pos_id == cursor_registrations_start)
 			break;
 
 		pos_id++;
-		user = xlist_next(profiles, &u);
+		prof = xlist_next(profiles, &u);
     }
 
 	pos = 0;
-	while(user)
+	while(prof)
     {
 		if (pos == y + gui->y1 - gui->y0)
 			break;
@@ -120,31 +126,9 @@ int window_registrations_list_print(gui_t* gui)
 		user = xlist_next(profiles, &u);
     }
 
-	refresh();
-
-	window_registrations_list_draw_commands(gui);
+	gui->gui_draw_commands(gui);
   
 	return 0;
-}
-
-void __show_new_entry()
-{
-	active_gui->on_off = GUI_OFF;
-  
-	if (gui_windows[EXTRAGUI]==NULL)
-		gui_windows[EXTRAGUI]= &gui_window_new_identity;
-	else
-    {
-		gui_windows[EXTRAGUI]->on_off = GUI_OFF;
-		josua_clear_box_and_commands(gui_windows[EXTRAGUI]);
-		gui_windows[EXTRAGUI]= &gui_window_new_identity;
-    }
-
-	active_gui = gui_windows[EXTRAGUI];
-	active_gui->on_off = GUI_ON;
-
-	active_gui->gui_print(active_gui);
-	/*window_new_identity_print();*/
 }
 
 int window_registrations_list_run_command(gui_t* gui, int c)
@@ -155,12 +139,13 @@ int window_registrations_list_run_command(gui_t* gui, int c)
 
 	xlist_user_t u;
 	user_profile_t *user;
+	ogmp_curses_t* ocui = gui->topui;
   
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
 
 	getmaxyx(stdscr,y,x);
 
-	max = xlist_size(profiles);
+	max = xlist_size(ocui->profiles);
 
 	switch (c)
     {
@@ -192,7 +177,7 @@ int window_registrations_list_run_command(gui_t* gui, int c)
 		{
 			/* registrations_list selected! */
 			pos=0;
-			user = xlist_first(profiles, &u);
+			user = xlist_first(ocui->profiles, &u);
 			while(user)
 			{
 				pos++;
@@ -206,7 +191,7 @@ int window_registrations_list_run_command(gui_t* gui, int c)
 					break;
 				}
 
-				user = xlist_next(profiles, &u);
+				user = xlist_next(ocui->profiles, &u);
 			}
 			
 			break;
@@ -247,7 +232,7 @@ int window_registrations_list_run_command(gui_t* gui, int c)
 		case 'a':
 		{
 			/* add new entry */
-			__show_new_entry();
+			gui_show_window(gui, GUI_ENTRY, GUI_REGLIST);
 			break;
 		}
 		default:
@@ -258,8 +243,20 @@ int window_registrations_list_run_command(gui_t* gui, int c)
 	}
 
 	if (gui->on_off==GUI_ON)
-		gui->gui_print(gui);
+		gui->gui_print(gui, gui->parent);
   
+	return 0;
+}
+
+gui_t* window_registrations_list_new(ogmp_curses_t* topui)
+{
+	gui_window_registrations_list.topui = topui;
+
+	return &gui_window_registrations_list;
+}
+
+int window_registrations_list_done(gui_t* gui)
+{
 	return 0;
 }
 

@@ -42,13 +42,16 @@ gui_t gui_window_insubscriptions_list = {
 
 int cursor_insubscriptions_list = 0;
 
-int window_insubscriptions_list_print(gui_t* gui)
+int window_insubscriptions_list_print(gui_t* gui, int wid)
 {
 	int k, pos;
 	int y,x;
 	char buf[250];
 
-	josua_clear_box_and_commands(gui_windows[EXTRAGUI]);
+	gui->parent = wid;
+
+	if(gui->topui->gui_windows[EXTRAGUI])
+		josua_clear_box_and_commands(gui->topui->gui_windows[EXTRAGUI]);
 
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
 
@@ -200,7 +203,7 @@ int window_insubscriptions_list_run_command(gui_t* gui, int c)
 			break;
 	
 		case 't':
-			__show_subscriptions_list(gui);
+			gui_show_window(gui, GUI_SUBS, GUI_INSUBS);
 			break;
 
 		case 'a':
@@ -324,7 +327,19 @@ int window_insubscriptions_list_run_command(gui_t* gui, int c)
     }
 #endif
 	if (gui_window_insubscriptions_list.on_off==GUI_ON)
-		window_insubscriptions_list_print(gui);
+		window_insubscriptions_list_print(gui, GUI_INSUBS);
   
+	return 0;
+}
+
+gui_t* window_insubscriptions_list_new(ogmp_curses_t* topui)
+{
+	gui_window_insubscriptions_list.topui = topui;
+
+	return &gui_window_insubscriptions_list;
+}
+
+int window_insubscriptions_list_done(gui_t* gui)
+{
 	return 0;
 }

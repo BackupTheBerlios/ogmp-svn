@@ -42,13 +42,16 @@ gui_t gui_window_subscriptions_list =
 
 int cursor_subscriptions_list = 0;
 
-int window_subscriptions_list_print(gui_t* gui)
+int window_subscriptions_list_print(gui_t* gui, int wid)
 {
   int k, pos;
   int y,x;
   char buf[250];
 
-  josua_clear_box_and_commands(gui_windows[EXTRAGUI]);
+  gui->parent = wid;
+
+  if(gui->topui->gui_windows[EXTRAGUI])
+		josua_clear_box_and_commands(gui->topui->gui_windows[EXTRAGUI]);
 
   curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
 
@@ -122,7 +125,7 @@ int window_subscriptions_list_print(gui_t* gui)
   window_subscriptions_list_draw_commands(gui);
   return 0;
 }
-
+/*
 void __show_insubscriptions_list()
 {
 	active_gui->on_off = GUI_OFF;
@@ -138,10 +141,10 @@ void __show_insubscriptions_list()
 	active_gui = gui_windows[EXTRAGUI];
 	active_gui->on_off = GUI_ON;
 
-	active_gui->gui_print(active_gui);
-	/*window_insubscriptions_list_print(gui);*/
+	active_gui->gui_print(active_gui, GUI_SUBS);
+	//window_insubscriptions_list_print(gui);
 }
-
+*/
 void window_subscriptions_list_draw_commands(gui_t* gui)
 {
   int x,y;
@@ -197,7 +200,7 @@ int window_subscriptions_list_run_command(gui_t* gui, int c)
       break;
 	
     case 't':
-      __show_insubscriptions_list();
+      gui_show_window(gui, GUI_INSUBS, GUI_SUBS);
       break;
 #if 0
     case 'r':
@@ -226,7 +229,20 @@ int window_subscriptions_list_run_command(gui_t* gui, int c)
       return -1;
     }
 
-  if (gui_window_subscriptions_list.on_off==GUI_ON)
-    window_subscriptions_list_print(gui);
+  if (gui->on_off==GUI_ON)
+    gui->gui_print(gui, GUI_SUBS);
+
   return 0;
+}
+
+gui_t* window_subscriptions_list_new(ogmp_curses_t* topui)
+{
+	gui_window_subscriptions_list.topui = topui;
+
+	return &gui_window_subscriptions_list;
+}
+
+int window_subscriptions_list_done(gui_t* gui)
+{
+	return 0;
 }

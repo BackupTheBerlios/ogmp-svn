@@ -23,9 +23,12 @@
 
 #include "gui.h"
 
-int window_new_identity_print(gui_t* gui);
+int window_new_identity_print(gui_t* gui, int wid);
 int window_new_identity_run_command(gui_t* gui, int c);
 void window_new_identity_draw_commands(gui_t* gui);
+
+gui_t* window_new_identity_new(ogmp_curses_t* topui);
+int window_new_identity_done(gui_t* gui);
 
 extern gui_t gui_window_new_identity;
 

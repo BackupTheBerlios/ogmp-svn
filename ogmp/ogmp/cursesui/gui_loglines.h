@@ -23,11 +23,7 @@
 
 #include "gui.h"
 
-extern char log_buf3[200];
-extern char log_buf2[200];
-extern char log_buf1[200];
-
-int window_loglines_print(gui_t* gui);
+int window_loglines_print(gui_t* gui, int wid);
 
 gui_t* window_loglines_new(ogmp_curses_t* topui);
 int window_loglines_done(gui_t* gui);

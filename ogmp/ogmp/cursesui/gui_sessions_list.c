@@ -41,13 +41,16 @@ gui_t gui_window_sessions_list =
 
 int cursor_sessions_list = 0;
 
-int window_sessions_list_print(gui_t* gui)
+int window_sessions_list_print(gui_t* gui, int wid)
 {
 	int k, pos;
 	int y,x;
 	char buf[250];
 
-	josua_clear_box_and_commands(gui_windows[EXTRAGUI]);
+	if(gui->topui->gui_windows[EXTRAGUI])
+		josua_clear_box_and_commands(gui->topui->gui_windows[EXTRAGUI]);
+
+	gui->parent = wid;
 
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
 
@@ -95,25 +98,28 @@ int window_sessions_list_print(gui_t* gui)
 	return 0;
 }
 
-void window_sessions_list_draw_commands()
+void window_sessions_list_draw_commands(gui_t* gui)
 {
-  int x,y;
-  char *sessions_list_commands[] = {
-    "<-",  "PrevWindow",
-    "->",  "NextWindow",
-    "c",  "Close" ,
-    "a",  "Answer",
-    "m",  "Mute"  ,
-    "u",  "UnMute",
-    "d",  "Decline",
-    "r",  "Reject",
-    "b",  "AppearBusy",
-    "o",  "SendOptions",
-    "digit",  "SendInfo",
-    NULL
-  };
-  getmaxyx(stdscr,y,x);
-  josua_print_command(sessions_list_commands, y-5, 0);
+	int x,y;
+	char *sessions_list_commands[] = 
+	{
+		"<-",  "PrevWindow",
+		"->",  "NextWindow",
+		"c",  "Close" ,
+		"a",  "Answer",
+		"m",  "Mute"  ,
+		"u",  "UnMute",
+		"d",  "Decline",
+		"r",  "Reject",
+		"b",  "AppearBusy",
+		"o",  "SendOptions",
+		"digit",  "SendInfo",
+		NULL
+	};
+  
+	getmaxyx(stdscr,y,x);
+
+	josua_print_command(sessions_list_commands, y-5, 0);
 }
 
 int window_sessions_list_run_command(gui_t* gui, int c)
@@ -254,6 +260,19 @@ int window_sessions_list_run_command(gui_t* gui, int c)
       return -1;
     }
 
-  window_sessions_list_print(gui);
-  return 0;
+	gui->gui_print(gui, gui->parent);
+
+	return 0;
+}
+
+gui_t* window_sessions_list_new(ogmp_curses_t* topui)
+{
+	gui_window_sessions_list.topui = topui;
+
+	return &gui_window_sessions_list;
+}
+
+int window_sessions_list_done(gui_t* gui)
+{
+	return 0;
 }

@@ -573,7 +573,7 @@ uint session_mode(xrtp_session_t * session);
  */
 extern DECLSPEC
 xrtp_media_t * 
-session_new_media(xrtp_session_t * ses, char * id, uint8 payload_type);
+session_new_media(xrtp_session_t * ses, uint8 profile_no, char *profile_type, int clockrate, int coding_param);
 
 
 extern DECLSPEC

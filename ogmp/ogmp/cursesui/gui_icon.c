@@ -20,12 +20,13 @@
 
 #include "gui_icon.h"
 
-static const char *icons[]= {
+static const char *icons[]= 
+{
 #define JD_EMPTY          0
     "             ___  " ,
     " WELCOME    /  /  " ,
     "           /__/   " ,
-    "   TO     //      " ,
+    "  NEW     //      " ,
     "         //       " ,
     " JOSUA  / \\_      " ,
     "        |__/      "
@@ -46,16 +47,19 @@ gui_t gui_window_icon =
 	-1,
 	-1,
 	-1,
+	NULL,
 	NULL
 };
 
-int window_icon_print(gui_t* gui)
+int window_icon_print(gui_t* gui, int wid)
 {
 	int y,x;
 	char buf[250];
 	int i;
   
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
+
+	gui->parent = wid;
 
 	gui_print_box(&gui_window_icon, -1, 1);
 
@@ -72,3 +76,15 @@ int window_icon_print(gui_t* gui)
 	return 0;
 }
 
+
+gui_t* window_icon_new(ogmp_curses_t* topui)
+{
+	gui_window_icon.topui = topui;
+
+	return &gui_window_icon;
+}
+
+int window_icon_done(gui_t* gui)
+{
+	return 0;
+}

@@ -23,12 +23,15 @@
 
 #include "gui.h"
 
-int window_online_print(gui_t* gui);
+int window_online_print(gui_t* gui, int wid);
 
 extern int josua_online_status;
 extern int josua_registration_status;
 extern char josua_registration_reason_phrase[100];
 extern char josua_registration_server[100];
+
+gui_t* window_online_new(ogmp_curses_t* topui);
+int window_online_done(gui_t* gui);
 
 extern gui_t gui_window_online;
 

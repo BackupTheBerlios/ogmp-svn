@@ -24,9 +24,12 @@
 
 #include "gui.h"
 
-int window_subscriptions_list_print(gui_t* gui);
+int window_subscriptions_list_print(gui_t* gui, int wid);
 int window_subscriptions_list_run_command(gui_t* gui, int c);
 void window_subscriptions_list_draw_commands(gui_t* gui);
+
+gui_t* window_subscriptions_list_new(ogmp_curses_t* topui);
+int window_subscriptions_list_done(gui_t* gui);
 
 extern gui_t gui_window_subscriptions_list;
 

@@ -19,6 +19,7 @@
 
 #include <timedia/timer.h>
 #include <timedia/xthread.h>
+#include <timedia/xmalloc.h>
 #include <timedia/catalog.h>
 #include <timedia/config.h>
 
@@ -61,7 +62,6 @@
 #define COMMAND_TYPE_REGISTER		2
 #define COMMAND_TYPE_UNREGISTER		3
 
-
 typedef struct ogmp_command_s ogmp_command_t;
 typedef struct ogmp_client_s ogmp_client_t;
 typedef struct ogmp_server_s ogmp_server_t;
@@ -69,12 +69,13 @@ typedef struct ogmp_server_s ogmp_server_t;
 typedef struct ogmp_ui_s ogmp_ui_t;
 struct ogmp_ui_s
 {
-	int (*init)(ogmp_ui_t* ui, sipua_t* sipua);
 	int (*show)(ogmp_ui_t *ui);
 	ogmp_command_t*(*wait_command)(ogmp_ui_t *ui);
 };
 
-ogmp_ui_t* ogmp_new_ui();
+extern DECLSPEC
+ogmp_ui_t* 
+ogmp_new_ui(sipua_t* sipua);
 
 struct ogmp_command_s
 {
@@ -128,39 +129,6 @@ struct ogmp_server_s
    xthr_cond_t* wait_unregistered;
 };
 
-struct ogmp_client_s
-{
-   int finish;
-   int valid;
-
-   media_control_t *control;
-
-   media_format_t *rtp_format;
-   xlist_t *format_handlers;
-
-   sipua_t *sipua;
-
-   sipua_set_t* call;
-
-   config_t * conf;
-
-   char *sdp_body;
-
-   int registered;
-
-   int ncap;
-   capable_descript_t *caps[MAX_NCAP];
-
-   xthr_lock_t *course_lock;
-   xthr_cond_t *wait_course_finish;
-
-   ogmp_ui_t* ui;
-
-   xthread_t* main_thread;
-
-   xthr_cond_t* wait_unregistered;
-};
-
 typedef struct ogmp_setting_s ogmp_setting_t;
 struct ogmp_setting_s
 {
@@ -183,7 +151,7 @@ int server_setup(ogmp_server_t *server, char *mode, void* extra);
 int server_start (ogmp_server_t *ser);
 int server_stop (ogmp_server_t *ser);
 
-ogmp_client_t* client_new(sipua_uas_t* uas, ogmp_ui_t* ui, user_profile_t* user, int bw);
+ogmp_client_t* client_new(user_profile_t* user, int portno, char* nettype, char* addrtype, char* firewall, char* proxy, int bandwidth);
 int client_config_rtp(void *conf, control_setting_t *setting);
 ogmp_setting_t* client_setting(media_control_t *control);
 

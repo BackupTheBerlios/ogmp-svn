@@ -27,7 +27,7 @@
 #define JUA_LOG
 
 #ifdef JUA_LOG
- #define jua_log(fmtargs)  do{printf fmtargs;}while(0)
+ #define jua_log(fmtargs)  do{log_printf fmtargs;}while(0)
 #else
  #define jua_log(fmtargs)
 #endif
@@ -57,11 +57,12 @@ int jua_process_event(eXosipua_t *jua)
 {
 	int counter =0;
 
-	/* use events to print some info */
 	eXosip_event_t *je;
+
 	for (;;)
     {
 		char buf[100];
+
 		je = eXosip_event_wait(0,50);
 
 		if (je==NULL)
@@ -177,16 +178,20 @@ int jua_process_event(eXosipua_t *jua)
 		}
 		else if (je->type==EXOSIP_REGISTRATION_SUCCESS)
 		{
-			sipua_event_t sip_e;
-			sip_e.call_info = (sipua_set_t*)je->external_reference;
-			sip_e.type = SIPUA_EVENT_REGISTRATION_SUCCEEDED;
+			sipua_reg_event_t reg_e;
+		
+			reg_e.event.call_info = NULL;
 
+			reg_e.event.type = SIPUA_EVENT_REGISTRATION_SUCCEEDED;
+			reg_e.status_code = je->status_code;
+			reg_e.server_info = je->reason_phrase;
+			reg_e.server = je->req_uri;
+			/*
 			snprintf(buf, 99, "<- (%i) [%i %s] %s for REGISTER %s",
 					je->rid, je->status_code, je->reason_phrase,
 					je->remote_uri, je->req_uri);
-	  
-			/*josua_printf(buf);*/
-
+			printf("jua_process_event: reg ok! [%s]\n", buf);
+			*/
 			jua->registration_status = je->status_code;
 			
 			snprintf(jua->registration_server, 100, "%s", je->req_uri);
@@ -196,38 +201,27 @@ int jua_process_event(eXosipua_t *jua)
 			else 
 				jua->registration_reason_phrase[0] = '\0';
 	
-			sip_e.from = jua->registration_server;
-			sip_e.content = NULL;
+			reg_e.event.from = jua->registration_server;
+			reg_e.event.content = NULL;
 
 			/* event back to sipuac */
-			jua->sipuas.notify_event(jua->sipuas.lisener, &sip_e);
+			jua->sipuas.notify_event(jua->sipuas.lisener, &reg_e.event);
 		}
 		else if (je->type==EXOSIP_REGISTRATION_FAILURE)
 		{
-			sipua_event_t sip_e;
-			sip_e.call_info = (sipua_set_t*)je->external_reference;
-			sip_e.type = SIPUA_EVENT_REGISTRATION_FAILURE;
+			sipua_reg_event_t reg_e;
 
-			snprintf(buf, 99, "<- (%i) [%i %s] %s for REGISTER %s",
-					je->rid, je->status_code, je->reason_phrase,
-					je->remote_uri, je->req_uri);
-	  
-			/*josua_printf(buf);*/
+			reg_e.event.type = SIPUA_EVENT_REGISTRATION_FAILURE;
+			reg_e.status_code = je->status_code;
+			reg_e.server_info = je->reason_phrase;
+			reg_e.server = je->req_uri;
 
-			jua->registration_status = je->status_code;
-	  
-			snprintf(jua->registration_server, 100, "%s", je->req_uri);
-	  
-			if (je->reason_phrase!='\0')
-				snprintf(jua->registration_reason_phrase, 100, "%s", je->reason_phrase);
-			else 
-				jua->registration_reason_phrase[0] = '\0';
-	  
-			sip_e.from = jua->registration_server;
-			sip_e.content = NULL;
+			reg_e.event.from = je->req_uri;
+			reg_e.event.content = NULL;
+			reg_e.event.call_info = NULL;
 
 			/* event back to sipuac */
-			jua->sipuas.notify_event(jua->sipuas.lisener, &sip_e);
+			jua->sipuas.notify_event(jua->sipuas.lisener, &reg_e.event);
 		}
 		else if (je->type==EXOSIP_OPTIONS_NEW)
 		{
@@ -473,7 +467,7 @@ int jua_loop(void *gen)
 {
 	eXosipua_t *jua = (eXosipua_t *)gen;
 
-	rtime_t ms_remain;
+	//rtime_t ms_remain;
 
 	jua->run = 1;
 
@@ -484,7 +478,7 @@ int jua_loop(void *gen)
 
 		jua_process_event(jua);
 
-		time_msec_sleep(jua->clock, JUA_INTERVAL_MSEC, &ms_remain);
+		//time_msec_sleep(jua->clock, JUA_INTERVAL_MSEC, &ms_remain);
 	}
 
 	return UA_OK;
@@ -602,7 +596,7 @@ int uas_clear_coding(sipua_uas_t* sipuas)
 	return UA_OK;
 }
 
-int uas_regist(sipua_uas_t *sipuas, char *registrar, char *id, int seconds)
+int uas_regist(sipua_uas_t *sipuas, char *loc, char *registrar, char *id, int seconds)
 {
 	int ret;
 	int regno = -1;
@@ -619,10 +613,7 @@ int uas_regist(sipua_uas_t *sipuas, char *registrar, char *id, int seconds)
 		return UA_OK;
     }
 
-	if(jua->owner || jua->owner[0] != '\0')
-		regno = eXosip_register_init(id, registrar, jua->owner);
-	else
-		regno = eXosip_register_init(id, registrar, NULL);
+	regno = eXosip_register_init(id, registrar, loc);
 
 	if (regno < 0)
 	{
@@ -632,26 +623,29 @@ int uas_regist(sipua_uas_t *sipuas, char *registrar, char *id, int seconds)
 
 	ret = eXosip_register(regno, seconds);
 
-	jua_log(("uas_regist: ret=%d\n", ret));
-
-	if(ret == 0)
-		strcpy(jua->current_id, id);
-
-	jua_log(("uas_regist: 6\n"));
-
 	eXosip_unlock();
 
-	jua_log(("uas_regist: 7\n"));
-
 	if(ret != 0)
+	{
+		jua_log(("uas_regist: ret=%d\n", ret));
+
 		return UA_FAIL;
+	}
+		
+	strcpy(jua->current_id, id);
 	
-	jua_log(("uas_regist: 8\n"));
+	if(!jua->thread)
+	{
+		jua->thread = xthr_new(jua_loop, jua, XTHREAD_NONEFLAGS);
+
+		if(!jua->thread)
+			return UA_FAIL;
+	}
 
 	return UA_OK;
 }
 
-int uas_unregist(sipua_uas_t *sipuas, char *registrar, char *id)
+int uas_unregist(sipua_uas_t *sipuas, char *userloc, char *registrar, char *id)
 {
 	int ret;
 	int regno = -1;
@@ -666,10 +660,7 @@ int uas_unregist(sipua_uas_t *sipuas, char *registrar, char *id)
 		return UA_OK;
     }
 
-	if(jua->owner[0] != '\0')
-		regno = eXosip_register_init(jua->current_id, jua->registration_server, jua->owner);
-	else
-		regno = eXosip_register_init(jua->current_id, jua->registration_server, NULL);
+	regno = eXosip_register_init(userloc, registrar, id);
 
 	if (regno < 0)
 	{
@@ -796,6 +787,8 @@ sipua_uas_t* sipua_uas(int sip_port, char* nettype, char* addrtype, char* firewa
 
 	memset(jua, 0, sizeof(eXosipua_t));
 
+	jua->clock = time_start();
+
 	uas = (sipua_uas_t*)jua;
 
 	uas->start = uas_start;
@@ -820,7 +813,7 @@ sipua_uas_t* sipua_uas(int sip_port, char* nettype, char* addrtype, char* firewa
 		jua_log(("sipua_uas: No ethernet interface found!\n"));
 		jua_log(("sipua_uas: using ip[127.0.0.1] (debug mode)!\n"));
 
-		strncpy(uas->netaddr, "127.0.0.1", MAX_IP_BYTES);
+		strcpy(uas->netaddr, "127.0.0.1");
     }
 	else
 	{

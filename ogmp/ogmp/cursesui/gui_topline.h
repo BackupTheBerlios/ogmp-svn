@@ -24,7 +24,10 @@
 
 #include "gui.h"
 
-int window_topline_print(gui_t* gui);
+int window_topline_print(gui_t* gui, int wid);
+
+gui_t* window_topline_new(ogmp_curses_t* topui);
+int window_topline_done(gui_t* gui);
 
 extern gui_t gui_window_topline;
 

@@ -20,6 +20,8 @@
 
 #include "gui_new_identity.h"
 
+#include "editor.h"
+
 gui_t gui_window_new_identity = 
 {
 	GUI_OFF,
@@ -38,79 +40,152 @@ gui_t gui_window_new_identity =
 	NULL
 };
 
-int window_new_identity_print(gui_t* gui)
+#define LINE_MAX 128
+
+#define NEWID_FULLNAME	0
+#define NEWID_BOOKLOC	1
+#define NEWID_REGISTARY	2
+#define NEWID_REGNAME	3
+#define NEWID_REGSEC	4
+
+char newid_fullname[128];
+char newid_bookloc[128];
+char newid_registary[128];
+char newid_regname[128];
+char newid_regsec[128];
+
+char* newid_inputs[5];
+editline_t *newid_edit[5];
+
+int cursor_newid = 0;
+
+int window_new_identity_print(gui_t* gui, int wid)
 {
 	int y,x;
 	char buf[250];
+
+	int pos;
+	char c, *ch;
 	
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
 
-	getmaxyx(stdscr,y,x);
-	attrset(A_NORMAL);
-	attrset(COLOR_PAIR(1));
+	gui->parent = wid;
 
-	if (gui_window_new_identity.x1==-999)
-    {}
-	else 
-		x = gui_window_new_identity.x1;
+	getmaxyx(stdscr,y,x);
+
+	attrset(A_NORMAL);
+
+	/* Window Title */
+	snprintf(buf, 250, "%199.199s", " ");
+
+	attrset(COLOR_PAIR(4));
+	mvaddnstr(gui->y0, gui->x0, buf, (x-gui->x0-1));
+	snprintf(buf, x-gui->x0-1, "Create new Identity");
+	mvaddstr(gui->y0, gui->x0+1, buf);
+	
+	/* Window Body */
+	pos = editline_pos(newid_edit[cursor_newid]);
+	editline_char(newid_edit[cursor_newid], &ch);
+	if(!*ch)
+		c = ' ';
+	else
+		c = *ch;
 
 	attrset(COLOR_PAIR(0));
-  
-	snprintf(buf, 199, "%199.199s", " ");
-	mvaddnstr(gui->y0+1, gui->x0, buf, (x - gui->x0 - 1));
-	mvaddnstr(gui->y0+2, gui->x0, buf, (x - gui->x0 - 1));
-	mvaddnstr(gui->y0+3, gui->x0, buf, (x - gui->x0 - 1));
-	mvaddnstr(gui->y0+4, gui->x0, buf, (x - gui->x0 - 1));
-  
-	attrset(COLOR_PAIR(1));
-	snprintf(buf, x - gui->x0, "Name      : ");
-	mvaddnstr(gui->y0, gui->x0, buf, (x - gui->x0 - 1));
-  
-	snprintf(buf, x - gui->x0, "Memo      : ");
-	mvaddnstr(gui->y0+1, gui->x0, buf, (x - gui->x0 - 1));
-  
-	snprintf(buf, x - gui->x0, "Public ID : ");
-	mvaddnstr(gui->y0+2, gui->x0, buf, (x - gui->x0 - 1));
-  
-	snprintf(buf, x - gui->x0, "Private ID: ");
-	mvaddnstr(gui->y0+3, gui->x0, buf, (x - gui->x0 - 1));
-  
-	window_new_identity_draw_commands(gui);
 
+	snprintf(buf, 250, "%199.199s", " ");
+	mvaddnstr(gui->y0+1, gui->x0, buf, (x-gui->x0-1));
+	mvaddnstr(gui->y0+2, gui->x0, buf, (x-gui->x0-1));
+	mvaddnstr(gui->y0+3, gui->x0, buf, (x-gui->x0-1));
+	mvaddnstr(gui->y0+4, gui->x0, buf, (x-gui->x0-1));
+	mvaddnstr(gui->y0+5, gui->x0, buf, (x-gui->x0-1));
+
+	if(cursor_newid == NEWID_FULLNAME)
+		attrset(COLOR_PAIR(10));
+	else
+		attrset(COLOR_PAIR(1));
+
+	snprintf(buf, 250, "%29.29s", "Full name :");
+	mvaddstr(gui->y0+1, gui->x0, buf);
+  
+	if(cursor_newid == NEWID_BOOKLOC)
+		attrset(COLOR_PAIR(10));
+	else
+		attrset(COLOR_PAIR(1));
+
+	snprintf(buf, 250, "%29.29s", "Phonebook location:");
+	mvaddstr(gui->y0+2, gui->x0, buf);
+
+	if(cursor_newid == NEWID_REGISTARY)
+		attrset(COLOR_PAIR(10));
+	else
+		attrset(COLOR_PAIR(1));
+
+	snprintf(buf, 250, "%29.29s", "Register server :");
+	mvaddstr(gui->y0+3, gui->x0, buf);
+  
+	if(cursor_newid == NEWID_REGNAME)
+		attrset(COLOR_PAIR(10));
+	else
+		attrset(COLOR_PAIR(1));
+
+	snprintf(buf, 250, "%29.29s", "Register name :");
+	mvaddstr(gui->y0+4, gui->x0, buf);
+
+	if(cursor_newid == NEWID_REGSEC)
+		attrset(COLOR_PAIR(10));
+	else
+		attrset(COLOR_PAIR(1));
+
+	snprintf(buf, 250, "%29.29s", "Register period in seconds :");
+	mvaddstr(gui->y0+5, gui->x0, buf);
+
+	attrset(COLOR_PAIR(0));
+	mvaddstr(gui->y0+1, gui->x0+30, newid_inputs[NEWID_FULLNAME]);
+
+	attrset(COLOR_PAIR(0));
+	mvaddstr(gui->y0+2, gui->x0+30, newid_inputs[NEWID_BOOKLOC]);
+
+	attrset(COLOR_PAIR(0));
+	mvaddstr(gui->y0+3, gui->x0+30, newid_inputs[NEWID_REGISTARY]);
+
+	attrset(COLOR_PAIR(0));
+	mvaddstr(gui->y0+4, gui->x0+30, newid_inputs[NEWID_REGNAME]);
+
+	attrset(COLOR_PAIR(0));
+	mvaddstr(gui->y0+5, gui->x0+30, newid_inputs[NEWID_REGSEC]);
+
+	attrset(COLOR_PAIR(10));
+	mvaddch(gui->y0+1+cursor_newid, gui->x0+30+pos, c);
+
+	gui->gui_draw_commands(gui);
+  
 	return 0;
 }
 
-
 int window_new_identity_run_command(gui_t* gui, int c)
 {
-	int y,x;
-  
-	getmaxyx(stdscr,y,x);
+	ogmp_curses_t* ocui = gui->topui;
 
-	if (gui->x1==-999)
-    {}
-	else 
-		x = gui->x1;
+	int max = 5;
 
 	switch (c)
     {
 		case KEY_DC:
 		{
+			editline_remove_char(newid_edit[cursor_newid]);
+			
 			delch();
+
 			break;
 		}
-		case KEY_BACKSPACE:
-		case 127:
+		case '\b':
 		{
-			if (active_gui->xcursor>10)
-			{
-				int xcur, ycur;
+			if (editline_move_pos(newid_edit[cursor_newid], -1) >= 0)
+				editline_remove_char(newid_edit[cursor_newid]);
+			else
+				beep();
 
-				active_gui->xcursor--;
-				getyx(stdscr,ycur,xcur);
-				move(ycur,xcur-1);
-				delch();
-			}
 			break;
 		}
 		case '\n':
@@ -118,91 +193,68 @@ int window_new_identity_run_command(gui_t* gui, int c)
 		case KEY_ENTER:
 		case KEY_DOWN:
 		{
-			if (gui->ycursor < 3)
-			{
-				gui->ycursor++;
-				gui->xcursor=10;
-			}
+			cursor_newid++;
+			cursor_newid %= max;
+
 			break;
 		}
 		case KEY_UP:
 		{
-			if (gui->ycursor>0)
-			{
-				gui->ycursor--;
-				gui->xcursor=10;
-			}
+			cursor_newid += max-1;
+			cursor_newid %= max;
+
 			break;
 		}
 		case KEY_RIGHT:
 		{
-			if (gui->xcursor < (x - gui->x0 - 1))
-				gui->xcursor++;
+			if (editline_move_pos(newid_edit[cursor_newid], 1) < 0)
+				beep();
 
 			break;
 		}
 		case KEY_LEFT:
 		{
-			if (gui->xcursor > 0)
-				gui->xcursor--;
-			
+			if (editline_move_pos(newid_edit[cursor_newid], -1) < 0)
+				beep();
+
 			break;
 		}
-
-		/* case 20: */  /* Ctrl-T */
 		case 1:  /* Ctrl-A */
 		{
-			int ycur = gui->y0;
-			int xcur = gui->x0 + 10;
+			int sec = 0;
 
-			char name[200];
-			char memo[200];
-			char pubid[200];
-			char priid[200];
+			if(newid_regsec[0])
+				sec = strtol(newid_regsec, NULL, 10);
 
-			mvinnstr(ycur, xcur, name, (x - gui->x0 - 10));
-				ycur++;
-			mvinnstr(ycur, xcur, memo, (x - gui->x0 - 10));
-				ycur++;
-			mvinnstr(ycur, xcur, pubid, (x - gui->x0 - 10));
-				ycur++;
-			mvinnstr(ycur, xcur, priid, (x - gui->x0 - 10));
-			/*
-			_josua_add_contact(sipurl, telurl, email, phone);
-			*/
+			if(sec <= 0)
+				break;
+			
+			if(newid_fullname[0] && newid_registary[0] && newid_regname[0])
+			{
+				int n = user_add_profile(ocui->user, newid_fullname, strlen(newid_fullname)+1,
+											newid_bookloc, newid_registary, 
+											newid_regname, sec);
+				
+				gui_hide_window(gui);
+			}
+
+			break;
+		}
+		case 3:  /* Ctrl-C */
+		{
+			gui_hide_window(gui);
+
 			break;
 		}
 		case 4:  /* Ctrl-D */
 		{
-			char buf[200];
-			
-			attrset(COLOR_PAIR(0));
-
-			snprintf(buf, 199, "%199.199s", " ");
-			mvaddnstr(gui->y0 + gui->ycursor, gui->x0 + 10, buf, (x - gui->x0 - 10 - 1));
+			editline_clear(newid_edit[cursor_newid]);
 	
-			gui->xcursor=10;
-      
-			break;
-		}
-		case 5:  /* Ctrl-E */
-		{
-			gui->xcursor = 10;
-			gui->ycursor = 0;
-
-			window_new_identity_print(gui);
 			break;
 		}
 		default:
 		{
-			if (gui_window_new_identity.xcursor<(x-gui_window_new_identity.x0-1))
-			{
-				gui_window_new_identity.xcursor++;
-	  
-				attrset(COLOR_PAIR(0));
-				echochar(c);
-			}
-			else
+			if(editline_append(newid_edit[cursor_newid], &((char)c), 1) == 0)
 				beep();
 	
 			return -1;
@@ -217,15 +269,39 @@ void window_new_identity_draw_commands(gui_t* gui)
 	int x,y;
 	char *new_identity_commands[] = 
 	{
-		"<-",  "PrevWindow",
-		"->",  "NextWindow",
 		"^A", "AddIdentity" ,
 		"^D", "DeleteLine",
-		"^E", "EraseAll",
+		"^C", "Cancel",
 		NULL
 	};
   
 	getmaxyx(stdscr,y,x);
   
 	josua_print_command(new_identity_commands, y-5, 0);
+}
+
+gui_t* window_new_identity_new(ogmp_curses_t* topui)
+{
+	gui_window_new_identity.topui = topui;
+
+	memset(newid_inputs, 0, sizeof(newid_inputs));
+
+	newid_edit[NEWID_FULLNAME] = editline_new(newid_fullname, LINE_MAX);
+	newid_edit[NEWID_BOOKLOC] = editline_new(newid_bookloc, LINE_MAX);
+	newid_edit[NEWID_REGISTARY] = editline_new(newid_registary, LINE_MAX);
+	newid_edit[NEWID_REGNAME] = editline_new(newid_regname, LINE_MAX);
+	newid_edit[NEWID_REGSEC] = editline_new(newid_regsec, LINE_MAX);
+
+	newid_inputs[NEWID_FULLNAME] = newid_fullname;
+	newid_inputs[NEWID_BOOKLOC] = newid_bookloc;
+	newid_inputs[NEWID_REGISTARY] = newid_registary;
+	newid_inputs[NEWID_REGNAME] = newid_regname;
+	newid_inputs[NEWID_REGSEC] = newid_regsec;
+
+	return &gui_window_new_identity;
+}
+
+int window_new_identity_done(gui_t* gui)
+{
+	return 0;
 }

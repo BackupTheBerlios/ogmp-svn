@@ -58,7 +58,7 @@ j_codec_t j_codec[] =
 	{ {"-1"}, {""} , -1}
 };
 
-int window_setup_print(gui_t* gui)
+int window_setup_print(gui_t* gui, int wid)
 {
 	int k;
 	int y,x;
@@ -66,7 +66,10 @@ int window_setup_print(gui_t* gui)
 
 	ogmp_curses_t* ocui = gui->topui;
 
-	josua_clear_box_and_commands(gui_windows[EXTRAGUI]);
+	gui->parent = wid;
+
+	if(ocui->gui_windows[EXTRAGUI])
+		josua_clear_box_and_commands(ocui->gui_windows[EXTRAGUI]);
 
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
 
@@ -241,7 +244,19 @@ int window_setup_run_command(gui_t* gui, int c)
     }
 */
 	if (gui->on_off==GUI_ON)
-		gui->gui_print(gui);
+		gui->gui_print(gui, gui->parent);
   
+	return 0;
+}
+
+gui_t* window_setup_new(ogmp_curses_t* topui)
+{
+	gui_window_setup.topui = topui;
+
+	return &gui_window_setup;
+}
+
+int window_setup_done(gui_t* gui)
+{
 	return 0;
 }

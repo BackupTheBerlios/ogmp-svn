@@ -38,7 +38,7 @@ int main(int argc, char** argv)
 	sipua_uas_t *uas_serv;
 	ogmp_server_t *server;
 
-	user_profile_t prof_serv = {"ogmps@timedia", "ogmps", "ogmp server", 12, "ogmps@timedia", "12345", 14400, "", "voip.timedia.org"};
+	user_profile_t prof_serv = {"ogmps", "ogmp server", 12, "ogmps@timedia", "12345", "ogmps@timedia", 14400, "", "voip.timedia.org"};
 
 	ogmp_log (("\nmain: modules in dir:%s\n", MODDIR));
 
@@ -62,15 +62,13 @@ int main(int argc, char** argv)
 
 	if(!strcmp(playmode, "netcast"))
 	{
-		sipua_uas_t *uas_clie;
 		ogmp_client_t* client;
 		ogmp_command_t cmd;
 
 		/* Initialise client */
 		user_profile_t prof_clie = {"ogmpc@timedia", "ogmpc", "ogmp client", 12, "ogmpc@timedia", "54321", 3600, "myname.net", "voip.timedia.org"};
 
-		uas_clie = sipua_uas(5070, "IN", "IP4", NULL, "127.0.0.1");
-		client = client_new(uas_clie, &prof_clie, 64*1024);
+		client = client_new(&prof_clie, 5070, "IN", "IP4", NULL, "127.0.0.1");
 
 		cmd.type = COMMAND_TYPE_REGISTER;
 		cmd.instruction = NULL;

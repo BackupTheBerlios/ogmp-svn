@@ -24,10 +24,13 @@
 #include "gui.h"
 
 void window_new_call_with_to(gui_t* gui, char *_to);
-int window_new_call_print(gui_t* gui);
+int window_new_call_print(gui_t* gui, int wid);
 int window_new_call_run_command(gui_t* gui, int c);
 int window_new_call_key_pressed(gui_t* gui);
 void window_new_call_draw_commands(gui_t* gui);
+
+gui_t* window_new_call_new(ogmp_curses_t* topui);
+int window_new_call_done(gui_t* gui);
 
 extern gui_t gui_window_new_call;
 

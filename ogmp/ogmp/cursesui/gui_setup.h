@@ -24,9 +24,12 @@
 
 #include "gui.h"
 
-int window_setup_print(gui_t* gui);
+int window_setup_print(gui_t* gui, int wid);
 int window_setup_run_command(gui_t* gui, int c);
 void window_setup_draw_commands(gui_t* gui);
+
+gui_t* window_setup_new(ogmp_curses_t* topui);
+int window_setup_done(gui_t* gui);
 
 extern gui_t gui_window_setup;
 

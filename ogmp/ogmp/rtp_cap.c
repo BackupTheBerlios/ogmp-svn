@@ -19,12 +19,13 @@
 #include <timedia/xmalloc.h>
 
 #include "rtp_cap.h"
+#include "log.h"
 
 #define RTPCAP_LOG
 #define RTPCAP_DEBUG
 
 #ifdef RTPCAP_LOG
- #define rtpcap_log(fmtargs)  do{printf fmtargs;}while(0)
+ #define rtpcap_log(fmtargs)  do{log_printf fmtargs;}while(0)
 #else
  #define rtpcap_log(fmtargs)
 #endif

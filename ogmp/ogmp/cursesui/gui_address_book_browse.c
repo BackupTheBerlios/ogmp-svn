@@ -26,21 +26,23 @@
 
 /*  extern eXosip_t eXosip; */
 
-gui_t gui_window_address_book_browse = {
-  GUI_OFF,
-  0,
-  -999,
-  10,
-  -6,
-  NULL,
-  &window_address_book_browse_print,
-  &window_address_book_browse_run_command,
-  NULL,
-  &window_address_book_browse_draw_commands,
-  -1,
-  -1,
-  -1,
-  NULL
+gui_t gui_window_address_book_browse = 
+{
+	GUI_OFF,
+	0,
+	-999,
+	10,
+	-6,
+	NULL,
+	window_address_book_browse_print,
+	window_address_book_browse_run_command,
+	NULL,
+	window_address_book_browse_draw_commands,
+	-1,
+	-1,
+	-1,
+	NULL,
+	NULL
 };
 
 int cursor_address_book_browse = 0;
@@ -66,7 +68,7 @@ void window_address_book_browse_draw_commands(gui_t* gui)
 	josua_print_command(address_book_browse_commands, y-5, 0);
 }
 
-int window_address_book_browse_print(gui_t* gui)
+int window_address_book_browse_print(gui_t* gui, int wid)
 {
 	int y,x;
 	char buf[250];
@@ -79,11 +81,24 @@ int window_address_book_browse_print(gui_t* gui)
   
 	ogmp_curses_t* ocui = gui->topui;
 
+	gui->parent = wid;
+
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
   
 	getmaxyx(stdscr,y,x);
 
-	contacts = sipua_contacts(ocui->sipuser->phonebook);
+	if(!ocui->phonebook)
+	{
+		snprintf(buf, gui->x1 - gui->x0, "No phonebook available !");
+      
+		attrset(COLOR_PAIR(10));
+
+		mvaddnstr(gui->y0, gui->x0, buf, x-gui->x0-1);
+
+		return 0;
+	}
+
+	contacts = sipua_contacts(ocui->phonebook);
 
 	pos_fr = 0;
 	contact = (sipua_contact_t*)xlist_first(contacts, &u);
@@ -101,7 +116,7 @@ int window_address_book_browse_print(gui_t* gui)
 	pos = 0;
 	while(contact)
     {
-		if (pos==y+gui->y1-gui->y0)
+		if (pos == y+gui->y1 - gui->y0)
 			break;
 
 		snprintf(buf, gui->x1 - gui->x0, "%c%c %-15.15s %-80.80s",
@@ -125,27 +140,6 @@ int window_address_book_browse_print(gui_t* gui)
 	return 0;
 }
 
-void
-__show_newentry_abook()
-{
-	active_gui->on_off = GUI_OFF;
-	if (gui_windows[EXTRAGUI]==NULL)
-		gui_windows[EXTRAGUI]= &gui_window_address_book_newentry;
-	else
-    {
-		gui_windows[EXTRAGUI]->on_off = GUI_OFF;
-		josua_clear_box_and_commands(gui_windows[EXTRAGUI]);
-		gui_windows[EXTRAGUI]= &gui_window_address_book_newentry;
-    }
-
-	active_gui = gui_windows[EXTRAGUI];
-	active_gui->on_off = GUI_ON;
-
-	active_gui->gui_print(active_gui);
-	/*window_address_book_newentry_print();*/
-}
-
-
 int window_address_book_browse_run_command(gui_t* gui, int c)
 {
 	int y, x;
@@ -157,13 +151,17 @@ int window_address_book_browse_run_command(gui_t* gui, int c)
 	xlist_user_t u;
   
 	ogmp_curses_t* ocui = gui->topui;
-	sipua_phonebook_t* phonebook = ocui->sipuser->phonebook;
+	sipua_phonebook_t* phonebook = ocui->phonebook;
 
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
 
 	getmaxyx(stdscr,y,x);
 
-	contacts = sipua_contacts(ocui->sipuser->phonebook);
+	if(!ocui->phonebook)
+		return 0;
+
+	contacts = sipua_contacts(ocui->phonebook);
+
 	max = xlist_size(contacts);
   
 	switch (c)
@@ -215,7 +213,7 @@ int window_address_book_browse_run_command(gui_t* gui, int c)
 			if (contact)
 				window_new_call_with_to(gui, contact->name);
 
-			__show_initiate_session(gui);
+			gui_show_window(gui, GUI_NEWCALL, GUI_BROWSE);
 
 			break;
 		}
@@ -230,7 +228,7 @@ int window_address_book_browse_run_command(gui_t* gui, int c)
 		}
 		case 'a':
 		{
-			__show_newentry_abook();
+			gui_show_window(gui, GUI_ENTRY, GUI_BROWSE);
 			break;
 		}
 		case 'd':
@@ -260,8 +258,20 @@ int window_address_book_browse_run_command(gui_t* gui, int c)
 		}
 	}
 
-	if(gui_window_address_book_browse.on_off==GUI_ON)
-		window_address_book_browse_print(&gui_window_address_book_browse);
+	if(gui->on_off==GUI_ON)
+		gui->gui_print(gui, gui->parent);
   
+	return 0;
+}
+
+gui_t* window_address_book_browse_new(ogmp_curses_t* topui)
+{
+	gui_window_address_book_browse.topui = topui;
+
+	return &gui_window_address_book_browse;
+}
+
+int window_address_book_browse_done(gui_t* gui)
+{
 	return 0;
 }

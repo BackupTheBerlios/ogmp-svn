@@ -41,15 +41,12 @@ struct dev_rtp_s
    xrtp_set_t *session_set;
 
    /* the profile module searched in catalog */
-   xrtp_session_t* (*rtp_session)
-		(
-			dev_rtp_t *rtp,
-			module_catalog_t *cata, media_control_t *ctrl,
-			char *cname, int cnlen,
-			char *ip, uint16 rtp_portno, uint16 rtcp_portno,
-			uint8 profile_no, char *profile_mime,
-			int total_bw, int rtp_bw
-		);
+   xrtp_session_t* (*rtp_session)(dev_rtp_t *rtp,
+				module_catalog_t *cata, media_control_t *ctrl,
+				char *cname, int cnlen,
+				char *ip, uint16 rtp_portno, uint16 rtcp_portno,
+				uint8 profile_no, char *profile_mime, int clockrate, int coding_param,
+				int bw_budget);
 
    media_pipe_t *frame_maker;
 };

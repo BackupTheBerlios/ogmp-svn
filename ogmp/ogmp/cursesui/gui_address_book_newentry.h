@@ -23,9 +23,12 @@
 
 #include "gui.h"
 
-int window_address_book_newentry_print(gui_t* gui);
+int window_address_book_newentry_print(gui_t* gui, int wid);
 int window_address_book_newentry_run_command(gui_t* gui, int c);
 void window_address_book_newentry_draw_commands(gui_t* gui);
+
+gui_t* window_address_book_newentry_new(ogmp_curses_t* topui);
+int window_address_book_newentry_done(gui_t* gui);
 
 extern gui_t gui_window_address_book_newentry;
 

@@ -37,6 +37,8 @@
 #include <assert.h>
 
 #include "../ogmp.h"
+#include "../log.h"
+
 #ifdef MOUSE_MOVED
 #undef MOUSE_MOVED
 #endif
@@ -72,7 +74,7 @@ struct gui
 	int y1;
 
 	int (*gui_clear)(gui_t* gui);
-	int (*gui_print)(gui_t* gui);
+	int (*gui_print)(gui_t* gui, int wid);
 	int (*gui_run_command)(gui_t* gui, int c);
 	int (*gui_key_pressed)(gui_t* gui);
 	void (*gui_draw_commands)(gui_t* gui);
@@ -84,20 +86,34 @@ struct gui
 	WINDOW *win;
 
 	ogmp_curses_t* topui;
+	
+	int parent;
 };
 
-#define TOPGUI      0
-#define ICONGUI     1
-#define LOGLINESGUI 2
-#define MENUGUI     3
-#define EXTRAGUI    4
+#define GUI_QUIT		-1
 
-extern gui_t *gui_windows[10];
-extern gui_t *active_gui;
+#define TOPGUI			0
+#define ICONGUI			1
+#define LOGLINESGUI		2
+#define MENUGUI			3
+#define EXTRAGUI		4
 
-extern sipua_t *sipua;
-extern xlist_t *profiles;
-extern user_profile_t *sipuser;
+#define GUI_BROWSE		5
+#define GUI_ENTRY		6
+#define GUI_INSUBS		7
+#define GUI_LOGIN		8
+#define GUI_NEWCALL		9
+#define GUI_NEWID		10
+#define GUI_ONLINE		11
+#define GUI_SESSION		12
+#define GUI_SETUP		13
+#define GUI_SUBS		14
+#define GUI_LOGLINES	15
+#define GUI_NEWUSER		16
+#define GUI_PROFILES	17
+#define GUI_MESSAGE		18
+
+#define MAXGUI			20
 
 typedef struct coding_s
 {
@@ -112,36 +128,46 @@ struct ogmp_curses_s
 {
 	struct ogmp_ui_s ui;
 
-	gui_t* gui_windows[10];
+	int nwin;
+	gui_t* gui_windows[MAXGUI];
 	gui_t* active_gui;
+
+	char* message;
 
 	int quit;
 
 	sipua_t *sipua;
-	xlist_t *profiles;
-	user_profile_t *sipuser;
+	sipua_uas_t* uas;
+	sipua_net_t* network;
+
+	user_t *user;
+	/*xlist_t *profiles;*/
+	user_profile_t *user_profile;
+
+	sipua_phonebook_t *phonebook;
 
 	int ncoding;
 	int codex[MAX_CODING];
 
 	coding_t codings[MAX_CODING];
-
-	xthr_lock_t *log_mutex;
 };
 
-int gui_show(ogmp_ui_t* ogui);
-/*
-int   josua_event_get();
-void  josua_printf(char *chfr, ...);
-*/
+char log_buf3[200];
+char log_buf2[200];
+char log_buf1[200];
 
-/* usefull method 
-int   gui_clear();
-int   gui_print();
-int gui_run_command(ogmp_curses_t* ocui, int c);
-*/
-int   josua_clear_box_and_commands(gui_t *box);
-int   josua_print_command(char **commands, int ypos, int xpos);
+xthr_lock_t *log_lock;
+
+/* usefull method */
+int gui_show_window(gui_t* gui, int wid, int wid_parent);
+int gui_hide_window(gui_t* gui);
+int gui_activate_window(gui_t* gui, int wid);
+
+int gui_next_view(ogmp_curses_t* ocui);
+int gui_previous_view(ogmp_curses_t* ocui);
+
+int  josua_clear_box_and_commands(gui_t *box);
+int  josua_print_command(char **commands, int ypos, int xpos);
 
 WINDOW *gui_print_box(gui_t *box, int draw, int color);
 

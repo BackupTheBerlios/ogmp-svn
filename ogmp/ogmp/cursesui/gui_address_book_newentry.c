@@ -35,15 +35,18 @@ gui_t gui_window_address_book_newentry =
 	10,
 	0,
 	-1,
+	NULL,
 	NULL
 };
 
-int window_address_book_newentry_print(gui_t* gui)
+int window_address_book_newentry_print(gui_t* gui, int wid)
 {
 	int y,x;
 	char buf[250];
   
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
+
+	gui->parent = wid;
 
 	getmaxyx(stdscr,y,x);
   
@@ -87,6 +90,8 @@ int window_address_book_newentry_print(gui_t* gui)
 int window_address_book_newentry_run_command(gui_t* gui, int c)
 {
 	int y,x;
+
+	ogmp_curses_t *ocui = gui->topui;
   
 	getmaxyx(stdscr,y,x);
 
@@ -105,11 +110,11 @@ int window_address_book_newentry_run_command(gui_t* gui, int c)
 		case KEY_BACKSPACE:
 		case 127:
 		{
-			if (active_gui->xcursor>10)
+			if (ocui->active_gui->xcursor>10)
 			{
 				int xcur,ycur;
 
-				active_gui->xcursor--;
+				ocui->active_gui->xcursor--;
 				getyx(stdscr,ycur,xcur);
 				move(ycur,xcur-1);
 				delch();
@@ -178,7 +183,7 @@ int window_address_book_newentry_run_command(gui_t* gui, int c)
 	
 			/*_josua_add_contact(sipurl, telurl, email, phone);*/
 			c = sipua_new_contact(name, strlen(name)+1, memo, strlen(memo)+1, pub, pri);
-			sipua_add_contact(sipuser->phonebook, c);
+			sipua_add_contact(ocui->phonebook, c);
       
 			break;
 		}
@@ -200,7 +205,7 @@ int window_address_book_newentry_run_command(gui_t* gui, int c)
 			gui->xcursor=10;
 			gui->ycursor=0;
 
-			gui->gui_print(gui);
+			gui->gui_print(gui, GUI_NEWUSER);
 			/*window_address_book_newentry_print();*/
 
 			break;
@@ -240,4 +245,16 @@ void window_address_book_newentry_draw_commands(gui_t* gui)
 	getmaxyx(stdscr,y,x);
   
 	josua_print_command(address_book_newentry_commands, y-5, 0);
+}
+
+gui_t* window_address_book_newentry_new(ogmp_curses_t* topui)
+{
+	gui_window_address_book_newentry.topui = topui;
+
+	return &gui_window_address_book_newentry;
+}
+
+int window_address_book_newentry_done(gui_t* gui)
+{
+	return 0;
 }

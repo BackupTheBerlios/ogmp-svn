@@ -24,10 +24,64 @@
 #define CLIE_LOG
 
 #ifdef CLIE_LOG
- #define clie_log(fmtargs)  do{printf fmtargs;}while(0)
+ #define clie_log(fmtargs)  do{log_printf fmtargs;}while(0)
 #else
  #define clie_log(fmtargs)
 #endif
+
+struct ogmp_client_s
+{
+	sipua_t sipua;
+
+	int finish;
+	int valid;
+
+	media_control_t *control;
+
+	media_format_t *rtp_format;
+	xlist_t *format_handlers;
+
+	sipua_set_t* call;
+
+	config_t * conf;
+
+	char *sdp_body;
+
+	int registered;
+
+	int ncap;
+	capable_descript_t *caps[MAX_NCAP];
+
+	xthr_lock_t *course_lock;
+	xthr_cond_t *wait_course_finish;
+
+	ogmp_ui_t* ui;
+
+	xthread_t* main_thread;
+
+	xthr_cond_t* wait_unregistered;
+
+	/* below is sipua related */
+	user_profile_t* user_prof;
+	user_profile_t* reg_profile;
+
+	int expire_sec; /* registration expired seconds, time() */
+
+	uint16 default_rtp_portno;
+	uint16 default_rtcp_portno;
+
+	int total_bandwidth;
+	int conference_bandwidth;
+
+	sipua_action_t* action;
+
+	int pt[MAX_PAYLOAD_TYPE];
+	
+	xlist_t* sip_sessions;
+
+	void* lisener;
+	int (*notify_event)(void* listener, sipua_event_t* e);
+};
 
 int client_done_format_handler(void *gen)
 {
@@ -231,94 +285,349 @@ int client_done(ogmp_client_t *client)
    return MP_OK;
 }
 
-int client_execute_command( ogmp_client_t* clie, ogmp_command_t* cmd)
+int client_sipua_event(void* lisener, sipua_event_t* e)
 {
-	switch(cmd->type)
-	{
-		case(COMMAND_TYPE_REGISTER):
-		{
-			sipua_action_t *act;
-			
-			clie_log(("client_execute_command: to register\n"));
+	sipua_t *sipua = (sipua_t*)lisener;
 
-			if(clie->registered)
+	ogmp_client_t *ua = (ogmp_client_t*)lisener;
+
+	sipua_set_t *call_info = e->call_info;
+
+	switch(e->type)
+	{
+		case(SIPUA_EVENT_REGISTRATION_SUCCEEDED):
+		case(SIPUA_EVENT_UNREGISTRATION_SUCCEEDED):
+		{
+			sipua_reg_event_t *reg_e = (sipua_reg_event_t*)e;
+			user_profile_t* user_prof = ua->reg_profile;
+
+			if(user_prof->reg_reason_phrase) 
+				xfree(user_prof->reg_reason_phrase);
+
+			if(user_prof->reg_status == SIPUA_STATUS_REG_DOING)
 			{
-				clie_log(("client_execute_command: already registered\n"));
-				break;
+				user_prof->reg_server = xstr_clone(reg_e->server);
+				
+				user_prof->reg_reason_phrase = xstr_clone(reg_e->server_info);
+
+				ua->user_prof = ua->reg_profile;
+
+				user_prof->reg_status = SIPUA_STATUS_REG_OK;
 			}
 
-			act = sipua_new_action (clie,
-									client_action_onregistration, 
-									client_action_oncall, 
-									client_action_onconnect, 
-									client_action_onreset,
-									client_action_onbye);
+			if(user_prof->reg_status == SIPUA_STATUS_UNREG_DOING)
+			{
+				user_prof->reg_status = SIPUA_STATUS_NORMAL;
+			}
 
-			clie->sipua->regist(clie->sipua, act);
-			
+			/* registering transaction completed */
+			ua->reg_profile = NULL;
+
 			break;
 		}
-		case(COMMAND_TYPE_UNREGISTER):
-		{
-			clie_log(("client_execute_command: to unregister\n"));
 
-			if(!clie->registered)
+		case(SIPUA_EVENT_REGISTRATION_FAILURE):
+		case(SIPUA_EVENT_UNREGISTRATION_FAILURE):
+		{
+			char buf[100];
+
+			sipua_reg_event_t *reg_e = (sipua_reg_event_t*)e;
+			user_profile_t* user_prof = ua->reg_profile;
+
+			snprintf(buf, 99, "Register %s Error[%i]: %s",
+					reg_e->server, reg_e->status_code, reg_e->server_info);
+
+			log_printf("client_sipua_event: %s\n", buf);
+
+			user_prof->reg_status = SIPUA_STATUS_REG_FAIL;
+
+			if(user_prof->reg_reason_phrase) 
+				xfree(user_prof->reg_reason_phrase);
+			user_prof->reg_reason_phrase = xstr_clone(reg_e->server_info);
+
+			/* registering transaction completed */
+			ua->reg_profile = NULL;
+
+			break;
+		}
+
+		case(SIPUA_EVENT_NEW_CALL):
+		{
+			rtp_coding_t *codings;
+			int ncoding=0;
+
+			int lineno = e->lineno;
+
+			rtpcap_set_t* rtpcapset;
+			rtpcap_descript_t* rtpcap;
+			sipua_set_t* call_info;
+
+			xlist_user_t u;
+			int bw_call;
+
+			sdp_message_t *sdp_message;
+			char* sdp_body = (char*)e->content;
+
+			sdp_message_init(&sdp_message);
+
+			if (sdp_message_parse(sdp_message, sdp_body) != 0)
 			{
-				clie_log(("client_execute_command: already unregistered\n"));
+				clie_log(("\nsipua_event: fail to parse sdp\n"));
+				sdp_message_free(sdp_message);
+				
+				return UA_FAIL;
+			}
+
+			rtpcapset = rtp_capable_from_sdp(sdp_message);
+
+			codings = xmalloc(sizeof(rtp_coding_t) * xlist_size(rtpcapset->rtpcaps));
+
+			rtpcap = xlist_first(rtpcapset->rtpcaps, &u);
+			while(rtpcap)
+			{
+				strncpy(codings[ncoding].mime, rtpcap->profile_mime, MAX_MIME_BYTES);
+				codings[ncoding].clockrate = rtpcap->clockrate;
+				codings[ncoding].param = rtpcap->coding_param;
+			
+				rtpcap = xlist_next(rtpcapset->rtpcaps, &u);
+				ncoding++;
+			}
+
+			call_info = ua->sipua.new_conference(&ua->sipua, ua->user_prof, rtpcapset->callid, 
+							rtpcapset->subject, rtpcapset->sbytes, 
+							rtpcapset->info, rtpcapset->ibytes,
+							ua->default_rtp_portno, ua->default_rtcp_portno, 
+							ua->total_bandwidth, &bw_call,
+							ua->control, codings, ncoding, ua->pt);
+
+			if(!call_info)
+			{
+				/* Unable receive the call, miss it */
 				break;
 			}
 
-			clie->sipua->unregist(clie->sipua);
-			
+			ua->total_bandwidth -= bw_call;
+
+			sipua->uas->set_call(sipua->uas, lineno, call_info);
+
+			sdp_message_free(sdp_message);
+			xfree(codings);
+
+			break;
+		}
+
+		case(SIPUA_EVENT_PROCEEDING):
+			break;
+
+		case(SIPUA_EVENT_RINGING):
+			break;
+
+		case(SIPUA_EVENT_ANSWERED):
+		{
+			ua->action->onconnect(ua->action->sip_user, e->from, e->content);
 			break;
 		}
 	}
 
-	return MP_OK;
+	return UA_OK;
 }
 
-int client_main_thread(void* gen)
+int sipua_done_rtp_media(void* gen)
 {
-	ogmp_client_t *clie = (ogmp_client_t*)gen;
+	xrtp_media_t* m = (xrtp_media_t*)gen;
 
-	clie_log(("client_main_thread: client running...\n"));
+	session_done(m->session);
 
-	if(!clie->ui)
-		return MP_FAIL;
+	return UA_OK;
+}
 
-	while(1)
+int sipua_done_sip_session(void* gen)
+{
+	sipua_set_t *set = (sipua_set_t*)gen;
+	
+	if(set->setid.username) xfree(set->setid.username);
+	if(set->setid.nettype) xfree(set->setid.nettype);
+	if(set->setid.addrtype) xfree(set->setid.addrtype);
+	if(set->setid.netaddr) xfree(set->setid.netaddr);
+
+	xfree(set->setid.id);
+	xfree(set->version);
+	xfree(set->subject);
+	xfree(set->info);
+
+	xlist_done(set->mediaset, sipua_done_rtp_media);
+
+	xfree(set);
+	
+	return UA_OK;
+}
+
+int sipua_done(sipua_t *sipua)
+{
+	ogmp_client_t *ua = (ogmp_client_t*)sipua;
+
+	sipua->uas->shutdown(sipua->uas);
+
+	xfree(ua->action);
+
+	xlist_done(ua->sip_sessions, sipua_done_sip_session);
+
+	xfree(ua);
+
+	/* stop regist thread */
+	ua->action->done(ua->action);
+   
+	return UA_OK;
+}
+
+/* NOTE! if match, return ZERO, otherwise -1 */
+int sipua_match_conference(void* tar, void* pat)
+{
+	sipua_set_t *set = (sipua_set_t*)tar;
+	sipua_setid_t *id = (sipua_setid_t*)pat;
+
+	if(	!strcmp(set->setid.id, id->id) && 
+		!strcmp(set->setid.username, id->username) && 
+		!strcmp(set->setid.nettype, id->nettype) && 
+		!strcmp(set->setid.addrtype, id->addrtype) && 
+		!strcmp(set->setid.netaddr, id->netaddr))
+			return 0;
+
+	return -1;
+}
+
+sipua_set_t* client_find_conference(sipua_t* sipua, char* id, char* username, char* nettype, char* addrtype, char* netaddr)
+{
+	ogmp_client_t *ua = (ogmp_client_t*)sipua;
+
+	sipua_setid_t setid;
+	xlist_user_t u;
+
+	setid.id = id;
+	setid.username = username;
+	setid.nettype = nettype;
+	setid.addrtype = addrtype;
+	setid.netaddr = netaddr;
+
+	return (sipua_set_t*)xlist_find(ua->sip_sessions, &setid, sipua_match_conference, &u);
+}
+
+int client_done_conference(sipua_t* sipua, sipua_set_t* set)
+{
+	ogmp_client_t *ua = (ogmp_client_t*)sipua;
+
+	xlist_remove_item(ua->sip_sessions, set);
+	/*
+	if(set->setid.username) xfree(set->setid.username);
+	*/
+	if(set->setid.nettype) xfree(set->setid.nettype);
+	if(set->setid.addrtype) xfree(set->setid.addrtype);
+	if(set->setid.netaddr) xfree(set->setid.netaddr);
+
+	xfree(set->setid.id);
+	xfree(set->version);
+	xfree(set->subject);
+	xfree(set->info);
+
+	xlist_done(set->mediaset, sipua_done_rtp_media);
+
+	xfree(set);
+		
+	return UA_OK;
+}
+
+int client_set_default_profile(sipua_t* sipua, user_profile_t* prof)
+{
+	ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+	client->user_prof = prof;
+
+	return UA_OK;
+}
+
+int client_regist(sipua_t *sipua, user_profile_t *user, char * userloc)
+{
+	ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+	/* before start, check if already have a register transaction */
+	if(client->reg_profile)
+		return UA_FAIL;
+
+	if(!client->action)
 	{
-		ogmp_command_t* command = clie->ui->wait_command(clie->ui);
+		client->action = sipua_new_action(client, 
+								client_action_onregistration,
+								client_action_oncall,
+								client_action_onconnect,
+								client_action_onreset,
+								client_action_onbye);
 
-		if(command->type == COMMAND_TYPE_EXIT)
-		{
-			command->type = COMMAND_TYPE_UNREGISTER;
-
-			client_execute_command(clie, command);
-
-			break;
-		}
-
-		client_execute_command(clie, command);
 	}
 
-	return MP_OK;
+	client->reg_profile = user;
+
+	return sipua_regist(sipua, user, userloc);
 }
 
-ogmp_client_t* client_new(sipua_uas_t* uas, ogmp_ui_t* ui, user_profile_t* user, int bw)
+int client_unregist(sipua_t *sipua, user_profile_t *user)
 {
+	ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+	/* before start, check if already have a register transaction */
+	if(client->reg_profile)
+		return UA_FAIL;
+
+	client->reg_profile = user;
+
+	clie_log(("sipua_unregist: unregistering [%s] from [%s] ...\n", user->regname, user->registrar));
+
+	return sipua_unregist(sipua, user);
+}
+
+sipua_set_t* client_create_call(ogmp_client_t* clie, char* subject, int sbytes, char *desc, int dbytes)
+{
+	ogmp_setting_t *setting;
+	sipua_t* sipua = (sipua_t*)clie;
+	sipua_set_t* call;
+
+	int bw_conf;
+
+	if(clie->total_bandwidth <= 0)
+		return NULL;
+
+	setting = client_setting(clie->control);
+
+	call = sipua_new_conference(sipua, clie->user_prof, NULL,
+						subject, sbytes, desc, dbytes,
+						clie->default_rtp_portno, clie->default_rtcp_portno, 
+						clie->total_bandwidth, &bw_conf, clie->control, 
+						setting->codings, setting->ncoding, clie->pt);
+
+	if(!call)
+		return NULL;
+
+	clie->total_bandwidth -= bw_conf;
+	
+	return call;
+}
+
+sipua_t* client_new_sipua(sipua_uas_t* uas, int bandwidth)
+{
+	int nmod;
+
 	sipua_action_t *act=NULL;
 	ogmp_client_t *client=NULL;
 	module_catalog_t *mod_cata = NULL;
 
-	int nmod;
+	sipua_t* sipua;
 
 	client = xmalloc(sizeof(ogmp_client_t));
 	memset(client, 0, sizeof(ogmp_client_t));
 
-	client->control = new_media_control();
+	sipua = (sipua_t*)client;
+	client->ui = ogmp_new_ui(sipua);
 
-	client->sipua = sipua_new(uas, user, bw, client->control);
+	client->control = new_media_control();
 
 	client->course_lock = xthr_new_lock();
 	client->wait_course_finish = xthr_new_cond(XTHREAD_NONEFLAGS);
@@ -338,77 +647,58 @@ ogmp_client_t* client_new(sipua_uas_t* uas, ogmp_ui_t* ui, user_profile_t* user,
 
 	/* set sip client */
 	client->valid = 0;
-	client->ui = ui;
-   
+
 	/* player controler */
 	client->control->config(client->control, client->conf, mod_cata);
 	client->control->add_device(client->control, "rtp", client_config_rtp, client->conf);
-   
-	if(client->ui)
-	{
-		client->main_thread = xthr_new(client_main_thread, client, XTHREAD_NONEFLAGS);
-		if(!client->main_thread)
-		{
-			client->control->done(client->control);
-			client->sipua->done(client->sipua);
-			xfree(client);
-			return NULL;
-		}
-	}
 
+	//client->lisener = client;
+	//client->notify_event = client_sipua_event;
+	uas->set_listener(uas, client, client_sipua_event);
+
+	sipua->uas = uas;
+
+	sipua->done = sipua_done;
+
+	sipua->userloc = sipua_userloc;
+	sipua->set_default_profile = client_set_default_profile;
+
+	sipua->regist = client_regist;
+	sipua->unregist = client_unregist;
+
+	sipua->new_conference = sipua_new_conference;
+	sipua->done_conference = client_done_conference;
+
+	sipua->add = sipua_add;
+	sipua->remove = sipua_remove;
+
+	sipua->invite = sipua_invite;
+	sipua->bye = sipua_bye;
+	sipua->reinvite = sipua_reinvite;
+   
 	clie_log(("client_new: client ready\n\n"));
 
-	return client;
+	return sipua;
 }
 
-int client_call(ogmp_client_t *clie, char *to_regname)
+int client_start(sipua_t* sipua)
 {
-	ogmp_setting_t *setting;
+	ogmp_client_t *clie = (ogmp_client_t*)sipua;
 
-	setting = client_setting(clie->control);
-
-	xthr_lock(clie->course_lock);
-
-	clie->call = clie->sipua->new_conference(clie->sipua, NULL,
-						SESSION_SUBJECT, strlen(SESSION_SUBJECT)+1, 
-						SESSION_DESCRIPT, strlen(SESSION_DESCRIPT)+1, 
-						setting->codings, setting->ncoding);
-
-	clie->sipua->invite(clie->sipua, clie->call, to_regname);
-
-	xthr_cond_wait(clie->wait_course_finish, clie->course_lock);
-
-	xthr_unlock(clie->course_lock);
+	clie->ui->show(clie->ui);
 
 	return MP_OK;
 }
 
 int main(int argc, char** argv)
 {
-	char * playmode = argv[1];
-   
-	/* define a player */
-	xrtp_clock_t * clock_main = NULL;
-	xrtp_lrtime_t remain = 0;
+	sipua_uas_t* uas = sipua_uas(5060, "IN", "IP4", NULL, NULL);
+	if(uas)
+	{
+		sipua_t* sipua = client_new_sipua(uas, 64*1024);
 
-	sipua_uas_t *uas_clie;
-	ogmp_client_t* client;
-	ogmp_ui_t* ui;
-
-	/* Initialise client */
-	user_profile_t prof_clie = {"ogmpc@timedia", "ogmpc", "ogmp client", 12, "ogmpc@timedia", "54321", 3600, "myname.net", "voip.timedia.org"};
-
-	/* sip useragent */
-	clie_log (("\nmain: modules in dir:%s\n", MODDIR));
-
-	uas_clie = sipua_uas(5070, "IN", "IP4", NULL, "127.0.0.1");
-
-	ui = ogmp_new_ui();
-
-	client = client_new(uas_clie, ui, &prof_clie, 64*1024);
-
-	ui->init(client->sipua);
-	ui->show(ui);
+		client_start(sipua);
+	}
 	/*
 	cmd.type = COMMAND_TYPE_REGISTER;
 	cmd.instruction = NULL;

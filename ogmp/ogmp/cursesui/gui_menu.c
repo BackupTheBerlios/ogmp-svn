@@ -51,33 +51,52 @@ gui_t gui_window_menu =
 static const menu_t josua_menu[] = 
 {
 	{ "a", " ADDRESS BOOK       -    Update address book",
-		&__show_address_book_browse  },
+		GUI_BROWSE  },
 	{ "i", " INITIATE SESSION   -    Initiate a session",
-		&__show_initiate_session },
+		GUI_NEWCALL },
 	{ "u", " SUBSCRIPTIONS LIST -    View pending subscriptions",
-		&__show_subscriptions_list },
+		GUI_SUBS},
 	{ "l", " SESSIONS LIST      -    View pending sessions",
-		&__show_sessions_list },
-	{ "r", " REGISTRATIONS LIST -    View pending registrations",
-		&__show_registrations_list  },
+		GUI_SESSION },
+	{ "r", " PROFILE LIST       -    Change user profile",
+		GUI_PROFILES  },
 	{ "s", " SETUP              -    Configure Josua options",
-		&__show_setup },
+		GUI_SETUP },
 	{ "q", " QUIT               -    Quit the Josua program",
-		&__josua_quit  },
+		GUI_QUIT  },
+	{ 0 }
+};
+
+static const menu_t login_menu[] = 
+{
+	{ "n", " NEW         -    Create a new user",
+		GUI_NEWUSER },
+	{ "l", " LOGIN       -    Login as the selected profile",
+		GUI_LOGIN },
+	{ "q", " QUIT        -    Quit program",
+		GUI_QUIT },
 	{ 0 }
 };
 
 static int cursor_menu = 0;
 
-int window_menu_print(gui_t *gui)
+int window_menu_print(gui_t *gui, int wid)
 {
 	int y,x, x1;
 	char buf[250];
 	int i;
 	int pos;
+
+	ogmp_curses_t* ocui;
+	const menu_t* menu;
+
+	gui->parent = wid;
+
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
 
 	getmaxyx(stdscr,y,x);
+
+	ocui = gui->topui;
 
 	if (gui->x1<=0)
 		x1 = x;
@@ -86,17 +105,24 @@ int window_menu_print(gui_t *gui)
 
 	pos = 0;
 
+	if(ocui->user_profile)
+		menu = josua_menu;
+	else
+		menu = login_menu;
+
 	for (i=gui->y0; i<gui->y1; i++)
     {
-		snprintf(buf, x1 - gui->x0,
-	      "%c%c [%s] %s ",
-	      (cursor_menu==pos) ? '-' : ' ',
-	      (cursor_menu==pos) ? '>' : ' ',
-	      josua_menu[i-gui->y0].key,
-	      josua_menu[i-gui->y0].text);
+		if(!menu[i-gui->y0].key)
+			break;
+
+		snprintf(buf, x1 - gui->x0, "%c%c [%s] %s ",
+					(cursor_menu==pos) ? '-' : ' ',
+					(cursor_menu==pos) ? '>' : ' ',
+					menu[i-gui->y0].key, menu[i-gui->y0].text);
 
 		attrset(COLOR_PAIR(5));
 		attrset((pos==cursor_menu) ? A_REVERSE : A_NORMAL);
+
 		mvaddnstr(i, gui->x0, buf, x-gui->x0-1);
 
 		pos++;
@@ -124,14 +150,28 @@ void window_menu_draw_commands(gui_t *gui)
 
 int window_menu_run_command(gui_t *gui, int c)
 {
-	int max = 7;
+	int max;
+	const menu_t* menu;
+	ogmp_curses_t* ocui = gui->topui;
+
+	if(ocui->user_profile)
+	{
+		menu = josua_menu;
+		max = 7;
+	}
+	else
+	{
+		menu = login_menu;
+		max = 3;
+	}
+
 	switch (c)
     {
 		case 9:
 		{
 			josua_online_status++;
 
-			if (josua_online_status>EXOSIP_NOTIFY_CLOSED)
+			if (josua_online_status > EXOSIP_NOTIFY_CLOSED)
 				josua_online_status = EXOSIP_NOTIFY_ONLINE;
 
 			break;
@@ -168,193 +208,87 @@ int window_menu_run_command(gui_t *gui, int c)
 			cursor_menu %= max;
 			break;
 		case 'a':
-			cursor_menu = 0;
+			if(ocui->user_profile)
+				cursor_menu = 0;
+			else
+				beep();
 			break;
 		case 'i':
-			cursor_menu = 1;
+			if(ocui->user_profile)
+				cursor_menu = 1;
+			else
+				beep();
 			break;
 		case 'u':
-			cursor_menu = 2;
+			if(ocui->user_profile)
+				cursor_menu = 2;
+			else
+				beep();
 			break;
 		case 'l':
-			cursor_menu = 3;
+			if(ocui->user_profile)
+				cursor_menu = 3;
+			else
+				cursor_menu = 0;
 			break;
 		case 'r':
-			cursor_menu = 4;
+			if(ocui->user_profile)
+				cursor_menu = 4;
+			else
+				beep();
 			break;
 		case 's':
-			cursor_menu = 5;
+			if(ocui->user_profile)
+				cursor_menu = 5;
+			else
+				beep();
 			break;
 		case 'q':
-			cursor_menu = 6;
+			if(ocui->user_profile)
+				cursor_menu = 6;
+			else
+				cursor_menu = 1;
 			break;
 		case '0':
 		case '1':
 		case '2':
+			cursor_menu = c-48;
+			break;
 		case '3':
 		case '4':
 		case '5':
 		case '6':
-			cursor_menu = c-48;
+			if(ocui->user_profile)
+				cursor_menu = c-48;
+			else
+				beep();
 			break;
 		case '\n':
 		case '\r':
 		case KEY_ENTER:
 			/* menu selected! */
-			josua_menu[cursor_menu].fn(gui);
+			gui_show_window(gui, menu[cursor_menu].wid, MENUGUI);
 			break;
-
 		default:
 			beep();
 		return -1;
 	}
 
 	if (gui->on_off==GUI_ON)
-		window_menu_print(gui);
+		gui->gui_print(gui, MENUGUI);
   
 	return 0;
 }
 
-void __show_address_book_browse(gui_t* gui)
+gui_t* window_menu_new(ogmp_curses_t* topui)
 {
-	ogmp_curses_t* ocui = gui->topui;
+	gui_window_menu.topui = topui;
 
-	ocui->active_gui->on_off = GUI_OFF;
-
-	if (ocui->gui_windows[EXTRAGUI] == NULL)
-		ocui->gui_windows[EXTRAGUI] = &gui_window_address_book_browse;
-	else
-    {
-		ocui->gui_windows[EXTRAGUI]->on_off = GUI_OFF;
-		josua_clear_box_and_commands(ocui->gui_windows[EXTRAGUI]);
-		ocui->gui_windows[EXTRAGUI]= &gui_window_address_book_browse;
-    }
-
-	ocui->active_gui = ocui->gui_windows[EXTRAGUI];
-	ocui->active_gui->on_off = GUI_ON;
-
-	ocui->active_gui->gui_print(ocui->active_gui);
-	/*window_address_book_browse_print();*/
+	return &gui_window_menu;
 }
 
-void
-__show_initiate_session(gui_t* gui)
+int window_menu_done(gui_t* gui)
 {
-	ogmp_curses_t* ocui = gui->topui;
-
-	ocui->active_gui->on_off = GUI_OFF;
-
-	if (ocui->gui_windows[EXTRAGUI]==NULL)
-		ocui->gui_windows[EXTRAGUI]= &gui_window_new_call;
-	else
-    {
-		ocui->gui_windows[EXTRAGUI]->on_off = GUI_OFF;
-		josua_clear_box_and_commands(ocui->gui_windows[EXTRAGUI]);
-		ocui->gui_windows[EXTRAGUI]= &gui_window_new_call;
-    }
-
-	ocui->active_gui = ocui->gui_windows[EXTRAGUI];
-	ocui->active_gui->on_off = GUI_ON;
-
-	ocui->active_gui->gui_print(ocui->active_gui);
-	/*window_new_call_print();*/
-}
-
-void
-__show_sessions_list(gui_t* gui)
-{
-	ogmp_curses_t* ocui = gui->topui;
-
-	ocui->active_gui->on_off = GUI_OFF;
-
-	if (ocui->gui_windows[EXTRAGUI]==NULL)
-		ocui->gui_windows[EXTRAGUI]= &gui_window_sessions_list;
-	else
-    {
-		ocui->gui_windows[EXTRAGUI]->on_off = GUI_OFF;
-		josua_clear_box_and_commands(ocui->gui_windows[EXTRAGUI]);
-		ocui->gui_windows[EXTRAGUI]= &gui_window_sessions_list;
-    }
-
-	ocui->active_gui = ocui->gui_windows[EXTRAGUI];
-	ocui->active_gui->on_off = GUI_ON;
-
-	ocui->active_gui->gui_print(ocui->active_gui);
-	/*window_sessions_list_print();*/
-}
-
-void __show_subscriptions_list(gui_t* gui)
-{
-	ogmp_curses_t* ocui = gui->topui;
-
-	ocui->active_gui->on_off = GUI_OFF;
-	if (ocui->gui_windows[EXTRAGUI]==NULL)
-		ocui->gui_windows[EXTRAGUI]= &gui_window_subscriptions_list;
-	else
-    {
-		ocui->gui_windows[EXTRAGUI]->on_off = GUI_OFF;
-		josua_clear_box_and_commands(ocui->gui_windows[EXTRAGUI]);
-		ocui->gui_windows[EXTRAGUI]= &gui_window_subscriptions_list;
-    }
-
-	ocui->active_gui = ocui->gui_windows[EXTRAGUI];
-	ocui->active_gui->on_off = GUI_ON;
-
-	ocui->active_gui->gui_print(ocui->active_gui);
-	/*window_subscriptions_list_print();*/
-}
-
-void __show_registrations_list(gui_t* gui)
-{
-	ogmp_curses_t* ocui = gui->topui;
-
-	ocui->active_gui->on_off = GUI_OFF;
-	if (ocui->gui_windows[EXTRAGUI]==NULL)
-		ocui->gui_windows[EXTRAGUI]= &gui_window_registrations_list;
-	else
-    {
-		ocui->gui_windows[EXTRAGUI]->on_off = GUI_OFF;
-		josua_clear_box_and_commands(ocui->gui_windows[EXTRAGUI]);
-		ocui->gui_windows[EXTRAGUI]= &gui_window_registrations_list;
-    }
-
-	ocui->active_gui = ocui->gui_windows[EXTRAGUI];
-	ocui->active_gui->on_off = GUI_ON;
-
-	ocui->active_gui->gui_print(ocui->active_gui);
-	/*window_registrations_list_print();*/
-}
-
-void __show_setup(gui_t* gui)
-{
-	ogmp_curses_t* ocui = gui->topui;
-
-	ocui->active_gui->on_off = GUI_OFF;
-	if (ocui->gui_windows[EXTRAGUI]==NULL)
-		ocui->gui_windows[EXTRAGUI]= &gui_window_setup;
-	else
-    {
-		ocui->gui_windows[EXTRAGUI]->on_off = GUI_OFF;
-		josua_clear_box_and_commands(ocui->gui_windows[EXTRAGUI]);
-		ocui->gui_windows[EXTRAGUI]= &gui_window_setup;
-    }
-
-	ocui->active_gui = ocui->gui_windows[EXTRAGUI];
-	ocui->active_gui->on_off = GUI_ON;
-
-	ocui->active_gui->gui_print(ocui->active_gui);
-	/*window_setup_print();*/
-}
-
-void __josua_quit(gui_t* gui)
-{
-	ogmp_curses_t* ocui = gui->topui;
-	/*
-	eXosip_quit();
-	osip_mutex_destroy(log_mutex);
-	*/
-	ocui->quit = 1;
-	/*exit(1);*/
-	return;
+	return 0;
 }
 

@@ -22,6 +22,7 @@
 #include <timedia/xstring.h>
 #include <xrtp/xrtp.h>
 
+#include "log.h"
 #include "media_format.h"
 #include "devices/dev_rtp.h"
 #include "eXosipua/eXutils.h"
@@ -54,6 +55,12 @@
 #define SIPUA_EVENT_REQUESTFAILURE				-3
 #define SIPUA_EVENT_SERVERFAILURE				-4
 #define SIPUA_EVENT_GLOBALFAILURE				-5
+
+#define SIPUA_STATUS_NORMAL						0
+#define SIPUA_STATUS_REG_OK						1
+#define SIPUA_STATUS_REG_FAIL					2
+#define SIPUA_STATUS_REG_DOING					3
+#define SIPUA_STATUS_UNREG_DOING				4
 
 #include "phonebook.h"
 
@@ -90,6 +97,10 @@ struct sipua_set_s
 
 	int lineno;  /* on which line */
 
+	user_profile_t* user_prof;
+
+	int status;  /* line status */
+
 	xlist_t *mediaset;
 };
 
@@ -105,8 +116,32 @@ struct sipua_event_s
 	void* content;
 };
 
+typedef struct sipua_reg_event_s sipua_reg_event_t;
+struct sipua_reg_event_s
+{
+	sipua_event_t event;
+
+	int status_code;
+
+	char *server_info;
+	char *server;
+};
+
 #define MAX_NETTYPE_BYTES 8
 #define MAX_IP_BYTES 64
+
+typedef struct sipua_net_s sipua_net_t;
+struct sipua_net_s
+{
+	int portno;
+
+	char nettype[MAX_NETTYPE_BYTES];
+	char addrtype[MAX_NETTYPE_BYTES];
+
+	char netaddr[MAX_IP_BYTES];
+	char firewall[MAX_IP_BYTES];
+	char proxy[MAX_IP_BYTES];
+};
 
 struct sipua_uas_s
 {
@@ -133,9 +168,9 @@ struct sipua_uas_s
 	
 	int (*clear_coding)(sipua_uas_t* uas);
 	
-	int (*regist)(sipua_uas_t* uas, char *registrar, char *regname, int seconds);
+	int (*regist)(sipua_uas_t* uas, char *userloc, char *registrar, char *regname, int seconds);
 	
-	int (*unregist)(sipua_uas_t* uas, char *registrar, char *regname);
+	int (*unregist)(sipua_uas_t* uas, char *userloc, char *registrar, char *regname);
  	
 	int (*call)(sipua_uas_t* uas, char *regname, sipua_set_t* call, char* sdp_body, int bytes);
 
@@ -173,32 +208,62 @@ struct sipua_s
 	
 	int (*done)(sipua_t *ua);
 
-	int (*set_user)(sipua_t *sipua, user_profile_t *user);
-	user_profile_t* (*user)(sipua_t *sipua);
+	char* (*userloc)(sipua_t* sipua, char* uid);
+	int (*set_default_profile)(sipua_t* sipua, user_profile_t* prof);
 
-	int (*regist)(sipua_t *sipua, sipua_action_t *act);
-	int (*unregist)(sipua_t *sipua);
+	/* registration */
+	int (*regist)(sipua_t *sipua, user_profile_t *user, char *userloc);
+	int (*unregist)(sipua_t *sipua, user_profile_t *user);
 
- 	sipua_set_t* (*new_conference)(sipua_t *sipua, char* id, 
-					  char* subject, int sbyte, char* info, int ibyte, 
-					  rtp_coding_t codings[], int ncoding);
-
+	/* conference */
 	int (*done_conference)(sipua_t *sipua, sipua_set_t* set);
+ 	sipua_set_t* (*new_conference)(sipua_t *sipua, user_profile_t *user, char* id, 
+							char* subject, int sbyte, char* info, int ibyte, 
+							int default_rtp_portno, int default_rtcp_portno, int bandwidth, int *bw_conf,
+							media_control_t* control, rtp_coding_t codings[], int ncoding, int pt_pool[]);
 	
-	sipua_set_t* (*pick_conference)(sipua_t *sipua, sipua_set_t* set);
-
-	int (*add)(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media);
+	/*
+	conversation media
+	return new bandwidth, <0 fail 
+	*/
+	int (*add)(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media, int bandwidth);
  	int (*remove)(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media);
 
- 	int (*session_sdp)(sipua_t *sipua, sipua_set_t* set, char** sdp);
+ 	/* session description */
+	int (*session_sdp)(sipua_t *sipua, sipua_set_t* set, char** sdp);
 
 	int (*invite)(sipua_t *ua, sipua_set_t* set, char *regname);
-	
 	int (*bye)(sipua_t *ua, sipua_set_t* set);
-	
 	int (*reinvite)(sipua_t *sipua, sipua_set_t* set);
 };
 
-sipua_t* sipua_new(sipua_uas_t *uas, int bandwidth, media_control_t* control);
+sipua_t* sipua_new(sipua_uas_t *uas, void* event_lisener, int(*lisen)(void*,sipua_event_t*), int bandwidth, media_control_t* control);
+	
+/* User location : user@host or user@address */
+char* sipua_userloc(sipua_t* sipua, char* uid);
+
+/* registration */
+int sipua_regist(sipua_t *sipua, user_profile_t *user, char *userloc);
+int sipua_unregist(sipua_t *sipua, user_profile_t *user);
+
+/* conference */
+sipua_set_t* sipua_new_conference(sipua_t *sipua, user_profile_t* user_prof, char* id, 
+							   char* subject, int sbyte, char* info, int ibyte,
+							   int default_rtp_portno, int default_rtcp_portno, int bandwidth, int *bw_used,
+							   media_control_t* control, rtp_coding_t codings[], int ncoding, int pt_pool[]);
+	
+/*
+conversation media
+return new bandwidth, <0 fail 
+*/
+int sipua_add(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media, int bandwidth);
+int sipua_remove(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media);
+
+/* session description */
+int sipua_session_sdp(sipua_t *sipua, sipua_set_t* set, char** sdp);
+
+int sipua_invite(sipua_t *ua, sipua_set_t* set, char *regname);
+int sipua_bye(sipua_t *ua, sipua_set_t* set);
+int sipua_reinvite(sipua_t *sipua, sipua_set_t* set);
 
 #endif

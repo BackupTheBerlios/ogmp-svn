@@ -187,8 +187,8 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
 							char *cname, int cnlen,
 							char *ip, uint16 rtp_portno, uint16 rtcp_portno,
 							
-							uint8 profile_no, char *profile_mime,
-							int total_bw, int rtp_bw)
+							uint8 profile_no, char *profile_mime, int clockrate, int coding_param,
+							int bw_budget)
 {
    xrtp_session_t *ses = NULL;
    xrtp_media_t *rtp_media;
@@ -201,29 +201,20 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
    {
 		ses = session_new(rtp->session_set, cname, cnlen, ip, rtp_portno, rtcp_portno, cata, ctrl);
 
-		if(!ses)
-			return NULL;
+		if(!ses) return NULL;
 
-		session_set_bandwidth(ses, total_bw, rtp_bw);
-
-		/* set xrtp handler
-		if (session_add_handler(ses, profile_mime) == NULL)
+		rtp_media = session_new_media(ses, profile_no, profile_mime, clockrate, coding_param);
+		
+		if(session_bandwidth(ses) <= bw_budget)
 		{
-			rtp_debug(("vrtp_new: Fail to set vorbis profile !\n"));
-
-			session_done(ses);
-
-			return NULL;
-		} 
-		*/
-
-		rtp_media = session_new_media(ses, profile_mime, profile_no);
+			session_set_scheduler(ses, xrtp_scheduler(rtp->session_set));
    
-		session_set_scheduler(ses, xrtp_scheduler(rtp->session_set));
+			rtp_debug(("rtp_session: session[%s:%s] created\n", cname, profile_mime));
+		}
+		else
+			rtp_debug(("rtp_session: session[%s:%s] exceed the bandwidth\n", cname, profile_mime));
    }
 
-   rtp_debug(("rtp_session: session[%s:%s] created\n", cname, profile_mime));
-   
    return ses;
 }
 

@@ -386,8 +386,6 @@ int server_done(ogmp_server_t *server)
 	xthr_done_cond(server->wait_request);
 	xthr_done_lock(server->lock);
 
-	xthr_done_lock(server->command_lock);
-	xthr_done_cond(server->wait_command);
 	xthr_done_cond(server->wait_unregistered);
 
 	if(server->sdp_body)

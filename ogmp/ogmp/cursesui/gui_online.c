@@ -43,20 +43,24 @@ gui_t gui_window_online =
   NULL
 };
 
-int window_online_print(gui_t* gui)
+int window_online_print(gui_t* gui, int wid)
 {
 	int y,x;
 	char buf[250];
+
+	ogmp_curses_t* ocui = gui->topui;
   
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
+
+	gui->parent = wid;
 
 	getmaxyx(stdscr,y,x);
   
 	attrset(A_NORMAL);
 	attrset(COLOR_PAIR(14));
 
-	snprintf(buf, x, "whoIam   :   %s %140.140s", sipuser->fullname, " ");
-	mvaddnstr(y + gui->y0, 0, buf, x-1);
+	snprintf(buf, x, "Current ID :   %s %140.140s", ocui->user_profile->fullname, " ");
+	mvaddnstr(y + gui->y0, 0, buf, x);
 
 	if (josua_online_status==EXOSIP_NOTIFY_UNKNOWN)
 		snprintf(buf, x, "IM status:   %s %140.140s", "unknown", " ");
@@ -79,36 +83,61 @@ int window_online_print(gui_t* gui)
 	else
 		snprintf(buf, x, "IM status:   ?? %140.140s" , " ");
   
-	mvaddnstr(y + gui->y0 + 1, 0, buf, x-1);
+	mvaddnstr(y + gui->y0 + 1, 0, buf, x);
 
-	if (josua_registration_status==-1)
+	if (ocui->user_profile->reg_status == SIPUA_STATUS_NORMAL)
     {
 		snprintf(buf, x, "registred:   --Not registred-- %140.140s", " ");
-		mvaddnstr(y + gui->y0 + 2, 0, buf, x-1);
+		mvaddnstr(y + gui->y0 + 2, 0, buf, x);
     }
-	else if (199 < josua_registration_status && josua_registration_status < 300)
-    {
-		snprintf(buf, x, "registred:   [%i %s] %s %140.140s", 
+	else if (ocui->user_profile->reg_status == SIPUA_STATUS_REG_OK)
+	{
+		if (199 < josua_registration_status && josua_registration_status < 300)
+		{
+			snprintf(buf, x, "registred:   [%i %s] %s %140.140s", 
 							josua_registration_status, 
 							josua_registration_reason_phrase,
 							josua_registration_server, " ");
-		mvaddnstr(y + gui->y0 + 2, 0, buf, x-1);
-    }
-	else if (josua_registration_status > 299)
-    {
-       snprintf(buf, x, "registred:   [%i %s] %s %140.140s",
+			mvaddnstr(y + gui->y0 + 2, 0, buf, x);
+		}
+		else if (josua_registration_status > 299)
+		{
+			snprintf(buf, x, "registred:   [%i %s] %s %140.140s",
 							josua_registration_status,
 							josua_registration_reason_phrase,
 							josua_registration_server, " ");
-		mvaddnstr(y + gui->y0 + 2, 0, buf, x-1);
-    }
+			mvaddnstr(y + gui->y0 + 2, 0, buf, x);
+		}
+	}
+	else if (ocui->user_profile->reg_status == SIPUA_STATUS_REG_DOING)
+	{
+		snprintf(buf, x, "registred:   registering... %140.140s", " ");
+		mvaddnstr(y + gui->y0 + 2, 0, buf, x);
+	}
+	else if (ocui->user_profile->reg_status == SIPUA_STATUS_UNREG_DOING)
+	{
+		snprintf(buf, x, "registred:   unregistering... %140.140s", " ");
+		mvaddnstr(y + gui->y0 + 2, 0, buf, x);
+	}
 	else if (josua_registration_status==0)
     {
 		snprintf(buf, x, "registred:   [no answer] %s %140.140s",
 							josua_registration_server, " ");
-		mvaddnstr(y + gui->y0 + 2, 0, buf, x-1);
+		mvaddnstr(y + gui->y0 + 2, 0, buf, x);
     }
 
+	return 0;
+}
+
+gui_t* window_online_new(ogmp_curses_t* topui)
+{
+	gui_window_online.topui = topui;
+
+	return &gui_window_online;
+}
+
+int window_online_done(gui_t* gui)
+{
 	return 0;
 }
 

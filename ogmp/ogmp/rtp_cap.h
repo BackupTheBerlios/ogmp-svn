@@ -34,6 +34,7 @@ typedef struct rtp_coding_s rtp_coding_t;
 struct rtp_coding_s
 {
 	char mime[MAX_MIME_BYTES];
+
 	int clockrate;
 	int param;
 };

@@ -46,11 +46,15 @@ void window_new_call_with_to(gui_t* gui, char *_to)
 	snprintf(static_to, 200, _to);
 }
 
-int window_new_call_print(gui_t* gui)
+int window_new_call_print(gui_t* gui, int wid)
 {
 	int y,x;
 	char buf[250];
+	ogmp_curses_t* ocui = gui->topui;
+
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
+
+	gui->parent = wid;
 
 	getmaxyx(stdscr,y,x);
 	attrset(A_NORMAL);
@@ -69,7 +73,7 @@ int window_new_call_print(gui_t* gui)
 	mvaddnstr(gui->y0+4, gui->x0, buf, x-gui->x0-1);
   
 	attrset(COLOR_PAIR(1));
-	snprintf(buf, x-gui->x0, "From    : %s %80.80s", sipuser->fullname, " ");
+	snprintf(buf, x-gui->x0, "From    : %s %80.80s", ocui->user_profile->fullname, " ");
 	mvaddnstr(gui->y0, gui->x0, buf, x-gui->x0-1);
   
 	snprintf(buf, x-gui->x0, "To      : ");
@@ -97,13 +101,11 @@ int window_new_call_print(gui_t* gui)
 int window_new_call_run_command(gui_t* gui, int c)
 {
 	int y,x;
-	/*int i;*/
+	ogmp_curses_t* ocui = gui->topui;
 
 	getmaxyx(stdscr,y,x);
 
-	if (gui->x1==-999)
-    {}
-	else 
+	if (gui->x1 != -999)
 		x = gui->x1;
 
 	switch (c)
@@ -113,10 +115,11 @@ int window_new_call_run_command(gui_t* gui, int c)
 			break;
 		case KEY_BACKSPACE:
 		case 127:
-			if (active_gui->xcursor>10)
+			if (ocui->active_gui->xcursor>10)
 			{
 				int xcur,ycur;
-				active_gui->xcursor--;
+
+				ocui->active_gui->xcursor--;
 				getyx(stdscr,ycur,xcur);
 				move(ycur,xcur-1);
 				delch();
@@ -126,10 +129,10 @@ int window_new_call_run_command(gui_t* gui, int c)
 		case '\r':
 		case KEY_ENTER:
 		case KEY_DOWN:
-			if (gui_window_new_call.ycursor<4)
+			if (gui->ycursor < 4)
 			{
-				gui_window_new_call.ycursor++;
-				gui_window_new_call.xcursor=10;
+				gui->ycursor++;
+				gui->xcursor=10;
 			}
 			break;
 		case KEY_UP:
@@ -150,30 +153,35 @@ int window_new_call_run_command(gui_t* gui, int c)
 
 		/* case 20: */  /* Ctrl-T */
 		case 1:  /* Ctrl-A */
-			__show_address_book_browse(gui);
+			gui_hide_window(gui);
 			break;
 		case 4:  /* Ctrl-D */
-			{
-				char buf[200];
+		{
+			char buf[200];
 
-				if (static_to[0]!='\0' && gui_window_new_call.ycursor==1)
-					static_to[0]='\0';
-				attrset(COLOR_PAIR(0));
-				snprintf(buf, 199, "%199.199s", " ");
-				mvaddnstr(gui_window_new_call.y0+gui_window_new_call.ycursor,
+			if (static_to[0]!='\0' && gui_window_new_call.ycursor==1)
+				static_to[0]='\0';
+				
+			attrset(COLOR_PAIR(0));
+			snprintf(buf, 199, "%199.199s", " ");
+			mvaddnstr(gui_window_new_call.y0+gui_window_new_call.ycursor,
 						gui_window_new_call.x0 + 10,
 						buf,
 						x-gui_window_new_call.x0-10-1);
-				gui_window_new_call.xcursor=10;
-			}
+
+			gui_window_new_call.xcursor=10;
+			
 			break;
+		}
 		case 5:  /* Ctrl-E */
+		{
 			if (static_to[0]!='\0')
 				static_to[0]='\0';
 			gui_window_new_call.xcursor=10;
 			gui_window_new_call.ycursor=1;
-			window_new_call_print(gui);
+			window_new_call_print(gui, GUI_NEWUSER);
 			break;
+		}
 		case 24: /* Ctrl-X */
 			{
 				int ycur = gui_window_new_call.y0;
@@ -208,6 +216,7 @@ int window_new_call_run_command(gui_t* gui, int c)
 				int xcur = gui_window_new_call.x0+10;
 				char to[200];
 				char route[200];
+
 				ycur++;
 				mvinnstr(ycur, xcur, to, x-gui_window_new_call.x0-10);
 				ycur++;
@@ -222,15 +231,16 @@ int window_new_call_run_command(gui_t* gui, int c)
 #endif
 		case 21: /* Ctrl-U */
 			{
-				int ycur = gui_window_new_call.y0;
-				int xcur = gui_window_new_call.x0+10;
+				int ycur = gui->y0;
+				int xcur = gui->x0+10;
 				char to[200];
 				char route[200];
+
 				ycur++;
-				mvinnstr(ycur, xcur, to, x-gui_window_new_call.x0-10);
+				mvinnstr(ycur, xcur, to, x-gui->x0-10);
 				ycur++;
 				ycur++;
-				mvinnstr(ycur, xcur, route, x-gui_window_new_call.x0-10);
+				mvinnstr(ycur, xcur, route, x-gui->x0-10);
 
 				/*
 				i = _josua_start_subscribe(cfg.identity, to, route);
@@ -245,14 +255,16 @@ int window_new_call_run_command(gui_t* gui, int c)
 				fprintf(stderr, "c=%i", c);
 				exit(0);
 			*/
-			if (gui_window_new_call.xcursor<(x-gui_window_new_call.x0-1))
+			if (gui->xcursor < (x-gui->x0-1))
 			{
-				gui_window_new_call.xcursor++;
+				gui->xcursor++;
+
 				attrset(COLOR_PAIR(0));
 				echochar(c);
 			}
 			else
 				beep();
+
 			return -1;
 	}
 
@@ -279,4 +291,16 @@ void window_new_call_draw_commands(gui_t* gui)
 	getmaxyx(stdscr,y,x);
 
 	josua_print_command(new_call_commands, y-5, 0);
+}
+
+gui_t* window_new_call_new(ogmp_curses_t* topui)
+{
+	gui_window_new_call.topui = topui;
+
+	return &gui_window_new_call;
+}
+
+int window_new_call_done(gui_t* gui)
+{
+	return 0;
 }
