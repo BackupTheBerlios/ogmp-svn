@@ -19,6 +19,7 @@
 #include <timedia/xmalloc.h>
 #include <timedia/ui.h>
 
+#include <time.h>
 #include "rtp_cap.h"
 
 #define RTPCAP_LOG
@@ -429,6 +430,78 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 		xlist_addto_first(rtpcapset->rtpcaps, rtpcap);
 
 		pos_media++;
+	}
+
+	return rtpcapset;
+}
+
+/**
+ * retrieve rtp_capable_descript from media format
+ */
+rtpcap_set_t* rtp_capable_from_format(media_format_t *format, 
+									  char* subject, char *info, 
+									  user_profile_t* user_prof)
+{
+	/* Retrieve capable from media format */
+	char *rtpmap = NULL;
+
+	int rtpmapno = 0;
+
+	char tmp[64] = "";
+
+	media_stream_t* strm;
+
+	rtpcap_set_t* rtpcapset = xmalloc(sizeof(rtpcap_set_t));
+	if(!rtpcapset)
+	{
+		return NULL;
+	}
+	memset(rtpcapset, 0, sizeof(rtpcap_set_t));
+
+	rtpcapset->rtpcaps = xlist_new();
+
+	if(!rtpcapset->rtpcaps)
+	{
+		xfree(rtpcapset);
+		return NULL;
+	}
+
+	rtpcapset->nettype = xstr_clone(user_prof->user->nettype);
+	rtpcapset->addrtype = xstr_clone(user_prof->user->addrtype);
+	rtpcapset->netaddr = xstr_clone(user_prof->user->netaddr);
+
+	rtpcapset->subject = xstr_clone(subject);
+	rtpcapset->info = xstr_clone(info);
+
+	strcpy(rtpcapset->cname, user_prof->cname);
+
+	rtpcapset->username = xstr_clone(user_prof->user->uid);
+
+	sprintf(tmp, "%i", (int)time(NULL));
+
+	rtpcapset->callid = xstr_clone(tmp);
+	rtpcapset->version = xstr_clone(tmp);
+
+	strm = format->first;
+
+	while (!strm)
+	{
+		rtpcap_descript_t *rtpcap;
+
+		rtpcap = xmalloc(sizeof(rtpcap_descript_t));
+		if(!rtpcap)
+		{
+			rtpcap_log(("rtp_capable_descript: No memory\n"));
+
+			break;
+		}
+		memset(rtpcap, 0, sizeof(rtpcap_descript_t));
+
+		rtpcap->media_info = strm->media_info;
+
+		xlist_addto_first(rtpcapset->rtpcaps, rtpcap);
+
+		strm = strm->next;
 	}
 
 	return rtpcapset;

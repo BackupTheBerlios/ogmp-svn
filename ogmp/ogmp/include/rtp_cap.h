@@ -104,6 +104,8 @@ struct rtpcap_descript_s
 	int enable;
 
 	sdp_message_t *sdp_message;
+
+	media_info_t *media_info;
 };
 
 
@@ -197,6 +199,14 @@ int rtp_capable_from_sdp(rtpcap_descript_t* rtpcaps[], int max_cap, sdp_message_
 DECLSPEC
 rtpcap_set_t* 
 rtp_capable_from_sdp(sdp_message_t *sdp);
+
+/**
+ * retrieve rtp_capable_descript from media format
+ */
+DECLSPEC
+rtpcap_set_t* 
+rtp_capable_from_format(media_format_t *format, char* subject, char *info, 
+						user_profile_t* user_prof);
 
 int rtp_capable_cname(rtpcap_set_t* set, char *cn, int bytes);
 

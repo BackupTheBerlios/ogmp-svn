@@ -136,6 +136,7 @@ struct gui
 #define GUI_PROFILES	17
 #define GUI_MESSAGE		18
 #define GUI_AUDIOTEST	19
+#define GUI_PREFERENCE	20
 
 #define MAXGUI			30
 

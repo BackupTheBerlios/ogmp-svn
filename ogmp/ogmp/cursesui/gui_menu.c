@@ -27,14 +27,15 @@
 #include "gui_subscriptions_list.h"
 #include "gui_online.h"
 #include "gui_setup.h"
+#include "gui_preference.h"
 
 extern struct osip_mutex *log_mutex;
 
 static const menu_t josua_menu[] = 
 {
-	{ "a", " PHONE BOOK         -  Manage phone book",
+	{ "a", " PHONE BOOK          -  Manage phone book",
 		GUI_BROWSE  },
-	{ "i", " NEW CALL SESSION   -  Create a call session",
+	{ "i", " NEW CALL SESSION    -  Create a call session",
 		GUI_NEWCALL },
 	{ "u", " SUBSCRIPTIONS LIST  -  View pending subscriptions",
 		GUI_SUBS},
@@ -42,8 +43,8 @@ static const menu_t josua_menu[] =
 		GUI_SESSION },
 	{ "r", " PROFILE LIST        -  Change your ID",
 		GUI_PROFILES  },
-	{ "s", " SETUP               -  Setting",
-		GUI_SETUP },
+	{ "p", " PREFERENCE          -  Your preference",
+		GUI_PREFERENCE },
 	{ "q", " QUIT                -  Quit",
 		GUI_QUIT  },
 	{ 0 }
@@ -51,12 +52,14 @@ static const menu_t josua_menu[] =
 
 static const menu_t login_menu[] = 
 {
-	{ "t", " MEDIA TEST  -    Test Media Function",
-		GUI_AUDIOTEST },
 	{ "n", " NEW         -    Create a new user",
 		GUI_NEWUSER },
 	{ "l", " LOGIN       -    Login as the selected profile",
 		GUI_LOGIN },
+	{ "s", " SETUP       -    Setting",
+		GUI_SETUP },
+	{ "t", " MEDIA TEST  -    Test Media Function",
+		GUI_AUDIOTEST },
 	{ "q", " QUIT        -    Quit program",
 		GUI_QUIT },
 	{ 0 }
@@ -120,8 +123,6 @@ void window_menu_draw_commands(gui_t *gui)
 	int x,y;
 	char *menu_commands[] = 
 	{
-		"<-",  "PrevWindow",
-		"->",  "NextWindow",
 		"^i",  "Toggle Online status",
 		"^a",  "Apply Status" ,
 		NULL
@@ -148,7 +149,7 @@ int window_menu_run_command(gui_t *gui, int c)
 	else
 	{
 		menu = login_menu;
-		max = 4;
+		max = 5;
 	}
 
 	switch (c)
@@ -229,6 +230,9 @@ int window_menu_run_command(gui_t *gui, int c)
 			else
 				beep();
 			break;
+		case 'p':
+			cursor_menu = 5;
+			break;
 		case 'q':
 			if(user_profile)
 				cursor_menu = 6;
@@ -239,9 +243,9 @@ int window_menu_run_command(gui_t *gui, int c)
 		case '1':
 		case '2':
 		case '3':
+		case '4':
 			cursor_menu = c-48;
 			break;
-		case '4':
 		case '5':
 		case '6':
 			if(user_profile)
@@ -257,7 +261,7 @@ int window_menu_run_command(gui_t *gui, int c)
 			break;
 		default:
 			beep();
-		return -1;
+			return -1;
 	}
 
 	gui_update(gui);

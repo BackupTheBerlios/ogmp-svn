@@ -37,6 +37,7 @@
 #include "gui_topline.h"
 #include "gui_message.h"
 #include "gui_audio_test.h"
+#include "gui_preference.h"
 
 #include <timedia/os.h>
 #include <timedia/xmalloc.h>
@@ -742,6 +743,7 @@ gui_show(ui_t* ui)
 	window_profiles_done(ocui->gui_windows[GUI_PROFILES]);
 	window_message_done(ocui->gui_windows[GUI_MESSAGE]);
 	window_audio_test_done(ocui->gui_windows[GUI_AUDIOTEST]);
+	window_preference_done(ocui->gui_windows[GUI_PREFERENCE]);
 
 	xfree(ocui);
 	
@@ -771,6 +773,7 @@ int gui_set_sipua(ogmp_ui_t* ui, sipua_t* sipua)
 	ocui->gui_windows[GUI_PROFILES] = window_profiles_new(ocui);
 	ocui->gui_windows[GUI_MESSAGE] = window_message_new(ocui);
 	ocui->gui_windows[GUI_AUDIOTEST] = window_audio_test_new(ocui);
+	ocui->gui_windows[GUI_PREFERENCE] = window_preference_new(ocui);
 
 	ocui->nwin = 17;
 

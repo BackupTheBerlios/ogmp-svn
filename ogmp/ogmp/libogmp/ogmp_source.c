@@ -190,7 +190,7 @@ int source_remove_destinate(transmit_source_t *tsrc, char *mime, char *cname, ch
 	return -1;
 }
 
-media_source_t* source_open(char* name, media_control_t* control, char *mode)
+media_source_t* source_open(char* name, media_control_t* control, char *mode, void* mode_param)
 {
 	media_source_t *msrc;
 	transmit_source_t *tsrc;
@@ -277,15 +277,28 @@ media_source_t* source_open(char* name, media_control_t* control, char *mode)
 	msrc->start = source_start;
 	msrc->stop = source_stop;
 
-	if(0 == format->new_all_player(format, source->control, mode, NULL))
+    if(0 == strcmp(mode, "playback"))
 	{
-        source_done(msrc);
+		if(0 == format->new_all_player(format, source->control, "playback", mode_param))
+		{
+			source_done(msrc);
 
-        return NULL;
+			return NULL;
+		}
 	}
-
-    if(0 == strcmp(mode, "netcast"))
+    else if(0 == strcmp(mode, "netcast"))
 	{
+		netcast_parameter_t *np = (netcast_parameter_t*)mode_param;
+		
+		rtpcap_set_t* rtpcapset = rtp_capable_from_format(format, np->subject, np->info, np->user_profile);
+
+		if(0 == format->new_all_player(format, source->control, "netcast", rtpcapset))
+		{
+			source_done(msrc);
+
+			return NULL;
+		}
+
         /* In "netcast" mode */
         tsrc = (transmit_source_t*)source;
     

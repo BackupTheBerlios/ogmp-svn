@@ -75,6 +75,19 @@
 
 #include "phonebook.h"
 
+typedef struct sipua_setting_s sipua_setting_t;
+struct sipua_setting_s
+{
+	char nettype[8];
+	char addrtype[8];
+
+	int default_rtp_portno;
+	int default_rtcp_portno;
+
+	int ncoding;
+	rtp_coding_t codings[MAX_NPAYLOAD_PRESET];
+};
+
 /* Contact Proxy
  * Sender register its session info to proxy
  * recvr contact sender by interact with proxy
@@ -93,9 +106,6 @@ struct sipua_setid_s
 };
 
 typedef struct sipua_set_s sipua_set_t;
-
-
-
 
 struct sipua_set_s
 {
@@ -267,7 +277,6 @@ struct sipua_s
 	/**
 	 * conversation media
 	 * return new bandwidth, <0 fail 
-
 	int (*add)(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media, int bandwidth);
  	int (*remove)(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media);
 	 */
@@ -287,11 +296,18 @@ struct sipua_s
  	sipua_set_t* (*pick)(sipua_t* sipua, int line);
  	int (*hold)(sipua_t* sipua);
 
-	/* play media when call in queue or on hold */
-	media_source_t* (*set_background_source)(sipua_t* sipua, char* name);
+	/**
+	 * Set the default media playing when call in queue or on hold:
+	 * @param sipua		The default media source
+	 * @param subject	subject of SDP of background media
+	 * @param info		info of SDP of background media
+	 */
+	media_source_t* (*set_background_source)(sipua_t* sipua, char* name, char* subject, char* info);
+	
+	sipua_setting_t* (*setting)(sipua_t* sipua);
 
 	/* call media attachment */
-	media_source_t* (*open_source)(sipua_t* sipua, char* name, char* mode);
+	media_source_t* (*open_source)(sipua_t* sipua, char* name, char* mode, void* param);
 	int (*close_source)(sipua_t* sipua, media_source_t* src);
 
 	int (*attach_source)(sipua_t* sipua, sipua_set_t* call, transmit_source_t* src);
@@ -360,6 +376,7 @@ sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char* mode, rtpcap_set_t
 							   xlist_t* format_handlers, media_control_t* control, int pt_pool[]);
 
 /* Create a SDP with new set of media info */
+DECLSPEC
 char*
 sipua_call_sdp(sipua_t *sipua, sipua_set_t* call, int bw_budget, media_control_t* control,
                 char* mediatypes[], int rtp_ports[], int rtcp_ports[], int nmedia,

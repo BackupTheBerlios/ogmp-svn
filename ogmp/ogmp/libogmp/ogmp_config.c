@@ -52,7 +52,7 @@ int client_config_rtp(void *conf, control_setting_t *setting)
    return MP_OK;
 }
 
-ogmp_setting_t src_setting = 
+sipua_setting_t src_setting = 
 {
 	"IN",		/* nettype */
 	"IP4",		/* addrtype */
@@ -63,7 +63,7 @@ ogmp_setting_t src_setting =
     {{"audio/speex", 8000, 1, PAYLOADTYPE_DYNA}}
 };
 
-ogmp_setting_t clie_setting = 
+sipua_setting_t clie_setting = 
 {
 	"IN",		/* nettype */
 	"IP4",		/* addrtype */
@@ -74,12 +74,12 @@ ogmp_setting_t clie_setting =
     {{"audio/speex", 8000, 1, PAYLOADTYPE_DYNA}}
 };
 
-ogmp_setting_t* source_setting(media_control_t *control)
+sipua_setting_t* source_setting(media_control_t *control)
 {
 	return &src_setting;
 }
 
-ogmp_setting_t* client_setting(media_control_t *control)
+sipua_setting_t* client_setting(sipua_t* sipua)
 {
 	return &clie_setting;
 }

@@ -21,6 +21,8 @@
 #include <timedia/xmalloc.h>
 #include <timedia/xstring.h>
 #include <timedia/list.h>
+#include <timedia/ui.h>
+
 #include <stdlib.h>
 
 #include "../devices/dev_rtp.h"
@@ -33,7 +35,7 @@
 #define SPXSENDER_DEBUG
 
 #ifdef SPXSENDER_LOG
- #define spxs_log(fmtargs)  do{printf fmtargs;}while(0)
+ #define spxs_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define spxs_log(fmtargs)
 #endif
@@ -272,21 +274,23 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 
 	/* extra is cast to rtpcapset for rtp device */
 	rtpcap_set_t *rtpcapset = (rtpcap_set_t*)extra;
-	user_profile_t *user = rtpcapset->user_profile;
+	user_profile_t *user;
 
 	rtpcap_descript_t *rtpcap;
 
 	media_device_t *dev = NULL;
 	dev_rtp_t * dev_rtp = NULL;
 	rtp_setting_t *rtpset = NULL;
-
 	speex_setting_t *spxset = NULL;
 
 	speex_sender_t *ss = (speex_sender_t*)mp;
 
 	int total_bw;
 
-	spxs_log(("spxs_set_device: need rtp device\n"));
+	spxs_debug(("spxs_set_device: rtpcapset@%x\n", rtpcapset));
+
+	user = rtpcapset->user_profile;
+
 	rtpcap = rtp_get_capable(rtpcapset, global_const.mime_type);
 	if(!rtpcap)
 	{

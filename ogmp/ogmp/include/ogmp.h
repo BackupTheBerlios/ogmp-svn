@@ -105,7 +105,11 @@ struct ogmp_client_s
 	media_format_t *rtp_format;
 
 	xlist_t *format_handlers;
-	media_source_t *backgroud_source;
+
+	media_source_t *background_source;
+	char *background_source_subject;
+	char *background_source_info;
+
 	/*
 	sipua_set_t* call;
 	*/
@@ -170,18 +174,14 @@ struct ogmp_source_s
    media_player_t* players[MAX_NCAP];
 };
 
-typedef struct ogmp_setting_s ogmp_setting_t;
-struct ogmp_setting_s
+typedef struct netcast_parameter_s netcast_parameter_t;
+struct netcast_parameter_s
 {
-	char nettype[8];
-	char addrtype[8];
-
-	int default_rtp_portno;
-	int default_rtcp_portno;
-
-	int ncoding;
-	rtp_coding_t codings[MAX_NPAYLOAD_PRESET];
+	char *subject;
+	char *info;
+	user_profile_t *user_profile;
 };
+
 /*
 extern DECLSPEC
 ogmp_ui_t* global_ui;
@@ -195,15 +195,14 @@ int
 client_config_rtp(void *conf, control_setting_t *setting);
 
 DECLSPEC
-ogmp_setting_t* 
-client_setting(media_control_t *control);
+sipua_setting_t* client_setting(sipua_t* sipua);
 
 int client_call(ogmp_client_t *client, char *regname);
 
 DECLSPEC
 media_source_t* 
-source_open(char* name, media_control_t* control, char* mode);
+source_open(char* name, media_control_t* control, char* mode, void* mode_param);
 
-ogmp_setting_t* source_setting(media_control_t *control);
+sipua_setting_t* source_setting(media_control_t *control);
 
 #endif

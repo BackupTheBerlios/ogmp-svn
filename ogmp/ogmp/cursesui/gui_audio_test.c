@@ -26,7 +26,7 @@
 #define LINE_MAX 128
 #endif
 
-#define AUDIOTEST_FILE		0
+#define AUDIOTEST_FILE	0
 
 char audio_test_inputs[1][LINE_MAX];
 editline_t *audio_test_edit[2];
@@ -200,6 +200,7 @@ int window_audio_test_run_command(gui_t* gui, int c)
 		}
 		case 1:  /* Ctrl-A */
 		{
+			/*
 			if(!audio_test_source && audio_test_inputs[AUDIOTEST_FILE][0])
 			{
                 char* name = audio_test_inputs[AUDIOTEST_FILE];
@@ -209,10 +210,8 @@ int window_audio_test_run_command(gui_t* gui, int c)
 					beep();
 					break;
 				}
-                
-                printf("window_audio_test_run_command: 1\n");
 			}
-
+			*/
             break;
 		}
 		case 9:  /* Ctrl-I */
@@ -225,7 +224,7 @@ int window_audio_test_run_command(gui_t* gui, int c)
 			{
 				char* fname = audio_test_inputs[AUDIOTEST_FILE];
 
-				audio_test_source = ocui->sipua->open_source(ocui->sipua, fname, "playback");
+				audio_test_source = ocui->sipua->open_source(ocui->sipua, fname, "playback", NULL);
 				
 				if(!audio_test_source)
 				{

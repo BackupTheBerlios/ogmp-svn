@@ -624,13 +624,13 @@ sipua_set_t* client_find_call(sipua_t* sipua, char* id, char* username, char* ne
 
 sipua_set_t* client_new_call(sipua_t* sipua, char* subject, int sbytes, char *desc, int dbytes)
 {
-	ogmp_setting_t *setting;
+	sipua_setting_t *setting;
 	sipua_set_t* call;
 	ogmp_client_t* clie = (ogmp_client_t*)sipua;
 
 	int bw_budget = clie->control->book_bandwidth(clie->control, MAX_CALL_BANDWIDTH);
 
-	setting = client_setting(clie->control);
+	setting = sipua->setting(sipua);
 
 	call = sipua_new_call(sipua, clie->sipua.user_profile, NULL, subject, sbytes, desc, dbytes,
 						clie->mediatypes, clie->default_rtp_ports, clie->default_rtcp_ports, clie->nmedia,
@@ -647,13 +647,13 @@ sipua_set_t* client_new_call(sipua_t* sipua, char* subject, int sbytes, char *de
 
 char* client_set_call_source(sipua_t* sipua, sipua_set_t* call, media_source_t* source)
 {
-	ogmp_setting_t *setting;
+	sipua_setting_t *setting;
 	ogmp_client_t* clie = (ogmp_client_t*)sipua;
     char *sdp;
 
 	int bw_budget = clie->control->book_bandwidth(clie->control, MAX_CALL_BANDWIDTH);
 
-	setting = client_setting(clie->control);
+	setting = sipua->setting(sipua);
 
 	sdp = sipua_call_sdp(sipua, call, bw_budget, clie->control, clie->mediatypes,
                        clie->default_rtp_ports, clie->default_rtcp_ports,
@@ -734,7 +734,6 @@ int client_lock_lines(sipua_t* sipua)
 	xthr_lock(client->lines_lock);
 
 	return UA_OK;
-
 }
 
 int client_unlock_lines(sipua_t* sipua)
@@ -791,11 +790,11 @@ sipua_set_t* client_line(sipua_t* sipua, int line)
 	return client->lines[line];
 }
 
-media_source_t* client_open_source(sipua_t* sipua, char* name, char* mode)
+media_source_t* client_open_source(sipua_t* sipua, char* name, char* mode, void* param)
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 	
-	return source_open(name, client->control, mode);
+	return source_open(name, client->control, mode, param);
 }
 
 
@@ -807,21 +806,46 @@ int client_close_source(sipua_t* sipua, media_source_t* src)
 	return src->done(src);
 }
 
-media_source_t* client_set_background_source(sipua_t* sipua, char* name)
+media_source_t* client_set_background_source(sipua_t* sipua, char* name, char *subject, char *info)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
-    if(client->backgroud_source)
+    if(!client->sipua.user_profile)
+	{
+		clie_debug(("client_set_background_source: No user profile found\n"));
+		return NULL;
+	}
+
+	if(client->background_source)
     {
-        client->backgroud_source->stop(client->backgroud_source);
-        client->backgroud_source->done(client->backgroud_source);
-        client->backgroud_source = NULL;
+        client->background_source->stop(client->background_source);
+        client->background_source->done(client->background_source);
+        client->background_source = NULL;
+
+		if(client->background_source_subject)
+			xstr_done_string(client->background_source_subject);
+		if(client->background_source_info)
+			xstr_done_string(client->background_source_info);
+
+		client->background_source_subject = NULL;
+		client->background_source_info = NULL;
     }
 
     if(name && name[0])
-        client->backgroud_source = source_open(name, client->control, "netcast");
+	{
+        netcast_parameter_t np;
 
-    return client->backgroud_source;
+		np.subject = client->background_source_subject;
+		np.info = client->background_source_info;
+		np.user_profile = client->sipua.user_profile;
+
+		client->background_source = source_open(name, client->control, "netcast", &np);
+		
+		client->background_source_subject = xstr_clone(subject);
+		client->background_source_info = xstr_clone(info);
+	}
+
+    return client->background_source;
 }
 
 /* call media attachment */
@@ -1032,6 +1056,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
  	sipua->line = client_line;
 
 	sipua->set_background_source = client_set_background_source;
+	sipua->setting = client_setting;
 
 	sipua->open_source = client_open_source;
 	sipua->close_source = client_close_source;

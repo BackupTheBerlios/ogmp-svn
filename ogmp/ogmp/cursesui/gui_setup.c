@@ -19,32 +19,19 @@
  */
 
 #include "gui_setup.h"
+#include "editor.h"
 
 int cursor_setup = 0;
-
-typedef struct _j_codec 
-{
-	char payload[10];
-	char codec[200];
-	int enabled;
-
-} j_codec_t;
-
-j_codec_t j_codec[] = 
-{
-	{ {"0"}, {"PCMU/8000"}, 0},
-	{ {"8"}, {"PCMA/8000"}, 0},
-	{ {"3"}, {"GSM/8000"}, 0},
-	{ {"110"}, {"speex/8000"}, 0},
-	{ {"111"}, {"speex/16000"}, 0},
-	{ {"-1"}, {""} , -1}
-};
 
 int window_setup_print(gui_t* gui, int wid)
 {
 	int k;
 	int y,x;
 	char buf[250];
+
+	int h_playlist = 0;
+
+	sipua_setting_t *setting;
 
 	ogmp_curses_t* ocui = gui->topui;
 
@@ -57,30 +44,36 @@ int window_setup_print(gui_t* gui, int wid)
 
 	getmaxyx(stdscr,y,x);
 	attrset(A_NORMAL);
+
+	/* Window Title */
+	snprintf(buf, 250, "%199.199s", " ");
+
+	attrset(COLOR_PAIR(4));
+
+	mvaddnstr(gui->y0, gui->x0, buf, (x-gui->x0));
+	snprintf(buf, x-gui->x0-1, "Setup");
+	mvaddstr(gui->y0, gui->x0+1, buf);
+
+	/* Window Body */
 	attrset(COLOR_PAIR(1));
 
-	if (gui->x1==-999)
-    {}
-	else 
+	if (gui->x1 != -999)
 		x = gui->x1;
 
-	attrset(COLOR_PAIR(0));
+	setting = ocui->sipua->setting(ocui->sipua);
 
-	for (k=0; k<ocui->ncoding; k++)
+	for (k=0; k<setting->ncoding; k++)
     {
-		snprintf(buf, 199, "   %c%c %s %-150.150s ",
-					(cursor_setup==k) ? '-' : ' ',
-					(cursor_setup==k) ? '>' : ' ',
-					(ocui->codings[ocui->codex[k]].enabled==0) ? "ON " : "   ",
-					ocui->codings[ocui->codex[k]].coding.mime);
+		snprintf(buf, 250, " %c%c %-25.25s %d   %d   %199.199s",
+				(cursor_setup==k) ? '-' : ' ', (cursor_setup==k) ? '>' : ' ',
+				setting->codings[k].mime,
+				setting->codings[k].clockrate,
+				setting->codings[k].param, " ");
 
-		/* 
-		attrset(COLOR_PAIR(0));
-		attrset((k==cursor_setup) ? A_REVERSE : A_NORMAL); 
-		*/
 		attrset((k==cursor_setup) ? A_REVERSE : COLOR_PAIR(1));
 
-		mvaddnstr(gui->y0+1+k, gui->x0, buf, x-gui->x0-1);
+		mvaddnstr(gui->y0+1+h_playlist+k, gui->x0, buf, x-gui->x0-1);
+
 		if (k > y + gui->y1 - gui->y0 + 1)
 			break; /* do not print next one */
     }
@@ -95,12 +88,11 @@ void window_setup_draw_commands(gui_t* gui)
 	int x,y;
 	char *setup_commands[] = 
 	{
-		"<-",  "PrevWindow",
-		"->",  "NextWindow",
-		"e",  "Enable",
-		"d",  "Disable" ,
-		"q",  "Move Up",
-		"w",  "Move Down" ,
+		"^A",  "OK",
+		"^E",  "Enable",
+		"^D",  "Disable",
+		"^Q",  "Move Up",
+		"^W",  "Move Down",
 		NULL
 	};
   
@@ -113,6 +105,8 @@ int window_setup_run_command(gui_t* gui, int c)
 {
 	int max;
 	int k,y,x;
+
+	sipua_setting_t* setting;
 	ogmp_curses_t* ocui = gui->topui;
 
 	int *codex = ocui->codex;
@@ -122,35 +116,45 @@ int window_setup_run_command(gui_t* gui, int c)
 
 	getmaxyx(stdscr,y,x);
 
-	if (gui->x1 == -999)
-    {}
-	else 
+	if (gui->x1 != -999)
 		x = gui->x1;
 
-	if (gui->y1 < 0)
-		max = y + gui->y1 - gui->y0 + 2;
-	else
-		max = gui->y1 - gui->y0 + 2;
-  
-	if (ocui->ncoding < max) 
-		max = ocui->ncoding;
+	setting = ocui->sipua->setting(ocui->sipua);
 
-	k = 0; /* codec list untouched */
+	max = setting->ncoding;
+
+	k = 0;
 	switch (c)
     {
 		case KEY_DOWN:
 		{
 			cursor_setup++;
 			cursor_setup %= max;
+
 			break;
 		}
 		case KEY_UP:
 		{
 			cursor_setup += max-1;
 			cursor_setup %= max;
+
 			break;
 		}
-		case 'q':
+		case 4:   /* ^D */
+		{
+			codings[codex[cursor_setup]].enabled = -1;
+			k = 1; /* rebuilt set of codec */
+
+			break;
+		}
+		case 5:   /* ^E */
+		{
+			codings[codex[cursor_setup]].enabled = 0;
+			k = 1; /* rebuilt set of codec */
+
+			break;
+		}
+		case 17:   /* ^Q */
 		{
 			if (cursor_setup==0)
 			{ 
@@ -166,15 +170,17 @@ int window_setup_run_command(gui_t* gui, int c)
 				codex[cursor_setup] = codex[cursor_setup+1];
 				codex[cursor_setup+1] = i;
 			}
+
 			break;
 		}
-		case 'w':
+		case 23:   /* ^W */
 		{
 			if (cursor_setup==max-1)
 			{ 
 				beep(); 
 				break; 
 			}
+
 			cursor_setup++;
 			cursor_setup %= max;
 			k = 1;
@@ -183,48 +189,16 @@ int window_setup_run_command(gui_t* gui, int c)
 				codex[cursor_setup] = codex[cursor_setup-1];
 				codex[cursor_setup-1] = i;
 			}
-			break;
-		}
-		case 'e':
-		{
-			codings[codex[cursor_setup]].enabled = 0;
-			k = 1; /* rebuilt set of codec */
-			break;
-		}
-		case 'd':
-		{
-			codings[codex[cursor_setup]].enabled = -1;
-			k = 1; /* rebuilt set of codec */
+
 			break;
 		}
 		default:
 		{
 			beep();
-			return -1;
+            return -1;
 		}
     }
-/*
-	if (k==1)
-    {
-		eXosip_sdp_negotiation_remove_audio_payloads();
 
-		for (k=0;j_codec[k].codec[0]!='\0';k++)
-		{
-			char tmp[40];
-			if (j_codec[k].enabled==0)
-			{
-				snprintf(tmp, 40, "%s %s", j_codec[k].payload, j_codec[k].codec);
-				
-				eXosip_sdp_negotiation_add_codec(osip_strdup(j_codec[k].payload),
-					       NULL,
-					       osip_strdup("RTP/AVP"),
-					       NULL, NULL, NULL,
-					       NULL,NULL,
-					       osip_strdup(tmp));
-			}
-		}
-    }
-*/
 	if (gui->on_off==GUI_ON)
 		gui->gui_print(gui, gui->parent);
   
