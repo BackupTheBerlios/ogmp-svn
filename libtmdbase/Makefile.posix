@@ -27,7 +27,8 @@ CFLAGS = -fPIC
 LIBFILES:= libtmdbase/libtmdbase.so
 INCFILES:= libtmdbase/list.h libtmdbase/buffer.h libtmdbase/md5.h libtmdbase/os.h \
 	   libtmdbase/spinqueue.h libtmdbase/xmap.h libtmdbase/xstring.h	\
-	   libtmdbase/loader.h libtmdbase/catalog.h libtmdbase/config.h
+	   libtmdbase/loader.h libtmdbase/catalog.h libtmdbase/config.h \
+	   libtmdbase/socket.h libtmdbase/inet.h
 
 all: sharedlib test
 

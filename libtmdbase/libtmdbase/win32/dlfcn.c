@@ -16,7 +16,8 @@
 
 #define snprintf _snprintf
 
-void *dlopen(const char *module_name, int mode)
+void *
+dlopen(const char *module_name, int mode)
 {
     UINT em;
     HINSTANCE dsoh;
@@ -50,7 +51,8 @@ void *dlopen(const char *module_name, int mode)
     return (void *)dsoh;
 }
 
-char *dlerror(void)
+char *
+dlerror(void)
 {
     int len, nErrorCode;
     static char errstr[120];
@@ -87,12 +89,14 @@ char *dlerror(void)
     return errstr;
 }
 
-int dlclose(void *handle)
+int
+dlclose(void *handle)
 {
   return  FreeLibrary(handle);
 }
 
-void *dlsym(void *handle, const char *name)
+void *
+dlsym(void *handle, const char *name)
 {
   return GetProcAddress(handle, name);
 }
