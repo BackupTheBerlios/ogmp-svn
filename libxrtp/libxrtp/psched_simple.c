@@ -513,7 +513,6 @@ int simple_schedule_rtp(void * gen)
    return XRTP_OK;
 }
 
-
 int simple_schedule_rtcp(void * gen)
 {
    simple_sched_t * ssch = (simple_sched_t *)gen;
