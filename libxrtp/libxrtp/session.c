@@ -258,10 +258,82 @@ int session_done(xrtp_session_t* ses)
     return XRTP_OK;
 }
 
+ /**
+  * Set mode of the Session, which could be
+  *
+  * 'SESSION_SEND', 'SESSION_RECV' or 'SESSION_DUPLEX' etc.
+  */
+int session_set_mode(xrtp_session_t * ses, int mode)
+{
+    switch(mode)
+	{
+       case(SESSION_SEND):
+
+          ses->mode_trans = mode;
+          if(!ses->rtp_send_pipe)
+		  {
+             ses->rtp_send_pipe = pipe_new(ses, XRTP_RTP, XRTP_SEND);
+			if(!ses->rtp_send_pipe)
+				goto fail;
+             ses->rtcp_send_pipe = pipe_new(ses, XRTP_RTCP, XRTP_SEND);
+			if(!ses->rtcp_send_pipe)
+				goto fail;
+          }
+          break;
+          
+       case(SESSION_RECV):
+
+          ses->mode_trans = mode;
+          if(!ses->rtp_recv_pipe)
+		  {
+             ses->rtp_recv_pipe = pipe_new(ses, XRTP_RTP, XRTP_RECEIVE);
+			if(!ses->rtp_recv_pipe)
+				goto fail;
+             ses->rtcp_recv_pipe = pipe_new(ses, XRTP_RTCP, XRTP_RECEIVE);
+			if(!ses->rtcp_recv_pipe)
+				goto fail;
+          }
+          break;
+          
+       case(SESSION_DUPLEX):
+
+          ses->mode_trans = mode;
+          if(!ses->rtp_send_pipe)
+		  {
+             ses->rtp_send_pipe = pipe_new(ses, XRTP_RTP, XRTP_SEND);
+			if(!ses->rtp_send_pipe)
+				goto fail;
+             ses->rtcp_send_pipe = pipe_new(ses, XRTP_RTCP, XRTP_SEND);
+			if(!ses->rtcp_send_pipe)
+				goto fail;
+             ses->rtp_recv_pipe = pipe_new(ses, XRTP_RTP, XRTP_RECEIVE);
+			if(!ses->rtp_recv_pipe)
+				goto fail;
+             ses->rtcp_recv_pipe = pipe_new(ses, XRTP_RTCP, XRTP_RECEIVE);
+			if(!ses->rtcp_recv_pipe)
+				goto fail;
+          }
+          break;
+
+       default:   
+		   return XRTP_EUNSUP;
+    }
+
+    return XRTP_OK;
+
+fail:
+	if(ses->rtp_send_pipe) pipe_done(ses->rtp_send_pipe);
+    if(ses->rtcp_send_pipe) pipe_done(ses->rtcp_send_pipe);
+    if(ses->rtp_recv_pipe) pipe_done(ses->rtp_recv_pipe);
+    if(ses->rtcp_recv_pipe) pipe_done(ses->rtcp_recv_pipe);
+
+    return XRTP_FAIL;   
+}
+ 
 /**
  * Create a new Session
  */
-xrtp_session_t* session_new(xrtp_set_t* set, char *cname, int clen, char *ip, uint16 default_rtp_portno, uint16 default_rtcp_portno, module_catalog_t *cata, void *media_control)
+xrtp_session_t* session_new(xrtp_set_t* set, char *cname, int clen, char *ip, uint16 default_rtp_portno, uint16 default_rtcp_portno, module_catalog_t *cata, void *media_control, int mode)
 {
 
     char *name;
@@ -326,18 +398,8 @@ xrtp_session_t* session_new(xrtp_set_t* set, char *cname, int clen, char *ip, ui
 	ses->bandwidth_lock = xthr_new_lock();
 	ses->rtp_incoming_lock = xthr_new_lock();
 
-    ses->rtp_send_pipe = pipe_new(ses, XRTP_RTP, XRTP_SEND);
-    ses->rtcp_send_pipe = pipe_new(ses, XRTP_RTCP, XRTP_SEND);
-    ses->rtp_recv_pipe = pipe_new(ses, XRTP_RTP, XRTP_RECEIVE);
-    ses->rtcp_recv_pipe = pipe_new(ses, XRTP_RTCP, XRTP_RECEIVE);
-
-    if(!ses->rtp_send_pipe || !ses->rtcp_send_pipe || !ses->rtp_recv_pipe || !ses->rtcp_recv_pipe)
+	if(session_set_mode(ses, mode) < XRTP_OK)
 	{
-       if(ses->rtp_send_pipe) pipe_done(ses->rtp_send_pipe);
-       if(ses->rtcp_send_pipe) pipe_done(ses->rtcp_send_pipe);
-       if(ses->rtp_recv_pipe) pipe_done(ses->rtp_recv_pipe);
-       if(ses->rtcp_recv_pipe) pipe_done(ses->rtcp_recv_pipe);
-       
        xlist_done(ses->senders, NULL);
        xlist_done(ses->members, NULL);
 
@@ -1970,53 +2032,6 @@ xrtp_lrtime_t session_rtcp_delay(xrtp_session_t *ses)
     return XRTP_OK;
  }
 
- /**
-  * Set mode of the Session, which could be
-  *
-  * 'SESSION_SEND', 'SESSION_RECV' or 'SESSION_DUPLEX' etc.
-  */
- int session_set_mode(xrtp_session_t * ses, int mode)
- {
-    switch(mode)
-	{
-       case(SESSION_SEND):
-
-          ses->mode_trans = mode;
-          if(!ses->rtp_send_pipe)
-		  {
-             ses->rtp_send_pipe = pipe_new(ses, XRTP_RTP, XRTP_SEND);
-             ses->rtcp_send_pipe = pipe_new(ses, XRTP_RTCP, XRTP_SEND);
-          }
-          break;
-          
-       case(SESSION_RECV):
-
-          ses->mode_trans = mode;
-          if(!ses->rtp_recv_pipe)
-		  {
-             ses->rtp_recv_pipe = pipe_new(ses, XRTP_RTP, XRTP_RECEIVE);
-             ses->rtcp_recv_pipe = pipe_new(ses, XRTP_RTCP, XRTP_RECEIVE);
-          }
-          break;
-          
-       case(SESSION_DUPLEX):
-
-          ses->mode_trans = mode;
-          if(!ses->rtp_send_pipe)
-		  {
-             ses->rtp_send_pipe = pipe_new(ses, XRTP_RTP, XRTP_SEND);
-             ses->rtcp_send_pipe = pipe_new(ses, XRTP_RTCP, XRTP_SEND);
-             ses->rtp_recv_pipe = pipe_new(ses, XRTP_RTP, XRTP_RECEIVE);
-             ses->rtcp_recv_pipe = pipe_new(ses, XRTP_RTCP, XRTP_RECEIVE);
-          }
-          break;
-
-       default:   return XRTP_EUNSUP;
-    }
-
-    return XRTP_OK;
- }
- 
 int session_done_module(void *gen)
 {
    profile_class_t * mod = (profile_class_t *)gen;
@@ -2188,9 +2203,10 @@ xrtp_media_t * session_new_media(xrtp_session_t * ses, uint8 profile_no, char *p
 			return NULL;
 		}
 	}
-	else if(ses->mode_trans == SESSION_RECV || ses->mode_trans == SESSION_DUPLEX)
+	
+	if(ses->mode_trans == SESSION_RECV || ses->mode_trans == SESSION_DUPLEX)
 	{
-		if(ses->media)
+		if(!ses->media)
 		{
 			pipe_add(ses->rtp_recv_pipe, med, XRTP_ENABLE);
 			pipe_add(ses->rtcp_recv_pipe, med, XRTP_ENABLE);
@@ -3344,7 +3360,7 @@ int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 time
     
 	datalen = connect_receive(ses->rtcp_incoming, &pdata, &packet_header_bytes, &ms_arrival, &us_arrival, &ns_arrival);
 
-    /* New RTCP Packet, 0 packet means default implementation depends value */
+	/* New RTCP Packet, 0 packet means default implementation depends value */
     rtcp = rtcp_new_compound(ses, RTP_RECEIVE, ses->rtcp_incoming, ms_arrival, us_arrival, ns_arrival);
     if(!rtcp)
        return XRTP_EMEM;
@@ -3352,6 +3368,7 @@ int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 time
     buf = buffer_new(0, NET_BYTEORDER);
     buffer_mount(buf, pdata, datalen);
 
+    printf("session_rtcp_to_receive: 3\n");
     rtcp_set_buffer(rtcp, buf);
     rtcp->bytes_received = datalen + packet_header_bytes; /* eg. (UDP+IP) header bytes */
 

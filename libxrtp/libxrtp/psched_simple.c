@@ -661,7 +661,6 @@ int simple_schedule_rtcp(void * gen)
          }
       }
 
-
       /* If any session need to send rtcp */
       if(n_expired)
 	  {

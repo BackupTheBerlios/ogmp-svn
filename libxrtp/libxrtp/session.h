@@ -479,7 +479,7 @@ struct xrtp_session_s
  */
 extern DECLSPEC
 xrtp_session_t * 
-session_new(xrtp_set_t* set, char * cname, int clen, char *ip, uint16 rtp_portno, uint16 rtcp_portno, module_catalog_t * cata, void *media_control);
+session_new(xrtp_set_t* set, char * cname, int clen, char *ip, uint16 rtp_portno, uint16 rtcp_portno, module_catalog_t * cata, void *media_control, int mode);
 
 /**
  * Release the Session

@@ -27,8 +27,8 @@
  
 #include "stdio.h"
 /*
-#define PIPELINE_LOG
 */
+#define PIPELINE_LOG
 #define PIPELINE_DEBUG
 
 #ifdef PIPELINE_LOG
@@ -86,20 +86,20 @@
     return XRTP_OK;
  }
 
- pipe_step_t * pipe_add(packet_pipe_t *pipe, profile_handler_t *handler, int enable){
-
+ pipe_step_t * pipe_add(packet_pipe_t *pipe, profile_handler_t *handler, int enable)
+ {
     pipe_step_t * step;
  
-    if(pipe->num_step == PIPE_MAX_STEP){
-      
-       pipe_log(("< pipe_add:pipe max handler reached >\n"));
+    if(pipe->num_step == PIPE_MAX_STEP)
+	{
+       pipe_log(("pipe_add:pipe max handler reached\n"));
        return NULL;
     }
 
     step = (pipe_step_t *)xmalloc(sizeof(pipe_step_t));
-    if(!step){
-      
-       pipe_log(("< pipe_add: No enough memory to alloc pipe handler >\n"));
+    if(!step)
+	{
+       pipe_log(("pipe_add: No enough memory to alloc pipe handler\n"));
        return NULL;
     }
 
@@ -113,7 +113,6 @@
     step->enable = enable;
 
     pipe->steps[pipe->num_step] = step;
-
 
     step->step_no = pipe->num_step;
     pipe->num_step++;
@@ -236,12 +235,14 @@
     return XRTP_OK;
  }
 
- int pipe_first_step(packet_pipe_t * pipe){
-
+ int pipe_first_step(packet_pipe_t * pipe)
+ {
     int i;
-    for(i = 0; i < pipe->num_step; i++){
-       if(pipe->steps[i]->enable){
 
+    for(i = 0; i < pipe->num_step; i++)
+	{
+       if(pipe->steps[i]->enable)
+	   {
           return i;
        }
     }
@@ -513,17 +514,18 @@
        pipe_log(("pipe_pump: rtp packet ready for scheduling\n"));
     }
 
-
-    if(!pipe->stop && pipe->type == XRTP_RTCP){   /* Produce the rtcp packet successfully */
-
+    if(!pipe->stop && pipe->type == XRTP_RTCP)
+	{   
+		/* Produce the rtcp packet successfully */
        /* return with the RTCP data for sending */
        /* Little confusion, may clarify these later */
        pipe_log(("pipe_pump: rtcp ready for sending\n"));
     }
 
-    if(pipe->stop){  /* pipe interupted, consume the packet */
+    if(pipe->stop)
+	{  /* pipe interupted, consume the packet */
        
-       pipe_log(("< pipe_pump: Fail to produce the packet >\n"));
+       pipe_debug(("pipe_pump: Fail to produce the packet\n"));
        
        if(pipe->type == XRTP_RTP)
           rtp_packet_done((xrtp_rtp_packet_t*)pac);
@@ -539,7 +541,6 @@
     
     if(pipe->direct == XRTP_SEND && packet_bytes != NULL)
        *packet_bytes = load->packet_bytes;
-
 
     step->load = NULL;
 
