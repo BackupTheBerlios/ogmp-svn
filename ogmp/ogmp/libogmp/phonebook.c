@@ -24,7 +24,7 @@
 
 #ifdef PBK_LOG
  #include <stdio.h>
- #define pbk_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
+ #define pbk_log(fmtargs)  do{ui_share.print_log fmtargs;}while(0)
 #else
  #define pbk_log(fmtargs)
 #endif

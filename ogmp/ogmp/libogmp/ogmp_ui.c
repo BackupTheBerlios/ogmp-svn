@@ -19,10 +19,11 @@
 #include "ogmp.h"
 
 #include <stdarg.h>
-
+/*
 extern ogmp_ui_t* global_ui = NULL;
+extern ui_t ui_share;
 
-int ui_print_log(char *fmt, ...)
+int ogmp_print_log(char *fmt, ...)
 {
 	int ret;
     int loglen;
@@ -51,20 +52,22 @@ int ui_print_log(char *fmt, ...)
 
 	return ret;
 }
-
+*/
 int ogmp_done_ui(void* gen)
 {
-    ogmp_ui_t* ui = (ogmp_ui_t*)gen;
+    ui_t* ui = (ui_t*)gen;
+
+    global_set_ui(NULL);
+	//ui_share.print_log = NULL;
 
     ui->done(ui);
-    global_ui = NULL;
 
     return UA_OK;
 }
 
-ogmp_ui_t* client_new_ui(module_catalog_t* mod_cata, char* type)
+ui_t* client_new_ui(module_catalog_t* mod_cata, char* type)
 {
-    ogmp_ui_t* ui = NULL;
+    ui_t* ui = NULL;
     
     xlist_user_t lu;
     xlist_t* uis  = xlist_new();
@@ -73,7 +76,7 @@ ogmp_ui_t* client_new_ui(module_catalog_t* mod_cata, char* type)
     int nmod = catalog_create_modules (mod_cata, "ui", uis);
     if(nmod)
     {
-        ui = (ogmp_ui_t*)xlist_first(uis, &lu);
+        ui = (ui_t*)xlist_first(uis, &lu);
         while(ui)
         {
             if(ui->match_type(ui, type))
@@ -92,7 +95,8 @@ ogmp_ui_t* client_new_ui(module_catalog_t* mod_cata, char* type)
     if(!found)
         return NULL;
 
-    global_ui = ui;
+	//ui_share.print_log = ogmp_print_log;
+    global_set_ui(ui);
     
     return ui;
 }

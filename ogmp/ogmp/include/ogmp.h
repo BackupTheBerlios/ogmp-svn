@@ -25,6 +25,7 @@
 #include <timedia/xmalloc.h>
 #include <timedia/catalog.h>
 #include <timedia/config.h>
+#include <timedia/ui.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -66,16 +67,19 @@ typedef struct ogmp_source_s ogmp_source_t;
 typedef struct ogmp_ui_s ogmp_ui_t;
 struct ogmp_ui_s
 {
+	struct ui_s ui;
+	/*
 	int (*done)(ogmp_ui_t *ui);
 	int (*match_type)(ogmp_ui_t *ui, char* type);
-    int (*set_sipua)(ogmp_ui_t *ui, sipua_t* sipua);
     
 	int (*show)(ogmp_ui_t *ui);
     
     int (*logbuf)(ogmp_ui_t *ui, char** buf);
     int (*print_log)(ogmp_ui_t *ui, char* buf);
     int (*beep)(ogmp_ui_t *ui);
-    
+    */
+    int (*set_sipua)(ogmp_ui_t *ui, sipua_t* sipua);
+
 	ogmp_command_t*(*wait_command)(ogmp_ui_t *ui);
 };
 /*
@@ -117,7 +121,7 @@ struct ogmp_client_s
 	xthr_lock_t *course_lock;
 	xthr_cond_t *wait_course_finish;
 
-	ogmp_ui_t* ui;
+	ogmp_ui_t* ogui;
 
 	xthread_t* main_thread;
 
@@ -179,12 +183,12 @@ struct ogmp_setting_s
 	int ncoding;
 	rtp_coding_t codings[MAX_NPAYLOAD_PRESET];
 };
-
+/*
 extern DECLSPEC
 ogmp_ui_t* global_ui;
-
+*/
 extern DECLSPEC
-ogmp_ui_t* 
+ui_t* 
 client_new_ui(module_catalog_t* mod_cata, char* type);
 
 DECLSPEC

@@ -194,7 +194,9 @@ rtp_capable_from_sdp(sdp_message_t *sdp);
 
 int rtp_capable_cname(rtpcap_set_t* set, char *cn, int bytes);
 
-rtpcap_descript_t* rtp_get_capable(rtpcap_set_t* set, char* mime);
+DECLSPEC
+rtpcap_descript_t* 
+rtp_get_capable(rtpcap_set_t* set, char* mime);
 
 DECLSPEC
 int 

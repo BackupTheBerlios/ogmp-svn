@@ -583,7 +583,7 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 			media_control_t *ctrl;
 
 			media_device_t *audio_in;
-			media_receiver_t *creater;
+			media_maker_t *maker;
 			media_player_t *player;
 
 			ctrl = (media_control_t*)session_media_control(ses);
@@ -592,9 +592,9 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 			player = ctrl->new_player(ctrl, "netcast", SPEEX_MIME, "", ses);
 
 			audio_in = ctrl->find_device(ctrl, "audio_in");
-			creater = ctrl->find_creater(ctrl, SPEEX_MIME, (media_info_t*)&spxinfo);
+			maker = ctrl->find_creater(ctrl, SPEEX_MIME, (media_info_t*)&spxinfo);
 
-			creater->new_media_stream(creater, audio_in, player, (media_info_t*)&spxinfo);
+			maker->new_media_stream(maker, audio_in, player, (media_info_t*)&spxinfo);
 			
 			audio_in->start(audio_in, ctrl);
 
@@ -1225,9 +1225,9 @@ int rtp_speex_play(void *player, void *media, int64 packetno, int ts_last, int e
 	mf->sno = packetno;
 
 	if(eos)
-		mp->receive_media(mp, mf, mf?mf->samplestamp:-1, MP_EOS);
+		mp->receiver.receive_media(&mp->receiver, mf, mf?mf->samplestamp:-1, MP_EOS);
 	else
-		mp->receive_media(mp, mf, mf->samplestamp, ts_last);
+		mp->receiver.receive_media(&mp->receiver, mf, mf->samplestamp, ts_last);
 
 	xfree(mf->raw);
 	xfree(mf);

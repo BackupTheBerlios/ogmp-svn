@@ -31,7 +31,7 @@
 #endif
 
 #ifdef RTPCAP_DEBUG
- #define rtpcap_debug(fmtargs)  do{printf fmtargs;}while(0)
+ #define rtpcap_debug(fmtargs)  do{ui_printf_log fmtargs;}while(0)
 #else
  #define rtpcap_debug(fmtargs)
 #endif

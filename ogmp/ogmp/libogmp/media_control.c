@@ -34,7 +34,6 @@
  #define cont_log(fmtargs)
 #endif             
 
-
 #ifdef MEDIA_CONTROL_DEBUG
  #define cont_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else

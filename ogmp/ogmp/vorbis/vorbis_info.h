@@ -17,7 +17,7 @@
 
 #define OGM_VORBIS_H
 
-#include "../media_format.h"
+#include "media_format.h"
 
 #ifdef OGG_TREMOR_CODEC
    #include "Tremor/ivorbiscodec.h"

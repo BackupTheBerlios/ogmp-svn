@@ -129,7 +129,7 @@ int spxr_receive_media (media_receiver_t *mr, void *mf, int64 samplestamp, int l
 	spxf.nraw = enc->encoding_nsample_expect;
 	spxf.eots = 1;
 
-	stream->player->receive_media(stream->player, &spxf, enc->group_samplestamp, last_packet);
+	stream->player->receiver.receive_media(&stream->player->receiver, &spxf, enc->group_samplestamp, last_packet);
    
 	/* for next group */
 	enc->group_samplestamp += enc->nsample_per_group;

@@ -663,9 +663,11 @@ gui_update(gui_t* gui)
 }
 
 int
-gui_show(ogmp_ui_t* ogui)
+gui_show(ui_t* ui)
 {
-    gui_event_t* gui_e;
+    ogmp_ui_t* ogui = (ogmp_ui_t*)ui;
+
+	gui_event_t* gui_e;
     ogmp_curses_t* ocui = (ogmp_curses_t*)ogui;
 
 	ocui->gui_windows[LOGLINESGUI]->on_off = GUI_ON;
@@ -791,7 +793,7 @@ int gui_set_sipua(ogmp_ui_t* ui, sipua_t* sipua)
 	return UA_OK;
 }
 
-int gui_match_type(ogmp_ui_t* ui, char *type)
+int gui_match_type(ui_t* ui, char *type)
 {
     if(strcmp(type, "cursesui")==0)
         return 1;
@@ -799,7 +801,7 @@ int gui_match_type(ogmp_ui_t* ui, char *type)
 	return 0;
 }
 
-int gui_logbuf(ogmp_ui_t* ui, char **buf)
+int gui_logbuf(ui_t* ui, char **buf)
 {
 	ogmp_curses_t *ocui = (ogmp_curses_t*)ui;
 
@@ -809,7 +811,7 @@ int gui_logbuf(ogmp_ui_t* ui, char **buf)
 }
 
 /* return actual line number output */
-int gui_print_log(ogmp_ui_t* ogui, char *buf)
+int gui_print_log(ui_t* ui, char *buf)
 {
 	char *p;
 	int i=0;
@@ -817,7 +819,7 @@ int gui_print_log(ogmp_ui_t* ogui, char *buf)
 
 	int l = 0;
 
-	ogmp_curses_t *ocui = (ogmp_curses_t*)ogui;
+	ogmp_curses_t *ocui = (ogmp_curses_t*)ui;
 
 	xthr_lock(log_lock);
 
@@ -863,14 +865,14 @@ int gui_print_log(ogmp_ui_t* ogui, char *buf)
 	return l;
 }
 
-int gui_beep(ogmp_ui_t* ui)
+int gui_beep(ui_t* ui)
 {
     beep();
     
     return UA_OK;
 }
 
-int gui_done(ogmp_ui_t* ui)
+int gui_done(ui_t* ui)
 {
 	ogmp_curses_t *ocui = (ogmp_curses_t*)ui;
     
@@ -897,15 +899,18 @@ module_interface_t* ogmp_new_ui()
     
 	ogui = (ogmp_ui_t*)ocui;
 
-	ogui->done = gui_done;
-    ogui->match_type = gui_match_type;
+	ogui->ui.done = gui_done;
+    ogui->ui.match_type = gui_match_type;
+
+	ogui->ui.show = gui_show;
+    ogui->ui.beep = gui_beep;
+
+    ogui->ui.logbuf = gui_logbuf;
+
+    ogui->ui.print_log = gui_print_log;
+    
 	ogui->set_sipua = gui_set_sipua;
 
-	ogui->show = gui_show;
-    ogui->logbuf = gui_logbuf;
-    ogui->print_log = gui_print_log;
-    ogui->beep = gui_beep;
-    
 	return ogui;
 }
 

@@ -112,7 +112,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			/* registering transaction completed */
             client->reg_profile = NULL;
 
-            client->ui->beep(client->ui);
+            client->ogui->ui.beep(&client->ogui->ui);
 
 			break;
 		}
@@ -679,8 +679,8 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
 	client = xmalloc(sizeof(ogmp_client_t));
 	memset(client, 0, sizeof(ogmp_client_t));
 
-	client->ui = client_new_ui(mod_cata, uitype);
-    if(client->ui == NULL)
+	client->ogui = (ogmp_ui_t*)client_new_ui(mod_cata, uitype);
+    if(client->ogui == NULL)
     {
         clie_log (("client_new: No cursesui module found!\n"));
         xfree(client);
@@ -690,7 +690,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
     
 	sipua = (sipua_t*)client;
 
-    client->ui->set_sipua(client->ui, sipua);
+    client->ogui->set_sipua(client->ogui, sipua);
 
 	client->control = new_media_control();
 
@@ -787,7 +787,7 @@ int client_start(sipua_t* sipua)
 {
 	ogmp_client_t *clie = (ogmp_client_t*)sipua;
 
-	clie->ui->show(clie->ui);
+	clie->ogui->ui.show(&clie->ogui->ui);
 
 	return MP_OK;
 }

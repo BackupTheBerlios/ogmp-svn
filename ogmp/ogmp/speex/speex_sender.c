@@ -169,12 +169,12 @@ const char* spxs_play_type(media_player_t * mp)
    return global_const.play_type;
 }
 
-const char* spxs_media_type(media_player_t * mp)
+char* spxs_media_type(media_player_t * mp)
 {
    return global_const.media_type;
 }
 
-const char* spxs_codec_type(media_player_t * mp)
+char* spxs_codec_type(media_player_t * mp)
 {
    return "";
 }
