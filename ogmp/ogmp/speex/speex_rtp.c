@@ -1124,7 +1124,6 @@ int rtp_speex_send_loop(void *gen)
 
 			spxrtp_log(("rtp_speex_send_loop: waiting is over!\n"));
 
-
 			profile->idle = 0;
 		}
 
@@ -1224,7 +1223,6 @@ int rtp_speex_send_loop(void *gen)
 			if(first_payload)
 				usec_stream_payload = usec_now;
 
-
 			if(first_group_payload)
 			{
 				/* group usec range from the time send the first rtp payload of the samplestamp */
@@ -1232,24 +1230,24 @@ int rtp_speex_send_loop(void *gen)
 					usec_group_start = usec_now;
 				else
 					usec_group_start = usec_group_end + 1;
-
 					
 				usec_group_end = usec_group_start + usec_group;
 
-				spxrtp_debug(("rtp_speex_send_loop: %dus...%dus\n", usec_group_start, usec_group_end));
+				spxrtp_log(("rtp_speex_send_loop: %dus...%dus\n", usec_group_start, usec_group_end));
 			}
 
-			usec_payload = (rtime_t)((int64)payload_samples * 1000000 / spxinfo->audioinfo.info.sample_rate);
+			usec_payload = payload_nframe * SPX_FRAME_MSEC * 1000;
 			usec_payload_deadline = usec_stream_payload + usec_payload;
 
 			/* Test purpose
-			spxrtp_log(("audio/speex.rtp_speex_send_loop: payload[%d]@%dus (%dP,%dS,%dus)\n", profile->usec_payload_timestamp, usec_stream_payload, payload_packets, payload_samples, usec_payload));
-			spxrtp_log(("audio/speex.rtp_speex_send_loop: %dus now, deadline[%dus]...in #%dus\n", usec_now, usec_payload_deadline, usec_payload_deadline - usec_now));
+			spxrtp_debug(("audio/speex.rtp_speex_send_loop: payload[%d]@%dus (%dS,%dus)\n", profile->usec_payload_timestamp, usec_stream_payload, payload_samples, usec_payload));
+			spxrtp_debug(("audio/speex.rtp_speex_send_loop: %dus now, deadline[%dus]...in #%dus\n", usec_now, usec_payload_deadline, usec_payload_deadline - usec_now));
 			 Test end */
 
 			/* call for session sending 
 			 * usec left before send rtp packet to the net
 			 * deadline<=0, means ASAP, the quickness decided by bandwidth
+				spxrtp_debug(("rtp_speex_send_loop: deadline[%dus]@%d,eots[%d], remains %d packets\n", usec_payload_deadline, (int)ses_clock, eots, xlist_size(profile->packets)));
 			 */
 			session_rtp_to_send(profile->session, usec_payload_deadline, eots);  
          /*
@@ -1313,9 +1311,9 @@ int rtp_speex_post(xrtp_media_t* media, media_data_t* frame, int data_bytes, uin
    xthr_lock(profile->packets_lock);
    
    xlist_addto_last(profile->packets, rtpf);
+
    if(rtpf->samplestamp != profile->recent_samplestamp)
    {
-
 	   /* when new group coming, old group will be discard 
 	    * if could not catch up the time */
 	   profile->group_first_frame = rtpf;
@@ -1326,7 +1324,7 @@ int rtp_speex_post(xrtp_media_t* media, media_data_t* frame, int data_bytes, uin
 
    if(profile->idle) 
 	   xthr_cond_signal(profile->pending);
-
+		
    return MP_OK;
 }
 

@@ -30,10 +30,10 @@
 #include "speex_info.h"
 
 #define PROFILE_MIME "audio/speex"
-
+/*
 #define SPXSENDER_LOG
 #define SPXSENDER_DEBUG
-
+*/
 #ifdef SPXSENDER_LOG
  #define spxs_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
@@ -441,9 +441,8 @@ int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 sample
    /**
     * Prepare frame for packet sending
     * NOTE: DATA IS CLONED!
-    */
-    
    spxs_debug(("spxs_receive_next: output->new_frame@%x\n", (int)output->new_frame));
+    */
    
    rtpf = (rtp_frame_t *)output->new_frame(output, mf->bytes, mf->raw);
 

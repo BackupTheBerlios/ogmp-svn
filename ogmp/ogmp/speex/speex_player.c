@@ -231,7 +231,6 @@ char* spxp_media_type(media_player_t * mp)
 char* spxp_play_type(media_player_t * mp)
 {
    return global_const.play_type;
-
 }
 
 media_pipe_t * spxp_pipe(media_player_t * p)
@@ -265,7 +264,6 @@ int spxp_set_options (media_player_t * mp, char *opt, void *value)
     }
 
 	{
-
         spxp_log(("vorbis_set_options: the option is not supported\n"));
         return MP_EUNSUP;
     }

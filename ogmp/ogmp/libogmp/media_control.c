@@ -494,7 +494,7 @@ int cont_demux_next (media_control_t * cont, int strm_end)
    
    if(impl->demuxing != 0)
 	{
-	   cont_log(("cont_demux_next: %dus period, last sleep %dus(need catchup %dus)\n", impl->period_us, impl->sleep_us, impl->catchup_us));
+	   cont_debug(("cont_demux_next: %dus period, last sleep %dus(need catchup %dus)\n", impl->period_us, impl->sleep_us, impl->catchup_us));
 
 	   demux_us = time_usec_spent(impl->clock, impl->period_start);
 
