@@ -109,7 +109,9 @@ struct sipua_set_s
 	int lineno;  /* on which line */
 
 	user_profile_t* user_prof;
-    char* from;
+
+	char* proto; /* 'sip' or 'sips' */
+    char* from;  /* name@domain, for outgoing call, from = NULL */
 
 	int status;  /* line status */
 /*

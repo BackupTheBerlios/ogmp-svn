@@ -159,6 +159,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			sdp_message_t *sdp_message;
 			char* sdp_body = (char*)e->content;
 
+			char *p, *q;
+
 			sdp_message_init(&sdp_message);
 
 			if (sdp_message_parse(sdp_message, sdp_body) != 0)
@@ -189,7 +191,17 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			call->did = call_e->did;
 			call->rtpcapset = rtpcapset;
 
-            call->from = xstr_clone(call_e->remote_uri);
+            /* Parse from uri */
+			p = call_e->remote_uri;
+			while(*p != '<') p++;
+			q = ++p;
+			while(*q != ':') q++;
+
+			call->proto = xstr_nclone(p, q-p);
+			p = ++q;
+			while(*q != '>') q++;
+
+			call->from = xstr_nclone(p, q-p);
             
 			for(i=0; i<MAX_SIPUA_LINES; i++)
 			{
@@ -277,8 +289,11 @@ int sipua_done_sip_session(void* gen)
 
 	xfree(set->setid.id);
 	xfree(set->version);
+
 	xstr_done_string(set->subject);
 	xstr_done_string(set->info);
+
+    xstr_done_string(set->proto);
     xstr_done_string(set->from);
 
 	set->rtp_format->done(set->rtp_format);

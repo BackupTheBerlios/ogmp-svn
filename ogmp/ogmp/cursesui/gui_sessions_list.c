@@ -93,20 +93,28 @@ int window_sessions_list_print(gui_t* gui, int wid)
 
 		if(line==calllist_line)
 		{
-			snprintf(buf, x - gui->x0, " %c%c [%d] %s - [%s]%-80.80s",
-					'-', '>', line, call->from, call->subject, " ");
+			if(call->from)
+				snprintf(buf, x - gui->x0, " %c%c [%d] <%s>: %s - %-80.80s",
+						'-', '>', line, call->from, call->subject, call->info);
+			else
+				snprintf(buf, x - gui->x0, " %c%c [%d] Myself: %s - %-80.80s",
+						'-', '>', line, call->subject, call->info);
       
 			attrset(COLOR_PAIR(10));
 		}
 		else
 		{
-			snprintf(buf, x - gui->x0, " %c%c %d. %s - [%s]%-80.80s",
-					' ', ' ', line, call->from, call->subject, " ");
+			if(call->from)
+				snprintf(buf, x - gui->x0, " %c%c  %d  <%s>: %s - %-80.80s",
+						' ', ' ', line, call->from, call->subject, call->info);
+			else
+				snprintf(buf, x - gui->x0, " %c%c  %d  Myself: %s - %-80.80s",
+						' ', ' ', line, call->subject, call->info);
       
 			attrset(COLOR_PAIR(1));
 		}
 
-		mvaddnstr(gui->y0+1+n, gui->x0, buf, x-gui->x0);
+		mvaddnstr(gui->y0+1+line, gui->x0, buf, x-gui->x0);
 
 		if (n == max)
 			break;
