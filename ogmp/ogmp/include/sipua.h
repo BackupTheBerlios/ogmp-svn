@@ -231,6 +231,8 @@ sipua_uas_t* sipua_uas(int portno, char* nettype, char* addrtype, char* firewall
 struct sipua_s
 {
 	sipua_uas_t* uas;
+
+	sipua_set_t* incall;  /* The call in conversation */
 	
 	int (*done)(sipua_t *ua);
 
@@ -270,7 +272,7 @@ struct sipua_s
 
 	/* switch current call session */
  	sipua_set_t* (*pick)(sipua_t* sipua, int line);
- 	int (*hold)(sipua_t* sipua, sipua_set_t* call);
+ 	int (*hold)(sipua_t* sipua);
 
 	/* play media when call in queue or on hold */
 	media_source_t* (*set_background_source)(sipua_t* sipua, char* name);

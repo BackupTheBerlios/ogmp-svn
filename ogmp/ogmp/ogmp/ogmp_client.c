@@ -320,7 +320,7 @@ int client_done_call(sipua_t* sipua, sipua_set_t* set)
 	int i;
 	ogmp_client_t *ua = (ogmp_client_t*)sipua;
 
-	if(ua->call != set)
+	if(ua->sipua.incall != set)
     {
 		for(i=0; i<MAX_SIPUA_LINES; i++)
         {
@@ -333,7 +333,7 @@ int client_done_call(sipua_t* sipua, sipua_set_t* set)
     }
 	else
 	{
-		ua->call = NULL;
+		ua->sipua.incall = NULL;
 	}
 
 	ua->control->release_bandwidth(ua->control, set->bandwidth);
@@ -353,13 +353,10 @@ int sipua_done(sipua_t *sipua)
 		if(ua->lines[i])
 			sipua_done_sip_session(ua->lines[i]);
 
-	if(ua->call)
-		sipua_done_sip_session(ua->call);
+	if(ua->sipua.incall)
+		sipua_done_sip_session(ua->sipua.incall);
 
 	xthr_done_lock(ua->lines_lock);
-
-
-
 
 	xfree(ua);
 
@@ -542,7 +539,7 @@ sipua_set_t* client_session(sipua_t* sipua)
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
-	return client->call;
+	return client->sipua.incall;
 }
 
 sipua_set_t* client_line(sipua_t* sipua, int line)
@@ -618,7 +615,6 @@ int client_attach_source(sipua_t* sipua, sipua_set_t* call, transmit_source_t* t
 
 int client_detach_source(sipua_t* sipua, sipua_set_t* call, transmit_source_t* tsrc)
 {
-
 	return MP_EIMPL;
 }
 	
@@ -627,30 +623,31 @@ sipua_set_t* client_pick(sipua_t* sipua, int line)
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
-	if(client->call)
+	if(client->sipua.incall)
 		return NULL;
 
-	client->call = client->lines[line];
+	client->sipua.incall = client->lines[line];
 	client->lines[line] = NULL;
 
 	/* FIXME: Howto transfer call from waiting session */
 
-	return client->call;
+	return client->sipua.incall;
 }
 
-int client_hold(sipua_t* sipua, sipua_set_t* call)
+int client_hold(sipua_t* sipua)
 {
 	int i;
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
-	if(!client->call)
+	if(!client->sipua.incall)
 		return -1;
 
 	for(i=0; i<MAX_SIPUA_LINES; i++)
 		if(!client->lines[i])
 			break;
 
-	client->lines[i] = call;
+	client->lines[i] = client->sipua.incall;
+	client->sipua.incall = NULL;
 
 	/* FIXME: Howto transfer call to waiting session */
 

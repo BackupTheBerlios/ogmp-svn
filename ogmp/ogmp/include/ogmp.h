@@ -106,9 +106,9 @@ struct ogmp_client_s
 
 	xlist_t *format_handlers;
 	media_source_t *backgroud_source;
-
+	/*
 	sipua_set_t* call;
-
+	*/
 	config_t * conf;
 
 	char *sdp_body;

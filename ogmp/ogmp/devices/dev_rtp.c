@@ -17,6 +17,7 @@
  
 #include <timedia/xmalloc.h>
 #include <timedia/xstring.h>
+#include <timedia/ui.h>
 
 #include "dev_rtp.h"
 
@@ -24,14 +25,14 @@
 #define RTP_DEBUG
 
 #ifdef RTP_LOG
- #define rtp_log(fmtargs)  do{printf fmtargs;}while(0)
+ #define rtp_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define rtp_log(fmtargs)
 #endif
 
 
 #ifdef RTP_DEBUG
- #define rtp_debug(fmtargs)  do{printf fmtargs;}while(0)
+ #define rtp_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define rtp_debug(fmtargs)
 #endif

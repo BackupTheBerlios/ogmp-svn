@@ -37,6 +37,8 @@ int window_sessions_list_print(gui_t* gui, int wid)
 	ogmp_curses_t* ocui = gui->topui;
 	user_profile_t* user_profile = ocui->sipua->profile(ocui->sipua);
 
+	int ntitle=0, nincall=0;
+
 	if(gui->topui->gui_windows[EXTRAGUI])
 		josua_clear_box_and_commands(gui->topui->gui_windows[EXTRAGUI]);
 
@@ -65,7 +67,35 @@ int window_sessions_list_print(gui_t* gui, int wid)
 	mvaddnstr(gui->y0+2, gui->x0, buf, (x-gui->x0));
 	mvaddnstr(gui->y0+3, gui->x0, buf, (x-gui->x0));
 
+	ntitle = 1;
+
 	/* Window Body */
+
+	/* Current incall */
+	if(ocui->sipua->incall)
+	{
+		call = ocui->sipua->incall;
+			
+		if(call->from)
+			snprintf(buf, x - gui->x0, " In call of From <%s>: %s - %-80.80s",
+						status, call->from, call->subject, call->info);
+		else
+			snprintf(buf, x - gui->x0, " In call of mine: %s - %-80.80s",
+						status, call->subject, call->info);
+      
+		attrset(COLOR_PAIR(4));
+	}
+	else
+	{
+		snprintf(buf, x - gui->x0, " %-80.80s", "You are free of call");
+
+		attrset(COLOR_PAIR(10));
+	}
+      
+	mvaddnstr(gui->y0+ntitle, gui->x0, buf, x-gui->x0);
+	nincall = 1;
+
+	/* Show all lines */
 	ocui->sipua->lock_lines(ocui->sipua);
 
 	nbusy = ocui->sipua->busylines(ocui->sipua, busylines, MAX_SIPUA_LINES);
@@ -73,8 +103,8 @@ int window_sessions_list_print(gui_t* gui, int wid)
 	{
 		attrset(COLOR_PAIR(1));
 
-		snprintf(buf, x - gui->x0, "No call available !");
-		mvaddstr(gui->y0+2, gui->x0+1, buf);
+		snprintf(buf, x - gui->x0, " %-80.80s", "No call available !");
+		mvaddnstr(gui->y0+ntitle+nincall, gui->x0, buf, x-gui->x0);
 
 		gui->gui_draw_commands(gui);
 		return 0;
@@ -112,7 +142,7 @@ int window_sessions_list_print(gui_t* gui, int wid)
 				snprintf(buf, x - gui->x0, " %c%c [%d] (%s) From <%s>: %s - %-80.80s",
 						'-', '>', line, status, call->from, call->subject, call->info);
 			else
-				snprintf(buf, x - gui->x0, " %c%c [%d] (%s) From Myself: %s - %-80.80s",
+				snprintf(buf, x - gui->x0, " %c%c [%d] (%s) My call: %s - %-80.80s",
 						'-', '>', line, status, call->subject, call->info);
       
 			attrset(COLOR_PAIR(10));
@@ -123,13 +153,13 @@ int window_sessions_list_print(gui_t* gui, int wid)
 				snprintf(buf, x - gui->x0, " %c%c  %d  (%s) From <%s>: %s - %-80.80s",
 						' ', ' ', line, status, call->from, call->subject, call->info);
 			else
-				snprintf(buf, x - gui->x0, " %c%c  %d  (%s) From Myself: %s - %-80.80s",
+				snprintf(buf, x - gui->x0, " %c%c  %d  (%s) My call: %s - %-80.80s",
 						' ', ' ', line, status, call->subject, call->info);
       
 			attrset(COLOR_PAIR(1));
 		}
 
-		mvaddnstr(gui->y0+1+line, gui->x0, buf, x-gui->x0);
+		mvaddnstr(gui->y0+ntitle+nincall+line, gui->x0, buf, x-gui->x0);
 
 		if (n == max)
 			break;
@@ -179,11 +209,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 	ocui->sipua->unlock_lines(ocui->sipua);
 
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
-	/*
-	i = jcall_get_number_of_pending_calls();
-	if (i<max) 
-		max=i;
-	*/
+
 	switch (c)
     {
 		sipua_set_t* call;
@@ -198,7 +224,6 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 				beep();
 				break;
 			}
-
 
 			calllist_line = busylines[++n];
 			break;
@@ -262,11 +287,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 			}
 
 			ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_ANSWER);
-/*
-			eXosip_lock();
-			eXosip_answer_call(ca->did, 200, 0);
-			eXosip_unlock();
-*/
+
 			break;
 		}
 		case 'r':
@@ -373,9 +394,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 		}
 		case 'h':
 		{
-			call = ocui->sipua->session(ocui->sipua);
-
-			calllist_line = ocui->sipua->hold(ocui->sipua, call);
+			calllist_line = ocui->sipua->hold(ocui->sipua);
 /*
 			eXosip_lock();
 			eXosip_on_hold_call(ca->did);

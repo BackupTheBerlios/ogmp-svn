@@ -790,9 +790,6 @@ int uas_accept(sipua_uas_t* uas, int lineno)
 
 int uas_answer(sipua_uas_t* uas, sipua_set_t* call, int reply, char* reply_type, char* reply_body)
 {
-    /*
-    eXosipua_t *jua = (eXosipua_t*)uas;
-	*/
 	if(reply_body)
 	{
 		if(eXosip_answer_call_with_body(call->did, reply, reply_type, reply_body) == 0)
