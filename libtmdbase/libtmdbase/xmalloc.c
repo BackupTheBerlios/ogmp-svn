@@ -29,10 +29,12 @@
  #include "memwatch/memwatch.h"
  #pragma message ("xmalloc.c: monite memory with memwatch")
 #endif
-
+/*
 void*
 xmalloc(size_t bytes)
 {
+    printf("xmalloc: 1\n");
+
 	return malloc(bytes);
 }
 
@@ -41,7 +43,7 @@ xfree(void *p)
 {
 	free(p);
 }
-
+*/
 #else
 
 #pragma message ("xmalloc.c: turn on memory monitor")

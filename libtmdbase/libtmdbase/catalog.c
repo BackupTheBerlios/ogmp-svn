@@ -63,14 +63,14 @@ module_catalog_t* catalog_new( char * type ){
    module_catalog_t *catalog;
 
    catalog = (module_catalog_t *)xmalloc(sizeof(module_catalog_t));
-   if (!catalog) {
-     
+   if (!catalog)
+   {
       catalog_debug(("catalog_new: NO more memory\n"));
       return NULL;
    }
    memset(catalog, 0, sizeof(module_catalog_t));
 
-   catalog->infos = xrtp_list_new();
+    catalog->infos = xrtp_list_new();
 
    strncpy (catalog->module_type, type, TYPENAME_LEN-1);
    catalog->module_type[TYPENAME_LEN-1] = '\0';
@@ -105,6 +105,7 @@ int catalog_done (module_catalog_t *cata){
 
    catalog_reset(cata);
 
+
    xrtp_list_free(cata->infos, catalog_freeitem);
 
    return OS_OK;
@@ -137,7 +138,7 @@ int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* pat
       return OS_EPARAM;
    }
 
-   catalog_log(("catalog_scan_modules: scan dir:%s\n", path));
+   catalog_log(("catalog_scan_modules: scan dir:'%s'\n", path));
 
    dir = opendir(path); /* POSIX call */
    if(!dir)
