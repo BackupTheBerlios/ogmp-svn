@@ -21,6 +21,7 @@
 #include <timedia/xmalloc.h>
 #include <timedia/xstring.h>
 #include <timedia/xthread.h>
+#include <timedia/ui.h>
 #include <ogg/ogg.h>
  
 #include <stdlib.h>
@@ -31,7 +32,7 @@
 #define SPXRTP_DEBUG
  
 #ifdef SPXRTP_LOG
- #define spxrtp_log(fmtargs)  do{printf fmtargs;}while(0)
+ #define spxrtp_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define spxrtp_log(fmtargs)
 #endif
@@ -628,9 +629,6 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 int spxrtp_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 {
    spxrtp_handler_t *h = (spxrtp_handler_t *)handler;
-   xrtp_session_t *ses = rtcp->session;
-
-   uint8 *app_mi = NULL;
 
    session_report(h->session, rtcp, h->timestamp_send);
     
@@ -728,6 +726,7 @@ int rtp_speex_set_parameter(xrtp_media_t* media, char* key, void* val)
 }
 
 int rtp_speex_parameter(xrtp_media_t *media, char* key, void* value)
+
 {
 	spxrtp_media_t *spxrtp = (spxrtp_media_t*)media;
 
@@ -791,8 +790,6 @@ void* rtp_speex_info(xrtp_media_t* media, void* rtp_cap)
 
 int rtp_speex_sdp(xrtp_media_t* media, void* sdp_info)
 {
-	int ptime_max = 0;
-	int penh = 0;
 	int pt, rtp_portno, rtcp_portno;
 	char *ipaddr;
 
@@ -837,7 +834,9 @@ int rtp_speex_sdp(xrtp_media_t* media, void* sdp_info)
 	{
 		char fmt[4];
 		ret = rtp_capable_to_sdp(rtpcap, sdp->sdp_message, sdp->sdp_media_pos);
-		sdp_message_m_payload_add (sdp->sdp_message, sdp->sdp_media_pos, xstr_clone(itoa(rtpcap->profile_no, fmt, 10)));
+
+        snprintf(fmt, 4, "%d", rtpcap->profile_no);
+        sdp_message_m_payload_add (sdp->sdp_message, sdp->sdp_media_pos, xstr_clone(fmt));
 	}
 
 	rtpcap->descript.done(&rtpcap->descript);
@@ -852,9 +851,6 @@ int rtp_speex_sdp(xrtp_media_t* media, void* sdp_info)
 
 int rtp_speex_new_sdp(xrtp_media_t *media, char* nettype, char* addrtype, char* netaddr, int* rtp_portno, int* rtcp_portno, int pt, int clockrate, int coding_param, int bw_budget, void* control, void* sdp_info)
 {
-	int ptime_max = 0;
-	int penh = 0;
-
 	speex_setting_t *spxset;
 	speex_info_t *spxinfo;
 	media_control_t* mctrl = (media_control_t*)control;
@@ -1249,8 +1245,6 @@ xrtp_media_t* rtp_speex(profile_handler_t *handler, int clockrate, int coding_pa
 	speex_setting_t *spxset;
 	speex_info_t *spxinfo;
 	xrtp_media_t* media = NULL;
-
-	spxrtp_log(("audio/speex.rtp_speex: create media handler\n"));
 
 	profile = (spxrtp_handler_t *)handler;
 

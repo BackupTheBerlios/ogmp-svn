@@ -18,13 +18,14 @@
 #include <stdlib.h>
 #include <timedia/xstring.h>
 #include <timedia/xmalloc.h>
+#include <timedia/ui.h>
 
 #include "speex_info.h"
 
 #define SPXSDP_LOG
 
 #ifdef SPXSDP_LOG
- #define spxsdp_log(fmtargs)  do{printf fmtargs;}while(0)
+ #define spxsdp_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define spxsdp_log(fmtargs)
 #endif
@@ -34,26 +35,25 @@
  */
 int speex_info_to_sdp(media_info_t *info, rtpcap_descript_t *rtpcap, sdp_message_t *sdp, int pos)
 {
-	//int ptime;
-
 	char a[128], fmt[4], *pa;
 
 	int semicolon = 0;
-	int found_pos_media = 0;
 
 	speex_info_t *spxinfo = (speex_info_t*)info;
 
 	/* create sdp message, "m=...", "a=rtpmap:..." */
 	rtp_capable_to_sdp(rtpcap, sdp, pos);
 
-	sdp_message_m_payload_add (sdp, pos, xstr_clone(itoa(rtpcap->profile_no, fmt, 10)));
+    snprintf(fmt, 4, "%d", rtpcap->profile_no);
+	sdp_message_m_payload_add (sdp, pos, xstr_clone(fmt));
 
 	/* make "a=ptime:" attribute */
 	if(spxinfo->ptime != SPX_FRAME_MSEC)
 	{
 		spxsdp_log(("speex_info_to_sdp: a=ptime:%d\n", spxinfo->ptime));
 
-		sdp_message_a_attribute_add (sdp, pos, xstr_clone("ptime"), xstr_clone(itoa(spxinfo->ptime, a, 10)));
+        snprintf(a, 128, "%d", spxinfo->ptime);
+		sdp_message_a_attribute_add (sdp, pos, xstr_clone("ptime"), xstr_clone(a));
 	}
 
 	if(!spxinfo->vbr && !spxinfo->cng && !spxinfo->penh)
@@ -67,7 +67,8 @@ int speex_info_to_sdp(media_info_t *info, rtpcap_descript_t *rtpcap, sdp_message
 	/* make "a=fmtp:" attribute */
 	pa = a;
 
-	itoa(rtpcap->profile_no, pa, 10);
+    sprintf(pa, "%d", rtpcap->profile_no);
+    /*itoa(rtpcap->profile_no, pa, 10);*/
 
 	while(*pa)
 		pa++;
@@ -78,10 +79,10 @@ int speex_info_to_sdp(media_info_t *info, rtpcap_descript_t *rtpcap, sdp_message
 	{
 		strcpy(pa, "vbr=on");
 		semicolon = 1;
-	}
 
-	while(*pa)
-		pa++;
+        while(*pa)
+            pa++;
+	}
 
 	if(spxinfo->cng != 0)
 	{
@@ -91,10 +92,11 @@ int speex_info_to_sdp(media_info_t *info, rtpcap_descript_t *rtpcap, sdp_message
 			strcpy(pa, "cng=on");
 
 		semicolon = 1;
+
+        while(*pa)
+            pa++;
 	}
 
-	while(*pa)
-		pa++;
 
 	/* encoding mode:  
 		Speex encoding mode. Can be {1,2,3,4,5,6,any}
@@ -103,6 +105,9 @@ int speex_info_to_sdp(media_info_t *info, rtpcap_descript_t *rtpcap, sdp_message
 	{
 		strcpy(pa, "mode=3");
 		semicolon = 1;
+
+        while(*pa)
+            pa++;
 	}
 	*/
 
