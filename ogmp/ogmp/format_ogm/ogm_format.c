@@ -21,9 +21,10 @@
 #define CATALOG_VERSION  0x0001
 #define DIRNAME_MAXLEN  128
 /*
+*/
 #define DEMUX_OGM_LOG
 #define DEMUX_OGM_DEBUG
-*/
+
 #ifdef DEMUX_OGM_LOG
  #define ogm_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -72,7 +73,7 @@ int ogm_done_format(media_format_t * mf)
 }
 
 /* New detected stream add to group */
-int ogm_add_stream(media_format_t * ogm, media_stream_t *strm, int strmno, unsigned char type)
+int ogm_add_stream(media_format_t * ogm, media_stream_t *strm, int sno, unsigned char type)
 {
   media_stream_t *cur = ogm->first;
 
@@ -80,7 +81,6 @@ int ogm_add_stream(media_format_t * ogm, media_stream_t *strm, int strmno, unsig
   {
     ogm->first = strm;
     ogm->first->next = NULL;
-
   } 
   else 
   {
@@ -99,8 +99,8 @@ int ogm_add_stream(media_format_t * ogm, media_stream_t *strm, int strmno, unsig
                /* default first audio stream as time reference */
                if (ogm->nastreams == 1)
 			   {
-                  ogm_log(("ogm_set_mime_player: stream #%d as default time stream\n", ogm->numstreams));
-                  ogm->time_ref = strmno;
+                  ogm_log(("ogm_set_mime_player: audio stream #%d as default time stream\n", sno));
+                  ogm->time_ref = sno;
                }
                   
                break;
@@ -352,7 +352,7 @@ int ogm_set_handlers ( ogm_format_t *ogm, module_catalog_t * cata )
 {
    media_format_t *mf = (media_format_t *)ogm;
 
-   mf->stream_handlers = xrtp_list_new();
+   mf->stream_handlers = xlist_new();
    if (!mf->stream_handlers)
    {
       return MP_FAIL;
@@ -361,7 +361,6 @@ int ogm_set_handlers ( ogm_format_t *ogm, module_catalog_t * cata )
    if(catalog_create_modules(cata, "ogm", mf->stream_handlers) <= 0)
    {
       xrtp_list_free(mf->stream_handlers, NULL);
-      
       return MP_FAIL;
    }
 
@@ -370,27 +369,25 @@ int ogm_set_handlers ( ogm_format_t *ogm, module_catalog_t * cata )
 
 int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_stream_state *sstate, ogg_packet *packet)
 {
-   stream_header sth;
+   //stream_header sth;
    xrtp_list_user_t $u;
    ogm_media_t *handler;
    
    media_format_t *mf = (media_format_t *)ogm;
 
-   copy_headers(&sth, (old_stream_header *)&(ogm->packet.packet[1]), ogm->packet.bytes);
+   //copy_headers(&sth, (old_stream_header *)&(ogm->packet.packet[0]), ogm->packet.bytes);
 
-   handler = (ogm_media_t*) xrtp_list_first (mf->stream_handlers, &$u);
+   handler = (ogm_media_t*) xlist_first (mf->stream_handlers, &$u);
 
    while (handler)
    {
       if (handler->detect_media(packet) != 0)
 	  {
-         if(handler->open_media(handler, ogm, ctrl, sstate, sno, &sth) >= MP_OK);
-			
-
-         break;
+         if(handler->open_media(handler, ogm, ctrl, sstate, sno, (stream_header *)&(ogm->packet.packet[0])) >= MP_OK)
+			break;
       }
       
-      handler = (ogm_media_t*) xrtp_list_next (mf->stream_handlers, &$u);     
+      handler = (ogm_media_t*) xlist_next (mf->stream_handlers, &$u);     
    }
 
    return MP_OK;
@@ -486,11 +483,11 @@ int ogm_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *
                ogm_log(("ogm_open_file: No stream handler found\n"));
                return MP_FAIL;
             }
-            
+	  
             ogm_open_stream(ogm, ctrl, sno, sstate, &ogm->packet);
          }
 
-         ogm_log(("ogm_open_file: %d packet(s) foun in the page\n", n_pack));
+         ogm_log(("ogm_open: %d packet(s) found in the page\n", n_pack));
       }
    }
 

@@ -15,12 +15,36 @@
  *                                                                         *
  ***************************************************************************/
 
+#undef MEM_DEBUG
+
 #include "xmalloc.h"
 
-#if defined(MEMWATCH)
+#ifndef MONITE_MEM
 
-#elif defined(MONITE_MEM)
+#ifdef MEMWATCH
+ /* turn on memwatch */
+ #ifndef MW_STDIO
+   #define MW_STDIO
+ #endif
+ #include "memwatch/memwatch.h"
+ #pragma message ("xmalloc.c: monite memory with memwatch")
+#endif
 
+void*
+xmalloc(size_t bytes)
+{
+	return malloc(bytes);
+}
+
+void
+xfree(void *p)
+{
+	free(p);
+}
+
+#else
+
+#pragma message ("xmalloc.c: turn on memory monitor")
 /*
 #define XMALLOC_LOG
 */

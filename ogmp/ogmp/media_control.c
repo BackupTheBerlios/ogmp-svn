@@ -58,11 +58,18 @@ typedef struct control_impl_s
    
    int namelen;
 
-   int started;
+   int demuxing;
    
-   xrtp_clock_t * clock;
-   xrtp_hrtime_t prev_period_start;
-   xrtp_hrtime_t prev_period_us;
+   xclock_t * clock;
+
+   rtime_t catchup_us;
+   rtime_t sleep_us;
+
+   rtime_t period_start;
+   rtime_t period_us;
+
+   rtime_t prev_period_start;
+   rtime_t prev_period_us;
 
    module_catalog_t *catalog;
 
@@ -326,7 +333,7 @@ media_player_t * cont_find_player (media_control_t *cont, char *mode, char *mime
       return NULL;
    }
 
-   player = xrtp_list_first(players, &$lu);
+   player = xlist_first(players, &$lu);
    while (player)
    {
       if(player->match_type(player, mime, fourcc))
@@ -353,10 +360,11 @@ int cont_seek_millisec (media_control_t * cont, int msec)
 {
    control_impl_t *impl = (control_impl_t *)cont;
 
-   impl->started = 0;
+   impl->demuxing = 0;
    
    return impl->format->seek_millisecond(impl->format, msec);
-}            
+}
+           
 /*
 int cont_demux_next (media_control_t * cont, int strm_end)
 {
@@ -392,36 +400,44 @@ int cont_demux_next (media_control_t * cont, int strm_end)
 
 int cont_demux_next (media_control_t * cont, int strm_end)
 {
-   rtime_t period_us = 0;
-   rtime_t demux_start, demux_us;
+	rtime_t demux_us;
 
-   control_impl_t *impl = (control_impl_t *)cont;
+	control_impl_t *impl = (control_impl_t *)cont;
 
-   demux_start = time_usec_now(impl->clock);
+	if(impl->demuxing != 0)
+	{
+	   cont_log(("cont_demux_next: %dus period, last sleep %dus(need catchup %dus)\n", impl->period_us, impl->sleep_us, impl->catchup_us));
 
-   period_us = impl->format->demux_next(impl->format, strm_end);
+	   demux_us = time_usec_spent(impl->clock, impl->period_start);
 
-   if(period_us <= 0) return period_us; // errno < 0 
+	   impl->sleep_us = impl->period_us - demux_us - impl->catchup_us;
+	   
+	   impl->catchup_us = 0;
+
+	   if(impl->sleep_us < 0)
+		   impl->catchup_us = -impl->sleep_us;
+
+	   time_usec_sleep(impl->clock, impl->sleep_us, NULL);
+	}
+
+	impl->period_start = time_usec_now(impl->clock);
+	impl->period_us = impl->format->demux_next(impl->format, strm_end);
+
+	if(impl->period_us <= 0)
+		return impl->period_us; /* errno < 0 */
    
-   cont_log(("cont_demux_next: %dus period\n", period_us));
-   
-   demux_us = time_usec_spent(impl->clock, demux_start);
-   
-   time_usec_sleep(impl->clock, period_us - demux_us, NULL);
-   
-   impl->started = 1;
+	impl->demuxing = 1;
 
-   return MP_OK;
+	return MP_OK;
 }
 
 int cont_config (media_control_t *cont, config_t *conf, module_catalog_t *cata)
 {
-   control_impl_t *impl = (control_impl_t *)cont;
+	control_impl_t *impl = (control_impl_t *)cont;
 
+	impl->catalog = cata;
 
-   impl->catalog = cata;
-   
-   return MP_OK;
+	return MP_OK;
 }
 
 module_catalog_t* cont_modules(media_control_t *cont)

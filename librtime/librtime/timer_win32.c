@@ -334,6 +334,24 @@ rtime_t time_msec_checkpass(xclock_t * clock, rtime_t *then)
     return *then - t;
 }
 
+rtime_t time_usec_checkpass(xclock_t * clock, rtime_t *then)
+{
+    int t = *then;
+
+    *then = time_usec_now(clock);
+
+    return *then - t;
+}
+
+rtime_t time_nsec_checkpass(xclock_t * clock, rtime_t *then)
+{
+    int t = *then;
+
+    *then = time_nsec_now(clock);
+
+    return *then - t;
+}
+
 int time_ntp(xrtp_clock_t * clock, uint32 *hintp, uint32 *lontp)
 {
     xthr_lock(clock->lock);

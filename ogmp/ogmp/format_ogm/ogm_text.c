@@ -38,13 +38,13 @@
 #define ogm_text_debug(fmtargs)  do{if(ogm_text_debug) printf fmtargs;}while(0)
 
 /* Detect a text media */
-int ogm_detect_text (ogg_packet *packet) {
-
+int ogm_detect_text (ogg_packet *packet)
+{
    stream_header sth;
 
    if ( ((*(packet->packet) & PACKET_TYPE_BITS ) == PACKET_TYPE_HEADER) &&
-       (packet->bytes >= (int)(sizeof(old_stream_header) + 1)) ) {
-
+       (packet->bytes >= (int)(sizeof(old_stream_header) + 1)) )
+   {
       /* Other type stream */
       copy_headers(&sth, (old_stream_header *)&(packet->packet[1]), packet->bytes);
 
@@ -55,13 +55,13 @@ int ogm_detect_text (ogg_packet *packet) {
 }
 
 /* Open a new text stream in the ogm file */
-int ogm_open_text(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ctrl, ogg_stream_state *sstate, int sno, stream_header *sth){
-
+int ogm_open_text(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ctrl, ogg_stream_state *sstate, int sno, stream_header *sth)
+{
    ogm_stream_t *ogm_strm = (ogm_stream_t *)malloc(sizeof(ogm_stream_t));
    media_stream_t *stream = (media_stream_t *)ogm_strm;
 
-   if (stream == NULL) {
-
+   if (stream == NULL)
+   {
       ogm_text_log(("ogm_open_text: malloc failed\n"));
       exit(1);
    }

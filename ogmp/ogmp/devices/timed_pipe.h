@@ -57,18 +57,21 @@ struct sample_buffer_s {
 #define PIPE_STATE_PIPING    2
 
 typedef struct timed_pipe_s timed_pipe_t;
-struct timed_pipe_s {
-
+struct timed_pipe_s
+{
    struct media_pipe_s pipe;
 
-   xrtp_clock_t *clock;
+   xclock_t *clock;
 
-   xrtp_lrtime_t lts_last;
+   rtime_t lts_last;
+
+   rtime_t usec_prepick;
    
    int eots;
    
    int pulsing;
 
+   int prepick;
    int switch_buffer;   /* buffer number plus 1. zero value means no jump */
    int buffered;        /* enough data to play */
 
@@ -84,12 +87,26 @@ struct timed_pipe_s {
    int bytes_allbuf;
    int bytes_freed;
 
+   int n_frame;
+
    media_frame_t *freed_frame_head; /* The frame to reuse, avoid malloc/free ops */
    int n_freed_frame;
 
    int usec_pulse;      /* constant pickup interval */
 
    int usec_per_buf;
+
+   rtime_t last_avg_usec_inbuf;		/* previous average usec */
+   rtime_t avg_usec_inbuf;			/* average usec in pipe b/w two prepick */
+
+   int n_switch_per_adjustment;
+
+   int adjust_reset;
+
+   int nsample_adjust;
+   int nsample_shift;
+
+   int under_shift;   /* for samples left to shift */
 
    int nsample_read_left;
    int nsample_write_left;
@@ -101,7 +118,6 @@ struct timed_pipe_s {
    char *fillgap;
 
    int sample_rate;
-   //int dad_min_nsample, dad_max_nsample;
 };
 
 media_pipe_t * timed_pipe_new(int sample_rate, int usec_pulse);

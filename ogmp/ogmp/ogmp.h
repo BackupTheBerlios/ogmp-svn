@@ -40,7 +40,8 @@
  #define MODDIR "."
 #endif
 
-#define FNAME "Dido_LifeForRent.ogg"
+//#define FNAME "Dido_LifeForRent.ogg"
+#define FNAME "QA.spx"
 
 #if 0
 typedef struct rtpcap_descript_s rtpcap_descript_t; 

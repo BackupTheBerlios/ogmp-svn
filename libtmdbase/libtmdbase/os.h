@@ -58,8 +58,14 @@
 #endif /* Windows */
 
 #ifdef WIN32
-#define vsnprintf _vsnprintf
-#define snprintf _snprintf
+ #define vsnprintf _vsnprintf
+ #define snprintf _snprintf
+
+ #ifdef __STDC__
+  #ifndef strdup
+   #define strdup _strdup
+  #endif
+ #endif
 #endif
 
 #ifdef _MSC_VER

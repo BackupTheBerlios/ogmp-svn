@@ -52,7 +52,7 @@ int main(int argc, char** argv){
 	   clock_main = time_start();
    
 	   /* play 300 seconds audio */
-	   time_msec_sleep (clock_main, 300000, &remain);
+	   time_msec_sleep (clock_main, 1000000, &remain);
    
 	   server_stop (server);
    }

@@ -28,6 +28,12 @@
 
 #ifdef WIN32
  #include "win32/dirent.h"
+ #ifdef __STDC__
+  #define stat _stat 
+  #define S_IFMT _S_IFMT 
+  #define S_IFDIR _S_IFDIR 
+  #define S_IFREG _S_IFREG
+ #endif 
 #else
  #include <dirent.h>
 #endif

@@ -1,5 +1,5 @@
 /***************************************************************************
-                          vorbis_player.c  -  vorbis audio codec
+                          vorbis_decoder.c  -  vorbis audio codec
                              -------------------
     begin                : Sun Feb 1 2004
     copyright            : (C) 2004 by Heming Ling
@@ -51,7 +51,7 @@ static ogg_int32_t CLIP_TO_15(ogg_int32_t x)
 #define VORBIS_SIMULATING
 */
 
-media_frame_t * vorbis_decode (vorbis_info_t *vorbis, ogg_packet * packet, media_pipe_t * output)
+media_frame_t * vorbis_decode (vorbis_info_t *vinfo, ogg_packet * packet, media_pipe_t * output)
 {
    int channels = 0;
    media_frame_t *auf = NULL;
@@ -70,15 +70,15 @@ media_frame_t * vorbis_decode (vorbis_info_t *vorbis, ogg_packet * packet, media
 
    int samples = 0;
    
-   vorbis_synthesis_blockin( &vorbis->vd, &vorbis->vb );
+   vorbis_synthesis_blockin( &vinfo->vd, &vinfo->vb );
 
 #ifdef OGG_TREMOR_CODEC
 
-   if( vorbis_synthesis(&vorbis->vb, packet, 1) != 0 ){
+   if( vorbis_synthesis(&vinfo->vb, packet, 1) != 0 ){
 
 #else /* OGG_TREMOR_CODEC */
 
-   if( vorbis_synthesis(&vorbis->vb, packet) != 0 ){
+   if( vorbis_synthesis(&vinfo->vb, packet) != 0 ){
 
 #endif /* OGG_TREMOR_CODEC */
 
@@ -90,7 +90,7 @@ media_frame_t * vorbis_decode (vorbis_info_t *vorbis, ogg_packet * packet, media
    {
       /* the packet contains vorbis data */
 
-      samples = vorbis_synthesis_pcmout(&vorbis->vd, &pcm);
+      samples = vorbis_synthesis_pcmout(&vinfo->vd, &pcm);
 
       if ( samples <= 0 )
 	  {
@@ -102,14 +102,14 @@ media_frame_t * vorbis_decode (vorbis_info_t *vorbis, ogg_packet * packet, media
 
    if(!output)
    {
-      vorbis_synthesis_read(&vorbis->vd, samples);
+      vorbis_synthesis_read(&vinfo->vd, samples);
 
       vorbis_player_debug(("vorbis_decode: no output, discard\n"));
 
       return NULL;
    }
    
-   channels=vorbis->vi.channels;
+   channels=vinfo->vi.channels;
 
 #ifdef OGG_TREMOR_CODEC
 
@@ -127,7 +127,7 @@ media_frame_t * vorbis_decode (vorbis_info_t *vorbis, ogg_packet * packet, media
       }
    }
 
-   vorbis_synthesis_read(&vorbis->vd, samples);
+   vorbis_synthesis_read(&vinfo->vd, samples);
 
    return samples*2*channels;
 
@@ -171,10 +171,10 @@ media_frame_t * vorbis_decode (vorbis_info_t *vorbis, ogg_packet * packet, media
       }
    }
 
-   vorbis_synthesis_read(&vorbis->vd, samples);
+   vorbis_synthesis_read(&vinfo->vd, samples);
 
    auf->nraw = samples;
-   auf->usec = 1000000 * samples / vorbis->vi.rate;  /* micro second unit */
+   auf->usec = 1000000 * samples / vinfo->vi.rate;  /* micro second unit */
 
    return auf;
 

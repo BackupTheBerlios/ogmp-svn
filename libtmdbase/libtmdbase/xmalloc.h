@@ -16,27 +16,50 @@
  ***************************************************************************/
 
 #ifndef XMALLOC_H
+#define XMALLOC_H
 
 #include <stdlib.h>
 
-#define MONITE_MEM
+#ifdef MEM_DEBUG
 
-#ifndef MONITE_MEM
+ /* debug memory */
+ #ifndef MEMWATCH
+  #define MEMWATCH
+ #endif
 
-#define xmalloc malloc
-#define xfree  free
+ #ifndef MW_STDIO
+  #define MW_STDIO
+ #endif
+
+ #include "memwatch/memwatch.h"
+
+ #define xmalloc malloc
+ #define xfree free
+
+ #pragma message ("xmalloc.h: debug module memory")
+
+#elif defined(MONITE_MEM) || defined(MEMWATCH)
+
+ /* check memory usage */
+ #include "os.h"
+
+ extern DECLSPEC
+ void* 
+ xmalloc(size_t bytes);
+
+ extern DECLSPEC
+ void
+ xfree(void *p);
+
+ #pragma message ("xmalloc.h: monite all memory")
 
 #else
 
-#include "os.h"
+ /* turn off monitor */
+ #define xmalloc malloc
+ #define xfree free
 
-extern DECLSPEC
-void*
-xmalloc(size_t bytes);
-
-extern DECLSPEC
-void
-xfree(void *p);
+ #pragma message ("xmalloc.h: turn off memory monitor")
 
 #endif
 #endif

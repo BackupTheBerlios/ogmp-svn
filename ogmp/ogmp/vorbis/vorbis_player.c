@@ -25,12 +25,10 @@
 #define VORBIS_PLAYER_DEBUG
 
 #ifdef VORBIS_PLAYER_LOG
-   const int vorbis_pa_log = 1;
+ #define vorbis_player_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int vorbis_pa_log = 0;
+ #define vorbis_player_log(fmtargs)
 #endif
-
-#define vorbis_player_log(fmtargs)  do{if(vorbis_pa_log) printf fmtargs;}while(0)
 
 #ifdef VORBIS_PLAYER_DEBUG
  #define vorbis_player_debug(fmtargs)  do{printf fmtargs;}while(0)
@@ -308,11 +306,14 @@ media_pipe_t * vorbis_pipe(media_player_t * p) {
    return p->device->pipe (p->device);
 }
 
-int vorbis_done(media_player_t *mp) {
+int vorbis_done(media_player_t *mp)
+{
+   if(mp->device)
+   {
+	   vorbis_stop (mp);
 
-   vorbis_stop (mp);
-
-   mp->device->done (mp->device);
+	   mp->device->done (mp->device);
+   }
 
    xfree((vorbis_decoder_t *)mp);
 

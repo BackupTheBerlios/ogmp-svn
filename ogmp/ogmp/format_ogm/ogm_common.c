@@ -13,12 +13,14 @@
 
 #include "ogm_common.h"
 
-void _die(const char *s, const char *file, int line) {
+void _die(const char *s, const char *file, int line)
+{
   fprintf(stderr, "die @ %s/%d : %s\n", file, line, s);
   exit(1);
 }
 
-ogg_packet *duplicate_ogg_packet(ogg_packet *src) {
+ogg_packet *duplicate_ogg_packet(ogg_packet *src)
+{
   ogg_packet *dst;
   
   dst = (ogg_packet *)malloc(sizeof(ogg_packet));
@@ -33,7 +35,8 @@ ogg_packet *duplicate_ogg_packet(ogg_packet *src) {
   return dst;
 }
 
-char **dup_comments(char **comments) {
+char **dup_comments(char **comments)
+{
   char **new_comments;
   int    nc;
   
@@ -57,7 +60,8 @@ char **dup_comments(char **comments) {
   return new_comments;
 }
 
-void free_comments(char **comments) {
+void free_comments(char **comments)
+{
   int i;
   
   if (comments != NULL) {
@@ -67,7 +71,8 @@ void free_comments(char **comments) {
   }
 }
 
-uint16 get_uint16(const void *buf) {
+uint16 get_uint16(const void *buf)
+{
   uint16      ret;
   unsigned char *tmp;
 
@@ -79,7 +84,8 @@ uint16 get_uint16(const void *buf) {
   return ret;
 }
 
-uint32 get_uint32(const void *buf) {
+uint32 get_uint32(const void *buf)
+{
   uint32      ret;
   unsigned char *tmp;
 
@@ -93,7 +99,8 @@ uint32 get_uint32(const void *buf) {
   return ret;
 }
 
-uint64 get_uint64(const void *buf) {
+uint64 get_uint64(const void *buf)
+{
   uint64      ret;
   unsigned char *tmp;
 
@@ -111,7 +118,8 @@ uint64 get_uint64(const void *buf) {
   return ret;
 }
 
-void put_uint16(void *buf, uint16 val) {
+void put_uint16(void *buf, uint16 val)
+{
   unsigned char *tmp;
 
   tmp = (unsigned char *) buf;
@@ -120,7 +128,8 @@ void put_uint16(void *buf, uint16 val) {
   tmp[1] = (val >>= 8) & 0xff;
 }
 
-void put_uint32(void *buf, uint32 val) {
+void put_uint32(void *buf, uint32 val)
+{
   unsigned char *tmp;
 
   tmp = (unsigned char *) buf;
@@ -131,7 +140,8 @@ void put_uint32(void *buf, uint32 val) {
   tmp[3] = (val >>= 8) & 0xff;
 }
 
-void put_uint64(void *buf, uint64 val) {
+void put_uint64(void *buf, uint64 val)
+{
   unsigned char *tmp;
 
   tmp = (unsigned char *) buf;
@@ -152,11 +162,13 @@ void put_uint64(void *buf, uint64 val) {
  *	say off_t is an arithmetic type, but not necessarily integral,
  *	while fpos_t might be neither.
  */
-int fseeko(FILE *stream, off_t offset, int whence) {
+int fseeko(FILE *stream, off_t offset, int whence)
+{
   off_t floc;
   struct stat filestat;
 
-  switch (whence) {
+  switch (whence)
+  {
     case SEEK_CUR:
       flockfile(stream);
       if (fgetpos(stream, &floc) != 0)
@@ -192,7 +204,8 @@ int fseeko(FILE *stream, off_t offset, int whence) {
   return -1;
 }
 
-off_t ftello(FILE *stream) {
+off_t ftello(FILE *stream)
+{
   off_t floc;
 
   if (fgetpos(stream, &floc) != 0)
@@ -202,18 +215,20 @@ off_t ftello(FILE *stream) {
 
 #endif /* NEED_FSEEKO */
 
-#define COPY(m, s) memcpy(&dst->m, &src->m, s)
-void copy_headers(stream_header *dst, old_stream_header *src, int size) {
-  if (size == sizeof(old_stream_header)) {
-    COPY(streamtype[0], 8);
-    COPY(subtype[0], 4);
-    COPY(size, 4);
-    COPY(time_unit, 8);
-    COPY(samples_per_unit, 8);
-    COPY(default_len, 4);
-    COPY(buffersize, 4);
-    COPY(bits_per_sample, 2);
-    COPY(sh, sizeof(stream_header_video));
-  } else
-    memcpy(dst, src, size);
+void copy_headers(stream_header *dst, old_stream_header *src, int size)
+{
+	if (size == sizeof(old_stream_header))
+	{
+		memcpy(&dst->streamtype[0], &src->streamtype[0], 8);
+		memcpy(&dst->subtype[0], &src->subtype[0], 4);
+		memcpy(&dst->size, &src->size, 4);
+		memcpy(&dst->time_unit, &src->time_unit, 8);
+		memcpy(&dst->samples_per_unit, &src->samples_per_unit, 8);
+		memcpy(&dst->default_len, &src->default_len, 4);
+		memcpy(&dst->buffersize, &src->buffersize, 4);
+		memcpy(&dst->bits_per_sample, &src->bits_per_sample, 2);
+		memcpy(&dst->sh, &src->sh, sizeof(stream_header_video));
+	} 
+	else
+		memcpy(dst, src, size);
 }

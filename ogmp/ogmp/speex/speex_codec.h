@@ -1,5 +1,5 @@
 /***************************************************************************
-                          vorbis_player.h  -  Vorbis stream player
+                          speex_codec.h
                              -------------------
     begin                : Mon Jan 19 2004
     copyright            : (C) 2004 by Heming Ling
@@ -15,17 +15,19 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "vorbis_info.h"
+#include "speex_info.h"
+
 #include <timedia/xthread.h>
+#include <ogg/ogg.h>
 
-#define VORBIS_SAMPLE_BITS 16  /* See vorbis_decode() */
+#define SPEEX_SAMPLE_BITS 16  /* See speex_decode() */
 
-typedef struct vorbis_decoder_s vorbis_decoder_t;
-struct vorbis_decoder_s{
-
+typedef struct speex_decoder_s speex_decoder_t;
+struct speex_decoder_s
+{
    struct media_player_s player;
 
-   vorbis_info_t *vorbis_info;
+   speex_info_t *speex_info;
 
    int receiving_media;
 
@@ -37,29 +39,26 @@ struct vorbis_decoder_s{
    /* Failure occurred */
    int fail;
 
-   /* Delay Adapt Detect: if the buffer fall into this range
-    * special process will activated to smooth the effect
-	*
-	* No in use yet.
-   int dad_min_ms;
-   int dad_max_ms;
-    */
-
    void *callback_on_ready_user;
-   int (*callback_on_ready) ();
+   int (*callback_on_ready)();
 
    void *callback_on_media_stop_user;
-   int (*callback_on_media_stop) ();
+   int (*callback_on_media_stop)();
 
    /* parallel with demux thread */
    xthread_t *thread;
+
    /* stop the thread */
    int stop;
+
    /* queue protected by lock*/
    xlist_t *pending_queue;
+
+   /* mutex pretected */
    xthr_lock_t *pending_lock;
+
    /* thread running condiftion */
    xthr_cond_t *packet_pending;
 };
 
-media_frame_t* vorbis_decode (vorbis_info_t *vinfo, ogg_packet *packet, media_pipe_t *output);
+media_frame_t* spxc_decode(speex_info_t* spxinfo, ogg_packet* packet, media_pipe_t* output);

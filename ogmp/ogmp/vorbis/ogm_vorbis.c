@@ -44,10 +44,10 @@
  #define ogm_vorbis_debug(fmtargs)
 #endif
 
-int ogm_detect_vorbis(ogg_packet * packet){
-
-   if ((packet->bytes >= 7) && ! strncmp(&(packet->packet[1]), "vorbis", 6)) {
-
+int ogm_detect_vorbis(ogg_packet * packet)
+{
+   if ((packet->bytes >= 7) && ! strncmp(&(packet->packet[1]), "vorbis", 6))
+   {
       /* 'Ogg/Vorbis' stream detected */
       ogm_vorbis_log(("ogm_vorbis.ogm_detect_vorbis: stream detected\n"));
 
@@ -58,8 +58,8 @@ int ogm_detect_vorbis(ogg_packet * packet){
 }                                     
 
 /* helpers: from Vorbis codebase info.c */
-static int ilog2(unsigned int v){
-
+static int ilog2(unsigned int v)
+{
   int ret=0;
 
   while(v)
@@ -101,7 +101,7 @@ int ogm_open_vorbis(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *c
       
       stream = (media_stream_t *)ogm_strm;
 
-      strncpy(stream->mime, "audio/vorbis", strlen("audio/vorbis"));
+      strncpy(stream->mime, "audio/vorbis\0", strlen("audio/vorbis")+1);
       ((ogm_stream_t*)stream)->stype = 'a';
       
       vinfo = xmalloc(sizeof(struct vorbis_info_s));
@@ -269,23 +269,23 @@ int ogm_process_vorbis(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *pag
    
    int ret;
    
-   if(stream->playable == -1) {
-
+   if(stream->playable == -1)
+   {
       ogm_vorbis_log(("ogm_process_vorbis: (a%d/%d) Vorbis audio stream isn't playable\n", ogm_strm->sno, mf->numstreams));
       return MP_FAIL;
    }
 
-   if(stream->playable == 0){
-
-      if (ogg_page_granulepos(page) > 0){
-
+   if(stream->playable == 0)
+   {
+      if (ogg_page_granulepos(page) > 0)
+	  {
          ogm_vorbis_log(("ogm_process_vorbis: (a%d/%d) Vorbis audio stream start without initialization\n", ogm_strm->sno, mf->numstreams));
          return MP_FAIL;
       }
       
       ret = vorbis_synthesis_headerin(&vinfo->vi, &vinfo->vc, pack);
-      if ( ret < 0 ) {
-
+      if ( ret < 0 )
+	  {
          if ( ret == OV_ENOTVORBIS )
             ogm_vorbis_log(("ogm_process_vorbis: (a%d/%d) is NOT a Vorbis audio stream actually\n",
                            ogm_strm->sno, mf->numstreams));
@@ -302,12 +302,12 @@ int ogm_process_vorbis(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *pag
       
       vinfo->head_packets++;
 
-      if (vinfo->head_packets == 2) {
-
+      if (vinfo->head_packets == 2)
+	  {
 		 /* Cache the header comment */
          vinfo->header_comment = xmalloc(ogm->packet.bytes);
-         if (!vinfo->header_comment) {
-
+         if (!vinfo->header_comment)
+		 {
             ogm_vorbis_log(("ogm_open_vorbis: no memory to cache header setup\n"));
             return MP_EMEM;
          }
@@ -318,8 +318,8 @@ int ogm_process_vorbis(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *pag
                           ogm_strm->sno, mf->numstreams, pack->bytes));
       }
       
-      if (vinfo->head_packets == 3) {
-      
+      if (vinfo->head_packets == 3)
+	  {
          /* initialize central decode state */
          vorbis_synthesis_init( &vinfo->vd, &vinfo->vi );
             
@@ -333,8 +333,8 @@ int ogm_process_vorbis(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *pag
 
          /* Cache the codebook */
          vinfo->header_setup = xmalloc(ogm->packet.bytes);
-         if (!vinfo->header_setup) {
-
+         if (!vinfo->header_setup)
+		 {
             ogm_vorbis_log(("ogm_open_vorbis: no memory to cache codebook\n"));
             return MP_EMEM;
          }
@@ -364,27 +364,28 @@ int ogm_process_vorbis(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *pag
    }
    
    /* send vorbis packet */
-   if (last_packet && stream_end) {   /* ogg_page_eos(page) */
-
+   if (last_packet && stream_end)
+   {   
+	  /* ogg_page_eos(page) */
       stream->player->receive_media(stream->player, pack, samplestamp, MP_EOS);
-      
-   } else {
-
+   }
+   else
+   {
       stream->player->receive_media(stream->player, pack, samplestamp, last_packet);
    }
    
    return MP_OK;
 }
 
-int ogm_done_vorbis (ogm_media_t * ogmm) {
-
+int ogm_done_vorbis (ogm_media_t * ogmm)
+{
    xfree(ogmm);
 
    return MP_OK;
 }
 
-module_interface_t * ogm_new_media() {
-
+module_interface_t * ogm_new_media()
+{
    ogm_media_t * ogmm = xmalloc(sizeof(struct ogm_media_s));
    if (!ogmm) {
 

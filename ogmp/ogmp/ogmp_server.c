@@ -183,7 +183,7 @@ int server_setup(ogmp_server_t *server, char *mode)
       server->control->add_device(server->control, "rtp", server_config_rtp, conf);
    
    /* create a media format, also get the capabilities of the file */
-   format = (media_format_t *) xrtp_list_first (server->format_handlers, &$lu);
+   format = (media_format_t *) xlist_first (server->format_handlers, &$lu);
    while (format)
    {
       /* open media source */
@@ -194,7 +194,7 @@ int server_setup(ogmp_server_t *server, char *mode)
          break;
       }
       
-      format = (media_format_t *)xrtp_list_next(server->format_handlers, &$lu);
+      format = (media_format_t *)xlist_next(server->format_handlers, &$lu);
    }
 
    /* open media source */
