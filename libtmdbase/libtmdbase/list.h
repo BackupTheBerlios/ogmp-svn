@@ -32,32 +32,38 @@
 #define XLIST_INSERT_AFTER_ITEM 2
 #define XLIST_INSERT_BEFORE_ITEM 3
 
-typedef struct xrtp_list_node_s xrtp_list_node_t;
+#define xrtp_list_node_s xlist_node_s
+#define xrtp_list_node_t xlist_node_t
+#define xrtp_list_s xlist_s
+#define xrtp_list_t xlist_t
+#define xrtp_list_user_s xlist_user_s
+#define xrtp_list_user_t xlist_user_t
 
-struct xrtp_list_node_s{
-   xrtp_list_node_t *next;
-	 void *data;
+typedef struct xlist_node_s xlist_node_t;
+
+struct xlist_node_s
+{
+   xlist_node_t *next;
+   void *data;
 };
 
-typedef struct xrtp_list_s xlist_t;
+typedef struct xlist_s xlist_t;
 
-typedef struct xrtp_list_s{
-  
-   xrtp_list_node_t *head;
-   xrtp_list_node_t *end;
-   int num;
-   
-}xrtp_list_t;
+typedef struct xlist_s
+{
+   xlist_node_t *head;
+   xlist_node_t *end;
+   int num;   
+};
 
-typedef struct xrtp_list_user_s xlist_user_t;
+typedef struct xlist_user_s xlist_user_t;
 
-typedef struct xrtp_list_user_s{
-  
-   xrtp_list_node_t *curr;
-   xrtp_list_node_t *prev;
-   xrtp_list_node_t *next;
-   
-}xrtp_list_user_t;
+typedef struct xlist_user_s
+{
+   xlist_node_t *curr;
+   xlist_node_t *prev;
+   xlist_node_t *next;
+};
 
 /* new api */
 extern DECLSPEC xlist_t * xlist_new();
@@ -71,8 +77,12 @@ extern DECLSPEC void * xlist_current(xlist_t * list, xlist_user_t * u);
 extern DECLSPEC int xlist_size(xlist_t * list);
 extern DECLSPEC int xlist_addto_first(xlist_t * list, void * data);
 extern DECLSPEC int xlist_addto_last(xlist_t * list, void * data);
+
+/* compare the address of the item, only add once to the list */
+extern DECLSPEC int xlist_add_once(xlist_t *list, void *data); 
 /* If item with same value, no addition occurred */
 extern DECLSPEC int xlist_addonce_ascent(xlist_t * list, void * data, int cmp(void *, void *));
+
 extern DECLSPEC void * xlist_remove_first(xlist_t * list);
 extern DECLSPEC int xlist_remove_item(xlist_t * list, void *item);
 extern DECLSPEC void * xlist_remove_if(xlist_t * list, void * data, int(*match)(void*, void*));

@@ -239,6 +239,56 @@ int xlist_addto_last(xlist_t * list, void * data){
 	return OS_OK;
 }
 
+int xlist_add_once(xlist_t *list, void *data) 
+{
+   xlist_node_t * curr = NULL;
+   xlist_node_t * prev = NULL;
+
+   xlist_node_t * node = NULL;
+
+   if(!list) return OS_INVALID;
+
+   if(!list->head)
+   {
+	   list->head = _xrtp_list_newnode();
+	   if(!list->head)
+		   return OS_FAIL;
+
+	   list->head->data = data;
+	   list->num = 1;
+
+	   return OS_OK;
+   }
+
+   curr = list->head;
+   prev = NULL;
+   
+   while(curr)
+   {
+      if( curr->data == data )
+	  { 
+		  /* exist */
+         xlist_log(("xlist_add_once: item exist\n"));
+         return OS_OK;
+      }
+
+      prev = curr;
+      curr = curr->next;
+   }
+
+   node = _xrtp_list_newnode();
+   if(!node)
+	   return OS_FAIL;
+
+   node->data = data;
+   prev->next = node;
+   list->num++;
+
+   xlist_log(("xlist_add_once: add new item\n"));
+
+   return OS_OK;
+}
+
 int xlist_addonce_ascent(xlist_t * list, void * ndata, int cmp(void *, void *)){
 
    int ret;
