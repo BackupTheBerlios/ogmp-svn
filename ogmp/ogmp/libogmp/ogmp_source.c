@@ -244,17 +244,12 @@ media_source_t* source_open(char* name, media_control_t* control, char *mode, vo
 	{
 		src_log(("source_setup: no format can open '%s'\n", name));
 
-		xthr_done_cond(source->wait_request);
-		xthr_done_lock(source->lock);
 		xfree(source);
 
 		return NULL;
 	}
 
 	/* set audio source */
-	source->lock = xthr_new_lock();
-	source->wait_request = xthr_new_cond(XTHREAD_NONEFLAGS);
-
 	source->control->set_format (source->control, "av", format);
 
 	msrc = (media_source_t*)source;
@@ -272,6 +267,9 @@ media_source_t* source_open(char* name, media_control_t* control, char *mode, vo
 			return NULL;
 		}
 
+		source->lock = xthr_new_lock();
+		source->wait_request = xthr_new_cond(XTHREAD_NONEFLAGS);
+
 		return msrc;
 	}
 
@@ -285,6 +283,9 @@ media_source_t* source_open(char* name, media_control_t* control, char *mode, vo
 
 	for(i=0; i<nplayer; i++)
 		source->players[i]->set_callback(source->players[i], CALLBACK_PLAYER_READY, source_cb_on_player_ready, source);
+
+	source->lock = xthr_new_lock();
+	source->wait_request = xthr_new_cond(XTHREAD_NONEFLAGS);
 
 	return msrc;
 }

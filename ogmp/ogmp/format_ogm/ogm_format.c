@@ -15,9 +15,9 @@
 
 #include "ogm_format.h"
 
-#include <timedia/ui.h>
 #include <timedia/xmalloc.h>
 #include <string.h>
+#include <timedia/ui.h>
 
 #define CATALOG_VERSION  0x0001
 #define DIRNAME_MAXLEN  128
@@ -174,15 +174,23 @@ int ogm_new_all_player(media_format_t *mf, media_control_t* ctrl, char* mode, vo
 		cur->player = ctrl->find_player(ctrl, mode, cur->media_info->mime, cur->media_info->fourcc, mode_param);
 			
 		if(!cur->player)
+		{
 			cur->playable = -1;
+
+			ogm_log(("ogm_new_mime_player: No %s player\n", cur->media_info->mime));
+		}
 		else if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
+		{
 			cur->playable = -1;
+
+			ogm_log(("ogm_new_mime_player: open %s stream fail!\n", cur->media_info->mime));
+		}
 		else
 		{
 			cur->playable = 1;
 			c++;
 
-			ogm_log(("ogm_new_mime_player: player ok\n"));
+			ogm_log(("ogm_new_mime_player: %s stream ok\n", cur->media_info->mime));
 		}
 
 		cur = cur->next;
@@ -524,7 +532,7 @@ int ogm_open(media_format_t *mf, char *fname, media_control_t *ctrl)
    int end = 0;   
    int head_parsed = 0;
    int n_pack = 0;
-   int n;
+   int n = 0;
 
    ogm_format_t *ogm = (ogm_format_t *)mf;
 
@@ -766,22 +774,20 @@ int ogm_seek_millisecond (media_format_t *mf, int millis) {
    ogm->page_ready = ogm->packet_ready = 0;
 
    /* more research
-   for (i=0; i<this->num_streams; i++) {
-
+   for (i=0; i<this->num_streams; i++)
+   {
       this->header_granulepos[i]=-1;
-   }*/
-
-
-   /*some strange streams have no syncpoint flag set at the beginning
+   }
+   */
+   /* some strange streams have no syncpoint flag set at the beginning
    if (start_pos == 0) this->keyframe_needed = 0;
-    */
+   */
 
    ogm_log (("ogm_seek_millisecond: seek to %ld called\n",start_pos));
 
    fseek (mf->fdin, start_pos, SEEK_SET);
 
    return start_pos;
-
 
    /* fixme - this would be a nice position to do the following tasks
       1. adjust an ogg videostream to a keyframe
@@ -850,13 +856,12 @@ int demux_ogm_process_packet(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_pag
 	  /* flag the end of a stream */
 	  stream_end = 1;
    }
-
    /*
-   if (!stream->rtp) {
-
+   if (!stream->rtp)
+   {
       return XRTP_OK;
-   }*/
-
+   }
+   */
    hdrlen = (*pack->packet & PACKET_LEN_BITS01) >> 6;
    hdrlen |= (*pack->packet & PACKET_LEN_BITS2) << 1;
 
