@@ -32,7 +32,7 @@
 
 
 #ifdef RTPDEV_DEBUG
- #define rtpdev_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
+ #define rtpdev_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define rtpdev_debug(fmtargs)
 #endif
@@ -201,7 +201,7 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
    xrtp_session_t *ses = NULL;
    xrtp_media_t *rtp_media;
 
-   printf("rtp_session: [%s] on [%s:%u|%u], mime[%s]\n", cname, netaddr, rtp_portno, rtcp_portno, profile_mime);
+   rtpdev_debug(("rtp_session: [%s] on [%s:%u|%u], mime[%s]\n", cname, netaddr, rtp_portno, rtcp_portno, profile_mime));
 
    /* If the session is exist */
    ses = xrtp_find_session(rtp->session_set, cname, cnlen, netaddr, rtp_portno, rtcp_portno, profile_no, profile_mime);

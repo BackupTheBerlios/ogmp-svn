@@ -253,9 +253,9 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 
 		media_bw = session_new_sdp(cata, nettype, addrtype, netaddr, &rtp_portno, &rtcp_portno, pt, codings[i].mime, codings[i].clockrate, codings[i].param, bw_budget, control, &sdp_info);
 
-		if(media_bw > 0)
+		if(media_bw > 0 && bw_budget > set->bandwidth + media_bw)
 		{
-			bw_budget -= media_bw;
+			set->bandwidth += media_bw;
 		}
 		else
 			break;
@@ -297,6 +297,7 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 	if(bw_budget == 0)
 	{
 		/* No enough bandwidth to make call */
+		ua_log(("sipua_new_set: No bandwidth\n"));
 		return NULL;
 	}
 
@@ -418,7 +419,9 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 							rtpcap->clockrate, rtpcap->coding_param, 
 							bw_budget, control, &sdp_info);
 			
-			if(media_bw < 0 || bw_budget < call_bw)
+			printf("sipua_new_set: media_bw[%d]\n", media_bw);
+
+			if(media_bw < 0 || bw_budget < call_bw + media_bw)
 				break;
 
 			rtpcap->enable = 1;
@@ -429,13 +432,14 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 		rtpcap = xlist_next(rtpcapset->rtpcaps, &u);
 	}
 
+	set->bandwidth = call_bw;
+
 	sdp_message_to_str(sdp_info.sdp_message, &set->reply_body);
 
     /* FIXME: If free here, lead to segment fault on linux(POSIX)
      * But why?
 	sdp_message_free(sdp_info.sdp_message);
     */
-
     /*
 	printf("sipua_negotiate_call:\n");
 	printf("-------Reply SDP----------\n");
@@ -480,13 +484,16 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
 			rtp_format_t* rtpfmt = (rtp_format_t*)format;
 
 			bw = rtpfmt->open_capables(format, rtpcapset, control, mode, call->bandwidth);
-
 			if(bw > 0)
 			{
 				call->rtp_format = format;
-
-				break;
 			}
+			else
+			{
+				printf("sipua_establish_call: no enough bandwidth\n");
+			}
+
+			break;
 		}
       
 		format = (media_format_t*) xlist_next(format_handlers, &u);
@@ -636,8 +643,6 @@ int sipua_unregist(sipua_t *sipua, user_profile_t *user)
 	else
 	{
 		user->cname = NULL;
-
-
 
 		user->reg_status = SIPUA_STATUS_UNREG_DOING;
 	}

@@ -32,6 +32,10 @@
 #define SDP_VERSION "0"
 #define PAYLOADTYPE_DYNA -1
 
+#define RTPCAP_NONE_CAPABLES		0x0
+#define RTPCAP_ALL_CAPABLES			0xF
+#define RTPCAP_SELECTED_CAPABLES	0xA
+
 typedef struct rtp_coding_s rtp_coding_t;
 struct rtp_coding_s
 {
@@ -127,6 +131,8 @@ struct rtpcap_set_s
 	sdp_message_t *sdp_message;
 
 	user_profile_t *user_profile;
+
+	int rtpcap_selection;
 };
 
 typedef struct rtpcap_sdp_s rtpcap_sdp_t;

@@ -316,9 +316,11 @@ control_setting_t* cont_fetch_setting(media_control_t *cont, char *name, media_d
    {
       setting = dev->new_setting(dev);
       
-      if(!setting) return NULL;
+      if(!setting) 
+		  return NULL;
       
-      if(item->call(item->call_user, setting) >= MP_OK) return setting;
+      if(item->call(item->call_user, setting) >= MP_OK) 
+		  return setting;
 
       cont_log(("cont_fetch_setting: no device setting\n"));
 

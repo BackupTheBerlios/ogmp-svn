@@ -212,7 +212,6 @@ int jcall_answered(eXosipua_t *jua, eXosip_event_t *je)
 {
 	sipua_call_event_t call_e;
 
-
 	/* event back to sipuac */
 	memset(&call_e, 0, sizeof(sipua_call_event_t));
 
@@ -221,9 +220,6 @@ int jcall_answered(eXosipua_t *jua, eXosip_event_t *je)
 	call_e.event.type = SIPUA_EVENT_ANSWERED;
 	call_e.event.content = je->sdp_body;
 
-	if (je->cid != call_e.cid && je->did != call_e.did)
-		return -1; 
-	
 	if (je->reason_phrase[0]!='\0')
     {
 		call_e.reason_phrase = je->reason_phrase;

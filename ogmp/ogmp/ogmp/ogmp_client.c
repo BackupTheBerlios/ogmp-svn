@@ -381,14 +381,13 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			sipua_set_t *call = e->call_info; 
 			call->status = SIPUA_EVENT_ANSWERED;
-
+			/*
 			printf("client_sipua_event: call[%s] answered\n", call->subject);
-
 			printf("client_sipua_event: SDP\n");
 			printf("------------------------\n");
 			printf("%s", sdp_body);
 			printf("------------------------\n");
-
+			*/
 			sdp_message_init(&sdp_message);
 
 			if (sdp_message_parse(sdp_message, sdp_body) != 0)
@@ -400,6 +399,9 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			}
 
 			rtpcapset = rtp_capable_from_sdp(sdp_message);
+
+			rtpcapset->user_profile = call->user_prof;
+			rtpcapset->rtpcap_selection = RTPCAP_ALL_CAPABLES;
 
 			/* rtp sessions created */
 			bw = sipua_establish_call(sipua, call, "playback", rtpcapset,
@@ -420,6 +422,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		{
 			sipua_set_t *call = e->call_info;
             
+			call->rtpcapset->rtpcap_selection = RTPCAP_ALL_CAPABLES;
+
 			/* Now create rtp sessions of the call */
 			sipua_establish_call(sipua, call, "playback", call->rtpcapset,
                                 client->format_handlers, client->control, client->pt);

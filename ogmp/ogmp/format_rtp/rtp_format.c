@@ -34,7 +34,7 @@
 #endif
 
 #ifdef RTP_DEBUG
- #define rtp_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
+ #define rtp_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define rtp_debug(fmtargs)  
 #endif
@@ -312,7 +312,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 	strm = xmalloc(sizeof(rtp_stream_t));
 	if(!strm)
 	{
-		rtp_log(("rtp_open_stream: No memory for rtp stream\n"));
+		rtp_debug(("rtp_open_stream: No memory for rtp stream\n"));
 		return NULL;
 	}
 	memset(strm, 0, sizeof(rtp_stream_t));
@@ -334,7 +334,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 	}
 	else
 	{
-		rtp_log(("rtp_open_stream: Unknown media type\n"));
+		rtp_debug(("rtp_open_stream: Unknown media type\n"));
 		xfree(strm);
 		return NULL;
 	}
@@ -342,7 +342,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 	rset = (rtp_setting_t*)ctrl->fetch_setting(ctrl, "rtp", (media_device_t*)rtp_format->rtp_in);
 	if(!rset)
 	{
-		rtp_log(("rtp_open_stream: No rtp setting\n"));
+		rtp_debug(("rtp_open_stream: No rtp setting\n"));
 		xfree(strm);
 		return NULL;
 	}
@@ -359,6 +359,8 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 	if(!strm->session)
 	{
 		xfree(strm);
+		rtp_debug(("rtp_open_stream: no session created\n"));
+
 		return NULL;
 	}
 
@@ -399,6 +401,8 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 
 	session_set_callback(strm->session, CALLBACK_SESSION_MEMBER_UPDATE, rtp_stream_on_member_update, strm);
 
+	printf("rtp_open_stream: stream opened, bandwidth[%d]\n", strm->bandwidth);
+
 	return strm;
 }
 
@@ -433,15 +437,22 @@ int rtp_open_capables(media_format_t *mf, rtpcap_set_t *rtpcapset, media_control
 
    rtp->rtp_in = (dev_rtp_t*)ctrl->find_device(ctrl, "rtp");
 
+	printf("rtp_open_capables: bandwidth[%d]\n", bandwidth);
+
    rtpcap = xlist_first(rtpcapset->rtpcaps, &u);
    while(rtpcap)
    {
-	   if(rtpcap->enable)
+	   if(rtpcapset->rtpcap_selection == RTPCAP_ALL_CAPABLES || (rtpcapset->rtpcap_selection == RTPCAP_SELECTED_CAPABLES && rtpcap->enable))
 	   {
 			strm = rtp_open_stream(rtp, sno++, rtpcap, ctrl, mode, bandwidth, rtpcapset);
 			if(strm)
+			{
+				printf("rtp_open_capables: stream bandwidth[%d]\n", strm->bandwidth);
 				bandwidth -= strm->bandwidth;
+			}
 	   }
+	   else
+			printf("rtp_open_capables: mime[%s] disabled\n", rtpcap->profile_mime);
 	   
 	   rtpcap = xlist_next(rtpcapset->rtpcaps, &u);
    }
