@@ -30,32 +30,41 @@
  #endif
  #define buffer_log(fmtargs)  do{if(buffer_log) printf fmtargs;}while(0)
 
- xrtp_buffer_t * buffer_new(uint size, enum byte_order_e order){
+ buffer_t * buffer_new(uint size, enum byte_order_e order){
 
-    xrtp_buffer_t * buf = (xrtp_buffer_t *)malloc(sizeof(struct xrtp_buffer_s) + sizeof(char) * size);
+    buffer_t * buf = (buffer_t *)malloc(sizeof(struct buffer_s));
 
-    if(!buf){
+    if(!buf || size < 0){
 
        return NULL;
     }
+	memset(buf, 0, sizeof(*buf));
 
     buf->byte_order = order;
-    buf->len = size;
-    buf->pos = 0;
-    buf->len_data = 0;
-    buf->data = (char *)(&(buf->data) + 1);
-    buf->mounted = 0;
 
-    buffer_log(("buffer_new: %d bytes buffer@(%d)\n", buf->len, (int)buf));
-    buffer_log(("buffer_new: buffer.data@(%d)\n\n", (int)(buf->data)));
+	if(size !=0){
+    
+		buf->data = malloc(size);
+		if(!buf->data){
+		
+			buffer_log(("buffer_new: No memory for data\n"));
+			free(buf);
+
+			return NULL;
+		}
+
+		buf->len = size;
+		buf->mounted = 1;
+
+		buffer_log(("buffer_new: %d bytes buffer mounted\n", buf->len));
+	}
 
     return buf;
  }
 
  int buffer_done(xrtp_buffer_t * buf){
 
-    if(buf->mounted)
-        free(buf->data);
+    if(buf->mounted == 1) free(buf->data);
             
     free(buf);
 
@@ -64,7 +73,9 @@
 
  int buffer_mount(xrtp_buffer_t * buf, char *data, int len){
 
-    buf->len = buf->len_data = len;
+	if(buf->data) free(buf->data);
+
+	buf->len = buf->len_data = len;
     buf->data = data;
     buf->mounted = 1;
     
@@ -104,29 +115,51 @@
     return newbuf;
  }
 
- xrtp_buffer_t * buffer_newsize(xrtp_buffer_t * buf, uint size){
+ int buffer_newsize(xrtp_buffer_t * buf, uint size){
 
-    xrtp_buffer_t * newbuf = (xrtp_buffer_t *)malloc(sizeof(struct xrtp_buffer_s) + sizeof(char) * size);
-    if(!newbuf){
+    char * newdata;
 
-       return NULL;
+	if(size == buf->len) return OS_OK;
+
+    newdata = malloc(size);
+    if(!newdata){
+
+		buffer_log(("buffer_newsize: No memory\n"));
+		return OS_EMEM;
     }
 
-    newbuf->byte_order = buf->byte_order;
-    newbuf->len = size;
-    newbuf->pos = 0;
-    newbuf->len_data = 0;
-    newbuf->data = (char *)(&(newbuf->data) + 1);
+	free(buf->data);
 
-    buffer_log(("buffer_newsize: %d bytes buffer@(%d)\n", buf->len, (int)buf));
-    buffer_log(("buffer_newsize: buffer.data@(%d)\n\n", (int)(buf->data)));
+    buf->len = size;
+    buf->pos = 0;
+    buf->len_data = 0;
+    buf->data = newdata;
 
-    return newbuf;
+    buffer_log(("buffer_newsize: %d bytes buffer remounted\n", buf->len, (int)buf));
+
+    return OS_OK;
+ }
+
+ int buffer_space(buffer_t *buf){
+ 
+	 return buf->len - buf->len_data;
  }
 
  char * buffer_data(xrtp_buffer_t * buf){
 
     return buf->data;
+ }
+
+ int buffer_clear(buffer_t *buf, int secure){
+ 
+	 if(buf->len_data){
+		
+		 if(secure) memset(buf->data, 0, buf->len_data);
+
+		 buf->len_data = buf->pos = 0;
+	 }
+
+	 return OS_OK;
  }
 
  uint buffer_maxlen(xrtp_buffer_t * buf){
