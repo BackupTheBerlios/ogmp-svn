@@ -52,19 +52,13 @@ char newcall_inputs[3][LINE_MAX];
 editline_t *newcall_edit[3];
 int cursor_newcall = 0;
 
-static char static_to[200] = { '\0' };
-
-void window_new_call_with_to(gui_t* gui, char *_to)
-{
-	snprintf(static_to, 200, _to);
-}
-
 int window_new_call_print(gui_t* gui, int wid)
 {
 	int y,x;
 	char buf[250];
 
 	ogmp_curses_t* ocui = gui->topui;
+	user_profile_t* user_profile = ocui->sipua->profile(ocui->sipua);
 
 	int pos;
 	char c, *ch;
@@ -87,7 +81,7 @@ int window_new_call_print(gui_t* gui, int wid)
 
 	attrset(COLOR_PAIR(4));
 	mvaddnstr(gui->y0, gui->x0, buf, (x-gui->x0));
-	snprintf(buf, x-gui->x0-1, "New call from: '%s'<%s>", ocui->user_profile->fullname, ocui->user_profile->regname);
+	snprintf(buf, x-gui->x0-1, "New call from: '%s'<%s>", user_profile->fullname, user_profile->regname);
 	mvaddstr(gui->y0, gui->x0+1, buf);
 
 	/* Window Body */
@@ -131,8 +125,14 @@ int window_new_call_print(gui_t* gui, int wid)
 
 	snprintf(buf, 25, "%10.10s", "Message :");
 	mvaddstr(gui->y0+3, gui->x0, buf);
+
+	if(newcall_inputs[NEWCALL_TO][0] == '\0' && ocui->contact)
+	{
+		editline_set_line(newcall_edit[NEWCALL_TO], ocui->contact->sip, strlen(ocui->contact->sip));
+
+		ocui->contact = NULL;
+	}
   
-	
 	attrset(COLOR_PAIR(0));
 	mvaddstr(gui->y0+1, gui->x0+11, newcall_inputs[NEWCALL_TO]);
 
@@ -219,60 +219,26 @@ int window_new_call_run_command(gui_t* gui, int c)
 	
 			break;
 		}
-#if 0
 		case 1: /* Ctrl-A */
 		{
-			/*
-			int ycur = gui_window_new_call.y0;
-			int xcur = gui_window_new_call.x0+10;
-			char to[200];
-			char subject[200];
-			char route[200];
-			char attachment[200];
+			/* if (_josua_start_call(cfg.identity, to, subject, route) != 0) beep(); */
+			
+			sipua_set_t* call = ocui->sipua->new_call(ocui->sipua, newcall_inputs[NEWCALL_SUBJ], strlen(newcall_inputs[NEWCALL_SUBJ]), newcall_inputs[NEWCALL_MSG], strlen(newcall_inputs[NEWCALL_MSG]));
+			
+			if(call)
+				ocui->sipua->invite(ocui->sipua, call, newcall_inputs[NEWCALL_TO]);
 
-			ycur++;
-			mvinnstr(ycur, xcur, to, x-gui_window_new_call.x0-10);
-			ycur++;
-			mvinnstr(ycur, xcur, subject, x-gui_window_new_call.x0-10);
-			ycur++;
-			mvinnstr(ycur, xcur, route, x-gui_window_new_call.x0-10);
-
-			osip_clrspace(to);
-			osip_clrspace(subject);
-			osip_clrspace(route);
-
-			i = _josua_start_call(cfg.identity, to, subject, route);
-			if (i!=0) 
-				beep();
-			*/
 			break;
 		}
+#if 0
 		case 15: /* Ctrl-O */
 		{
-			int ycur = gui_window_new_call.y0;
-			int xcur = gui_window_new_call.x0+10;
-			char to[200];
-			char route[200];
-
-			ycur++;
-			mvinnstr(ycur, xcur, to, x-gui_window_new_call.x0-10);
-			ycur++;
-			ycur++;
-			mvinnstr(ycur, xcur, route, x-gui_window_new_call.x0-10);
-
-			i = _josua_start_options(cfg.identity, to, route);
-			if (i!=0) beep();
-			/* mvinnstr(ycur, xcur, tmp, 199); */
+			/* if (_josua_start_options(cfg.identity, to, route) != 0) beep(); */
 			break;
 		}
 		case 19: /* Ctrl-S */
 		{
-			/*
-			i = _josua_start_subscribe(cfg.identity, to, route);
-			if (i!=0) 
-				beep();
-			mvinnstr(ycur, xcur, tmp, 199); 
-			*/
+			/* if (_josua_start_subscribe(cfg.identity, to, route) != 0) beep(); */
 			break;
 		}
 #endif

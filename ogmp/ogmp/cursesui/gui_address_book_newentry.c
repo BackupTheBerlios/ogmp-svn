@@ -20,6 +20,8 @@
 
 #include "gui_address_book_newentry.h"
 
+#include "editor.h"
+
 gui_t gui_window_address_book_newentry = 
 {
 	GUI_OFF,
@@ -39,11 +41,28 @@ gui_t gui_window_address_book_newentry =
 	NULL
 };
 
+#define LINE_MAX 128
+
+#define NEWENTRY_NAME	0
+#define NEWENTRY_MEMO	1
+#define NEWENTRY_SIP	2
+
+char newentry_inputs[3][LINE_MAX];
+
+editline_t *newentry_edit[4];
+int cursor_newentry = 0;
+
 int window_address_book_newentry_print(gui_t* gui, int wid)
 {
 	int y,x;
 	char buf[250];
   
+	int pos;
+	char c, *ch;
+	
+	ogmp_curses_t* ocui = gui->topui;
+	user_profile_t* user_profile = ocui->sipua->profile(ocui->sipua);
+
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
 
 	gui->parent = wid;
@@ -58,6 +77,23 @@ int window_address_book_newentry_print(gui_t* gui, int wid)
 	else 
 		x = gui->x1;
 
+	/* Window Title */
+	snprintf(buf, 250, "%199.199s", " ");
+
+	attrset(COLOR_PAIR(4));
+	mvaddnstr(gui->y0, gui->x0, buf, (x-gui->x0));
+
+	snprintf(buf, x-gui->x0, "New contact for '%s'<%s>", user_profile->fullname, user_profile->regname);
+	mvaddstr(gui->y0, gui->x0+1, buf);
+
+	/* Window Body */
+	pos = editline_pos(newentry_edit[cursor_newentry]);
+	editline_char(newentry_edit[cursor_newentry], &ch);
+	if(!*ch)
+		c = ' ';
+	else
+		c = *ch;
+
 	attrset(COLOR_PAIR(0));
 
 	snprintf(buf, 199, "%199.199s", " ");
@@ -68,20 +104,46 @@ int window_address_book_newentry_print(gui_t* gui, int wid)
   
 	attrset(COLOR_PAIR(1));
 
-	snprintf(buf, x - gui->x0, "Name      : ");
-	mvaddnstr(gui->y0, gui->x0, buf, (x - gui->x0 - 1));
+	if(cursor_newentry == NEWENTRY_NAME)
+		attrset(COLOR_PAIR(10));
+	else
+		attrset(COLOR_PAIR(1));
+
+	snprintf(buf, 25, "%10.10s", "Name :");
+	mvaddstr(gui->y0+1, gui->x0, buf);
   
-	snprintf(buf, x - gui->x0, "Memo      : ");
-	mvaddnstr(gui->y0+1, gui->x0, buf, (x - gui->x0 - 1));
+	
+	if(cursor_newentry == NEWENTRY_MEMO)
+		attrset(COLOR_PAIR(10));
+	else
+		attrset(COLOR_PAIR(1));
+
+	snprintf(buf, 25, "%10.10s", "Memo :");
+	mvaddstr(gui->y0+2, gui->x0, buf);
+
+
+	if(cursor_newentry == NEWENTRY_SIP)
+		attrset(COLOR_PAIR(10));
+	else
+		attrset(COLOR_PAIR(1));
+
+	snprintf(buf, 25, "%10.10s", "Contact :");
+	mvaddstr(gui->y0+3, gui->x0, buf);
   
-	snprintf(buf, x - gui->x0, "Public ID : ");
-	mvaddnstr(gui->y0+2, gui->x0, buf, (x - gui->x0 - 1));
-  
-	snprintf(buf, x - gui->x0, "Private ID: ");
-	mvaddnstr(gui->y0+3, gui->x0, buf, (x - gui->x0 - 1));
-  
+	
+	attrset(COLOR_PAIR(0));
+	mvaddstr(gui->y0+1, gui->x0+11, newentry_inputs[NEWENTRY_NAME]);
+
+	attrset(COLOR_PAIR(0));
+	mvaddstr(gui->y0+2, gui->x0+11, newentry_inputs[NEWENTRY_MEMO]);
+
+	attrset(COLOR_PAIR(0));
+	mvaddstr(gui->y0+3, gui->x0+11, newentry_inputs[NEWENTRY_SIP]);
+
+	attrset(COLOR_PAIR(10));
+	mvaddch(gui->y0+1+cursor_newentry, gui->x0+11+pos, c);
+
 	gui->gui_draw_commands(gui);
-	/*window_address_book_newentry_draw_commands();*/
 
 	return 0;
 }
@@ -89,36 +151,27 @@ int window_address_book_newentry_print(gui_t* gui, int wid)
 
 int window_address_book_newentry_run_command(gui_t* gui, int c)
 {
-	int y,x;
+	ogmp_curses_t* ocui = gui->topui;
 
-	ogmp_curses_t *ocui = gui->topui;
-  
-	getmaxyx(stdscr,y,x);
-
-	if (gui->x1==-999)
-    {}
-	else 
-		x = gui->x1;
+	int max = 3;
 
 	switch (c)
     {
 		case KEY_DC:
 		{
+			editline_remove_char(newentry_edit[cursor_newentry]);
+			
 			delch();
+
 			break;
 		}
-		case KEY_BACKSPACE:
-		case 127:
+		case '\b':
 		{
-			if (ocui->active_gui->xcursor>10)
-			{
-				int xcur,ycur;
+			if (editline_move_pos(newentry_edit[cursor_newentry], -1) >= 0)
+				editline_remove_char(newentry_edit[cursor_newentry]);
+			else
+				beep();
 
-				ocui->active_gui->xcursor--;
-				getyx(stdscr,ycur,xcur);
-				move(ycur,xcur-1);
-				delch();
-			}
 			break;
 		}
 		case '\n':
@@ -126,102 +179,64 @@ int window_address_book_newentry_run_command(gui_t* gui, int c)
 		case KEY_ENTER:
 		case KEY_DOWN:
 		{
-			if (gui->ycursor<3)
-			{
-				gui->ycursor++;
-				gui->xcursor=10;
-			}
+			cursor_newentry++;
+			cursor_newentry %= max;
+
 			break;
 		}
 		case KEY_UP:
 		{
-			if (gui->ycursor>0)
-			{
-				gui->ycursor--;
-				gui->xcursor=10;
-			}
+			cursor_newentry += max-1;
+			cursor_newentry %= max;
+
 			break;
 		}
 		case KEY_RIGHT:
 		{
-			if (gui->xcursor < x - gui->x0 - 1)
-				gui->xcursor++;
+			if (editline_move_pos(newentry_edit[cursor_newentry], 1) < 0)
+				beep();
 
 			break;
 		}
 		case KEY_LEFT:
 		{
-			if (gui->xcursor > 0)
-				gui->xcursor--;
-      
+			if (editline_move_pos(newentry_edit[cursor_newentry], -1) < 0)
+				beep();
+
 			break;
 		}
-
-		/* case 20: */  /* Ctrl-T */
 		case 1:  /* Ctrl-A */
 		{
-			int ycur = gui->y0;
-			int xcur = gui->x0+10;
+			if(newentry_inputs[NEWENTRY_NAME][0] && newentry_inputs[NEWENTRY_MEMO][0] && newentry_inputs[NEWENTRY_SIP][0])
+			{
+				sipua_contact_t* contact = sipua_new_contact(newentry_inputs[NEWENTRY_NAME], strlen(newentry_inputs[NEWENTRY_NAME]), newentry_inputs[NEWENTRY_MEMO], strlen(newentry_inputs[NEWENTRY_MEMO]), newentry_inputs[NEWENTRY_SIP]);
+				
+				int n = sipua_add_contact(ocui->phonebook, contact);
 
-			char name[200];
-			char memo[200];
-			char pub[200];
-			char pri[200];
+				log_printf("%d contacts in phonebook\n", n);
+				
+				gui_hide_window(gui);
+			}
 
-			sipua_contact_t *c;
-	
-			mvinnstr(ycur, xcur, name, (x - gui->x0 - 10));
-			ycur++;
-	
-			mvinnstr(ycur, xcur, memo, (x - gui->x0 - 10));
-			ycur++;
-	
-			mvinnstr(ycur, xcur, pub, (x - gui->x0 - 10));
-			ycur++;
-	
-			mvinnstr(ycur, xcur, pri, (x - gui->x0 - 10));
-	
-			/*_josua_add_contact(sipurl, telurl, email, phone);*/
-			c = sipua_new_contact(name, strlen(name)+1, memo, strlen(memo)+1, pub, pri);
-			sipua_add_contact(ocui->phonebook, c);
-      
+			break;
+		}
+		case 3:  /* Ctrl-C */
+		{
+			gui_hide_window(gui);
+
 			break;
 		}
 		case 4:  /* Ctrl-D */
 		{
-			char buf[200];
+			editline_clear(newentry_edit[cursor_newentry]);
 	
-			attrset(COLOR_PAIR(0));
-		
-			snprintf(buf, 199, "%199.199s", " ");
-			mvaddnstr(gui->y0 + gui->ycursor, gui->x0 + 10, buf, (x - gui->x0 - 10 - 1));
-	
-			gui->xcursor=10;
-      
-			break;
-		}
-		case 5:  /* Ctrl-E */
-		{
-			gui->xcursor=10;
-			gui->ycursor=0;
-
-			gui->gui_print(gui, GUI_NEWUSER);
-			/*window_address_book_newentry_print();*/
-
 			break;
 		}
 		default:
 		{
-			if (gui->xcursor < (x - gui->x0 - 1))
-			{
-				gui->xcursor++;
-	  
-				attrset(COLOR_PAIR(0));
-				echochar(c);
-			}
-			else
+			if(editline_append(newentry_edit[cursor_newentry], &((char)c), 1) == 0)
 				beep();
-      
+	
 			return -1;
 		}
 	}
@@ -234,11 +249,8 @@ void window_address_book_newentry_draw_commands(gui_t* gui)
 	int x,y;
 	char *address_book_newentry_commands[] = 
 	{
-		"<-",  "PrevWindow",
-		"->",  "NextWindow",
-		"^A", "AddEntry" ,
-		"^D", "DeleteLine",
-		"^E", "EraseAll",
+		"^A", "Add" ,
+		"^D", "ClearLine",
 		NULL
 	};
   
@@ -251,10 +263,18 @@ gui_t* window_address_book_newentry_new(ogmp_curses_t* topui)
 {
 	gui_window_address_book_newentry.topui = topui;
 
+	newentry_edit[NEWENTRY_NAME] = editline_new(newentry_inputs[NEWENTRY_NAME], LINE_MAX);
+	newentry_edit[NEWENTRY_MEMO] = editline_new(newentry_inputs[NEWENTRY_MEMO], LINE_MAX);
+	newentry_edit[NEWENTRY_SIP] = editline_new(newentry_inputs[NEWENTRY_SIP], LINE_MAX);
+
 	return &gui_window_address_book_newentry;
 }
 
 int window_address_book_newentry_done(gui_t* gui)
 {
+	editline_done(newentry_edit[NEWENTRY_NAME]);
+	editline_done(newentry_edit[NEWENTRY_MEMO]);
+	editline_done(newentry_edit[NEWENTRY_SIP]);
+
 	return 0;
 }

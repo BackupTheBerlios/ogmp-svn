@@ -77,7 +77,7 @@ struct ogmp_client_s
 
 	int pt[MAX_PAYLOAD_TYPE];
 	
-	xlist_t* sip_sessions;
+	xlist_t* calls;
 
 	void* lisener;
 	int (*notify_event)(void* listener, sipua_event_t* e);
@@ -316,9 +316,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			}
 
 			if(user_prof->reg_status == SIPUA_STATUS_UNREG_DOING)
-			{
 				user_prof->reg_status = SIPUA_STATUS_NORMAL;
-			}
 
 			/* registering transaction completed */
 			ua->reg_profile = NULL;
@@ -393,7 +391,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				ncoding++;
 			}
 
-			call_info = ua->sipua.new_conference(&ua->sipua, ua->user_prof, rtpcapset->callid, 
+			call_info = ua->sipua.create_call(&ua->sipua, ua->user_prof, rtpcapset->callid, 
 							rtpcapset->subject, rtpcapset->sbytes, 
 							rtpcapset->info, rtpcapset->ibytes,
 							ua->default_rtp_portno, ua->default_rtcp_portno, 
@@ -445,7 +443,6 @@ int sipua_done_sip_session(void* gen)
 {
 	sipua_set_t *set = (sipua_set_t*)gen;
 	
-	if(set->setid.username) xfree(set->setid.username);
 	if(set->setid.nettype) xfree(set->setid.nettype);
 	if(set->setid.addrtype) xfree(set->setid.addrtype);
 	if(set->setid.netaddr) xfree(set->setid.netaddr);
@@ -462,6 +459,15 @@ int sipua_done_sip_session(void* gen)
 	return UA_OK;
 }
 
+int client_done_call(sipua_t* sipua, sipua_set_t* set)
+{
+	ogmp_client_t *ua = (ogmp_client_t*)sipua;
+
+	xlist_remove_item(ua->calls, set);
+
+	return sipua_done_sip_session(set);
+}
+
 int sipua_done(sipua_t *sipua)
 {
 	ogmp_client_t *ua = (ogmp_client_t*)sipua;
@@ -470,7 +476,7 @@ int sipua_done(sipua_t *sipua)
 
 	xfree(ua->action);
 
-	xlist_done(ua->sip_sessions, sipua_done_sip_session);
+	xlist_done(ua->calls, sipua_done_sip_session);
 
 	xfree(ua);
 
@@ -481,7 +487,7 @@ int sipua_done(sipua_t *sipua)
 }
 
 /* NOTE! if match, return ZERO, otherwise -1 */
-int sipua_match_conference(void* tar, void* pat)
+int sipua_match_call(void* tar, void* pat)
 {
 	sipua_set_t *set = (sipua_set_t*)tar;
 	sipua_setid_t *id = (sipua_setid_t*)pat;
@@ -496,7 +502,7 @@ int sipua_match_conference(void* tar, void* pat)
 	return -1;
 }
 
-sipua_set_t* client_find_conference(sipua_t* sipua, char* id, char* username, char* nettype, char* addrtype, char* netaddr)
+sipua_set_t* client_find_call(sipua_t* sipua, char* id, char* username, char* nettype, char* addrtype, char* netaddr)
 {
 	ogmp_client_t *ua = (ogmp_client_t*)sipua;
 
@@ -509,40 +515,21 @@ sipua_set_t* client_find_conference(sipua_t* sipua, char* id, char* username, ch
 	setid.addrtype = addrtype;
 	setid.netaddr = netaddr;
 
-	return (sipua_set_t*)xlist_find(ua->sip_sessions, &setid, sipua_match_conference, &u);
+	return (sipua_set_t*)xlist_find(ua->calls, &setid, sipua_match_call, &u);
 }
 
-int client_done_conference(sipua_t* sipua, sipua_set_t* set)
-{
-	ogmp_client_t *ua = (ogmp_client_t*)sipua;
-
-	xlist_remove_item(ua->sip_sessions, set);
-	/*
-	if(set->setid.username) xfree(set->setid.username);
-	*/
-	if(set->setid.nettype) xfree(set->setid.nettype);
-	if(set->setid.addrtype) xfree(set->setid.addrtype);
-	if(set->setid.netaddr) xfree(set->setid.netaddr);
-
-	xfree(set->setid.id);
-	xfree(set->version);
-	xfree(set->subject);
-	xfree(set->info);
-
-	xlist_done(set->mediaset, sipua_done_rtp_media);
-
-	xfree(set);
-		
-	return UA_OK;
-}
-
-int client_set_default_profile(sipua_t* sipua, user_profile_t* prof)
+int client_set_profile(sipua_t* sipua, user_profile_t* prof)
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
 	client->user_prof = prof;
 
 	return UA_OK;
+}
+
+user_profile_t* client_profile(sipua_t* sipua)
+{
+	return ((ogmp_client_t*)sipua)->user_prof;
 }
 
 int client_regist(sipua_t *sipua, user_profile_t *user, char * userloc)
@@ -597,10 +584,10 @@ int client_unregist(sipua_t *sipua, user_profile_t *user)
 	return ret;
 }
 
-sipua_set_t* client_create_call(ogmp_client_t* clie, char* subject, int sbytes, char *desc, int dbytes)
+sipua_set_t* client_new_call(sipua_t* sipua, char* subject, int sbytes, char *desc, int dbytes)
 {
 	ogmp_setting_t *setting;
-	sipua_t* sipua = (sipua_t*)clie;
+	ogmp_client_t* clie = (ogmp_client_t*)sipua;
 	sipua_set_t* call;
 
 	int bw_conf;
@@ -610,7 +597,7 @@ sipua_set_t* client_create_call(ogmp_client_t* clie, char* subject, int sbytes, 
 
 	setting = client_setting(clie->control);
 
-	call = sipua_new_conference(sipua, clie->user_prof, NULL,
+	call = sipua_create_call(sipua, clie->user_prof, NULL,
 						subject, sbytes, desc, dbytes,
 						clie->default_rtp_portno, clie->default_rtcp_portno, 
 						clie->total_bandwidth, &bw_conf, clie->control, 
@@ -620,6 +607,8 @@ sipua_set_t* client_create_call(ogmp_client_t* clie, char* subject, int sbytes, 
 		return NULL;
 
 	clie->total_bandwidth -= bw_conf;
+
+	xlist_addto_first(clie->calls, call);
 	
 	return call;
 }
@@ -674,13 +663,16 @@ sipua_t* client_new_sipua(sipua_uas_t* uas, int bandwidth)
 	sipua->done = sipua_done;
 
 	sipua->userloc = sipua_userloc;
-	sipua->set_default_profile = client_set_default_profile;
+
+	sipua->set_profile = client_set_profile;
+	sipua->profile = client_profile;
 
 	sipua->regist = client_regist;
 	sipua->unregist = client_unregist;
 
-	sipua->new_conference = sipua_new_conference;
-	sipua->done_conference = client_done_conference;
+	sipua->new_call = client_new_call;
+	sipua->create_call = sipua_create_call;
+	sipua->done_call = client_done_call;
 
 	sipua->add = sipua_add;
 	sipua->remove = sipua_remove;

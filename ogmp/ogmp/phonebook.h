@@ -32,18 +32,17 @@ struct sipua_contact_s
 	char		*memo;
 	int			mbytes;
 
-	char		*public_sip;
-	char		*private_sip;
+	char		*sip;
 };
 
 sipua_phonebook_t* sipua_new_book();
 int sipua_done_book(sipua_phonebook_t* book);
 
-sipua_phonebook_t* sipua_load_book(user_profile_t* prof);
+sipua_phonebook_t* sipua_load_book(char* bookloc);
 int sipua_save_book(sipua_phonebook_t* book, char* location);
 
-sipua_contact_t* sipua_new_contact(char* name, int nbytes, char* memo, int mbytes, char* public_sip, char* private_sip);
-int sipua_contact(sipua_contact_t* contact, char** name, int* nbytes, char** memo, int* mbytes, char** public_sip, char** private_sip);
+sipua_contact_t* sipua_new_contact(char* name, int nbytes, char* memo, int mbytes, char* sip);
+int sipua_contact(sipua_contact_t* contact, char** name, int* nbytes, char** memo, int* mbytes, char** sip);
 
 sipua_contact_t* sipua_pick_contact(sipua_phonebook_t* book, int pos);
 

@@ -122,7 +122,7 @@ char* sipua_userloc(sipua_t* sipua, char* uid)
 	return loc;
 }
 
-sipua_set_t* sipua_new_conference(sipua_t *sipua, user_profile_t* user_prof, char* id, 
+sipua_set_t* sipua_create_call(sipua_t *sipua, user_profile_t* user_prof, char* id, 
 							   char* subject, int sbyte, char* info, int ibyte,
 							   int default_rtp_portno, int default_rtcp_portno, int bandwidth, int *bw_used,
 							   media_control_t* control, rtp_coding_t codings[], int ncoding, int pt_pool[])

@@ -50,19 +50,19 @@ gui_t gui_window_menu =
 
 static const menu_t josua_menu[] = 
 {
-	{ "a", " ADDRESS BOOK       -    Update address book",
+	{ "a", " PHONE BOOK         -    Manage phone book",
 		GUI_BROWSE  },
-	{ "i", " INITIATE SESSION   -    Initiate a session",
+	{ "i", " NEW CALL SESSION   -    Create a call session",
 		GUI_NEWCALL },
 	{ "u", " SUBSCRIPTIONS LIST -    View pending subscriptions",
 		GUI_SUBS},
-	{ "l", " SESSIONS LIST      -    View pending sessions",
+	{ "l", " CALL LIST          -    Manage all calls",
 		GUI_SESSION },
-	{ "r", " PROFILE LIST       -    Change user profile",
+	{ "r", " PROFILE LIST       -    Change your ID",
 		GUI_PROFILES  },
-	{ "s", " SETUP              -    Configure Josua options",
+	{ "s", " SETUP              -    Setting",
 		GUI_SETUP },
-	{ "q", " QUIT               -    Quit the Josua program",
+	{ "q", " QUIT               -    Quit",
 		GUI_QUIT  },
 	{ 0 }
 };
@@ -87,16 +87,16 @@ int window_menu_print(gui_t *gui, int wid)
 	int i;
 	int pos;
 
-	ogmp_curses_t* ocui;
 	const menu_t* menu;
+
+	ogmp_curses_t* ocui = gui->topui;
+	user_profile_t* user_profile = ocui->sipua->profile(ocui->sipua);
 
 	gui->parent = wid;
 
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
 
 	getmaxyx(stdscr,y,x);
-
-	ocui = gui->topui;
 
 	if (gui->x1<=0)
 		x1 = x;
@@ -105,7 +105,7 @@ int window_menu_print(gui_t *gui, int wid)
 
 	pos = 0;
 
-	if(ocui->user_profile)
+	if(user_profile)
 		menu = josua_menu;
 	else
 		menu = login_menu;
@@ -152,9 +152,11 @@ int window_menu_run_command(gui_t *gui, int c)
 {
 	int max;
 	const menu_t* menu;
-	ogmp_curses_t* ocui = gui->topui;
 
-	if(ocui->user_profile)
+	ogmp_curses_t* ocui = gui->topui;
+	user_profile_t* user_profile = ocui->sipua->profile(ocui->sipua);
+
+	if(user_profile)
 	{
 		menu = josua_menu;
 		max = 7;
@@ -208,43 +210,43 @@ int window_menu_run_command(gui_t *gui, int c)
 			cursor_menu %= max;
 			break;
 		case 'a':
-			if(ocui->user_profile)
+			if(user_profile)
 				cursor_menu = 0;
 			else
 				beep();
 			break;
 		case 'i':
-			if(ocui->user_profile)
+			if(user_profile)
 				cursor_menu = 1;
 			else
 				beep();
 			break;
 		case 'u':
-			if(ocui->user_profile)
+			if(user_profile)
 				cursor_menu = 2;
 			else
 				beep();
 			break;
 		case 'l':
-			if(ocui->user_profile)
+			if(user_profile)
 				cursor_menu = 3;
 			else
 				cursor_menu = 0;
 			break;
 		case 'r':
-			if(ocui->user_profile)
+			if(user_profile)
 				cursor_menu = 4;
 			else
 				beep();
 			break;
 		case 's':
-			if(ocui->user_profile)
+			if(user_profile)
 				cursor_menu = 5;
 			else
 				beep();
 			break;
 		case 'q':
-			if(ocui->user_profile)
+			if(user_profile)
 				cursor_menu = 6;
 			else
 				cursor_menu = 1;
@@ -258,7 +260,7 @@ int window_menu_run_command(gui_t *gui, int c)
 		case '4':
 		case '5':
 		case '6':
-			if(ocui->user_profile)
+			if(user_profile)
 				cursor_menu = c-48;
 			else
 				beep();

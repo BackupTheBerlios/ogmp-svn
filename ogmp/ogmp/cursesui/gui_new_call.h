@@ -23,7 +23,6 @@
 
 #include "gui.h"
 
-void window_new_call_with_to(gui_t* gui, char *_to);
 int window_new_call_print(gui_t* gui, int wid);
 int window_new_call_run_command(gui_t* gui, int c);
 int window_new_call_key_pressed(gui_t* gui);

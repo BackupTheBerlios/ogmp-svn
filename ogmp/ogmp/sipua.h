@@ -209,15 +209,19 @@ struct sipua_s
 	int (*done)(sipua_t *ua);
 
 	char* (*userloc)(sipua_t* sipua, char* uid);
-	int (*set_default_profile)(sipua_t* sipua, user_profile_t* prof);
+
+	int (*set_profile)(sipua_t* sipua, user_profile_t* prof);
+	user_profile_t* (*profile)(sipua_t* sipua);
 
 	/* registration */
 	int (*regist)(sipua_t *sipua, user_profile_t *user, char *userloc);
 	int (*unregist)(sipua_t *sipua, user_profile_t *user);
 
 	/* conference */
-	int (*done_conference)(sipua_t *sipua, sipua_set_t* set);
- 	sipua_set_t* (*new_conference)(sipua_t *sipua, user_profile_t *user, char* id, 
+	sipua_set_t* (*new_call)(sipua_t* sipua, char* subject, int sbytes, char *desc, int dbytes);
+	int (*done_call)(sipua_t *sipua, sipua_set_t* set);
+ 	
+	sipua_set_t* (*create_call)(sipua_t *sipua, user_profile_t *user, char* id, 
 							char* subject, int sbyte, char* info, int ibyte, 
 							int default_rtp_portno, int default_rtcp_portno, int bandwidth, int *bw_conf,
 							media_control_t* control, rtp_coding_t codings[], int ncoding, int pt_pool[]);
@@ -247,7 +251,7 @@ int sipua_regist(sipua_t *sipua, user_profile_t *user, char *userloc);
 int sipua_unregist(sipua_t *sipua, user_profile_t *user);
 
 /* conference */
-sipua_set_t* sipua_new_conference(sipua_t *sipua, user_profile_t* user_prof, char* id, 
+sipua_set_t* sipua_create_call(sipua_t *sipua, user_profile_t* user_prof, char* id, 
 							   char* subject, int sbyte, char* info, int ibyte,
 							   int default_rtp_portno, int default_rtcp_portno, int bandwidth, int *bw_used,
 							   media_control_t* control, rtp_coding_t codings[], int ncoding, int pt_pool[]);

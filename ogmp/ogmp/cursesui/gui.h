@@ -141,10 +141,10 @@ struct ogmp_curses_s
 	sipua_net_t* network;
 
 	user_t *user;
-	/*xlist_t *profiles;*/
-	user_profile_t *user_profile;
+	//user_profile_t *user_profile;
 
 	sipua_phonebook_t *phonebook;
+	sipua_contact_t *contact;
 
 	int ncoding;
 	int codex[MAX_CODING];

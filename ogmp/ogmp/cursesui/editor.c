@@ -62,7 +62,7 @@ int editline_set_line(editline_t* edl, char *ascii, int asize)
 	memcpy(edl->line, ascii, ncpy);
 	edl->line[ncpy] = '\0';
 
-	edl->pos = ncpy+1;
+	edl->pos = ncpy;
 	edl->num = ncpy;
 
 	return edl->num;

@@ -49,6 +49,7 @@ int window_online_print(gui_t* gui, int wid)
 	char buf[250];
 
 	ogmp_curses_t* ocui = gui->topui;
+	user_profile_t* user_profile = ocui->sipua->profile(ocui->sipua);
   
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
 
@@ -59,7 +60,7 @@ int window_online_print(gui_t* gui, int wid)
 	attrset(A_NORMAL);
 	attrset(COLOR_PAIR(14));
 
-	snprintf(buf, x, "Current ID :   %s %140.140s", ocui->user_profile->fullname, " ");
+	snprintf(buf, x, "Current ID :   %s %140.140s", user_profile->fullname, " ");
 	mvaddnstr(y + gui->y0, 0, buf, x);
 
 	if (josua_online_status==EXOSIP_NOTIFY_UNKNOWN)
@@ -85,12 +86,12 @@ int window_online_print(gui_t* gui, int wid)
   
 	mvaddnstr(y + gui->y0 + 1, 0, buf, x);
 
-	if (ocui->user_profile->reg_status == SIPUA_STATUS_NORMAL)
+	if (user_profile->reg_status == SIPUA_STATUS_NORMAL)
     {
 		snprintf(buf, x, "registred:   --Not registred-- %140.140s", " ");
 		mvaddnstr(y + gui->y0 + 2, 0, buf, x);
     }
-	else if (ocui->user_profile->reg_status == SIPUA_STATUS_REG_OK)
+	else if (user_profile->reg_status == SIPUA_STATUS_REG_OK)
 	{
 		if (199 < josua_registration_status && josua_registration_status < 300)
 		{
@@ -109,12 +110,12 @@ int window_online_print(gui_t* gui, int wid)
 			mvaddnstr(y + gui->y0 + 2, 0, buf, x);
 		}
 	}
-	else if (ocui->user_profile->reg_status == SIPUA_STATUS_REG_DOING)
+	else if (user_profile->reg_status == SIPUA_STATUS_REG_DOING)
 	{
 		snprintf(buf, x, "registred:   registering... %140.140s", " ");
 		mvaddnstr(y + gui->y0 + 2, 0, buf, x);
 	}
-	else if (ocui->user_profile->reg_status == SIPUA_STATUS_UNREG_DOING)
+	else if (user_profile->reg_status == SIPUA_STATUS_UNREG_DOING)
 	{
 		snprintf(buf, x, "registred:   unregistering... %140.140s", " ");
 		mvaddnstr(y + gui->y0 + 2, 0, buf, x);

@@ -52,6 +52,7 @@ int window_profiles_print(gui_t* gui, int wid)
 	user_profile_t* prof;
 
 	ogmp_curses_t* ocui = gui->topui;
+	user_profile_t* user_profile = ocui->sipua->profile(ocui->sipua);
 
 	gui->parent = wid;
 
@@ -124,7 +125,7 @@ int window_profiles_print(gui_t* gui, int wid)
 			snprintf(buf, 199, " %c%c %c '%s'<%s> [%-s] %-100.100s",
 						(cursor_profiles_pos==k) ? '-' : ' ',
 						(cursor_profiles_pos==k) ? '>' : ' ',
-						(prof == ocui->user_profile) ? '*' : ' ',
+						(prof == user_profile) ? '*' : ' ',
 						fullname, prof->regname, prof->registrar, "OK");
 		}
 		else if (prof->reg_status == SIPUA_STATUS_REG_FAIL)
@@ -132,7 +133,7 @@ int window_profiles_print(gui_t* gui, int wid)
 			snprintf(buf, 199, " %c%c %c '%s'<%s> [%-s] %-100.100s",
 						(cursor_profiles_pos==k) ? '-' : ' ',
 						(cursor_profiles_pos==k) ? '>' : ' ',
-						(prof == ocui->user_profile) ? '*' : ' ',
+						(prof == user_profile) ? '*' : ' ',
 						fullname, prof->regname, prof->registrar, "FAIL");
 		}
 		else if (prof->reg_status == SIPUA_STATUS_REG_DOING)
@@ -140,7 +141,7 @@ int window_profiles_print(gui_t* gui, int wid)
 			snprintf(buf, 199, " %c%c %c '%s'<%s> [%-s] %-100.100s",
 						(cursor_profiles_pos==k) ? '-' : ' ',
 						(cursor_profiles_pos==k) ? '>' : ' ',
-						(prof == ocui->user_profile) ? '*' : ' ',
+						(prof == user_profile) ? '*' : ' ',
 						fullname, prof->regname, prof->registrar, "R...");
 		}
 		else if (prof->reg_status == SIPUA_STATUS_UNREG_DOING)
@@ -148,7 +149,7 @@ int window_profiles_print(gui_t* gui, int wid)
 			snprintf(buf, 199, " %c%c %c '%s'<%s> [%-s] %-100.100s",
 						(cursor_profiles_pos==k) ? '-' : ' ',
 						(cursor_profiles_pos==k) ? '>' : ' ',
-						(prof == ocui->user_profile) ? '*' : ' ',
+						(prof == user_profile) ? '*' : ' ',
 						fullname, prof->regname, prof->registrar, "U...");
 		}
 		else
@@ -156,7 +157,7 @@ int window_profiles_print(gui_t* gui, int wid)
 			snprintf(buf, 199, " %c%c %c '%s'<%s> [%-s] %-100.100s",
 						(cursor_profiles_pos==k) ? '-' : ' ',
 						(cursor_profiles_pos==k) ? '>' : ' ',
-						(prof == ocui->user_profile) ? '*' : ' ',
+						(prof == user_profile) ? '*' : ' ',
 						fullname, prof->regname, prof->registrar, "---");
 		}
       
@@ -188,10 +189,9 @@ void window_profiles_draw_commands(gui_t* gui)
 									"^D",   "Delete",
 									"^R",	"Register",
 									"^U",	"Unregister",
-									"^E",	"AsDefault",
 									"^F",	"Refresh",
 									"^S",	"Save List",
-									"CR",	"Done",
+									"CR",	"Select",
 									NULL
 								};
 
@@ -200,9 +200,8 @@ void window_profiles_draw_commands(gui_t* gui)
 											"^D",   "Delete",
 											"^R",	"Register",
 											"^U",	"Unregister",
-											"^E",	"AsDefault",
 											"^F",	"Refresh",
-											"CR",	"Done",
+											"CR",	"Select",
 											NULL
 										};
 
@@ -222,6 +221,8 @@ int window_profiles_run_command(gui_t* gui, int c)
 	int max=0;
 
 	ogmp_curses_t* ocui = gui->topui;
+	user_profile_t* user_profile = ocui->sipua->profile(ocui->sipua);
+
 	xlist_t* profiles = ocui->user->profiles;
 
 	/*curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);*/
@@ -289,32 +290,8 @@ int window_profiles_run_command(gui_t* gui, int c)
 				prof = (user_profile_t*)xlist_next(profiles, &lu);
 			}
 
-			if(prof && ocui->user_profile != prof)
+			if(prof && user_profile != prof)
 				user_remove_profile(ocui->user, prof);
-
-			break;
-		}
-
-		case 5:   /* Ctrl-E */
-		{
-			/* Set default profile */
-			user_profile_t* prof;
-			xlist_user_t lu;
-
-			k = 0;
-
-			prof = (user_profile_t*)xlist_first(profiles, &lu);
-			while(prof)
-			{
-				if(k == cursor_profiles_pos)
-					break;
-
-				k++;
-				prof = (user_profile_t*)xlist_next(profiles, &lu);
-			}
-
-			if(prof)
-				ocui->user_profile = prof;
 
 			break;
 		}
@@ -322,6 +299,7 @@ int window_profiles_run_command(gui_t* gui, int c)
 		case 6:   /* Ctrl-F */
 		{
 			/* Refresh the list */
+
 			break;
 		}
 
@@ -345,13 +323,10 @@ int window_profiles_run_command(gui_t* gui, int c)
 
 			if(prof)
 			{
-				if(prof->reg_status != SIPUA_STATUS_NORMAL)
+				if(prof->reg_status == SIPUA_STATUS_REG_OK)
 					break;
 				
-				if(ocui->sipua->regist(ocui->sipua, prof, ocui->user->userloc) < UA_OK)
-					break;
-
-				ocui->phonebook = sipua_load_book(ocui->user_profile);
+				ocui->sipua->regist(ocui->sipua, prof, ocui->user->userloc);
 			}
 
 			break;
@@ -379,7 +354,7 @@ int window_profiles_run_command(gui_t* gui, int c)
 			user_profile_t* prof;
 			xlist_user_t lu;
 
-			if(!ocui->user_profile)
+			if(!user_profile)
 				break;
 
 			k = 0;
@@ -393,13 +368,15 @@ int window_profiles_run_command(gui_t* gui, int c)
 				prof = (user_profile_t*)xlist_next(profiles, &lu);
 			}
 
-			if(prof && ocui->user_profile != prof)
+			if(prof && user_profile != prof)
 			{
 				if(prof->reg_status != SIPUA_STATUS_REG_OK)
 					break;
 				
 				ocui->sipua->unregist(ocui->sipua, prof);
 			}
+			else
+				beep();
 
 			break;
 		}
@@ -410,10 +387,8 @@ int window_profiles_run_command(gui_t* gui, int c)
 			user_profile_t* prof;
 			xlist_user_t lu;
 
-			if(ocui->user_profile)
-				break;
-
 			k = 0;
+
 			prof = (user_profile_t*)xlist_first(profiles, &lu);
 			while(prof)
 			{
@@ -426,17 +401,10 @@ int window_profiles_run_command(gui_t* gui, int c)
 
 			if(prof)
 			{
-				if(prof->reg_status != SIPUA_STATUS_NORMAL)
-					break;
-
-				if(ocui->sipua->regist(ocui->sipua, prof, ocui->user->userloc) < UA_OK)
-					break;
-
-				ocui->user_profile = prof;
-
-				ocui->phonebook = sipua_load_book(ocui->user_profile);
-			
-				gui_activate_window(gui, MENUGUI);
+				if(prof->reg_status == SIPUA_STATUS_REG_OK)
+					ocui->sipua->set_profile(ocui->sipua, prof);
+				else
+					ocui->sipua->regist(ocui->sipua, prof, ocui->user->userloc);
 			}
 
 			break;
