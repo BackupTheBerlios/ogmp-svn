@@ -81,6 +81,9 @@ int client_call_ringing(void* gen)
 					call->status = SIPUA_EVENT_ONHOLD;
 					client->nring--;
 
+					if(client->background_source)
+						client->sipua.answer(&client->sipua, call, SIPUA_STATUS_ANSWER, client->background_source);
+
 					if(client->nring == 0)
 						break;
 
@@ -102,8 +105,6 @@ int client_call_ringing(void* gen)
 	}
 
 	xthr_unlock(client->nring_lock);
-
-
 
 	client->thread_ringing = NULL;
 
@@ -133,9 +134,6 @@ int client_done(ogmp_client_t *client)
    if(client->sdp_body)
 	   free(client->sdp_body);
 
-
-
-
    xfree(client);
 
    return MP_OK;
@@ -158,11 +156,6 @@ int client_register_loop(void *gen)
 	while(user_prof->enable)
 	{
 		user_prof->seconds_left -= intv;
-
-
-
-
-
 
 		if(user_prof->seconds_left <= 0)
 			client_regist(&client->sipua, user_prof, user_prof->cname);
@@ -187,8 +180,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 	{
 		case(SIPUA_EVENT_REGISTRATION_SUCCEEDED):
 		case(SIPUA_EVENT_UNREGISTRATION_SUCCEEDED):
-
-
 		{
 			sipua_reg_event_t *reg_e = (sipua_reg_event_t*)e;
 			user_profile_t* user_prof = client->reg_profile;
@@ -344,7 +335,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			{
 				if(client->lines[i] == NULL)
 				{
-
 					call->ring_num = SIPUA_MAX_RING;
 
 					client->lines[i] = call;
@@ -365,6 +355,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 					break;
 				}
 			}
+
             /* Cannot free here, need for media specific parsing !!!
             sdp_message_free(sdp_message);
             */
@@ -414,6 +405,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				break;
 			}
 
+			/* capable answered by callee */
 			rtpcapset = rtp_capable_from_sdp(sdp_message);
 
 			rtpcapset->user_profile = call->user_prof;
@@ -425,7 +417,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			if(bw < 0)
 			{
 				sipua_answer(&client->sipua, call, SIPUA_STATUS_DECLINE, NULL);
-
 
 				break;
 			}
@@ -440,15 +431,21 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			sipua_set_t *call = e->call_info;
             
+            if(call->status == SIPUA_EVENT_ONHOLD)
+			{
+				client->sipua.attach_source(&client->sipua, call, (transmit_source_t*)client->background_source);
+				break;
+			}
+
 			call->rtpcapset->rtpcap_selection = RTPCAP_ALL_CAPABLES;
 
 			/* Now create rtp sessions of the call */
 			bw = sipua_establish_call(sipua, call, "playback", call->rtpcapset,
                                 client->format_handlers, client->control, client->pt);
+
 			if(bw < 0)
 			{
 				sipua_answer(&client->sipua, call, SIPUA_STATUS_REJECT, NULL);
-
 				break;
 			}
 
@@ -468,7 +465,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				call->status = SIPUA_EVENT_REQUESTFAILURE;
 			else
 				call->status = call_e->status_code;
-
 
 			break;
 		}
@@ -512,8 +508,6 @@ int sipua_done_sip_session(void* gen)
 	sipua_set_t *set = (sipua_set_t*)gen;
 	
 	if(set->setid.nettype) xfree(set->setid.nettype);
-
-
 
 	if(set->setid.addrtype) xfree(set->setid.addrtype);
 	if(set->setid.netaddr) xfree(set->setid.netaddr);
@@ -651,11 +645,9 @@ char* client_set_call_source(sipua_t* sipua, sipua_set_t* call, media_source_t* 
 	ogmp_client_t* clie = (ogmp_client_t*)sipua;
     char *sdp;
 
-	int bw_budget = clie->control->book_bandwidth(clie->control, MAX_CALL_BANDWIDTH);
-
 	setting = sipua->setting(sipua);
 
-	sdp = sipua_call_sdp(sipua, call, bw_budget, clie->control, clie->mediatypes,
+	sdp = sipua_call_sdp(sipua, call, MAX_CALL_BANDWIDTH, clie->control, clie->mediatypes,
                        clie->default_rtp_ports, clie->default_rtcp_ports,
                        clie->nmedia, source, clie->pt);
  
@@ -691,7 +683,6 @@ int client_regist(sipua_t *sipua, user_profile_t *user, char * userloc)
 	}
 
 	client->reg_profile = user;
-
 
 	ret = sipua_regist(sipua, user, userloc);
 
@@ -853,20 +844,32 @@ int client_attach_source(sipua_t* sipua, sipua_set_t* call, transmit_source_t* t
 {
 	xlist_user_t lu;
 	char *cname = call->rtpcapset->cname;
-
+	/*
+	where are you?
+	int bw_budget = clie->control->book_bandwidth(clie->control, MAX_CALL_BANDWIDTH);
+	*/
 	rtpcap_descript_t *rtpcap = xlist_first(call->rtpcapset->rtpcaps, &lu);
+
 	while(rtpcap)
 	{
 		if(rtpcap->netaddr)
+		{
+			/* The net address for the media */
 			tsrc->add_destinate(tsrc, rtpcap->profile_mime, cname, 
-								rtpcap->nettype, rtpcap->addrtype, rtpcap->netaddr, 
+								rtpcap->nettype, 
+								rtpcap->addrtype, 
+								rtpcap->netaddr, 
 								rtpcap->rtp_portno, rtpcap->rtcp_portno);
+		}
 		else
+		{
+			/* The default media net address */
 			tsrc->add_destinate(tsrc, rtpcap->profile_mime, cname, 
 								call->rtpcapset->nettype, 
 								call->rtpcapset->addrtype, 
 								call->rtpcapset->netaddr, 
 								rtpcap->rtp_portno, rtpcap->rtcp_portno);
+		}
 	
 		rtpcap = xlist_next(call->rtpcapset->rtpcaps, &lu);
 	}
@@ -937,9 +940,6 @@ int client_answer(sipua_t *sipua, sipua_set_t* call, int reply, media_source_t* 
                 char *sdp = client_set_call_source(sipua, call, source);
             
                 sipua_answer(&client->sipua, call, reply, sdp);
-
-                /* FIXME: Shouldn't be here */
-                client_attach_source(sipua, call, (transmit_source_t*)source);
 
                 xstr_done_string(sdp);
             }

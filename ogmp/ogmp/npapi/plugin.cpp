@@ -449,7 +449,6 @@ void nsPluginInstance::SetFilename(const char *filename)
 void nsPluginInstance::GetShowControls(PRBool * _retval)
 {
     *_retval = (PRBool) controlsvisible;
-
 }
 
 void nsPluginInstance::SetShowControls(PRBool value)

@@ -156,7 +156,7 @@ int window_preference_print(gui_t* gui, int wid)
 			break; /* do not print next one */
     }
 
-	//window_preference_draw_commands(gui);
+	window_preference_draw_commands(gui);
   
 	return 0;
 }

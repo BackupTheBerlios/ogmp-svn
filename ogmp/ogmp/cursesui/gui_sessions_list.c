@@ -96,7 +96,6 @@ int window_sessions_list_print(gui_t* gui, int wid)
 				strcpy(status, "Global Fail"); break;
 			case SIPUA_EVENT_ONHOLD:
 				strcpy(status, "On hold"); break;
-
 			case SIPUA_STATUS_REJECT:
 				strcpy(status, "Rejected"); break;
 			case SIPUA_STATUS_BUSY:
@@ -172,7 +171,6 @@ int window_sessions_list_print(gui_t* gui, int wid)
 				strcpy(status, "Global Fail"); break;
 			case SIPUA_EVENT_ONHOLD:
 				strcpy(status, "On hold"); break;
-
 			case SIPUA_STATUS_REJECT:
 				strcpy(status, "Rejected"); break;
 			case SIPUA_STATUS_BUSY:
@@ -218,7 +216,7 @@ int window_sessions_list_print(gui_t* gui, int wid)
   
 	ocui->sipua->unlock_lines(ocui->sipua);
 
-	//gui->gui_draw_commands(gui);
+	gui->gui_draw_commands(gui);
   
 	return 0;
 }
@@ -227,10 +225,6 @@ void window_sessions_list_draw_commands(gui_t* gui)
 {
 	int x,y;
 	char *sessions_list_commands[] = 
-
-
-
-
 	{
 		"N",  "New" ,
 		"A",  "Answer",
