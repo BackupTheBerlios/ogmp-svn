@@ -189,6 +189,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			call->did = call_e->did;
 			call->rtpcapset = rtpcapset;
 
+            call->from = xstr_clone(call_e->remote_uri);
+            
 			for(i=0; i<MAX_SIPUA_LINES; i++)
 			{
 				if(client->lines[i] == NULL)
@@ -275,8 +277,9 @@ int sipua_done_sip_session(void* gen)
 
 	xfree(set->setid.id);
 	xfree(set->version);
-	xfree(set->subject);
-	xfree(set->info);
+	xstr_done_string(set->subject);
+	xstr_done_string(set->info);
+    xstr_done_string(set->from);
 
 	set->rtp_format->done(set->rtp_format);
 
@@ -750,6 +753,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
  	/* lines management */
  	sipua->lock_lines = client_lock_lines;
  	sipua->unlock_lines = client_unlock_lines;
+
 
 	sipua->lines = client_lines;
  	sipua->busylines = client_busylines;

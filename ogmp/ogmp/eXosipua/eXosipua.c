@@ -72,30 +72,36 @@ int jua_process_event(eXosipua_t *jua)
 
 		if (je->type==EXOSIP_CALL_NEW)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) INVITE from: %s",
 					je->cid, je->did, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 
 			jcall_new(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_ANSWERED)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 
 			jcall_answered(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_ACK)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 
 			jcall_ack(jua, je);
 		}
@@ -111,78 +117,94 @@ int jua_process_event(eXosipua_t *jua)
 		}
 		else if (je->type==EXOSIP_CALL_RINGING)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 
 			jcall_ringing(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_REDIRECTED)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 
 			jcall_redirected(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_REQUESTFAILURE)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 
 			jcall_requestfailure(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_SERVERFAILURE)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 
 			jcall_serverfailure(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_GLOBALFAILURE)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 
 			jcall_globalfailure(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_CLOSED)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) BYE from: %s",
 					je->cid, je->did, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 	
 			jcall_closed(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_HOLD)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) INVITE (On Hold) from: %s",
 					je->cid, je->did, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 
 			jcall_onhold(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_OFFHOLD)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) INVITE (Off Hold) from: %s",
 					je->cid, je->did, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 
 			jcall_offhold(jua, je);
 		}
@@ -237,10 +259,12 @@ int jua_process_event(eXosipua_t *jua)
 		{
 			int k;
 	  
+			/*
 			snprintf(buf, 99, "<- (%i %i) OPTIONS from: %s",
 					je->cid, je->did, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 
 			/* answer the OPTIONS method */
 
@@ -272,51 +296,63 @@ int jua_process_event(eXosipua_t *jua)
 		}
 		else if (je->type==EXOSIP_OPTIONS_ANSWERED)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 		}
 		else if (je->type==EXOSIP_OPTIONS_PROCEEDING)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 		}
 		else if (je->type==EXOSIP_OPTIONS_REDIRECTED)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 		}
 		else if (je->type==EXOSIP_OPTIONS_REQUESTFAILURE)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 		}
 		else if (je->type==EXOSIP_OPTIONS_SERVERFAILURE)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 		}
 		else if (je->type==EXOSIP_OPTIONS_GLOBALFAILURE)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 			
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 		}
 		else if (je->type==EXOSIP_INFO_NEW)
 		{
@@ -327,27 +363,33 @@ int jua_process_event(eXosipua_t *jua)
 		}
 		else if (je->type==EXOSIP_INFO_ANSWERED)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 		}
 		else if (je->type==EXOSIP_INFO_PROCEEDING)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 		}
 		else if (je->type==EXOSIP_INFO_REDIRECTED)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 		}
 		else if (je->type==EXOSIP_INFO_REQUESTFAILURE)
 		{
@@ -359,60 +401,75 @@ int jua_process_event(eXosipua_t *jua)
 		}
 		else if (je->type==EXOSIP_INFO_SERVERFAILURE)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 		}
 		else if (je->type==EXOSIP_INFO_GLOBALFAILURE)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 		}
 		else if (je->type==EXOSIP_SUBSCRIPTION_ANSWERED)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s for SUBSCRIBE",
 					je->sid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
-			snprintf(buf, 99, "<- (%i %i) online=%i [status: %i reason:%i]",
+            josua_printf(buf);
+
+            snprintf(buf, 99, "<- (%i %i) online=%i [status: %i reason:%i]",
 					je->sid, je->did, je->online_status,
 					je->ss_status, je->ss_reason);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 			jsubscription_answered(jua, je);
 		}
 		else if (je->type==EXOSIP_SUBSCRIPTION_PROCEEDING)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s for SUBSCRIBE",
 					je->sid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 			jsubscription_proceeding(jua, je);
 		}
 		else if (je->type==EXOSIP_SUBSCRIPTION_REDIRECTED)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s for SUBSCRIBE",
 					je->sid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 			jsubscription_redirected(jua, je);
 		}
 		else if (je->type==EXOSIP_SUBSCRIPTION_REQUESTFAILURE)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s for SUBSCRIBE",
 					je->sid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 			jsubscription_requestfailure(jua, je);
+
+
 		}
 		else if (je->type==EXOSIP_SUBSCRIPTION_SERVERFAILURE)
 		{
@@ -425,34 +482,40 @@ int jua_process_event(eXosipua_t *jua)
 		}
 		else if (je->type==EXOSIP_SUBSCRIPTION_GLOBALFAILURE)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s for SUBSCRIBE",
 					je->sid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 			jsubscription_globalfailure(jua, je);
 		}
 		else if (je->type==EXOSIP_SUBSCRIPTION_NOTIFY)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) NOTIFY from: %s",
 					je->sid, je->did, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
 
 			snprintf(buf, 99, "<- (%i %i) online=%i [status: %i reason:%i]",
 					je->sid, je->did, je->online_status,
 					je->ss_status, je->ss_reason);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 
 			jsubscription_notify(jua, je);
 		}
 		else if (je->type==EXOSIP_IN_SUBSCRIPTION_NEW)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) SUBSCRIBE from: %s",
 					je->nid, je->did, je->remote_uri);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 
 			/* search for the user to see if he has been
 				previously accepted or not! */
@@ -462,10 +525,13 @@ int jua_process_event(eXosipua_t *jua)
 		}
 		else if (je->textinfo[0]!='\0')
 		{
+			/*
 			snprintf(buf, 99, "(%i %i %i %i) %s", je->cid, je->sid, je->nid, je->did, je->textinfo);
 	  
-			/*josua_printf(buf);*/
+            josua_printf(buf);
+            */
 		}
+
 	
 		eXosip_event_free(je);
 	}
@@ -666,17 +732,18 @@ int uas_unregist(sipua_uas_t *sipuas, char *userloc, char *registrar, char *id)
 int uas_invite(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_body, int sdp_bytes)
 {
 	eXosipua_t *jua = (eXosipua_t*)sipuas;
+    
 	osip_message_t *invite;
 	char sdp_size[8];
 	char* proxy;
 
 	int ret;
 
-	char *current_id = call_info->user_prof->regname;
+	char *from = call_info->user_prof->regname;
 	/*
 	OSIP_TRACE (osip_trace(__FILE__, __LINE__, OSIP_INFO2, NULL, "To: |%s|\n", to));
 	*/
-	if (0!=jua_check_url(current_id))
+	if (0!=jua_check_url(from))
 	{
 		jua_log(("uas_call: illigal sip id!\n"));
 		return UA_FAIL;
@@ -693,7 +760,7 @@ int uas_invite(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_
 	else
 		proxy = jua->sipuas.proxy;
 
-	if (eXosip_build_initial_invite(&invite, to, current_id, proxy, call_info->subject) != 0)
+	if (eXosip_build_initial_invite(&invite, to, from, proxy, call_info->subject) != 0)
 		return UA_FAIL;
 
 	/* sdp content of the call */

@@ -109,6 +109,7 @@ struct sipua_set_s
 	int lineno;  /* on which line */
 
 	user_profile_t* user_prof;
+    char* from;
 
 	int status;  /* line status */
 /*
@@ -353,6 +354,7 @@ int sipua_session_sdp(sipua_t *sipua, sipua_set_t* set, char** sdp);
 
 DECLSPEC
 int 
+
 sipua_call(sipua_t *ua, sipua_set_t* set, char *regname);
 	
 DECLSPEC

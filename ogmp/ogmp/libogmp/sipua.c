@@ -159,6 +159,7 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 	else
 	{
 		/* conference identification */
+
 		set->setid.id = xstr_clone(id);
 		set->setid.username = user_prof->username;
 
@@ -579,6 +580,7 @@ int sipua_session_sdp(sipua_t *sipua, sipua_set_t* set, char** sdp_body)
 
 	sdp_message_free(sdp.sdp_message);
 
+
 	return UA_OK;
 }
 #endif
@@ -641,12 +643,12 @@ int sipua_unregist(sipua_t *sipua, user_profile_t *user)
 	return ret;
 }
 
-int sipua_call(sipua_t *sipua, sipua_set_t* set, char *regname) 
+int sipua_call(sipua_t *sipua, sipua_set_t* set, char *callee) 
 {
 	/*char *sdp_body = NULL;*/
 	int ret;
 
-	ua_log(("sipua_connect: Call from [%s] to [%s]\n", set->user_prof->regname, regname));
+	ua_log(("sipua_connect: Call from [%s] to [%s]\n", set->user_prof->regname, callee));
 
 	/*sipua_session_sdp(sipua, set, &sdp_body);*/
 
@@ -655,8 +657,9 @@ int sipua_call(sipua_t *sipua, sipua_set_t* set, char *regname)
 	ua_log(("%s", set->sdp_body));
 	ua_log(("--------------------------\n"));
 
-	ret = sipua->uas->invite(sipua->uas, regname, set, set->sdp_body, strlen(set->sdp_body)+1);
-	if(ret < UA_OK)
+	ret = sipua->uas->invite(sipua->uas, callee, set, set->sdp_body, strlen(set->sdp_body)+1);
+
+    if(ret < UA_OK)
 		return ret;
 
 	/*free(sdp_body);*/

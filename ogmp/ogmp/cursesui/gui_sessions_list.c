@@ -18,7 +18,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*#include "jcalls.h"*/
 #include "gui_sessions_list.h"
 
 int calllist_line = 0;
@@ -52,6 +51,7 @@ int window_sessions_list_print(gui_t* gui, int wid)
 	/* Window Title */
 	attrset(COLOR_PAIR(4));
 	snprintf(buf, 250, "%199.199s", " ");
+
 
 	mvaddnstr(gui->y0, gui->x0, buf, (x-gui->x0));
 
@@ -89,29 +89,19 @@ int window_sessions_list_print(gui_t* gui, int wid)
 	
 	for(line = view; line < nbusy; line++)
     {
-#if 0
-		snprintf(buf, 199, "%c%c %i//%i %i %s with: %s %199.199s",
-					(cursor_sessions_list==pos-1) ? '-' : ' ',
-					(cursor_sessions_list==pos-1) ? '>' : ' ',
-					jcalls[k].cid,
-					jcalls[k].did,
-					jcalls[k].status_code,
-					jcalls[k].reason_phrase,
-					jcalls[k].remote_uri, " ");
-#endif
 		call = ocui->sipua->line(ocui->sipua, busylines[line]);
 
 		if(line==calllist_line)
 		{
-			snprintf(buf, x - gui->x0, " %c%c %d. %s - [%s]%-80.80s",
-					'-', '>', line, call->setid.id, call->subject, " ");
+			snprintf(buf, x - gui->x0, " %c%c [%d] %s - [%s]%-80.80s",
+					'-', '>', line, call->from, call->subject, " ");
       
 			attrset(COLOR_PAIR(10));
 		}
 		else
 		{
 			snprintf(buf, x - gui->x0, " %c%c %d. %s - [%s]%-80.80s",
-					' ', ' ', line, call->setid.id, call->subject, " ");
+					' ', ' ', line, call->from, call->subject, " ");
       
 			attrset(COLOR_PAIR(1));
 		}
@@ -185,6 +175,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 				beep();
 				break;
 			}
+
 
 			calllist_line = busylines[++n];
 			break;
@@ -286,7 +277,6 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 			if (i==0) jcall_remove(ca);
 			eXosip_unlock();
 */
-
 			gui->gui_print(gui, gui->parent);
 			break;
 		}
@@ -389,6 +379,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 		}
 		case 'o':
 		{
+
 			call = ocui->sipua->pick(ocui->sipua, calllist_line);
 			if (!call) 
 			{ 

@@ -105,8 +105,10 @@ int jcall_new(eXosipua_t *jua, eXosip_event_t *je)
 
 	call_e.cid = je->cid;
 	call_e.did = je->did;
+    
 	call_e.subject = je->subject;
 	call_e.textinfo = je->textinfo;
+    
 	call_e.req_uri = je->req_uri;
 	call_e.local_uri = je->local_uri;
 	call_e.remote_uri = je->remote_uri;
@@ -121,7 +123,6 @@ int jcall_new(eXosipua_t *jua, eXosip_event_t *je)
 	jua->sipuas.notify_event(jua->sipuas.lisener, &call_e.event);
 
 	return 0;
-
 }
 
 int jcall_remove(eXosipua_t *jua, jcall_t *ca)
