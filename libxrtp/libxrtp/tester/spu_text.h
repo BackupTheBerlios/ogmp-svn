@@ -27,7 +27,7 @@
 #define ERR (void *)-1
 #define SUB_MAX_TEXT  5
 #define SUB_BUFSIZE 1024
-#define SUB_MAXLEN  512
+#define SUB_MAXLEN  1024
 
 typedef struct {
 
@@ -82,10 +82,10 @@ void demux_sputext_done (demux_sputext_t *this);
 
 int demux_sputext_rewind(demux_sputext_t *this);
 
-int demux_sputext_seek(demux_sputext_t *this, int millisec);
+int demux_sputext_seek_msec(demux_sputext_t *this, int millisec);
 
 subtitle_t * demux_sputext_next_subtitle(demux_sputext_t *this);
 
 void demux_sputext_show_title(subtitle_t * subt);
 
-int demux_sputext_get_stream_length (demux_sputext_t *this);
+int demux_sputext_get_stream_msec (demux_sputext_t *this);

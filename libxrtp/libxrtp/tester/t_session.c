@@ -18,7 +18,7 @@
 #include "../xrtp.h"
  
 #include "spu_text.h"
-#include <string.h>                           
+#include <string.h>                          
 #include <stdlib.h>
 
 typedef struct subt_frame_s{
@@ -127,13 +127,17 @@ int cb_media_sent(void * u, xrtp_media_t * media){
 
          if(sender.need_seek){
 
-            demux_sputext_seek(sender.spu, sender.seek_time);
+            demux_sputext_seek_msec(sender.spu, sender.seek_time);
             sender.need_seek = 0;
          }
          
          subt = demux_sputext_next_subtitle(sender.spu);
-         if(!subt) break;
-
+         if(!subt){
+           
+            printf("spu_sender_run: No more subtitle, quit\n");
+            break;
+         }
+         
          //start = (sender.spu->uses_time) ? subt->start * 10 : subt->start;
          //end = (sender.spu->uses_time) ? subt->end * 10 : subt->end;
 
@@ -269,6 +273,7 @@ int cb_media_sent(void * u, xrtp_media_t * media){
 
  /* make no sense */
  xrtp_hrtime_t cb_mt2hrt(media_time_t ts){
+
 
     //printf("test.cb_mt2hrt: mt = %d, hrt = %d\n", ts, ts * 10000000);
     return (xrtp_hrtime_t)(ts * 1000000);
@@ -408,7 +413,7 @@ int cb_media_sent(void * u, xrtp_media_t * media){
     f = fopen(title, "r");
 
     spu = demux_sputext_new(f);
-    printf("Session tester: Subtitle specialised\n");
+    printf("Session tester: Subtitle '%s' specialised\n", title);
 
     //fclose(f);
     
@@ -480,7 +485,7 @@ int cb_media_sent(void * u, xrtp_media_t * media){
     
     /* seekable */
     sender.clock = time_start();
-	time_adjust(sender.clock, 600000,0,0);
+   time_adjust(sender.clock, 600000,0,0);
     
     sender.seek_time = 600000;
     sender.need_seek = 1;

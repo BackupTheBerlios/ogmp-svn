@@ -17,7 +17,7 @@
 
  #include "session.h"
  #include <stdlib.h>
-
+ 
  #include "const.h"
  #include <timedia/xstring.h>
  
@@ -935,7 +935,7 @@
              break;
           }
        }
-
+       
        if(!chunk){
 
           if(sdes->$head.count == XRTP_MAX_SDES_CHUNK){
@@ -1047,7 +1047,7 @@
 
     if(!new_sdes && new_chunk)
        sdes->chunks[sdes->$head.count++] = chunk;
-
+       
     if(new_sdes){
 
        sdes = rtcp_new_sdes(com); /* Create a SDES and add to compound */

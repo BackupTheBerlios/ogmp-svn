@@ -19,16 +19,20 @@
  * Most of the code is stealed from xine project - http://xinehq.de, Thanks ;)
  */
 
+#include <timedia/timer.h>
+#include "spu_text.h"
+
 #include <string.h>
 #include <ctype.h>
 
-#include "spu_text.h"
+#define SPU_TEXT_LOG
 
 #ifdef SPU_TEXT_LOG
- #define sputext_log(fmtargs)  do{printf fmtargs;}while(0)
+   const int spu_text_log = 1;
 #else
- #define sputext_log(fmtargs)
+   const int spu_text_log = 0;
 #endif
+#define sputext_log(fmtargs)  do{if(spu_text_log) printf fmtargs;}while(0)
 
 static int eol(char p) {
   return (p=='\r' || p=='\n' || p=='\0');
@@ -79,7 +83,6 @@ static char *read_line(demux_sputext_t *this, char *line, off_t len) {
 }
 
 char *sub_readtext(char *source, char **dest) {
-
   int len=0;
   char *p=source;
 
@@ -103,7 +106,7 @@ char *sub_readtext(char *source, char **dest) {
 
 /* parsing the subrip format */
 static subtitle_t *sub_read_line_subrip(demux_sputext_t *this, subtitle_t *current) {
-  char line[SUB_MAXLEN+1];
+  char line[1001];
   int a1,a2,a3,a4,b1,b2,b3,b4;
   char *p=NULL;
   int i,len;
@@ -112,12 +115,12 @@ static subtitle_t *sub_read_line_subrip(demux_sputext_t *this, subtitle_t *curre
 
   while (!current->text[0]) {
     
-    if (!read_line(this, line, SUB_MAXLEN))  return NULL;
+    if (!read_line(this, line, 1000))  return NULL;
     
     if ((len=sscanf (line, "%d:%d:%d,%d --> %d:%d:%d,%d",&a1,&a2,&a3,&a4,&b1,&b2,&b3,&b4)) < 8)
       continue;
       
-    current->start_ms = a1*3600000+a2*60000+a3*1000+a4;   /* to lrtime */
+    current->start_ms = a1*3600000+a2*60000+a3*1000+a4;   /* to millisec */
     current->end_ms   = b1*3600000+b2*60000+b3*1000+b4;
     
     for (i=0; i<SUB_MAX_TEXT;) {
@@ -338,9 +341,9 @@ void demux_sputext_show_title(subtitle_t * subt){
   int r; 
   int i;
 
-  s1 = subt->start_ms / 3600000;
+  s1 = subt->start_ms / 3600000;  /* millisec per hour */
   r = subt->start_ms % 3600000;
-  s2 = r / 60000; 
+  s2 = r / 60000;			   /* millisec per minute */
   r = r % 60000;
   s3 = r / 1000;
   r = r % 1000;
@@ -364,8 +367,7 @@ void demux_sputext_show_title(subtitle_t * subt){
 
 subtitle_t * demux_sputext_next_subtitle(demux_sputext_t *this) {
   
-  if (this->cur >= this->num)
-    return NULL;
+  if (this->cur >= this->num) return NULL;
 
   return &this->subtitles[this->cur++];
 }
@@ -383,10 +385,10 @@ void demux_sputext_done (demux_sputext_t *this) {
   free(this);
 }
 
-int demux_sputext_get_stream_length (demux_sputext_t *this) {
+rtime_t demux_sputext_get_stream_msec (demux_sputext_t *this) {
   
   if( this->uses_time && this->num ) {
-    return this->subtitles[this->num-1].end_ms;
+    return this->subtitles[this->num-1].end_ms * 10;
   } else {
     return 0;
   }
@@ -399,15 +401,14 @@ int demux_sputext_rewind(demux_sputext_t *this) {
   return 0;
 }
 
-int demux_sputext_seek(demux_sputext_t *this, int millisec){
+int demux_sputext_seek_msec(demux_sputext_t *this, rtime_t ms){
 
    subtitle_t *subt;
    
    this->cur = 0;
-   
    subt = &this->subtitles[this->cur];
-   
-   while(subt->start_ms < millisec) subt = &this->subtitles[this->cur++];
+   while(subt->start_ms < ms)
+      subt = &this->subtitles[this->cur++];
 
    return OS_OK;
 }

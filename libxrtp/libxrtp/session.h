@@ -97,8 +97,8 @@ typedef struct member_state_s{
     uint32 expected_prior;
     uint32 received_prior;
     
-    xrtp_hrtime_t last_hrt_local;
-    xrtp_hrtime_t last_hrt_rtpts;
+    rtime_t last_hrt_local;
+    rtime_t last_hrt_rtpts;
 
     uint32 last_transit;       /* For playout time computing, session_local_time() */
     uint32 last_last_transit;
@@ -116,7 +116,7 @@ typedef struct member_state_s{
     int playout_adapt;
     int play_mode;
 
-    xrtp_hrtime_t last_playout_offset;
+    rtime_t last_playout_offset;
     xrtp_lrtime_t lrts_last_heard;
 
     double jitter;
@@ -136,7 +136,7 @@ typedef struct member_state_s{
      * uint32 total_lost;  calc on_fly
      */
     uint32 lsr_ts; 
-    xrtp_hrtime_t lsr_hrt;   /* time of last sr received */
+    rtime_t lsr_hrt;   /* time of last sr received */
     xrtp_lrtime_t lsr_lrt;   /* time of last sr received */
     
     xrtp_list_t * rtp_buffer; /* Playout buffer */
@@ -146,7 +146,7 @@ typedef struct member_state_s{
     xrtp_lrtime_t lrt_last_rtcp_sent;
     
     xrtp_lrtime_t lrts_last_rtp_sent;
-    xrtp_hrtime_t hrts_last_rtp_sent;
+    rtime_t hrts_last_rtp_sent;
 
     char * cname;
     int cname_len;
@@ -163,7 +163,7 @@ typedef struct session_state_s{
 	 int n_pack_recvd;
 	 int n_pack_sent;
 
-   xrtp_hrtime_t hrts_start_send;
+   rtime_t hrts_start_send;
    xrtp_lrtime_t lrts_start_send;
     
 	 int oct_recvd;
@@ -276,14 +276,14 @@ struct session_callbacks_s{
     /**
      * Callout type: CALLBACK_SESSION_RECEIVE_RTP
      * Preempty current sending by a receive event
-    int (*receive_rtp)(void* user, xrtp_hrtime_t ts);
+    int (*receive_rtp)(void* user, rtime_t ts);
     void * receive_rtp_user;
      */
 
     /**
      * Callout type: CALLBACK_SESSION_RESUME_SEND_RTP
      * After receiving, resume the sending
-    int (*resume_send_rtp)(void* user, xrtp_hrtime_t now);
+    int (*resume_send_rtp)(void* user, rtime_t now);
     void * resume_send_rtp_user;
      */
     
@@ -312,28 +312,28 @@ struct session_callbacks_s{
      * Callout type: CALLBACK_SESSION_NOTIFY_DELAY
      * Tell the user how late we are
      */
-    int (*notify_delay)(void* user, xrtp_session_t * session, xrtp_hrtime_t late);
+    int (*notify_delay)(void* user, xrtp_session_t * session, rtime_t late);
     void * notify_delay_user;
 
     /**
      * Callout type: CALLBACK_SESSION_SYNC_TIMESTAMP
      * Get NTP and Local timestamp
      */
-    int (*sync_timestamp)(void* user, uint32 * hi_ntp, uint32 * lo_ntp, xrtp_hrtime_t * hrts_local);
+    int (*sync_timestamp)(void* user, uint32 * hi_ntp, uint32 * lo_ntp, rtime_t * hrts_local);
     void * sync_timestamp_user;
 
     /**
      * Callout type: CALLBACK_SESSION_RESYNC_TIMESTAMP
      * Sync Remote NTP and Local timestamp
      */
-    int (*resync_timestamp)(void* user, xrtp_session_t * session, uint32 hi_ntp, uint32 lo_ntp, xrtp_hrtime_t hrts_local);
+    int (*resync_timestamp)(void* user, xrtp_session_t * session, uint32 hi_ntp, uint32 lo_ntp, rtime_t hrts_local);
     void * resync_timestamp_user;
 
     /**
      * Callout type: CALLBACK_SESSION_RTP_TIMESTAMP
      * Get RTP timestamp
      */
-    int (*rtp_timestamp)(void* user, xrtp_hrtime_t * rtp_ts);
+    int (*rtp_timestamp)(void* user, rtime_t * rtp_ts);
     void * rtp_timestamp_user;
 
     /**
@@ -346,13 +346,13 @@ struct session_callbacks_s{
     /**
      * Callout type: CALLBACK_SESSION_HRT2MT
      */
-    media_time_t (*hrtime_to_mediatime)(void* user, xrtp_hrtime_t hrt);
+    media_time_t (*hrtime_to_mediatime)(void* user, rtime_t hrt);
     void * hrtime_to_mediatime_user;
 
     /**
      * Callout type: CALLBACK_SESSION_MT2HRT
      */
-    xrtp_hrtime_t (*mediatime_to_hrtime)(void* user, media_time_t mt);
+    rtime_t (*mediatime_to_hrtime)(void* user, media_time_t mt);
     void * mediatime_to_hrtime_user;
 };
 
@@ -393,7 +393,7 @@ struct xrtp_session_s {
     uint  rtcp_bw;    /* RTCP bandwidth */
     int rtp_bw_left;  /* unused bandwidth each sending */
 
-    xrtp_hrtime_t hrts_last_rtp_sent;
+    rtime_t hrts_last_rtp_sent;
 
     rtime_t period;
     rtime_t rtcp_interval;
@@ -413,7 +413,7 @@ struct xrtp_session_s {
 
     int  rtcp_init;   /* if rtcp is sent ever */
 
-    xrtp_hrtime_t tp, tc, tn; /* RTCP transition time (RFC3550 6.3) */
+    rtime_t tp, tc, tn; /* RTCP transition time (RFC3550 6.3) */
 
     uint pn_member;    /* pmember */
     
@@ -432,7 +432,7 @@ struct xrtp_session_s {
 
     uint32 timestamp;
 
-    xrtp_hrtime_t rtp_cancel_ts;
+    rtime_t rtp_cancel_ts;
     int rtp_cancelled;
 
     sched_schedinfo_t * schedinfo;
@@ -446,7 +446,7 @@ struct xrtp_session_s {
 	  struct session_cond_s $condvars;
 
     spin_queue_t * packets_in_sched;
-    xrtp_hrtime_t timesize;
+    rtime_t timesize;
 
     xrtp_thread_t * thr_rtp_recv;
     xthr_lock_t * rtp_recv_lock;
@@ -550,6 +550,7 @@ uint32 session_ssrc(xrtp_session_t * session);
  */
 extern DECLSPEC
 int 
+
 session_set_bandwidth(xrtp_session_t * session, int32 total_bw, int32 rtp_bw);
 
 uint32 session_rtp_bandwidth(xrtp_session_t * session);
@@ -616,11 +617,11 @@ extern DECLSPEC
 xrtp_rtp_packet_t*
 session_member_next_rtp_withhold(member_state_t * member);
  
-media_time_t session_hrt2mt(xrtp_session_t * session, xrtp_hrtime_t hrt);
-xrtp_hrtime_t session_mt2hrt(xrtp_session_t * session, media_time_t mt);
+media_time_t session_hrt2mt(xrtp_session_t * session, rtime_t hrt);
+rtime_t session_mt2hrt(xrtp_session_t * session, media_time_t mt);
 
 extern DECLSPEC
-xrtp_hrtime_t 
+rtime_t 
 session_member_mapto_local_time(member_state_t * member, xrtp_rtp_packet_t * rtp);
 
 uint32
@@ -656,7 +657,7 @@ session_set_rtp_rate(xrtp_session_t *session, int rate);
 
 rtime_t session_rtp_period(xrtp_session_t *session);
 /* How long is allow to delay the rtp sending, used as a sched window */
-xrtp_hrtime_t session_rtp_delay(xrtp_session_t *session);
+rtime_t session_rtp_delay(xrtp_session_t *session);
  
 xrtp_lrtime_t session_rtcp_interval(xrtp_session_t *session);
 /* How long is allow to delay the rtcp sending, used as a sched window */
@@ -666,7 +667,7 @@ extern DECLSPEC
 int 
 session_count_rtcp(xrtp_session_t * ses, xrtp_rtcp_compound_t * rtcp);
  
-int session_notify_delay(xrtp_session_t * session, xrtp_hrtime_t howlate);
+int session_notify_delay(xrtp_session_t * session, rtime_t howlate);
  
 /**
  * Set callback of some event arised.
@@ -683,8 +684,8 @@ int session_set_callbacks(xrtp_session_t *session, session_call_t cbs[], int n);
  */
 extern DECLSPEC
 int 
-session_rtp_to_send(xrtp_session_t *session, xrtp_hrtime_t ts, int last);
-int session_cancel_rtp_sending(xrtp_session_t *session, xrtp_hrtime_t ts);
+session_rtp_to_send(xrtp_session_t *session, rtime_t ts, int last);
+int session_cancel_rtp_sending(xrtp_session_t *session, rtime_t ts);
  
 /**
  * Reached schedule time, send data immidiately, called by scheduler
@@ -699,7 +700,7 @@ int session_rtp_to_receive(xrtp_session_t *ses);
 /**
  * Check if the rtp packet is a cancelled one
  */
-int session_rtp_receiving_cancelled(xrtp_session_t * session, xrtp_hrtime_t ts);
+int session_rtp_receiving_cancelled(xrtp_session_t * session, rtime_t ts);
 
 /**
  * send rtcp packet to pipeline

@@ -75,7 +75,7 @@ module_loadin_t xrtp_handler;
     media_data_t * data_out;
 
  };
-
+ 
 /**
  * Main Methods MUST BE implemented
  */

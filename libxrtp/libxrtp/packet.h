@@ -183,11 +183,11 @@
   */
  struct xrtp_rtcp_head_s {
 
-    uint8 version  :2;
-    uint8 padding  :1;
-    int8 count    :5;
-    uint8 type     :8;
-    uint16 length   :16;
+    uint8 version; /*2 bits*/
+    uint8 padding; /*1 bit*/
+    uint8 count;    /*5 bits*/
+    uint8 type;
+    uint16 length;
     
     int32 bytes; /* count bytes of each packet */
  };
