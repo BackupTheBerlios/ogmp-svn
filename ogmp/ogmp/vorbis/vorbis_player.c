@@ -155,6 +155,8 @@ int vorbis_open_stream (media_player_t *mp, media_info_t *media_info) {
    
    int ret;
    
+   vorbis_player_log(("vorbis_open_stream: 1\n"));
+
    if (!mp->device) {
      
       vorbis_player_log (("vorbis_open_stream: No device to play vorbis audio\n"));
@@ -169,7 +171,7 @@ int vorbis_open_stream (media_player_t *mp, media_info_t *media_info) {
    ai.info.sample_bits = VORBIS_SAMPLE_BITS;
    ai.channels = vinfo->vi.channels;
    
-   ret = mp->device->start (mp->device, &ai, vp->dad_min_ms, vp->dad_max_ms);
+   ret = mp->device->set_media_info(mp->device, (media_info_t*)&ai);
    
    if (ret < MP_OK) {
 
@@ -353,39 +355,12 @@ int vorbis_set_device (media_player_t * mp, media_control_t *cont, module_catalo
 
    control_setting_t *setting = NULL;
 
-   xrtp_list_user_t $lu;
-   xrtp_list_t * devs = xrtp_list_new();
-
    media_device_t *dev = NULL;
    
    vorbis_player_log(("vorbis_set_device: need audio device\n"));
+
+   dev = cont->find_device(cont, "audio");
    
-   if (catalog_create_modules(cata, "device", devs) <= 0) {
-   
-      vorbis_player_log(("vorbis_set_device: no device module found\n"));
-
-      xrtp_list_free(devs, NULL);
-
-      return MP_FAIL;
-   }
-
-   dev = xrtp_list_first(devs, &$lu);
-   while (dev) {
-
-      if (dev->match_type(dev, "audio")) {
-
-         vorbis_player_log(("vorbis_set_device: found audio device\n"));
-
-         xrtp_list_remove_item(devs, dev);
-
-         break;
-      }
-
-      dev = xrtp_list_next(devs, &$lu);
-   }
-
-   xrtp_list_free(devs, vorbis_done_device);
-
    if(!dev) return MP_FAIL;
 
    setting = cont->fetch_setting(cont, "audio", dev);

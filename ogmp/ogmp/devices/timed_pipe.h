@@ -101,7 +101,7 @@ struct timed_pipe_s {
    char *fillgap;
 
    int sample_rate;
-   int dad_min_nsample, dad_max_nsample;
+   //int dad_min_nsample, dad_max_nsample;
 };
 
-media_pipe_t * timed_pipe_new(int sample_rate, int usec_pulse, int us_min, int us_max);
+media_pipe_t * timed_pipe_new(int sample_rate, int usec_pulse);

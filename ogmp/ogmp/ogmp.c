@@ -229,7 +229,8 @@ int main(int argc, char** argv){
    
    sender.control->config(sender.control, controlmode, conf, mod_cata);
 
-   sender.control->put_configer(sender.control, "rtp", ogmp_config_rtp, conf);
+   /* For some player handles multi-stream, device can be pre-opened. */
+   sender.control->add_device(sender.control, "rtp", ogmp_config_rtp, conf);
    
    sender.control->set_format (sender.control, "av", format);
 

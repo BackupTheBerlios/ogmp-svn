@@ -69,7 +69,9 @@ typedef struct control_impl_s {
 
    module_catalog_t *catalog;
 
-   xrtp_list_t *setting_calls;
+   xlist_t *devices;
+
+   xlist_t *setting_calls;
    
 } control_impl_t;
 
@@ -79,7 +81,14 @@ int cont_done_setting (void* gen) {
 
    setting->done(setting);
 
-   free(setting);
+   return MP_OK;
+}
+
+int cont_done_device(void * gen) {
+
+   media_device_t *dev = (media_device_t *)gen;
+
+   dev->done(dev);
 
    return MP_OK;
 }
@@ -90,7 +99,9 @@ int cont_done (media_control_t * cont) {
    
    time_end(impl->clock);
 
-   xrtp_list_free(impl->setting_calls, cont_done_setting);
+   xlist_done(impl->devices, cont_done_device);
+
+   xlist_done(impl->setting_calls, cont_done_setting);
 
    return MP_OK;
 }
@@ -128,23 +139,59 @@ int cont_done_player(void * gen) {
    return MP_OK;
 }
 
-int cont_done_device(void * gen) {
-
-   media_device_t *dev = (media_device_t *)gen;
-
-   dev->done(dev);
-
-   return MP_OK;
-}
-
-int cont_put_configer (media_control_t *cont, char *name, control_setting_call_t *call, void*user) {
+int cont_add_device (media_control_t *cont, char *name, control_setting_call_t *call, void*user) {
 
    control_impl_t *impl = (control_impl_t*)cont;
    
-   control_setting_item_t *item = malloc(sizeof(struct control_setting_item_s));
-   if(!item){
+   control_setting_item_t *item;
+   media_device_t *dev;
 
-      cont_log(("cont_put_setting: No memory\n"));
+   xlist_user_t $lu;
+   xlist_t *devs = xlist_new();
+
+   if(!impl->catalog){
+   
+	   cont_debug(("cont_add_device: device->config need to be call first\n"));
+	   return MP_INVALID;
+   }
+
+   if (catalog_create_modules(impl->catalog, "device", devs) <= 0) {
+
+      cont_log(("cont_add_device: no device module found\n"));
+
+      xrtp_list_free(devs, NULL);
+
+      return MP_FAIL;
+   }
+
+   dev = xlist_first(devs, &$lu);
+   while (dev) {
+
+      if (dev->match_type(dev, name)) {
+
+         cont_log(("cont_add_device: found '%s' device\n", name));
+
+         xlist_remove_item(devs, dev);
+
+         break;
+      }
+
+      dev = xlist_next(devs, &$lu);
+   }
+
+   xlist_done(devs, cont_done_device);
+   if(!dev){
+   
+	   cont_log(("cont_add_device: No '%s' device found.\n", name));
+	   return MP_FAIL;
+   }
+
+   item = malloc(sizeof(struct control_setting_item_s));
+   if(!item)
+   {
+      cont_log(("cont_add_device: No memory for setting\n"));
+	  dev->done(dev);
+
       return MP_EMEM;
    }
 
@@ -152,9 +199,69 @@ int cont_put_configer (media_control_t *cont, char *name, control_setting_call_t
    item->call = call;
    item->call_user = user;
 
-   xrtp_list_add_first(impl->setting_calls, item);
+   xlist_addto_first(impl->setting_calls, item);
+   xlist_addto_first(impl->devices, dev);
+
+   dev->start(dev);
 
    return MP_OK;
+}
+
+int cont_match_device(void* t, void *p){
+
+   media_device_t *dev = (media_device_t*)t;
+   char *name = (char*)p;
+
+   int ret = dev->match_type(dev, name);
+
+   /* return 0 means match, see xlist.h */
+   if(ret == 1) return 0;
+
+   return -1;
+}
+
+media_device_t* cont_find_device(media_control_t *cont, char *name) {
+
+   xlist_user_t lu;
+   xlist_t *devs;
+
+   control_impl_t *impl = (control_impl_t*)cont;
+
+   media_device_t *dev = xlist_find(impl->devices, name, cont_match_device, &lu);
+   
+   if(dev) return dev;
+
+   devs = xlist_new();
+
+   if (catalog_create_modules(impl->catalog, "device", devs) <= 0) {
+
+      cont_log(("cont_find_device: no device module found\n"));
+
+      xlist_done(devs, cont_done_device);
+
+      return NULL;
+   }
+
+   dev = xlist_first(devs, &lu);
+   while (dev) {
+	   
+      if (dev->match_type(dev, name)) {
+
+         cont_log(("cont_find_device: found '%s' device\n", name));
+
+         xlist_remove_item(devs, dev);
+
+         break;
+      }
+
+      dev = xlist_next(devs, &lu);
+   }
+
+   xlist_done(devs, cont_done_device);
+
+   if(!dev) cont_log(("cont_find_device: can't find '%s' device\n", name));
+
+   return dev;
 }
 
 int cont_match_call(void* t, void *p){
@@ -193,6 +300,7 @@ control_setting_t* cont_fetch_setting(media_control_t *cont, char *name, media_d
       if(item->call(item->call_user, setting) >= MP_OK) return setting;
 
       cont_log(("cont_fetch_setting: no device setting\n"));
+
       setting->done(setting);
    }
 
@@ -310,10 +418,21 @@ module_interface_t* new_media_control () {
 
    impl->clock = time_start();
 
-   impl->setting_calls = xrtp_list_new();
+   impl->devices = xlist_new();
+   if(!impl->devices){
+
+      cont_debug (("media_new_control: No memory for devices\n"));
+      free(impl);
+      
+      return NULL;
+   }
+
+   impl->setting_calls = xlist_new();
    if(!impl->setting_calls){
 
       cont_debug (("media_new_control: No memory for setting list\n"));
+	  
+	  xlist_done(impl->devices, cont_done_device);
       free(impl);
       
       return NULL;
@@ -323,9 +442,10 @@ module_interface_t* new_media_control () {
 
    cont->done = cont_done;
    
-   cont->find_player = cont_find_player;
+   cont->add_device = cont_add_device;
+   cont->find_device = cont_find_device;
 
-   cont->put_configer = cont_put_configer;
+   cont->find_player = cont_find_player;
 
    cont->fetch_setting = cont_fetch_setting;
    

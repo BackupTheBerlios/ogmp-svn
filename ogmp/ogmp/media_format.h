@@ -64,7 +64,9 @@ struct media_control_s {
 
    media_player_t* (*find_player) (media_control_t *cont, char *mime, char *fourcc);
 
-   int (*put_configer)(media_control_t *cont, char *name, control_setting_call_t *call, void*user);
+   int (*add_device)(media_control_t *cont, char *name, control_setting_call_t *call, void*user);
+   media_device_t* (*find_device)(media_control_t *cont, char *name);
+
    control_setting_t* (*fetch_setting)(media_control_t *cont, char *name, media_device_t *dev);
 
    int (*set_format) (media_control_t * cont, char *format_id, media_format_t * format);
@@ -225,15 +227,16 @@ struct media_device_s {
 
    int running;
    
-   //media_input_t* (*input) (media_device_t *);
-
    media_pipe_t* (*pipe) (media_device_t *);
 
-   int (*start) (media_device_t * dev, void * setting, int us_min, int us_max);
+   int (*start) (media_device_t * dev);
    
    int (*stop) (media_device_t * dev);
 
+   int (*set_media_info)(media_device_t *dev, media_info_t *info);
+
    int (*setting) (media_device_t * dev, control_setting_t *setting, module_catalog_t *catalog);
+
    control_setting_t* (*new_setting) (media_device_t * dev);
    
    int (*match_type) (media_device_t *dev, char *type);

@@ -26,27 +26,21 @@
 #define DEFAULT_SAMPLE_FACTOR  16
 
 #define DELAY_WHILE 1000
-
 /*
 #define PORTAUDIO_LOG
 #define PORTAUDIO_DEBUG
 */
-
 #ifdef PORTAUDIO_LOG
-   const int portaudio_log = 1;
+ #define pa_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int portaudio_log = 0;
+ #define pa_log(fmtargs)
 #endif
-
-#define pa_log(fmtargs)  do{if(portaudio_log) printf fmtargs;}while(0)
 
 #ifdef PORTAUDIO_DEBUG
-   const int portaudio_debug = 1;
+ #define pa_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int portaudio_debug = 0;
+ #define pa_debug(fmtargs)
 #endif
-
-#define pa_debug(fmtargs)  do{if(portaudio_debug) printf fmtargs;}while(0)
 
 typedef struct portaudio_device_s {
 
@@ -170,6 +164,8 @@ int pa_online (media_device_t * dev) {
 
    pa_dev->online = 1;
 
+   pa_debug(("pa_online: portaudio initialized\n"));
+   
    return MP_OK;
 }
 
@@ -194,7 +190,7 @@ int pa_sample_type (int sample_bits) {
    return paInt16;
 }
 
-int pa_start (media_device_t * dev, void * info, int usec_min, int usec_max) {
+int pa_set_media_info(media_device_t *dev, media_info_t *info){
 
    portaudio_device_t *pa = (portaudio_device_t *)dev;
    
@@ -229,7 +225,7 @@ int pa_start (media_device_t * dev, void * info, int usec_min, int usec_max) {
    
    pa->ai.channels_bytes = pa->ai.channels * pa->ai.info.sample_bits / BYTE_BITS;
 
-   pa->out = timed_pipe_new(pa->ai.info.sample_rate, pa->usec_pulse, usec_min, usec_max);
+   pa->out = timed_pipe_new(pa->ai.info.sample_rate, pa->usec_pulse);
          
    sample_type = pa_sample_type(pa->ai.info.sample_bits);
    
@@ -249,6 +245,7 @@ int pa_start (media_device_t * dev, void * info, int usec_min, int usec_max) {
 
       pa_debug(("pa_start: %s\n", Pa_GetErrorText(err) ));
       Pa_Terminate();
+      pa_debug(("pa_start: here\n"));
 
       return MP_FAIL;
    }
@@ -271,6 +268,12 @@ int pa_start (media_device_t * dev, void * info, int usec_min, int usec_max) {
    pa_debug(("pa_start: PortAudio started\n"));
 
    return MP_OK;
+}
+
+int pa_start (media_device_t * dev){
+
+	pa_log(("pa_start: pa_set_media_info() to start portaudio\n"));
+	return MP_OK;
 }
 
 int pa_stop (media_device_t * dev) {
@@ -316,6 +319,7 @@ int pa_offline (media_device_t * dev) {
    if (dev->running) pa_stop (dev);
 
    Pa_Terminate();
+   pa_debug(("pa_stop: portaudio terminated.\n"));
 
    pa_dev = (portaudio_device_t *)dev;
 
@@ -403,6 +407,8 @@ module_interface_t* media_new_device () {
    dev->stop = pa_stop;
    
    dev->done = pa_done;
+
+   dev->set_media_info = pa_set_media_info;
    
    dev->new_setting = pa_new_setting;
    dev->setting = pa_setting;

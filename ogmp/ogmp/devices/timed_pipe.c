@@ -18,12 +18,10 @@
 #include "timed_pipe.h"
 
 #include <string.h>
-
 /*
 #define PIPE_LOG
 #define PIPE_DEBUG
 */
-
 #ifdef PIPE_LOG
  #define pout_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -254,7 +252,7 @@ int pout_put_frame (media_pipe_t *mp, media_frame_t *f, int last) {
       /* trigger switch signal */
       pipe->switch_buffer = pipe->bufn_write + 1;  /* avoid zero */
       
-      pout_log(("pout_put_frame: switch cost %dns\n", hrtime_passed(pipe->clock, jump_start)));
+      pout_log(("pout_put_frame: switch cost %dns\n", time_nsec_spent(pipe->clock, jump_start)));
 
       pipe->bufn_write = (pipe->bufn_write + 1) % PIPE_NBUF;
       bufw = &(pipe->buffer[pipe->bufn_write]);
@@ -461,7 +459,7 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
    if (!pipe->buffered) {
    
       /* buffer certain number frames before play back */
-      //sample_buffer_t * bufw = &(pipe->buffer[pipe->bufn_write]);
+      sample_buffer_t * bufw = &(pipe->buffer[pipe->bufn_write]);
       
       memset(out, MUTE_VALUE, nraw_once * ai->channels_bytes);
       
@@ -761,7 +759,7 @@ int timed_pipe_set_usec (timed_pipe_t *pipe, int usec) {
  * - usec_pulse: samples are sent by group, named pulse within certain usecond.
  * - ms_min, ms_max: buffered/delayed samples are limited.
  */
-media_pipe_t * timed_pipe_new(int sample_rate, int usec_pulse, int ms_min, int ms_max) {
+media_pipe_t * timed_pipe_new(int sample_rate, int usec_pulse) {
 
    media_pipe_t * mout = NULL;
 
@@ -780,9 +778,10 @@ media_pipe_t * timed_pipe_new(int sample_rate, int usec_pulse, int ms_min, int m
    pout->usec_per_buf = DEFAULT_USEC_PER_BUF;
    
    pout->sample_rate = sample_rate;
+   /*
    pout->dad_min_nsample = (int)((double)ms_min / 1000 * sample_rate);
    pout->dad_max_nsample = (int)((double)ms_max / 1000 * sample_rate);
-
+   */
    pout_log(("timed_pipe_new: delay adapt detect b/w [%d...%d] samples\n"
         , pout->dad_min_nsample, pout->dad_max_nsample));
    

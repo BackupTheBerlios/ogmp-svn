@@ -15,6 +15,7 @@
  *                                                                         *
  ***************************************************************************/
 
+#include <timedia/timer.h>
 #include <xrtp/xrtp.h>
 
 #include "../media_format.h"
@@ -24,9 +25,34 @@
 #define MP_RTP_END		0x2
 
 typedef struct rtp_setting_s rtp_setting_t;
+typedef struct rtp_pipe_s rtp_pipe_t;
+
+typedef struct dev_rtp_s dev_rtp_t;
+struct dev_rtp_s{
+
+   struct media_device_s dev;
+
+   /* the profile module searched in catalog */
+   xrtp_session_t* (*new_session)(dev_rtp_t *dev_rtp, rtp_setting_t *setting, module_catalog_t *catalog);
+
+   int (*done_session)(dev_rtp_t *dev_rtp, xrtp_session_t * session);
+
+   int (*session_id)(dev_rtp_t *dev_rtp, xrtp_session_t * session);
+   
+   xrtp_session_t* (*find_session)(dev_rtp_t *dev_rtp, int id); 
+
+   /*
+   char *cname;
+   int cnlen;
+
+   xrtp_session_t *session;
+   xrtp_media_t *media;
+   */
+   media_pipe_t *frame_maker;
+};
+
 typedef struct rtp_callback_s rtp_callback_t;
 typedef struct rtp_frame_s rtp_frame_t;
-typedef struct rtp_pipe_s rtp_pipe_t;
 
 struct rtp_callback_s {
 
@@ -65,17 +91,22 @@ struct rtp_frame_s {
 
    struct media_frame_s frame;
 
-   //uint rtp_flag;
+   /* group stamp:
+    * For the first frame in the group, stamp is the msec of the sender time;
+	* For the following packet, stamp is relative msec from the first packet;
+   rtime_t usec_group_start;
+   rtime_t usec_group;
+    */
+
+   /* global timestamp */
    int64 samplestamp;
+
+   int grpno;
+
+   int samples;
+
    void *media_info;
    
    long  unit_bytes;
    char *media_unit;
-};
-
-struct rtp_pipe_s {
-
-   struct media_pipe_s pipe;
-
-   xrtp_media_t *rtp_media;
 };

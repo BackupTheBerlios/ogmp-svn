@@ -56,6 +56,20 @@ int ogm_detect_vorbis(ogg_packet * packet){
    return 0;   
 }                                     
 
+/* helpers: from Vorbis codebase info.c */
+static int ilog2(unsigned int v){
+
+  int ret=0;
+
+  while(v)
+  {
+    ret++;
+    v>>=1;
+  }
+
+  return(ret);
+}
+
 /* Open a new 'Ogg/Vorbis' stream in the ogm file */
 int ogm_open_vorbis(ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *sstate, int sno, stream_header *sth){
 
@@ -137,15 +151,44 @@ int ogm_open_vorbis(ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *
             ogm_strm->stype = 'a';
             ogm_strm->instate = sstate;
 
-            ogm_vorbis_log(("ogm_open_vorbis: (a%d/%d) Vorbis audio (channels %d " \
-                              "rate %ld)\n", ogm_strm->sno, mf->numstreams, vinfo->vi.channels, vinfo->vi.rate));
+            /* Point to the codec_setup_info */
+			vinfo->some_csi = (some_codec_setup_info*)vinfo->vi.codec_setup;
+			
+			/* Cache the header identification */
+            vinfo->header_identification = malloc(ogm->packet.bytes);
+            if (!vinfo->header_identification) {
 
-            ogm_vorbis_log(("ogm_open_vorbis: (a%d/%d) Vorbis info (head #1) retrieved in %ld bytes\n",
+               ogm_vorbis_log(("ogm_open_vorbis: no memory to cache header setup\n"));
+               return MP_EMEM;
+            }
+            memcpy(vinfo->header_identification, ogm->packet.packet, ogm->packet.bytes);
+            vinfo->header_identification_len = ogm->packet.bytes;
+
+            ogm_vorbis_log(("ogm_open_vorbis: (a%d/%d) Vorbis identification (head #1) retrieved in %ld bytes\n",
                               ogm_strm->sno, mf->numstreams, ogm->packet.bytes));
 
-         }
+            ogm_vorbis_log(("ogm_open_vorbis: version: %d\n", vinfo->vi.version));
+            ogm_vorbis_log(("ogm_open_vorbis: channels: %d\n", vinfo->vi.channels));
+            ogm_vorbis_log(("ogm_open_vorbis: rate: %ld\n", vinfo->vi.rate));
+            ogm_vorbis_log(("ogm_open_vorbis: upper bitrate: %ld\n", vinfo->vi.bitrate_upper));
+            ogm_vorbis_log(("ogm_open_vorbis: nominal bitrate: %ld\n", vinfo->vi.bitrate_nominal));
+            ogm_vorbis_log(("ogm_open_vorbis: lower bitrate: %ld\n", vinfo->vi.bitrate_lower));
+            ogm_vorbis_log(("ogm_open_vorbis: window bitrate: %ld\n", vinfo->vi.bitrate_window));
+            ogm_vorbis_log(("ogm_open_vorbis: short blocksize: %ld\n", vinfo->some_csi->blocksizes[0]));
+            ogm_vorbis_log(("ogm_open_vorbis: long blocksize: %ld\n", vinfo->some_csi->blocksizes[1]));
+		 }
 
          if (vinfo->head_packets == 2) {
+
+			/* Cache the header comment */
+            vinfo->header_comment = malloc(ogm->packet.bytes);
+            if (!vinfo->header_comment) {
+
+               ogm_vorbis_log(("ogm_open_vorbis: no memory to cache header setup\n"));
+               return MP_EMEM;
+            }
+            memcpy(vinfo->header_comment, ogm->packet.packet, ogm->packet.bytes);
+            vinfo->header_comment_len = ogm->packet.bytes;
 
             ogm_vorbis_log(("ogm_open_vorbis: (a%d/%d) Vorbis comments (head #2) retrieved in %ld bytes\n",
                               ogm_strm->sno, mf->numstreams, ogm->packet.bytes));
@@ -161,24 +204,24 @@ int ogm_open_vorbis(ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *
              * multiple vorbis_block structures for vd here */
             vorbis_block_init( &vinfo->vd, &vinfo->vb );
 
-            stream->playable = 1;
-
-            ogm_vorbis_log(("ogm_open_vorbis: (a%d/%d) Vorbis codebook (head #3) retrieved in %ld bytes\n",
+            ogm_vorbis_log(("ogm_open_vorbis: (a%d/%d) Vorbis setup (head #3) retrieved in %ld bytes\n",
                               ogm_strm->sno, mf->numstreams, ogm->packet.bytes));
+			
+			/* Cache the codebook */
+            vinfo->header_setup = malloc(ogm->packet.bytes);
+            if (!vinfo->header_setup) {
 
-            /* Cache the codebook */
-            vinfo->codebook = malloc(ogm->packet.bytes);
-            if (!vinfo->codebook) {
-
-               ogm_vorbis_log(("ogm_open_vorbis: no memory to cache codebook\n"));
+               ogm_vorbis_log(("ogm_open_vorbis: no memory to cache header setup\n"));
                return MP_EMEM;
             }
-            memcpy(vinfo->codebook, ogm->packet.packet, ogm->packet.bytes);
-            vinfo->codebook_len = ogm->packet.bytes;
+            memcpy(vinfo->header_setup, ogm->packet.packet, ogm->packet.bytes);
+            vinfo->header_setup_len = ogm->packet.bytes;
 
             /* time to open the stream with a player */
             if(!stream->player)
                stream->player = mf->control->find_player(mf->control, stream->mime, stream->fourcc);
+
+            ogm_vorbis_log(("ogm_open_vorbis: 1\n"));
 
             if(!stream->player)
                stream->playable = -1;
@@ -191,9 +234,12 @@ int ogm_open_vorbis(ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *
             }
             
             stream->playable = 1;
+			vinfo->mode_bits = ilog2(vinfo->some_csi->modes-1);
+
             ogm_vorbis_log(("ogm_open_vorbis: (a%d/%d) Vorbis stream intialized in Stage One, playable now\n",
                               ogm_strm->sno, mf->numstreams));
 
+            ogm_vorbis_log(("ogm_open_vorbis: vorbis_mode_bits: %d\n", vinfo->mode_bits));
          }
 
       } else{
@@ -254,6 +300,16 @@ int ogm_process_vorbis(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *pag
 
       if (vinfo->head_packets == 2) {
 
+		 /* Cache the header comment */
+         vinfo->header_comment = malloc(ogm->packet.bytes);
+         if (!vinfo->header_comment) {
+
+            ogm_vorbis_log(("ogm_open_vorbis: no memory to cache header setup\n"));
+            return MP_EMEM;
+         }
+         memcpy(vinfo->header_comment, ogm->packet.packet, ogm->packet.bytes);
+         vinfo->header_comment_len = ogm->packet.bytes;
+
          ogm_vorbis_log(("ogm_process_vorbis: (a%d/%d) Vorbis comments (packet #2) retrieved in %ld bytes\n",
                           ogm_strm->sno, mf->numstreams, pack->bytes));
       }
@@ -272,15 +328,15 @@ int ogm_process_vorbis(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *pag
                               ogm_strm->sno, mf->numstreams, pack->bytes));
 
          /* Cache the codebook */
-         vinfo->codebook = malloc(ogm->packet.bytes);
-         if (!vinfo->codebook) {
+         vinfo->header_setup = malloc(ogm->packet.bytes);
+         if (!vinfo->header_setup) {
 
             ogm_vorbis_log(("ogm_open_vorbis: no memory to cache codebook\n"));
             return MP_EMEM;
          }
          
-         memcpy(vinfo->codebook, ogm->packet.packet, ogm->packet.bytes);
-         vinfo->codebook_len = ogm->packet.bytes;
+         memcpy(vinfo->header_setup, ogm->packet.packet, ogm->packet.bytes);
+         vinfo->header_setup_len = ogm->packet.bytes;
          
          /* time to open the stream with a player */         
          if(!stream->player)
@@ -302,8 +358,12 @@ int ogm_process_vorbis(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *pag
          
          stream->playable = 1;
 
+		 vinfo->mode_bits = ilog2(vinfo->some_csi->modes-1);
+
          ogm_vorbis_log(("ogm_process_vorbis: (a%d/%d) Vorbis stream intialized in Stage Two, playable now\n",
                         ogm_strm->sno, mf->numstreams));
+
+         ogm_vorbis_log(("ogm_process_vorbis: vorbis_mode_bits: %d\n", vinfo->mode_bits));
       }
       
       return MP_OK;
