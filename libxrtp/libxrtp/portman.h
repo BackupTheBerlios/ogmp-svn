@@ -17,25 +17,25 @@
 
 #ifndef XRTP_PORTMAN_H
  
- #define XRTP_PORTMAN_H
+#define XRTP_PORTMAN_H
 
- typedef struct portman_s portman_t;
+typedef struct portman_s portman_t;
 
- #include "session.h"
+#include "session.h"
 
- portman_t * portman_new();
+portman_t * portman_new();
 
- int portman_done(portman_t * man);
+int portman_done(portman_t * man);
 
- int portman_add_port(portman_t * man, xrtp_port_t * port);
+int portman_add_port(portman_t * man, xrtp_port_t * port);
 
- int portman_remove_port(portman_t * man, xrtp_port_t * port);
+int portman_remove_port(portman_t * man, xrtp_port_t * port);
 
- int portman_clear_ports(portman_t * man);
+int portman_clear_ports(portman_t * man);
 
- /* How many port can be handle up to */
- int portman_maximum(portman_t * man);
+/* How many port can be handle up to */
+int portman_maximum(portman_t * man);
 
- int portman_poll(portman_t * man);
+int portman_poll(portman_t * man);
 
 #endif

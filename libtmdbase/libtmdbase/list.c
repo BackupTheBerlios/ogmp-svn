@@ -40,11 +40,11 @@
 
 int _xrtp_list_freenode(xrtp_list_node_t * node);
 
-xrtp_list_t * xrtp_list_new(){
+xlist_t * xlist_new(){
   
-   xrtp_list_t * list;
+   xlist_t * list;
 
-   list = (xrtp_list_t *)malloc(sizeof(xrtp_list_t));
+   list = (xlist_t *)malloc(sizeof(xlist_t));
    if(list != NULL){
      
       list->num = 0;
@@ -53,6 +53,7 @@ xrtp_list_t * xrtp_list_new(){
 
    return list;
 }
+xrtp_list_t * xrtp_list_new(){return xlist_new();}
 
 int xrtp_list_free(xrtp_list_t *list, int(*free_data)(void *)){
 

@@ -1,5 +1,5 @@
 /***************************************************************************
-                          portman_posix.c  -  port manager posix implementation
+                          portman.c  -  port set moniter
                              -------------------
     begin                : Wed Dec 3 2003
     copyright            : (C) 2003 by Heming Ling
@@ -37,6 +37,8 @@ struct portman_s{
     int n_port;
 
     xrtp_map_t * ports;
+	xlist_t * iolist; /* used to retrieve all */
+
     fd_set io_set;
 };
 
@@ -50,6 +52,7 @@ portman_t * portman_new(){
         man->n_port = 0;
         man->max_port = FD_SETSIZE;
         man->ports = map_new(0);   /* Map default size, which is 1024 in this implement */
+		man->iolist = xlist_new();
     }
 
     return man;
@@ -58,6 +61,7 @@ portman_t * portman_new(){
 int portman_done(portman_t * man){
 
     map_done(man->ports);
+	xlist_done(man->iolist);
 
     free(man);
 
@@ -75,7 +79,10 @@ int portman_add_port(portman_t * man, xrtp_port_t * port){
     io = port_io(port);
 
     FD_SET(io, &(man->io_set));
+
     map_add(man->ports, port, io);
+	xlist_add(man->iolist, io);
+
     man->n_port++;
     
     /* DEBUG Start */
@@ -111,6 +118,7 @@ int portman_remove_port(portman_t * man, xrtp_port_t * port){
     
     FD_CLR(io, &(man->io_set));
     map_remove(man->ports, io);
+	xlist_remove_item(man->iolist, io);
     man->n_port--;
 
     /* DEBUG Start */
@@ -126,6 +134,11 @@ int portman_remove_port(portman_t * man, xrtp_port_t * port){
     return XRTP_OK;
 }
 
+int portman_free_ioitem(void *gen){
+	
+	return OS_OK;
+}
+
 int portman_clear_ports(portman_t * man){
 
     if(man->n_port == 0)
@@ -133,6 +146,8 @@ int portman_clear_ports(portman_t * man){
 
     FD_ZERO(&(man->io_set));
     map_blank(man->ports);
+	xlist_reset(man->iolist, port_free_ioitem);
+
     man->n_port = 0;
 
     return XRTP_OK;
@@ -160,7 +175,9 @@ int portman_poll(portman_t * man){
     
     portman_log(("portman_poll: maxio = %d, %d incoming on sockets\n", maxio, n));
 
-    for(i=0; i<=maxio; i++){
+    /* retrieve port io which readable */
+
+	for(i=0; i<=maxio; i++){
 
        if(FD_ISSET(i, &io_mask)){
 

@@ -39,6 +39,8 @@ struct xrtp_list_node_s{
 	 void *data;
 };
 
+typedef struct xrtp_list_s xlist_t;
+
 typedef struct xrtp_list_s{
    xrtp_list_node_t *head;
 	 xrtp_list_node_t *end;
@@ -51,14 +53,19 @@ typedef struct xrtp_list_user_s{
 	xrtp_list_node_t *next;
 }xrtp_list_user_t;
 
+extern DECLSPEC xlist_t * xlist_new();
 extern DECLSPEC xrtp_list_t * xrtp_list_new();
 
+extern DECLSPEC int xlist_done(xlist_t *list, int(*free_item)(void *));
 extern DECLSPEC int xrtp_list_free(xrtp_list_t *list, int(*free_data)(void *));
 
+extern DECLSPEC int xlist_reset(xlist_t *list, int(*free_item)(void *));
 extern DECLSPEC int xrtp_list_reset(xrtp_list_t *list, int(*free_data)(void *));
 
+extern DECLSPEC xlist_user_t * xlist_new_user(xlist_t *list);
 extern DECLSPEC xrtp_list_user_t * xrtp_list_newuser(xrtp_list_t *list);
 
+extern DECLSPEC int xlist_done_user(xrtp_list_user_t *user);
 extern DECLSPEC int xrtp_list_freeuser(xrtp_list_user_t *user);
 
 extern DECLSPEC void * xrtp_list_first(xrtp_list_t *list, xrtp_list_user_t *u);

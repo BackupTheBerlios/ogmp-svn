@@ -25,8 +25,8 @@
  #include <timedia/socket.h> 
  #include <timedia/inet.h> 
 
-//#define UDP_LOG
-//#define UDP_DEBUG
+#define UDP_LOG
+#define UDP_DEBUG
 
  #ifdef UDP_LOG
 	#define udp_log(fmtargs)  do{printf fmtargs;}while(0)
@@ -314,7 +314,7 @@
      return XRTP_NO;
   }
 
-  int port_poll(xrtp_port_t * port, xrtp_hrtime_t timeout){
+  int port_poll(xrtp_port_t * port, rtime_t timeout_ns){
 
       /* Note: if need nanosecond time resolution, use pselect and timespec
        * Not a little confusion in glibc about its sys/select.h, which related to
@@ -326,8 +326,8 @@
 	 int n;
      
      struct timeval tout;
-     tout.tv_sec = timeout / HRTIME_SECOND_DIVISOR;     
-     tout.tv_usec = (timeout % HRTIME_SECOND_DIVISOR) / HRTIME_MICRO;
+     tout.tv_sec = timeout_ns / HRTIME_SECOND_DIVISOR;     
+     tout.tv_usec = (timeout_ns % HRTIME_SECOND_DIVISOR) / HRTIME_MICRO;
 
      FD_ZERO(&io_set);
      FD_SET(port->socket, &io_set);
@@ -335,6 +335,7 @@
      /* Warning: High Frequent output 
      udp_log(("port_poll: check incoming and timeout is set to %d seconds %d microseconds\n", (int)(tout.tv_sec), (int)(tout.tv_usec)));
 	 */
+
      n = select(port->socket+1, &io_set, NULL, NULL, &tout);
 
      if(n == 1)
@@ -353,7 +354,7 @@
 
 	 int msec_dummy = 0; /* no use, just satisfy the api */
 
-     udp_log(("port_incoming: incoming\n"));
+     udp_log(("port_incoming: incoming pending\n"));
      
      /* Determine the incoming packet address from recvfrom return */
 	 addrlen = sizeof(remote_addr);
