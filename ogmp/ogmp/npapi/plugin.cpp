@@ -333,6 +333,21 @@ void nsPluginInstance::get_ip()
 	NPN_GetURL(mInstance, javascript, NULL);
 }
 
+extern "C"
+{
+int callback_on_register(void *user_on_register, int result, char *reason)
+{
+    char javascript[512];
+    NPP mInstance = (NPP)user_on_register;
+    
+    sprintf(javascript, "javascript:regist_return('%d', %s);", result, reason);
+
+	NPN_GetURL(mInstance, javascript, NULL);
+
+    return NPERR_NO_ERROR;
+}
+}
+
 NPError nsPluginInstance::sipua_init()
 {
     int sip_port = 5060;
@@ -369,6 +384,8 @@ NPError nsPluginInstance::sipua_init()
         return NPERR_MODULE_LOAD_FAILED_ERROR;
 	}
 
+    this->sipua->set_callback(this->sipua, SIPUA_CALLBACK_ON_REGISTER, callback_on_register, this->mInstance);
+    
 	client_start(this->sipua);
 
     return NPERR_NO_ERROR;

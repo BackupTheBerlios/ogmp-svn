@@ -121,6 +121,8 @@ class nsPluginInstance:public nsPluginInstanceBase
     void answer(PRInt32 lineno);
     void bye(PRInt32 lineno);
     
+	int callback_on_register(void *user_on_register, int result, char *reason);
+    
     // we need to provide implementation of this method as it will be
     // used by Mozilla to retrive the scriptable peer
     // and couple of other things on Unix
@@ -137,6 +139,7 @@ class nsPluginInstance:public nsPluginInstanceBase
     
     /*
     char mString[128];
+    
     // put member data here
 
     // JavaScript State
