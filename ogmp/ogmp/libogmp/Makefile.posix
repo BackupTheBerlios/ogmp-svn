@@ -1,0 +1,44 @@
+# Make Ogmp for Linux
+
+PROGNAME = ogmp
+
+PREFIX = /home/hling/timedia-project
+
+CC = gcc
+
+INCLUDES = -I$(PREFIX)/include -I.. -I../include
+
+INSTDIR = $(PREFIX)/lib/$(PROGNAME)
+
+SRCFILES = media_control.c ogmp_source.c ogmp_ui.c ogmp_config.c \
+				sipua.c rtp_cap.c phonebook.c
+
+SRCHEAD = media_format.h ogmp.h sipua.h rtp_cap.h phonebook.h
+
+OBJFILES = media_control.o ogmp_source.o ogmp_ui.o ogmp_config.o \
+				sipua.o rtp_cap.o phonebook.o
+
+LIBFILES = libogmp.so
+
+CFLAGS = -Wall -fPIC
+
+all:	 libs install
+
+.c.o:
+	-$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $*.o
+
+libs: $(SRCFILES:.c=.o)
+	gcc -shared $(OBJFILES) -o $(LIBFILES)
+
+install: $(LIBFILES)
+	-@cp -f $(LIBFILES) $(INSTDIR)
+
+uninstall:
+	-@rm -f $(INSTDIR)/$(LIBFILES)
+
+clean:
+	-@rm -f *.o
+	-@rm -f *.lo
+	-@rm -f *.so
+
+
