@@ -236,6 +236,8 @@
 
      if(!local_addr) return NULL;
 
+	 udp_log(("port_new: %s:%d\n", local_addr, local_portno));
+
      port = (xrtp_port_t *)malloc(sizeof(struct xrtp_port_s));
 
      if(!port) return NULL;
