@@ -37,12 +37,13 @@ int rtp_descript_done(capable_descript_t *cap)
 	xstr_done_string(rtpcap->ipaddr);
 	free(rtpcap);
 
+
 	return MP_OK;
 }
 
 int rtp_descript_match_type(capable_descript_t *cap, char *type)
 {
-	return !strcmp("rtp", type);
+	return !strncmp("rtp", type, 3);
 }
 
 int rtp_descript_match(capable_descript_t *me, capable_descript_t *oth)
@@ -54,8 +55,10 @@ int rtp_descript_match(capable_descript_t *me, capable_descript_t *oth)
 		return 0;
 
 	rtpoth = (rtpcap_descript_t*)oth;
+
+   tran_log(("rtp_descript_match: rtp:%s\n", rtpoth->profile_mime));
 	
-	return !strcmp(rtpme->profile_mime, rtpoth->profile_mime);
+	return !strncmp(rtpme->profile_mime, rtpoth->profile_mime, strlen(rtpme->profile_mime));
 }
 
 rtpcap_descript_t* rtp_capable_descript()
@@ -65,7 +68,7 @@ rtpcap_descript_t* rtp_capable_descript()
 	rtpcap = malloc(sizeof(rtpcap_descript_t));
 	if(!rtpcap)
 	{
-		tran_log(("vsend_capable: no memory for rtp capable"));
+		tran_log(("rtp_capable_descript: no memory for rtp capable"));
 		return NULL;
 	}
 	memset(rtpcap, 0, sizeof(rtpcap_descript_t));

@@ -294,17 +294,17 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 
 	rtpcap = (rtpcap_descript_t*)cap;
 
-	if(strncmp(rtpcap->profile_mime, "audio", 5))
+	if(strncmp(rtpcap->profile_mime, "audio", 5) == 0)
 	{
 		rtp_log(("rtp_open_stream: audio media\n"));
 		stype = MP_AUDIO;
 	}
-	else if(strncmp(rtpcap->profile_mime, "video", 5))
+	else if(strncmp(rtpcap->profile_mime, "video", 5) == 0)
 	{
 		rtp_log(("rtp_open_stream: video media type\n"));
 		stype = MP_VIDEO;
 	}
-	else if(strncmp(rtpcap->profile_mime, "text", 4))
+	else if(strncmp(rtpcap->profile_mime, "text", 4) == 0)
 	{
 		rtp_log(("rtp_open_stream: text media type\n"));
 		stype = MP_TEXT;
@@ -367,7 +367,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 
 	rtp_add_stream((media_format_t*)rtp_format, (media_stream_t*)strm, sno, stype);
 
-	rtp_log(("rtp_open_stream: for [%s@%s:%u|%u%]\n", src_cn, rtpcap->ipaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno));
+	rtp_log(("rtp_open_stream: for [%s@%s:%u|%u]\n", src_cn, rtpcap->ipaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno));
 	session_add_cname(strm->session, src_cn, src_cnlen, rtpcap->ipaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno, NULL);
 
 	return strm;

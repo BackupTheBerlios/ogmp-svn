@@ -40,7 +40,7 @@
  #define MODDIR "."
 #endif
 
-#define FNAME "/timedia-project/samples/Dido_LifeForRent.ogg"
+#define FNAME "Dido_LifeForRent.ogg"
 
 typedef struct rtpcap_descript_s rtpcap_descript_t; 
 struct rtpcap_descript_s

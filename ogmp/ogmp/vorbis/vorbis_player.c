@@ -53,7 +53,7 @@ struct global_const_s
 
 } global_const = {"audio", "audio/vorbis", "local"};
 
-int vorbis_set_callback (media_player_t * mp, int type, int(*call)(void*,...), void * user)
+int vorbis_set_callback (media_player_t * mp, int type, int(*call)(), void * user)
 {
    vorbis_decoder_t *playa = (vorbis_decoder_t *)mp;
 
@@ -143,6 +143,7 @@ int vorbis_loop(void *gen){
 
 	return MP_OK;
 }
+
 
 int vorbis_open_stream (media_player_t *mp, media_info_t *media_info) {
 

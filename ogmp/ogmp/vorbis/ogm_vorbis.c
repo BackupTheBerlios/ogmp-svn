@@ -340,14 +340,14 @@ int ogm_process_vorbis(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *pag
          ret = stream->player->open_stream(stream->player, (media_info_t*)vinfo);
          
          if( ret < MP_OK)
-		 {
+         {
             stream->playable = -1;
             return ret;
          }         
          
          stream->playable = 1;
 
-		 vinfo->mode_bits = ilog2(vinfo->some_csi->modes-1);
+         vinfo->mode_bits = ilog2(vinfo->some_csi->modes-1);
 
          ogm_vorbis_log(("ogm_process_vorbis: (a%d/%d) Vorbis stream intialized in Stage Two, playable now\n",
                         ogm_strm->sno, mf->numstreams));

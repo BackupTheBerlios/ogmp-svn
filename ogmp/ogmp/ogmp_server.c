@@ -39,7 +39,7 @@ int server_loop(void * gen)
       {/*lock*/ xthr_lock(server->lock);}
       
       if (!server->demuxing)
-	  {
+      {
          serv_log (("\nogmplyer: waiting for demux request\n"));
          xthr_cond_wait(server->wait_request, server->lock);
          server->demuxing = 1;
@@ -47,7 +47,7 @@ int server_loop(void * gen)
       }
 
       if (server->finish)
-	  {
+      {
          serv_log (("\nogmplyer: Last demux and quit\n"));
          server->control->demux_next(server->control, 1);
          
@@ -56,7 +56,7 @@ int server_loop(void * gen)
 
       itv = server->control->demux_next(server->control, 0);
       if( itv < 0 && itv == MP_EOF)
-	  {
+      {
          serv_log(("(server_loop: stop demux)\n"));
          break;
       }
@@ -64,15 +64,18 @@ int server_loop(void * gen)
       {/*unlock*/ xthr_unlock(server->lock);}
    }
    
+   server->demuxing = 0;
    {/*unlock*/ xthr_unlock(server->lock);}
 
-   serv_log (("\n(ogmplyer: server quit)\n"));
+   serv_log (("\n(ogmplyer: server stopped\n"));
    
    return MP_OK;
 }
 
 int server_start (ogmp_server_t *server)
 {
+   serv_log (("server_start: server starts ...\n"));
+
    if (!server->valid)
    {
       serv_log (("server_loop: server is not available\n"));
@@ -81,7 +84,6 @@ int server_start (ogmp_server_t *server)
    
    if (!server->demuxing)
    {
-      server->demuxing = 1;
       xthr_cond_signal(server->wait_request);
    }
    
@@ -92,7 +94,7 @@ int server_stop (ogmp_server_t *server)
 {
    int ret;
    
-   serv_log (("server_stop: to stop\n"));
+   serv_log (("server_stop: server stops ...\n"));
 
    if (!server->valid) return MP_OK;
    if (!server->demuxing) return MP_OK;
@@ -139,8 +141,6 @@ int server_setup(ogmp_server_t *server, char *mode)
    /* define a player */
    //media_player_t *playa = NULL;
    media_format_t *format = NULL;
-   xrtp_clock_t * clock_main = NULL;
-   rtime_t remain = 0;
    
    config_t * conf;
 
@@ -177,7 +177,8 @@ int server_setup(ogmp_server_t *server, char *mode)
    server->control->config(server->control, conf, mod_cata);
 
    /* For some player handles multi-stream, device can be pre-opened. */
-   server->control->add_device(server->control, "rtp", server_config_rtp, conf);
+   if(strcmp(mode, "netcast") == 0)
+      server->control->add_device(server->control, "rtp", server_config_rtp, conf);
    
    /* create a media format, also get the capabilities of the file */
    format = (media_format_t *) xrtp_list_first (server->format_handlers, &$lu);
@@ -218,7 +219,7 @@ int server_setup(ogmp_server_t *server, char *mode)
    server->format = format;
    server->valid = 1;
 
-   /* now play */
+   /* start thread */
    server->demuxer = xthr_new(server_loop, server, XTHREAD_NONEFLAGS);
    
    return server->nplayer;
@@ -227,6 +228,7 @@ int server_setup(ogmp_server_t *server, char *mode)
 /****************************************************************************************
  * SIP Callbacks
  */
+
 int callback_server_oncall(void *user, char *from_cn, int from_cnlen, capable_descript_t* from_caps[], int from_ncap, capable_descript_t* **selected_caps)
 {
 	int i,j,c = 0;
@@ -272,7 +274,7 @@ int callback_server_onconnect(void *user, char *from_cn, int from_cnlen, capable
 {
 	ogmp_server_t *server = (ogmp_server_t*)user;
 
-	serv_log(("\ncallback_server_onconnect: with cn[%s]\n\n", from_cn));
+	serv_log(("\ncallback_server_onconnect: with cn[%s] requires %d capables\n\n", from_cn, from_ncap));
 
 	if(from_ncap>0)
 	{
@@ -280,10 +282,12 @@ int callback_server_onconnect(void *user, char *from_cn, int from_cnlen, capable
 		media_transmit_t *mt;
 
 		/* link by capabilities */
+      
 		for(i=0; i<server->nplayer; i++)
 		{
 			mt = (media_transmit_t*)server->players[i];
 			for(j=0; j<from_ncap; j++)
+
 			{
 				if(mt->player.match_capable((media_player_t*)mt, from_caps[j]))
 				{

@@ -48,7 +48,7 @@
 
 #define VORBIS_MIME "audio/vorbis"
 
-const char vorbis_mime[] = "audio/vorbis";
+char vorbis_mime[] = "audio/vorbis";
 
 char vrtp_desc[] = "Vorbis Profile for RTP";
 
@@ -171,9 +171,6 @@ int vrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 {
    vrtp_handler_t *vh = (vrtp_handler_t *)h;
    
-   vrtp_media_t *vmedia = vh->vorbis_media;
-   xrtp_media_t *rtpmedia = (xrtp_media_t*)vmedia;
-
    uint16 seqno, src;
 
    uint32 rtpts_payload;
@@ -313,6 +310,7 @@ int vrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 	   vrtp_log(("audio/vorbis.vrtp_rtp_in: seqno[%u] is stall, discard\n", seqno));
 	   rtp_packet_done(rtp);
 	   return XRTP_CONSUMED;
+
    }
 
    /* calculate play timestamp */
@@ -325,6 +323,7 @@ int vrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
    rtpts_arrival = rtpts_playing - (uint32)((us_playing - us_arrival)/1000000.0 * rate);
 
    rtpts_toplay = session_member_mapto_local_time(sender, rtpts_payload, rtpts_arrival, JITTER_ADJUSTMENT_LEVEL);
+
    
    if(!sender->media_playable)
    {
@@ -561,6 +560,8 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
    int rate;
 
    xrtp_session_t * ses = rtcp->session;
+   
+   char appname[4] = {'V','O','R','B'};
 
    /* for vorbis stream setup */
    char *appdata;
@@ -587,6 +588,7 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
    vrtp_log(("audio/vorbis.vrtp_rtcp_in: arrived %dB at %dms/%dus/%dns\n", rtcp->bytes_received, ms, us, ns));
 
    /* rtp_conn and rtcp_conn will be uncertain after this call */
+
    sender = session_update_member_by_rtcp(rtcp->session, rtcp);
    if(!sender)
    {
@@ -656,7 +658,7 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
    /* Check SDES */
 
    /* Check APP if carried, vorbis header packet is carried by APP packet */
-   applen = rtcp_app(rtcp, src_sender, 0, 'VORB', &appdata);
+   applen = rtcp_app(rtcp, src_sender, 0, (uint32)appname, &appdata);
    if(applen)
    {
 		vorbis_info_t *vinfo;
@@ -772,6 +774,8 @@ int vrtp_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
    int signum;
    void *minfo;
 
+   char appname[4] = {'V','O','R','B'};
+
    session_report(h->session, rtcp, h->timestamp_send);
     
    if(session_renew_media_info(ses, &rtpts_h, &signum, &minfo))
@@ -808,7 +812,7 @@ int vrtp_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 	   app += vinfo->header_comment_len;
 	   memcpy(app, vinfo->header_setup, vinfo->header_setup_len);
 
-	   rtcp_new_app(rtcp, session_ssrc(ses), 0, 'VORB', applen, app_mi);
+	   rtcp_new_app(rtcp, session_ssrc(ses), 0, (uint32)appname, applen, app_mi);
    }
 
    /* Profile specified */
@@ -857,9 +861,9 @@ void * rtp_vorbis_master(profile_handler_t *handler)
    return _h->master;
 }
 
-const char * rtp_vorbis_mime(xrtp_media_t * media)
+int rtp_vorbis_match_mime(xrtp_media_t * media, char *mime)
 {
-   return vorbis_mime;
+   return !strncmp(vorbis_mime, mime, strlen(vorbis_mime));
 }
 
 int rtp_vorbis_done(xrtp_media_t * media)
@@ -988,8 +992,6 @@ int rtp_vorbis_loop(void *gen)
 
 	vrtp_handler_t *profile = (vrtp_handler_t*)gen;
 
-	xrtp_session_t *session = profile->vorbis_media->rtp_media.session;
-   
 	rtp_frame_t *remain_frame = NULL;
 	char *packet_data = NULL;
 	int packet_bytes = 0;
@@ -1463,7 +1465,7 @@ xrtp_media_t * rtp_vorbis(profile_handler_t *handler)
 
       media->session = h->session;
 
-      media->mime = rtp_vorbis_mime;
+      media->match_mime = rtp_vorbis_match_mime;
       media->done = rtp_vorbis_done;
       
       media->set_parameter = rtp_vorbis_set_parameter;
@@ -1485,9 +1487,10 @@ xrtp_media_t * rtp_vorbis(profile_handler_t *handler)
    return media;
 }
 
-const char * vrtp_id(profile_class_t * clazz){
-
-   return vorbis_mime;
+int vrtp_match_id(profile_class_t * clazz, char *id)
+{
+   vrtp_log(("audio/vorbis.vrtp_match_id: i am '%s' handler\n", vorbis_mime));
+   return strncmp(vorbis_mime, id, strlen(vorbis_mime)) == 0;
 }
 
 int vrtp_type(profile_class_t * clazz){
@@ -1553,6 +1556,7 @@ profile_handler_t * vrtp_new_handler(profile_class_t * clazz, xrtp_session_t * s
    h->rtcp_out = vrtp_rtcp_out;
    h->rtcp_size = vrtp_rtcp_size;
 
+
    ++num_handler;
 
    return h;
@@ -1575,7 +1579,7 @@ module_interface_t * module_init(){
 
    vrtp = (profile_class_t *)malloc(sizeof(profile_class_t));
 
-   vrtp->id = vrtp_id;
+   vrtp->match_id = vrtp_match_id;
    vrtp->type = vrtp_type;
    vrtp->description = vrtp_description;
    vrtp->capacity = vrtp_capacity;

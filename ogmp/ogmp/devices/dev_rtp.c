@@ -235,13 +235,15 @@ int rtp_setting (media_device_t *dev, control_setting_t *setting, module_catalog
 /**
  * libxrtp initilized
  */
-int rtp_start (media_device_t * dev)
+int rtp_start (media_device_t * dev, media_control_t *ctrl)
 {
    /* Realised the xrtp lib */
-   int ret = xrtp_init();  
+   int ret = xrtp_init(ctrl->modules(ctrl));
+     
    if(ret < XRTP_OK) return ret;
    
    rtp_debug(("rtp.rtp_start: started...\n"));
+   
    return MP_OK;
 }
 
@@ -257,8 +259,7 @@ int rtp_stop (media_device_t * dev)
 
 int rtp_set_media_info (media_device_t *dev, media_info_t *info)
 {
-   dev_rtp_t *rtp = (dev_rtp_t*)dev;
-   
+   /* media info is retrieved from rtp format */
    return MP_OK;
 }
 

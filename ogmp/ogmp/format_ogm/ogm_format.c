@@ -430,13 +430,13 @@ int ogm_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *
    while (!end)
    {
       if ( !ogm_read_page(ogm) )
-	  {
+      {
          ogm_log(("ogm_open_file: No more pages, scan finish\n"));
          break;
       }
 
       if (!ogg_page_bos(&ogm->page))
-	  {
+      {
          ogm->page_ready = 1;
 
          ogm_log(("----------------------------------------------------\n"));
@@ -448,11 +448,11 @@ int ogm_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *
          /* End of stream head parsing */
          break;
       }
-	  else
-	  {
+      else
+      {
          ogg_stream_state *sstate = malloc(sizeof(ogg_stream_state));
          if(!sstate)
-		 {
+         {
             ogm_log(("ogm_open_file: No memery for stream allocation\n"));
             return MP_EMEM;
          }
@@ -460,7 +460,7 @@ int ogm_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *
          sno = ogg_page_serialno(&ogm->page);
 
          if (ogg_stream_init(sstate, sno) != 0)
-		 {
+         {
             ogm_log(("ogm_open_file: ogg_stream_init failed\n"));
             free(sstate);
             return MP_FAIL;
@@ -469,11 +469,11 @@ int ogm_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *
          ogg_stream_pagein(sstate, &ogm->page);
 
          while(ogg_stream_packetout(sstate, &ogm->packet) == 1)
-		 {
+         {
             n_pack++;
 
             if (head_parsed)
-			{
+            {
                ogm_log(("ogm_open_file: stream header parsed, the packet untouched yet\n"));
                ogm->packet_ready = 1;
                end = 1;
@@ -481,7 +481,7 @@ int ogm_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *
             }
 
             if ( mf->stream_handlers == NULL && ogm_set_handlers(ogm, ctrl->modules(ctrl)) < MP_OK )
-			{
+            {
                ogm_log(("ogm_open_file: No stream handler found\n"));
                return MP_FAIL;
             }
@@ -1012,6 +1012,7 @@ module_interface_t * media_new_format()
 
    /* Stream management */
    mf->add_stream = ogm_add_stream;
+
 
    mf->find_stream = ogm_find_stream;
    mf->find_mime = ogm_find_mime;

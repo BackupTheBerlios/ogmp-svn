@@ -45,10 +45,10 @@ struct vorbis_decoder_s{
    int dad_min_ms;
    int dad_max_ms;
 
-   int (*callback_on_ready) (void *user, ...);
+   int (*callback_on_ready) ();
    void *callback_on_ready_user;
 
-   int (*stop_media) (void * user);
+   int (*stop_media) ();
    void * stop_media_user;
 
    /* parallel with demux thread */

@@ -253,7 +253,7 @@ struct media_device_s
    
    media_pipe_t* (*pipe) (media_device_t *);
 
-   int (*start) (media_device_t * dev);
+   int (*start) (media_device_t * dev, media_control_t *ctrl);
    
    int (*stop) (media_device_t * dev);
 
@@ -285,7 +285,7 @@ struct media_player_s
    
    int (*match_type) (media_player_t * playa, char *mime, char *fourcc);
 
-   int (*set_callback) (media_player_t * playa, int type, void *call, void *user);
+   int (*set_callback) (media_player_t * playa, int type, int(*call)(), void *user);
 
    int (*set_options) (media_player_t * playa, char *opt, void *value);
    int (*set_device) (media_player_t * mp, media_control_t *control, module_catalog_t *cata);

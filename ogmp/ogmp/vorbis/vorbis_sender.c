@@ -61,6 +61,8 @@ struct vorbis_sender_s
    void *callback_on_ready_user;
    int (*callback_on_ready) (void *user, media_player_t *player);
 
+
+
    void *stop_media_user;
    int (*stop_media) (void *user);
 
@@ -84,9 +86,10 @@ struct vorbis_sender_s
    uint16 rtcp_port;
 };
 
-int vsend_set_callback (media_player_t *mp, int type, void *call, void *user)
+int vsend_set_callback (media_player_t *mp, int type, int (*call)(), void *user)
 {
    vorbis_sender_t *playa = (vorbis_sender_t *)mp;
+
 
    switch(type)
    {
@@ -130,6 +133,8 @@ int vsend_open_stream (media_player_t *mp, media_info_t *media_info)
 
    struct audio_info_s ai;
    
+   vsend_log (("vsend_open_stream: open vorbis stream\n"));
+
    if (!mp->device)
    {
       vsend_log (("vsend_open_stream: No device to play vorbis audio\n"));
@@ -146,7 +151,11 @@ int vsend_open_stream (media_player_t *mp, media_info_t *media_info)
    
    vs->rtp_media->set_rate(vs->rtp_media, ai.info.sample_rate);
 
+   vsend_log (("vsend_open_stream: here\n"));
+
    session_issue_media_info(vs->rtp_session, vinfo, vs->vorbis_info_signum++);
+   
+   vsend_log (("vsend_open_stream: vorbis stream opened\n"));
    
    return MP_OK;
 }
@@ -171,6 +180,7 @@ int vsend_receive_next (media_player_t *mp, void *vorbis_packet, int64 samplesta
    media_pipe_t *output = NULL;
    rtp_frame_t *rtpf = NULL;
    
+
    vorbis_sender_t *vs = (vorbis_sender_t *)mp;
    ogg_packet *pack = (ogg_packet*)vorbis_packet;
 
@@ -184,9 +194,9 @@ int vsend_receive_next (media_player_t *mp, void *vorbis_packet, int64 samplesta
 
    oggpack_buffer       *opb;
   
-   int                  mode;
-   int					blocksize, shortsize;
-   int					samples_half1, samples_half2;
+   int     mode;
+   int     blocksize, shortsize;
+   int     samples_half1, samples_half2;
 
    if (!mp->device)
    {
@@ -262,72 +272,72 @@ int vsend_receive_next (media_player_t *mp, void *vorbis_packet, int64 samplesta
 
    if(vinfo->audio_start == 0)
    {
-	   /* 
-	   vsend_log(("audio/vorbis.rtp_vorbis_post: first packet has no sample\n"));
-	   */
-	   rtpf->samples = 0;
+      /* 
+      vsend_log(("audio/vorbis.rtp_vorbis_post: first packet has no sample\n"));
+      */
+      rtpf->samples = 0;
    }
    else
    {
-	   /* Window type of the previous and next */
-	   if(vinfo->vb.W)
-	   {
-		   /* long block */
-		   vinfo->vb.lW=oggpack_read(opb,1);	   
-		   vinfo->vb.nW=oggpack_read(opb,1);
-	   
-		   if(vinfo->vb.nW==-1)
-		   {
-			   /*
-			   vsend_log(("audio/vorbis.rtp_vorbis_post: wrong window flay\n"));
-			   */
-			   rtpf->frame.owner->recycle_frame(rtpf->frame.owner, (media_frame_t*)rtpf);
-			   return MP_EFORMAT;
-		   }
+      /* Window type of the previous and next */
+      if(vinfo->vb.W)
+      {
+         /* long block */
+         vinfo->vb.lW=oggpack_read(opb,1);	   
+         vinfo->vb.nW=oggpack_read(opb,1);
 
-		   if(vinfo->vb.lW)
-		   {
-			   /* long/(long) 
-			   vsend_log(("audio/vorbis.rtp_vorbis_post: long/(long): %d/(%d)\n", blocksize, blocksize));
-			   */
-			   rtpf->samples = blocksize/2;
-		   }
+         if(vinfo->vb.nW==-1)
+         {
+            /*
+            vsend_log(("audio/vorbis.rtp_vorbis_post: wrong window flay\n"));
+            */
+            rtpf->frame.owner->recycle_frame(rtpf->frame.owner, (media_frame_t*)rtpf);
+            return MP_EFORMAT;
+         }
 
-		   else
-		   {
-			   shortsize = vinfo->some_csi->blocksizes[vinfo->vb.lW];
-			   samples_half1 = blocksize/4 + shortsize/4;
-			   /*
-			   vsend_log(("audio/vorbis.rtp_vorbis_post: short/(long): %d/(%d)\n", shortsize, blocksize));
-			   */
-			   if(vinfo->vb.nW)
-			   {
-				   /* (long)/long */
-				   samples_half2 = 0;
-				   /*
-				   vsend_log(("audio/vorbis.rtp_vorbis_post: (long)/long: (%d)/%d\n", blocksize, blocksize));
-				   */
-			   }
-			   else
-			   {
-				   /* (long)/short */
-				   samples_half2 = blocksize/4 - shortsize/4;
-				   /*
-				   vsend_log(("audio/vorbis.rtp_vorbis_post: (long)/short: (%d)/%d\n", blocksize, shortsize));
-				   */
-			   }
-		   
-			   rtpf->samples = samples_half1 + samples_half2;
-		   }
-	   }
-	   else
-	   {
-		   /* (short) 
-		   vsend_log(("audio/vorbis.rtp_vorbis_post: short/(short): %d/(%d)\n", blocksize, blocksize));
-		   */
-		   blocksize = vinfo->some_csi->blocksizes[vinfo->vb.W];
-		   rtpf->samples = blocksize/2;
-	   }
+         if(vinfo->vb.lW)
+         {
+            /* long/(long) 
+            vsend_log(("audio/vorbis.rtp_vorbis_post: long/(long): %d/(%d)\n", blocksize, blocksize));
+            */
+            rtpf->samples = blocksize/2;
+         }
+
+         else
+         {
+            shortsize = vinfo->some_csi->blocksizes[vinfo->vb.lW];
+            samples_half1 = blocksize/4 + shortsize/4;
+            /*
+            vsend_log(("audio/vorbis.rtp_vorbis_post: short/(long): %d/(%d)\n", shortsize, blocksize));
+            */
+            if(vinfo->vb.nW)
+            {
+               /* (long)/long */
+               samples_half2 = 0;
+               /*
+               vsend_log(("audio/vorbis.rtp_vorbis_post: (long)/long: (%d)/%d\n", blocksize, blocksize));
+               */
+            }
+            else
+            {
+               /* (long)/short */
+               samples_half2 = blocksize/4 - shortsize/4;
+               /*
+               vsend_log(("audio/vorbis.rtp_vorbis_post: (long)/short: (%d)/%d\n", blocksize, shortsize));
+               */
+            }
+
+            rtpf->samples = samples_half1 + samples_half2;
+         }
+      }
+      else
+      {
+         /* (short) 
+         vsend_log(("audio/vorbis.rtp_vorbis_post: short/(short): %d/(%d)\n", blocksize, blocksize));
+         */
+         blocksize = vinfo->some_csi->blocksizes[vinfo->vb.W];
+         rtpf->samples = blocksize/2;
+      }
 
    }
 
@@ -340,8 +350,8 @@ int vsend_receive_next (media_player_t *mp, void *vorbis_packet, int64 samplesta
 
    if(last_packet)
    {
-	   vsend_log(("vsend_receive_next: samples(%lld) ", samplestamp));
-	   vsend_log(("end @%dus\n", time_usec_now(clock)));
+      vsend_log(("vsend_receive_next: samples(%lld) ", samplestamp));
+      vsend_log(("end @%dus\n", time_usec_now(clock)));
    }
 
    return MP_OK;
@@ -405,15 +415,14 @@ capable_descript_t* vsend_capable(media_player_t * mp)
 
 int vsend_match_capable(media_player_t * mp, capable_descript_t *cap)
 {
-	rtpcap_descript_t *rtpcap;
-	vorbis_sender_t *vs = (vorbis_sender_t *)mp;
+   rtpcap_descript_t *rtpcap;
 
-	if(!cap->match_type(cap, "rtp"))
-		return 0;
+   if(!cap->match_type(cap, "rtp"))
+      return 0;
 
-	rtpcap = (rtpcap_descript_t*)cap;
+   rtpcap = (rtpcap_descript_t*)cap;
 
-	return !strcmp(global_const.mime_type, rtpcap->profile_mime);
+	return !strncmp(global_const.mime_type, rtpcap->profile_mime, strlen(global_const.mime_type));
 }
 
 /**************************************************************/
@@ -465,7 +474,7 @@ int vsend_set_device (media_player_t *mp, media_control_t *cont, module_catalog_
 
    dev_rtp = (dev_rtp_t*)dev;
    
-   dev->start(dev);
+   dev->start(dev, cont);
 
    setting = cont->fetch_setting(cont, "rtp", dev);
    if(!setting)

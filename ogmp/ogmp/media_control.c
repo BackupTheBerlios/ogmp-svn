@@ -198,7 +198,7 @@ int cont_add_device (media_control_t *cont, char *name, control_setting_call_t *
    xlist_addto_first(impl->setting_calls, item);
    xlist_addto_first(impl->devices, dev);
 
-   dev->start(dev);
+   dev->start(dev, cont);
 
    return MP_OK;
 }

@@ -12,7 +12,7 @@ INCLUDES = -I$(PREFIX)/include
 
 INSTDIR = $(PREFIX)/lib/$(PROGNAME)
 
-FILES = vorbis_player.c vorbis_decoder.c ogm_vorbis.c vorbis_sender.c vorbis_rtp.c
+FILES = vorbis_player.c vorbis_decoder.c ogm_vorbis.c vorbis_sender.c ../ogmp_transmit.c vorbis_rtp.c
 
 LIBFILES = vorbis_player.so ogm_vorbis.so vorbis_sender.so vorbis_rtp.so
 
@@ -27,7 +27,7 @@ libs: $(FILES:.c=.o)
 	gcc -shared -lvorbis vorbis_player.o vorbis_decoder.o  -o vorbis_player.so
 	gcc -shared -lvorbis ogm_vorbis.o -o ogm_vorbis.so
 
-	gcc -shared $(LIBS) vorbis_sender.o -o vorbis_sender.so
+	gcc -shared $(LIBS) vorbis_sender.o ../ogmp_transmit.o -o vorbis_sender.so
 	gcc -shared $(LIBS) vorbis_rtp.o -o vorbis_rtp.so
 
 install: $(LIBFILES)
