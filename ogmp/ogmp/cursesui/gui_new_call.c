@@ -67,6 +67,13 @@ int window_new_call_print(gui_t* gui, int wid)
 
 	attrset(COLOR_PAIR(4));
 	mvaddnstr(gui->y0, gui->x0, buf, (x-gui->x0));
+	mvaddnstr(gui->y0+1, gui->x0, buf, (x-gui->x0));
+	mvaddnstr(gui->y0+2, gui->x0, buf, (x-gui->x0));
+	mvaddnstr(gui->y0+3, gui->x0, buf, (x-gui->x0));
+	mvaddnstr(gui->y0+4, gui->x0, buf, (x-gui->x0));
+	mvaddnstr(gui->y0+5, gui->x0, buf, (x-gui->x0));
+	mvaddnstr(gui->y0+6, gui->x0, buf, (x-gui->x0));
+
 	snprintf(buf, x-gui->x0-1, "New call from: '%s'<%s>", user_profile->fullname, user_profile->regname);
 	mvaddstr(gui->y0, gui->x0+1, buf);
 
@@ -196,7 +203,9 @@ int window_new_call_run_command(gui_t* gui, int c)
 		case 1: /* Ctrl-A */
 		{
 			/* if (_josua_start_call(cfg.identity, to, subject, route) != 0) beep(); */
-			sipua_set_t* call = ocui->sipua->new_call(ocui->sipua, newcall_inputs[NEWCALL_SUBJ], strlen(newcall_inputs[NEWCALL_SUBJ]), newcall_inputs[NEWCALL_DESC], strlen(newcall_inputs[NEWCALL_DESC]));
+			sipua_set_t* call;
+
+			call = ocui->sipua->new_call(ocui->sipua, newcall_inputs[NEWCALL_SUBJ], strlen(newcall_inputs[NEWCALL_SUBJ]), newcall_inputs[NEWCALL_DESC], strlen(newcall_inputs[NEWCALL_DESC]));
 			
 			if(call)
 				ocui->sipua->call(ocui->sipua, call, newcall_inputs[NEWCALL_TO]);

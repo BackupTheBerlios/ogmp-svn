@@ -754,6 +754,7 @@ int uas_invite(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_
 	int ret;
 
 	char *from = call_info->user_prof->regname;
+
 	/*
 	OSIP_TRACE (osip_trace(__FILE__, __LINE__, OSIP_INFO2, NULL, "To: |%s|\n", to));
 	*/
@@ -765,7 +766,7 @@ int uas_invite(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_
 
 	if (0!=jua_check_url(to))
 	{
-		jua_log(("uas_call: illigal sip destination\n"));
+		jua_log(("uas_invite: illigal sip destination\n"));
 		return UA_FAIL;
 	}
 
@@ -774,12 +775,22 @@ int uas_invite(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_
 	else
 		proxy = jua->sipuas.proxy;
 
+	sprintf(sdp_size,"%i", sdp_bytes);
+
+	/*
+	printf("uas_invite: [%s] from %s to %s, proxy[%s]\n", call_info->subject, from, to, proxy);
+	printf("\n-------Initiate SDP [%d bytes]--------\n", sdp_bytes);
+	printf("Callid[%s]\n", call_info->setid.id);
+	printf("----------------------------------------\n");
+	printf("%s", sdp_body);
+	printf("----------------------------------------\n");
+	getchar();
+	*/
+
 	if (eXosip_build_initial_invite(&invite, to, from, proxy, call_info->subject) != 0)
 		return UA_FAIL;
 
 	/* sdp content of the call */
-	sprintf(sdp_size,"%i", sdp_bytes);
-
 	osip_message_set_content_type(invite, "application/sdp");
 	osip_message_set_content_length(invite, sdp_size);
 	osip_message_set_body(invite, sdp_body);
@@ -788,7 +799,11 @@ int uas_invite(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_
 
 	ret = eXosip_initiate_call(invite, call_info, NULL/*negotiation_reference*/, NULL/*local_audio_port*/);
 
-	eXosip_unlock();  
+	eXosip_unlock();
+	
+	/*When to free it ???
+	osip_message_free(invite);
+	*/
 
 	return ret;
 }

@@ -213,6 +213,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			rtpcap_set_t* rtpcapset;
 
 			sdp_message_t *sdp_message;
+
 			char* sdp_body = (char*)e->content;
 
 			char *p, *q;
@@ -515,11 +516,10 @@ sipua_set_t* client_find_call(sipua_t* sipua, char* id, char* username, char* ne
 
 sipua_set_t* client_new_call(sipua_t* sipua, char* subject, int sbytes, char *desc, int dbytes)
 {
-	/*int i;*/
-
 	ogmp_setting_t *setting;
-	ogmp_client_t* clie = (ogmp_client_t*)sipua;
 	sipua_set_t* call;
+	ogmp_client_t* clie = (ogmp_client_t*)sipua;
+
 	int bw_budget = clie->control->book_bandwidth(clie->control, 0);
 
 	setting = client_setting(clie->control);
@@ -527,25 +527,13 @@ sipua_set_t* client_new_call(sipua_t* sipua, char* subject, int sbytes, char *de
 	call = sipua_new_call(sipua, clie->user_prof, NULL, subject, sbytes, desc, dbytes,
 						clie->mediatypes, clie->default_rtp_ports, clie->default_rtcp_ports, clie->nmedia,
 						clie->control, bw_budget, setting->codings, setting->ncoding, clie->pt);
+
 	if(!call)
 	{
 		clie_log(("client_new_call: no call created\n"));
 		return NULL;
 	}
 
-    /*
-    for(i=0; i<MAX_SIPUA_LINES; i++)
-	{
-		if(!clie->lines[i])
-		{
-			clie->lines[i] = call;
-			break;
-		}
-	}
-
-	clie_log(("client_new_call: new call on line %d\n", i));
-    */
-	
 	return call;
 }
 
