@@ -20,24 +20,6 @@
 
 #include "gui_setup.h"
 
-gui_t gui_window_setup = 
-{
-	GUI_OFF,
-	0,
-	-999,
-	10,
-	-6,
-	NULL,
-	window_setup_print,
-	window_setup_run_command,
-	NULL,
-	window_setup_draw_commands,
-	-1,
-	-1,
-	-1,
-	NULL
-};
-
 int cursor_setup = 0;
 
 typedef struct _j_codec 
@@ -249,6 +231,12 @@ int window_setup_run_command(gui_t* gui, int c)
 	return 0;
 }
 
+int window_setup_event(gui_t* gui, gui_event_t* ge)
+{
+    /* Nothing interesting yet */
+    return GUI_EVENT_CONTINUE;
+}
+
 gui_t* window_setup_new(ogmp_curses_t* topui)
 {
 	gui_window_setup.topui = topui;
@@ -260,3 +248,22 @@ int window_setup_done(gui_t* gui)
 {
 	return 0;
 }
+
+gui_t gui_window_setup =
+{
+	GUI_OFF,
+	0,
+	-999,
+	10,
+	-6,
+	NULL,
+    window_setup_event,
+	window_setup_print,
+	window_setup_run_command,
+	NULL,
+	window_setup_draw_commands,
+	-1,
+	-1,
+	-1,
+	NULL
+};

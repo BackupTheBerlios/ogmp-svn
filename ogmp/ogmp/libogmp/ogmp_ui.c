@@ -47,7 +47,7 @@ int ui_print_log(char *fmt, ...)
 
 	va_end(ap);
 
-	ret = global_ui->print_log(global_ui, logbuf);
+    ret = global_ui->print_log(global_ui, logbuf);
 
 	return ret;
 }

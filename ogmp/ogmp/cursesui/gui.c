@@ -40,11 +40,11 @@
 
 #include <timedia/os.h>
 #include <timedia/xmalloc.h>
-
+/*
 char log_buf3[LOG_LEN] = { '\0' };
 char log_buf2[LOG_LEN] = { '\0' };
 char log_buf1[LOG_LEN] = { '\0' };
-
+*/
 xthr_lock_t *log_lock = NULL;
 
 gui_t *gui_windows[10] =
@@ -215,6 +215,9 @@ josua_print_command(char **commands, int ypos, int xpos)
 	attrset(A_NORMAL);
 
 	if (commands[0]!=NULL) /* erase with default background */
+
+
+
 		attrset(COLOR_PAIR(10));
 	else
 		attrset(COLOR_PAIR(0));
@@ -236,6 +239,8 @@ josua_print_command(char **commands, int ypos, int xpos)
 	len = strlen("Back");
 	if(maxlen < len)
 		maxlen = len;
+
+
 
 	attrset(COLOR_PAIR(1));
 	snprintf(buf, strlen("^B")+1, "^B");
@@ -345,20 +350,23 @@ gui_toggle_online_logline(ogmp_curses_t* ocui)
 {
 	static int log_or_online=0;
 
+	log_or_online = (log_or_online+1)%3;
+
 	if (log_or_online==0)
     {
-		log_or_online = 1;
-
 		ocui->gui_windows[LOGLINESGUI] = ocui->gui_windows[GUI_ONLINE];
+        ocui->gui_windows[LOGLINESGUI]->on_off = GUI_ON;
     }
-	else
+	else if (log_or_online==1)
     {
-		log_or_online = 0;
-
 		ocui->gui_windows[LOGLINESGUI] = ocui->gui_windows[GUI_LOGLINES];
+        ocui->gui_windows[LOGLINESGUI]->on_off = GUI_ON;
     }
-	
+    else
+        ocui->gui_windows[LOGLINESGUI]->on_off = GUI_OFF;
+	/*
 	gui_windows[LOGLINESGUI]->gui_print(gui_windows[LOGLINESGUI], TOPGUI);
+    */
 }
 
 /* Tab betuween regions */
@@ -436,7 +444,8 @@ int gui_key_pressed(ogmp_curses_t* ocui)
 
 	if (c==ERR)
     {
-		if(errno != 0){}
+		if(errno != 0)
+        {}
 
 		return -1;
     }
@@ -512,10 +521,57 @@ gui_print_box(gui_t *box, int draw, int color)
 	return box->win;
 }
 
-int 
-gui_event(ogmp_ui_t* ogui)
+gui_event_t* gui_event(ogmp_ui_t* ogui)
 {
-	return 0;
+    gui_event_t* ge = NULL;
+    ogmp_curses_t* ocui = (ogmp_curses_t*)ogui;
+    
+    xthr_lock(ocui->event_queue_lock);
+    
+    ge = xlist_remove_first(ocui->event_queue);
+    
+    xthr_unlock(ocui->event_queue_lock);
+
+    return ge;
+}
+
+int gui_add_event(ogmp_ui_t* ogui, gui_event_t* ge)
+{
+    int n;
+    ogmp_curses_t* ocui = (ogmp_curses_t*)ogui;
+
+    xthr_lock(ocui->event_queue_lock);
+
+    n = xlist_addto_first(ocui->event_queue, ge);
+
+    xthr_unlock(ocui->event_queue_lock);
+
+    return n;
+}
+
+gui_event_t* gui_new_event(gui_t* gui, int event_id)
+{
+    gui_event_t* ge = xmalloc(sizeof(gui_event_t));
+    if(ge)
+    {
+        ge->done = NULL;
+        ge->event_id = event_id;
+        ge->gui = gui;
+    }
+
+    return ge;
+}
+
+int gui_done_event(void* gen)
+{
+    gui_event_t* ge = (gui_event_t*)gen;
+    
+    if(ge->done)
+        ge->done(ge);
+    else
+        xfree(ge);
+        
+    return UA_OK;
 }
 
 int gui_quit(ogmp_curses_t* ocui)
@@ -529,7 +585,6 @@ int
 gui_show_window(gui_t* gui, int wid, int parent)
 {
 	ogmp_curses_t* ocui = gui->topui;
-
 
 	ocui->active_gui->on_off = GUI_OFF;
 
@@ -566,6 +621,7 @@ int gui_activate_window(gui_t* gui, int wid)
 	return UA_OK;
 }
 
+
 int gui_hide_window(gui_t* gui)
 {
 	ogmp_curses_t* ocui = gui->topui;
@@ -587,11 +643,29 @@ int gui_hide_window(gui_t* gui)
 	return UA_OK;
 }
 
+
+int
+gui_update(gui_t* gui)
+{
+	ogmp_ui_t* ogui = (ogmp_ui_t*)gui->topui;
+    
+    if(gui->on_off != GUI_ON)
+        return UA_OK;
+    
+    gui_event_t* ge = gui_new_event(gui, GUI_EVENTID_UPDATE);
+    if(ge)
+        return gui_add_event(ogui, ge);
+
+    return UA_FAIL;
+}
+
 int
 gui_show(ogmp_ui_t* ogui)
 {
-	ogmp_curses_t* ocui = (ogmp_curses_t*)ogui;
+    gui_event_t* gui_e;
+    ogmp_curses_t* ocui = (ogmp_curses_t*)ogui;
 
+	ocui->gui_windows[LOGLINESGUI]->on_off = GUI_ON;
 	ocui->gui_windows[MENUGUI]->on_off = GUI_ON;
 	ocui->active_gui = ocui->gui_windows[MENUGUI];
 
@@ -600,7 +674,6 @@ gui_show(ogmp_ui_t* ogui)
 
 	ocui->quit = 0;
 	while(!ocui->quit)
-
     {
 		int key;
 		int i;
@@ -608,7 +681,7 @@ gui_show(ogmp_ui_t* ogui)
 		/* find the active gui window */
 		for (i=0; ocui->gui_windows[i]!=NULL && ocui->gui_windows[i]->on_off != GUI_ON ; i++)
 		{}
-
+        
 		if (ocui->gui_windows[i]->on_off != GUI_ON)
 			return -1; /* no active window?? */
 
@@ -617,21 +690,39 @@ gui_show(ogmp_ui_t* ogui)
 		else
 			key = ocui->gui_windows[i]->gui_key_pressed(gui_windows[i]);
 
-		if (key==-1)
-		{
-			/* no interesting key */
-		}
-		else
-		{
+		if (key != -1)
 			gui_run_command(ocui, key);
-		}
 
-		i = gui_event(ogui);
+		gui_e = gui_event(ogui);
 
-		if (i==0 && ocui->gui_windows[EXTRAGUI])
-			ocui->gui_windows[EXTRAGUI]->gui_print(ocui->gui_windows[EXTRAGUI], ocui->gui_windows[EXTRAGUI]->parent);
+        if(!gui_e) continue;
 
-		ocui->gui_windows[LOGLINESGUI]->gui_print(ocui->gui_windows[LOGLINESGUI], TOPGUI);
+        if(gui_e->event_id == GUI_EVENTID_MYOWN)
+        {
+            /* gui own event */
+            if(gui_e->gui->event == NULL || gui_e->gui->event(gui_e->gui, gui_e) != GUI_EVENT_END)
+                gui_done_event(gui_e);
+
+            continue;
+        }
+
+        switch(gui_e->event_id)
+        {
+            case GUI_EVENTID_NOTHING:
+            {
+                /* What! Sorry, nothing. */
+                break;
+            }
+            case GUI_EVENTID_UPDATE:
+            {
+                gui_e->gui->gui_print(gui_e->gui, gui_e->gui->parent);
+                
+                break;
+            }
+        }
+        
+        /* event consumed by gui */
+        gui_done_event(gui_e);
 		
 		refresh();
 	}
@@ -723,6 +814,8 @@ int gui_print_log(ogmp_ui_t* ogui, char *buf)
 
 	int l = 0;
 
+	ogmp_curses_t *ocui = (ogmp_curses_t*)ogui;
+
 	xthr_lock(log_lock);
 
 	p = buf;
@@ -762,11 +855,18 @@ int gui_print_log(ogmp_ui_t* ogui, char *buf)
 
 	xthr_unlock(log_lock);
 
+    gui_update(ocui->gui_windows[GUI_LOGLINES]);
+
 	return l;
 }
 
 int gui_done(ogmp_ui_t* ui)
 {
+	ogmp_curses_t *ocui = (ogmp_curses_t*)ui;
+    
+    xlist_done(ocui->event_queue, gui_done_event);
+    xthr_done_lock(ocui->event_queue_lock);
+    
     xfree(ui);
 
 	return UA_OK;
@@ -781,6 +881,9 @@ module_interface_t* ogmp_new_ui()
         return NULL;
     
 	memset(ocui, 0, sizeof(ogmp_curses_t));
+    
+    ocui->event_queue = xlist_new();
+    ocui->event_queue_lock = xthr_new_lock();
     
 	ogui = (ogmp_ui_t*)ocui;
 

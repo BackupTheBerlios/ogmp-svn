@@ -20,25 +20,6 @@
 
 #include "gui_message.h"
 
-gui_t gui_window_message = 
-{
-	GUI_OFF,
-	0,
-	-999,
-	16,
-	-6,
-	NULL,
-	window_message_print,
-	window_message_run_command,
-	NULL,
-	window_message_draw_commands,
-	-1,
-	-1,
-	-1,
-	NULL,
-	NULL
-};
-
 int window_message_print(gui_t* gui, int wid)
 {
 	int y,x;
@@ -98,6 +79,7 @@ int window_message_run_command(gui_t* gui, int c)
 			xfree(ocui->message);
 			ocui->message = NULL;
 
+
 			gui_hide_window(gui);
 
 			break;
@@ -113,6 +95,12 @@ int window_message_run_command(gui_t* gui, int c)
 	return 0;
 }
 
+int window_message_event(gui_t* gui, gui_event_t* ge)
+{
+    /* Nothing interesting yet */
+    return GUI_EVENT_CONTINUE;
+}
+
 gui_t* window_message_new(ogmp_curses_t* topui)
 {
 	gui_window_message.topui = topui;
@@ -124,3 +112,23 @@ int window_message_done(gui_t* gui)
 {
 	return 0;
 }
+
+gui_t gui_window_message =
+{
+	GUI_OFF,
+	0,
+	-999,
+	16,
+	-6,
+	NULL,
+    window_message_event,
+	window_message_print,
+	window_message_run_command,
+	NULL,
+	window_message_draw_commands,
+	-1,
+	-1,
+	-1,
+	NULL,
+	NULL
+};

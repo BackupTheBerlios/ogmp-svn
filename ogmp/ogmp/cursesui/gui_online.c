@@ -25,24 +25,6 @@ int josua_registration_status = -1;
 char josua_registration_reason_phrase[100] = { '\0' };
 char josua_registration_server[100] = { '\0' };
 
-gui_t gui_window_online = 
-{
-  GUI_DISABLED,
-  0,
-  -999,
-  -3,
-  0,
-  NULL,
-  &window_online_print,
-  NULL,
-  NULL,
-  NULL,
-  -1,
-  -1,
-  -1,
-  NULL
-};
-
 int window_online_print(gui_t* gui, int wid)
 {
 	int y,x;
@@ -130,6 +112,12 @@ int window_online_print(gui_t* gui, int wid)
 	return 0;
 }
 
+int window_online_event(gui_t* gui, gui_event_t* ge)
+{
+    /* Nothing interesting yet */
+    return GUI_EVENT_CONTINUE;
+}
+
 gui_t* window_online_new(ogmp_curses_t* topui)
 {
 	gui_window_online.topui = topui;
@@ -142,3 +130,21 @@ int window_online_done(gui_t* gui)
 	return 0;
 }
 
+gui_t gui_window_online =
+{
+  GUI_DISABLED,
+  0,
+  -999,
+  -3,
+  0,
+  NULL,
+  window_online_event,
+  window_online_print,
+  NULL,
+  NULL,
+  NULL,
+  -1,
+  -1,
+  -1,
+  NULL
+};

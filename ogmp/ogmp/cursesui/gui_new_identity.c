@@ -22,24 +22,6 @@
 
 #include "editor.h"
 
-gui_t gui_window_new_identity = 
-{
-	GUI_OFF,
-	0,
-	-999,
-	10,
-	-6,
-	NULL,
-	window_new_identity_print,
-	window_new_identity_run_command,
-	NULL,
-	window_new_identity_draw_commands,
-	10,
-	0,
-	-1,
-	NULL
-};
-
 #ifndef	LINE_MAX
 #define LINE_MAX 128
 #endif
@@ -49,6 +31,7 @@ gui_t gui_window_new_identity =
 #define NEWID_REGISTARY	2
 #define NEWID_REGNAME	3
 #define NEWID_REGSEC	4
+
 
 char newid_fullname[128];
 char newid_bookloc[128];
@@ -257,11 +240,15 @@ int window_new_identity_run_command(gui_t* gui, int c)
 		default:
 		{
 			if(editline_append(newid_edit[cursor_newid], (char*)&c, 1) == 0)
+            {
 				beep();
 	
-			return -1;
+                return -1;
+            }
 		}
 	}
+
+    gui_update(gui);
 
 	return 0;
 }
@@ -280,6 +267,12 @@ void window_new_identity_draw_commands(gui_t* gui)
 	getmaxyx(stdscr,y,x);
   
 	josua_print_command(new_identity_commands, y-5, 0);
+}
+
+int window_new_identity_event(gui_t* gui, gui_event_t* ge)
+{
+    /* Nothing interesting yet */
+    return GUI_EVENT_CONTINUE;
 }
 
 gui_t* window_new_identity_new(ogmp_curses_t* topui)
@@ -313,3 +306,22 @@ int window_new_identity_done(gui_t* gui)
 
 	return 0;
 }
+
+gui_t gui_window_new_identity =
+{
+	GUI_OFF,
+	0,
+	-999,
+	10,
+	-6,
+	NULL,
+    window_new_identity_event,
+	window_new_identity_print,
+	window_new_identity_run_command,
+	NULL,
+	window_new_identity_draw_commands,
+	10,
+	0,
+	-1,
+	NULL
+};

@@ -22,24 +22,6 @@
 
 #include "editor.h"
 
-gui_t gui_window_audio_test = 
-{
-	GUI_OFF,
-	0,
-	-999,
-	10,
-	-6,
-	NULL,
-	window_audio_test_print,
-	window_audio_test_run_command,
-	NULL,
-	window_audio_test_draw_commands,
-	-1,
-	-1,
-	-1,
-	NULL
-};
-
 #ifndef	LINE_MAX
 #define LINE_MAX 128
 #endif
@@ -119,6 +101,7 @@ int window_audio_test_print(gui_t* gui, int wid)
 		mvaddch(gui->y0+1, gui->x0+20+pos, c);
 	}
 
+
 	gui->gui_draw_commands(gui);
   
 	return 0;
@@ -151,6 +134,7 @@ int window_audio_test_run_command(gui_t* gui, int c)
 	if(gui->x1 != -999)
 		x = gui->x1;
 
+
 	if(gui->xcursor == -1)
 		gui->xcursor = 20;
 
@@ -159,7 +143,7 @@ int window_audio_test_run_command(gui_t* gui, int c)
 
 	max = 1;
 
-	switch (c)
+    switch (c)
     {
 		case KEY_DC:
 		{
@@ -271,13 +255,23 @@ int window_audio_test_run_command(gui_t* gui, int c)
 		default:
 		{
 			if(editline_append(audio_test_edit[cursor_audio_test], (char*)&c, 1) == 0)
+            {
 				beep();
-	
-			return -1;
+                
+                return -1;
+            }
 		}
 	}
 
+    gui_update(gui);
+
 	return 0;
+}
+
+int window_audio_test_event(gui_t* gui, gui_event_t* ge)
+{
+    /* Nothing interesting yet */
+    return GUI_EVENT_CONTINUE;
 }
 
 gui_t* window_audio_test_new(ogmp_curses_t* topui)
@@ -297,3 +291,22 @@ int window_audio_test_done(gui_t* gui)
 
 	return 0;
 }
+
+gui_t gui_window_audio_test =
+{
+	GUI_OFF,
+	0,
+	-999,
+	10,
+	-6,
+	NULL,
+    window_audio_test_event,
+	window_audio_test_print,
+	window_audio_test_run_command,
+	NULL,
+	window_audio_test_draw_commands,
+	-1,
+	-1,
+	-1,
+	NULL
+};

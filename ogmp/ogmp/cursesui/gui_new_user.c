@@ -22,24 +22,6 @@
 
 #include "editor.h"
 
-gui_t gui_window_new_user = 
-{
-	GUI_OFF,
-	0,
-	-999,
-	10,
-	-6,
-	NULL,
-	window_new_user_print,
-	window_new_user_run_command,
-	NULL,
-	window_new_user_draw_commands,
-	-1,
-	-1,
-	-1,
-	NULL
-};
-
 #define MAX_LINE 128
 
 #define INPUT_UID 0
@@ -163,6 +145,7 @@ void window_new_user_draw_commands(gui_t* gui)
 	char *new_user_commands[] = 
 	{
 		"<-",  "PrevWindow",
+
 		"->",  "NextWindow",
 		"^A",  "Create",
 		"^E",  "Cancel" ,
@@ -196,6 +179,7 @@ int window_new_user_run_command(gui_t* gui, int c)
 	switch (c)
     {
 		case KEY_DC:
+
 		{
 			editline_remove_char(edit[cursor_user]);
 			
@@ -296,6 +280,12 @@ int window_new_user_run_command(gui_t* gui, int c)
 	return 0;
 }
 
+int window_new_user_event(gui_t* gui, gui_event_t* ge)
+{
+    /* Nothing interesting yet */
+    return GUI_EVENT_CONTINUE;
+}
+
 gui_t* window_new_user_new(ogmp_curses_t* topui)
 {
 	gui_window_new_user.topui = topui;
@@ -321,3 +311,22 @@ int window_new_user_done(gui_t* gui)
 
 	return 0;
 }
+
+gui_t gui_window_new_user =
+{
+	GUI_OFF,
+	0,
+	-999,
+	10,
+	-6,
+	NULL,
+    window_new_user_event,
+	window_new_user_print,
+	window_new_user_run_command,
+	NULL,
+	window_new_user_draw_commands,
+	-1,
+	-1,
+	-1,
+	NULL
+};

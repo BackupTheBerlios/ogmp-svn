@@ -20,24 +20,6 @@
 
 #include "gui_profiles.h"
 
-gui_t gui_window_profiles = 
-{
-	GUI_OFF,
-	0,
-	-999,
-	10,
-	-6,
-	NULL,
-	window_profiles_print,
-	window_profiles_run_command,
-	NULL,
-	window_profiles_draw_commands,
-	-1,
-	-1,
-	-1,
-	NULL
-};
-
 int cursor_profiles_pos = 0;
 int cursor_profiles_view  = 0;
 
@@ -108,7 +90,7 @@ int window_profiles_print(gui_t* gui, int wid)
 
 	while(prof)
     {
-		if (cursor_profiles_view == k)
+		if (k == cursor_profiles_view)
 			break;
 
 		prof = (user_profile_t*)xlist_next(profiles, &lu);
@@ -116,55 +98,52 @@ int window_profiles_print(gui_t* gui, int wid)
     }
 
 	nview = 0;
+    
 	while (prof)
     {
-		char *fullname = prof->fullname;
-		
 		if (prof->reg_status == SIPUA_STATUS_REG_OK)
 		{
-			snprintf(buf, 199, " %c%c %c '%s'<%s> [%-s] %-100.100s",
+			snprintf(buf, 199, " %c%c %c %d.'%s'<%s> [%-s] %-100.100s",
 						(cursor_profiles_pos==k) ? '-' : ' ',
 						(cursor_profiles_pos==k) ? '>' : ' ',
 						(prof == user_profile) ? '*' : ' ',
-						fullname, prof->regname, prof->registrar, "OK");
+						k+1, prof->fullname, prof->regname, prof->registrar, "OK");
 		}
 		else if (prof->reg_status == SIPUA_STATUS_REG_FAIL)
 		{
-			snprintf(buf, 199, " %c%c %c '%s'<%s> [%-s] %-100.100s",
+			snprintf(buf, 199, " %c%c %c %d.'%s'<%s> [%-s] %-100.100s",
 						(cursor_profiles_pos==k) ? '-' : ' ',
 						(cursor_profiles_pos==k) ? '>' : ' ',
 						(prof == user_profile) ? '*' : ' ',
-						fullname, prof->regname, prof->registrar, "FAIL");
+						k+1, prof->fullname, prof->regname, prof->registrar, "FAIL");
 		}
 		else if (prof->reg_status == SIPUA_STATUS_REG_DOING)
 		{
-			snprintf(buf, 199, " %c%c %c '%s'<%s> [%-s] %-100.100s",
+			snprintf(buf, 199, " %c%c %c %d.'%s'<%s> [%-s] %-100.100s",
 						(cursor_profiles_pos==k) ? '-' : ' ',
 						(cursor_profiles_pos==k) ? '>' : ' ',
 						(prof == user_profile) ? '*' : ' ',
-						fullname, prof->regname, prof->registrar, "R...");
+						k+1, prof->fullname, prof->regname, prof->registrar, "R...");
 		}
 		else if (prof->reg_status == SIPUA_STATUS_UNREG_DOING)
 		{
-			snprintf(buf, 199, " %c%c %c '%s'<%s> [%-s] %-100.100s",
+			snprintf(buf, 199, " %c%c %c %d.'%s'<%s> [%-s] %-100.100s",
 						(cursor_profiles_pos==k) ? '-' : ' ',
 						(cursor_profiles_pos==k) ? '>' : ' ',
 						(prof == user_profile) ? '*' : ' ',
-						fullname, prof->regname, prof->registrar, "U...");
+						k+1, prof->fullname, prof->regname, prof->registrar, "U...");
 		}
 		else
 		{
-			snprintf(buf, 199, " %c%c %c '%s'<%s> [%-s] %-100.100s",
+			snprintf(buf, 199, " %c%c %c %d.'%s'<%s> [%-s] %-100.100s",
 						(cursor_profiles_pos==k) ? '-' : ' ',
 						(cursor_profiles_pos==k) ? '>' : ' ',
 						(prof == user_profile) ? '*' : ' ',
-						fullname, prof->regname, prof->registrar, "---");
+						k+1, prof->fullname, prof->regname, prof->registrar, "---");
 		}
       
 		attrset((k==cursor_profiles_pos) ? COLOR_PAIR(10) : COLOR_PAIR(1));
 		mvaddnstr(gui->y0+1+nview, gui->x0, buf, x-gui->x0);
-
-		xfree(fullname);
 
 		if (nview > y + gui->y1 - gui->y0 - 1)
 			break; /* do not print next one */
@@ -183,6 +162,7 @@ int window_profiles_print(gui_t* gui, int wid)
 void window_profiles_draw_commands(gui_t* gui)
 {
 	int x,y;
+
 
 	char *profiles_commands[] = {
 									"^A",   "Add",
@@ -217,7 +197,7 @@ void window_profiles_draw_commands(gui_t* gui)
 
 int window_profiles_run_command(gui_t* gui, int c)
 {
-	int k,y,x;
+	int k,y,x,h;
 	int max=0;
 
 	ogmp_curses_t* ocui = gui->topui;
@@ -226,8 +206,9 @@ int window_profiles_run_command(gui_t* gui, int c)
 	xlist_t* profiles = ocui->user->profiles;
 
 	/*curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);*/
-
 	getmaxyx(stdscr,y,x);
+    
+    h = y - gui->y0 + gui->y1;
 
 	if (gui->x1 != -999)
 		x = gui->x1;
@@ -245,13 +226,12 @@ int window_profiles_run_command(gui_t* gui, int c)
 			{
 				cursor_profiles_pos++;
 			
-				if ((cursor_profiles_pos - cursor_profiles_view) > y+gui->y1-gui->y0-1)
+				if ((cursor_profiles_pos - cursor_profiles_view) > h)
 					cursor_profiles_view++;
 			}
 
 			break;
 		}
-
 		case KEY_UP:
 		{
 			if (cursor_profiles_pos == 0)
@@ -266,14 +246,12 @@ int window_profiles_run_command(gui_t* gui, int c)
 
 			break;
 		}
-
 		case 1:  /* Ctrl-A */
 		{
 			gui_show_window(gui, GUI_NEWID, GUI_PROFILES);
 
 			break;
 		}
-
 		case 4:  /* Ctrl-D */
 		{
 			user_profile_t* prof;
@@ -295,14 +273,12 @@ int window_profiles_run_command(gui_t* gui, int c)
 
 			break;
 		}
-
 		case 6:   /* Ctrl-F */
 		{
 			/* Refresh the list */
 
 			break;
 		}
-
 		case 18:  /* Ctrl-R */
 		{
 			/* Register the name */
@@ -409,7 +385,6 @@ int window_profiles_run_command(gui_t* gui, int c)
 
 			break;
 		}
-
 		default:
 		{
 			beep();
@@ -418,7 +393,15 @@ int window_profiles_run_command(gui_t* gui, int c)
 		}
     }
 
+    gui_update(gui);
+
 	return 0;
+}
+
+int window_profiles_event(gui_t* gui, gui_event_t* ge)
+{
+    /* Nothing interesting yet */
+    return GUI_EVENT_CONTINUE;
 }
 
 gui_t* window_profiles_new(ogmp_curses_t* topui)
@@ -432,3 +415,22 @@ int window_profiles_done(gui_t* gui)
 {
 	return 0;
 }
+
+gui_t gui_window_profiles =
+{
+	GUI_OFF,
+	0,
+	-999,
+	10,
+	-6,
+	NULL,
+    window_profiles_event,
+	window_profiles_print,
+	window_profiles_run_command,
+	NULL,
+	window_profiles_draw_commands,
+	-1,
+	-1,
+	-1,
+	NULL
+};

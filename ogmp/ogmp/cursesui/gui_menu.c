@@ -30,39 +30,21 @@
 
 extern struct osip_mutex *log_mutex;
 
-gui_t gui_window_menu = 
-{
-	GUI_OFF,
-	20,
-	-999,
-	2,
-	9,
-	NULL,
-	window_menu_print,
-	window_menu_run_command,
-	NULL,
-	window_menu_draw_commands,
-	-1,
-	-1,
-	-1,
-	NULL
-};
-
 static const menu_t josua_menu[] = 
 {
-	{ "a", " PHONE BOOK         -    Manage phone book",
+	{ "a", " PHONE BOOK         -  Manage phone book",
 		GUI_BROWSE  },
-	{ "i", " NEW CALL SESSION   -    Create a call session",
+	{ "i", " NEW CALL SESSION   -  Create a call session",
 		GUI_NEWCALL },
-	{ "u", " SUBSCRIPTIONS LIST -    View pending subscriptions",
+	{ "u", " SUBSCRIPTIONS LIST  -  View pending subscriptions",
 		GUI_SUBS},
-	{ "l", " CALL LIST          -    Manage all calls",
+	{ "l", " CALL LIST           -  Manage all calls",
 		GUI_SESSION },
-	{ "r", " PROFILE LIST       -    Change your ID",
+	{ "r", " PROFILE LIST        -  Change your ID",
 		GUI_PROFILES  },
-	{ "s", " SETUP              -    Setting",
+	{ "s", " SETUP               -  Setting",
 		GUI_SETUP },
-	{ "q", " QUIT               -    Quit",
+	{ "q", " QUIT                -  Quit",
 		GUI_QUIT  },
 	{ 0 }
 };
@@ -215,7 +197,7 @@ int window_menu_run_command(gui_t *gui, int c)
 			if(user_profile)
 				cursor_menu = 0;
 			else
-				beep();
+				bgui_updateeep();
 			break;
 		case 'i':
 			if(user_profile)
@@ -278,10 +260,15 @@ int window_menu_run_command(gui_t *gui, int c)
 		return -1;
 	}
 
-	if (gui->on_off==GUI_ON)
-		gui->gui_print(gui, MENUGUI);
+	gui_update(gui);
   
 	return 0;
+}
+
+int window_menu_event(gui_t* gui, gui_event_t* ge)
+{
+    /* Nothing interesting yet */
+    return GUI_EVENT_CONTINUE;
 }
 
 gui_t* window_menu_new(ogmp_curses_t* topui)
@@ -296,3 +283,22 @@ int window_menu_done(gui_t* gui)
 	return 0;
 }
 
+
+gui_t gui_window_menu =
+{
+	GUI_OFF,
+	20,
+	-999,
+	2,
+	9,
+	NULL,
+	window_menu_event,
+	window_menu_print,
+	window_menu_run_command,
+	NULL,
+	window_menu_draw_commands,
+	-1,
+	-1,
+	-1,
+	NULL
+};

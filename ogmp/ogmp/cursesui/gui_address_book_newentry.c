@@ -22,25 +22,6 @@
 
 #include "editor.h"
 
-gui_t gui_window_address_book_newentry = 
-{
-	GUI_OFF,
-	0,
-	-999,
-	10,
-	-6,
-	NULL,
-	window_address_book_newentry_print,
-	window_address_book_newentry_run_command,
-	NULL,
-	window_address_book_newentry_draw_commands,
-	10,
-	0,
-	-1,
-	NULL,
-	NULL
-};
-
 #ifndef	LINE_MAX
 #define LINE_MAX 128
 #endif
@@ -213,7 +194,7 @@ int window_address_book_newentry_run_command(gui_t* gui, int c)
 			{
 				sipua_contact_t* contact = sipua_new_contact(newentry_inputs[NEWENTRY_NAME], strlen(newentry_inputs[NEWENTRY_NAME]), newentry_inputs[NEWENTRY_MEMO], strlen(newentry_inputs[NEWENTRY_MEMO]), newentry_inputs[NEWENTRY_SIP]);
 				
-				int n = sipua_add_contact(ocui->phonebook, contact);
+				sipua_add_contact(ocui->phonebook, contact);
 
 				gui_hide_window(gui);
 			}
@@ -259,6 +240,12 @@ void window_address_book_newentry_draw_commands(gui_t* gui)
 	josua_print_command(address_book_newentry_commands, y-5, 0);
 }
 
+int window_address_book_newentry_event(gui_t* gui, gui_event_t* ge)
+{
+    /* Nothing interesting yet */
+    return GUI_EVENT_CONTINUE;
+}
+
 gui_t* window_address_book_newentry_new(ogmp_curses_t* topui)
 {
 	gui_window_address_book_newentry.topui = topui;
@@ -278,3 +265,23 @@ int window_address_book_newentry_done(gui_t* gui)
 
 	return 0;
 }
+
+gui_t gui_window_address_book_newentry =
+{
+	GUI_OFF,
+	0,
+	-999,
+	10,
+	-6,
+	NULL,
+    window_address_book_newentry_event,
+	window_address_book_newentry_print,
+	window_address_book_newentry_run_command,
+	NULL,
+	window_address_book_newentry_draw_commands,
+	10,
+	0,
+	-1,
+	NULL,
+	NULL
+};

@@ -21,25 +21,6 @@
 
 #include "gui_topline.h"
 
-
-gui_t gui_window_topline = 
-{
-	GUI_DISABLED,
-	0,
-	-999,
-	0,
-	1,
-	NULL,
-	window_topline_print,
-	NULL,
-	NULL,
-	NULL,
-	-1,
-	-1,
-	-1,
-	NULL
-};
-
 int window_topline_print(gui_t* gui, int wid)
 {
 	int y,x;
@@ -60,6 +41,12 @@ int window_topline_print(gui_t* gui, int wid)
 	return 0;
 }
 
+int window_topline_event(gui_t* gui, gui_event_t* ge)
+{
+    /* Nothing interesting yet */
+    return GUI_EVENT_CONTINUE;
+}
+
 gui_t* window_topline_new(ogmp_curses_t* topui)
 {
 	gui_window_topline.topui = topui;
@@ -72,3 +59,21 @@ int window_topline_done(gui_t* gui)
 	return 0;
 }
 
+gui_t gui_window_topline =
+{
+	GUI_DISABLED,
+	0,
+	-999,
+	0,
+	1,
+	NULL,
+    window_topline_event,
+	window_topline_print,
+	NULL,
+	NULL,
+	NULL,
+	-1,
+	-1,
+	-1,
+	NULL
+};

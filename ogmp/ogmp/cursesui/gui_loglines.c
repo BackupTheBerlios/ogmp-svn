@@ -21,28 +21,12 @@
 
 #include "gui_loglines.h"
 
-gui_t gui_window_loglines = 
-{
-	GUI_DISABLED,
-	0,
-	-999,
-	-3,
-	0,
-	NULL,
-	window_loglines_print,
-	NULL,
-	NULL,
-	NULL,
-	-1,
-	-1,
-	-1,
-	NULL,
-	NULL
-};
-
 char log_buf[LOG_MAXLINE][LOG_MAXLEN];
+
 int log_ln1=0, log_lnn=0;
-int log_maxline = LOG_MAXLINE, log_maxlen = LOG_MAXLEN, log_nline = 0;
+int log_maxline = LOG_MAXLINE,
+int log_maxlen = LOG_MAXLEN,
+int log_nline = 0;
 
 int cursor_log_view;
 int log_nview = 3;
@@ -73,6 +57,7 @@ int window_loglines_print(gui_t* gui, int wid)
 		/* int xpos; */
 		attrset(COLOR_PAIR(4));
 
+
 		mvaddnstr(y-1-n, 0, buf1, x);
 		mvaddstr(y-1-n, 0, log_buf[ln]);
 
@@ -82,9 +67,13 @@ int window_loglines_print(gui_t* gui, int wid)
 
 	xthr_unlock(log_lock);
 
-	refresh();
-
 	return 0;
+}
+
+int window_loglines_event(gui_t* gui, gui_event_t* ge)
+{
+    /* Nothing interesting yet */
+    return GUI_EVENT_CONTINUE;
 }
 
 gui_t* window_loglines_new(ogmp_curses_t* topui)
@@ -103,3 +92,26 @@ int window_loglines_done(gui_t* gui)
 	return 0;
 }
 
+gui_t gui_window_loglines =
+{
+	GUI_DISABLED,
+    
+	0,       /* x0 */
+	-999,    /* x1 */
+    
+	-3,      /* y0 */
+	0,       /* y1 */
+    
+	NULL,
+    window_loglines_event,
+
+	window_loglines_print,
+	NULL,
+	NULL,
+	NULL,
+	-1,
+	-1,
+	-1,
+	NULL,
+	NULL
+};

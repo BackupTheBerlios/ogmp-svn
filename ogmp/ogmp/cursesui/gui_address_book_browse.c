@@ -26,27 +26,6 @@
 #include "gui_menu.h"
 #include "gui_new_call.h"
 
-/*  extern eXosip_t eXosip; */
-
-gui_t gui_window_address_book_browse = 
-{
-	GUI_OFF,
-	0,
-	-999,
-	10,
-	-6,
-	NULL,
-	window_address_book_browse_print,
-	window_address_book_browse_run_command,
-	NULL,
-	window_address_book_browse_draw_commands,
-	-1,
-	-1,
-	-1,
-	NULL,
-	NULL
-};
-
 #ifndef	LINE_MAX
 #define LINE_MAX 128
 #endif
@@ -282,6 +261,7 @@ int window_address_book_browse_run_command(gui_t* gui, int c)
 				sipua_remove_contact(phonebook, contact);
       
 			break;
+
 		}
 		case 5: /* ctrl-E */
 		{
@@ -335,6 +315,7 @@ int window_address_book_browse_run_command(gui_t* gui, int c)
 			while(contact)
 			{
 				if(cursor_address_book_browse + cursor_address_book_start == pos)
+
 					break;
 
 				pos++;
@@ -440,6 +421,12 @@ int window_address_book_browse_run_command(gui_t* gui, int c)
 	return 0;
 }
 
+int window_address_book_browse_event(gui_t* gui, gui_event_t* ge)
+{
+    /* Nothing interesting yet */
+    return GUI_EVENT_CONTINUE;
+}
+
 gui_t* window_address_book_browse_new(ogmp_curses_t* topui)
 {
 	gui_window_address_book_browse.topui = topui;
@@ -454,3 +441,24 @@ int window_address_book_browse_done(gui_t* gui)
 	
 	return 0;
 }
+
+gui_t gui_window_address_book_browse =
+{
+
+	GUI_OFF,
+	0,
+	-999,
+	10,
+	-6,
+	NULL,
+    window_address_book_browse_event,
+	window_address_book_browse_print,
+	window_address_book_browse_run_command,
+	NULL,
+	window_address_book_browse_draw_commands,
+	-1,
+	-1,
+	-1,
+	NULL,
+	NULL
+};

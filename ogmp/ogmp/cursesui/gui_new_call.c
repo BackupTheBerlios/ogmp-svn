@@ -23,24 +23,6 @@
 
 #include "editor.h"
 
-gui_t gui_window_new_call = 
-{
-	GUI_OFF,
-	0,
-	-999,
-	10,
-	-6,
-	NULL,
-	window_new_call_print,
-	window_new_call_run_command,
-	NULL,
-	window_new_call_draw_commands,
-	10,
-	1,
-	-1,
-	NULL
-};
-
 #ifndef	LINE_MAX
 #define LINE_MAX 128
 #endif
@@ -274,6 +256,12 @@ void window_new_call_draw_commands(gui_t* gui)
 	josua_print_command(new_call_commands, y-5, 0);
 }
 
+int window_new_call_event(gui_t* gui, gui_event_t* ge)
+{
+    /* Nothing interesting yet */
+    return GUI_EVENT_CONTINUE;
+}
+
 gui_t* window_new_call_new(ogmp_curses_t* topui)
 {
 	gui_window_new_call.topui = topui;
@@ -293,3 +281,22 @@ int window_new_call_done(gui_t* gui)
 
 	return 0;
 }
+
+gui_t gui_window_new_call =
+{
+	GUI_OFF,
+	0,
+	-999,
+	10,
+	-6,
+	NULL,
+    window_new_call_event,
+	window_new_call_print,
+	window_new_call_run_command,
+	NULL,
+	window_new_call_draw_commands,
+	10,
+	1,
+	-1,
+	NULL
+};

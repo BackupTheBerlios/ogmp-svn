@@ -22,24 +22,6 @@
 
 #include "editor.h"
 
-gui_t gui_window_login = 
-{
-	GUI_OFF,
-	0,
-	-999,
-	10,
-	-6,
-	NULL,
-	window_login_print,
-	window_login_run_command,
-	NULL,
-	window_login_draw_commands,
-	-1,
-	-1,
-	-1,
-	NULL
-};
-
 #ifndef	LINE_MAX
 #define LINE_MAX 128
 #endif
@@ -275,13 +257,23 @@ int window_login_run_command(gui_t* gui, int c)
 		default:
 		{
 			if(editline_append(edit[cursor_inputs], (char*)&c, 1) == 0)
+            {
 				beep();
 	
-			return -1;
+                return -1;
+            }
 		}
 	}
 
+    gui_update(gui);
+
 	return 0;
+}
+
+int window_login_event(gui_t* gui, gui_event_t* ge)
+{
+    /* Nothing interesting yet */
+    return GUI_EVENT_CONTINUE;
 }
 
 gui_t* window_login_new(ogmp_curses_t* topui)
@@ -309,3 +301,22 @@ int window_login_done(gui_t* gui)
 
 	return 0;
 }
+
+gui_t gui_window_login =
+{
+	GUI_OFF,
+	0,
+	-999,
+	10,
+	-6,
+	NULL,
+    window_login_event,
+	window_login_print,
+	window_login_run_command,
+	NULL,
+	window_login_draw_commands,
+	-1,
+	-1,
+	-1,
+	NULL
+};

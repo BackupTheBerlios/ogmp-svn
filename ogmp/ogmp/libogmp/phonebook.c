@@ -975,7 +975,7 @@ int user_add_profile(user_t* user, char* fullname, int fbytes, char* book_loc, c
 	prof->username = user->uid;
 
 	prof->fullname = xstr_nclone(fullname, fbytes);
-    pbk_log(("user_add_profile: fullname[%s]\n", prof->fullname));
+    
 	prof->fbyte = fbytes;
 
 	prof->registrar = xstr_clone(home);

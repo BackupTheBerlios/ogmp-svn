@@ -23,23 +23,6 @@
 #include "gui_insubscriptions_list.h"
 #include "gui_online.h"
 
-gui_t gui_window_insubscriptions_list = {
-  GUI_OFF,
-  0,
-  -999,
-  10,
-  -6,
-  NULL,
-  &window_insubscriptions_list_print,
-  &window_insubscriptions_list_run_command,
-  NULL,
-  window_insubscriptions_list_draw_commands,
-  -1,
-  -1,
-  -1,
-  NULL
-};
-
 int cursor_insubscriptions_list = 0;
 
 int window_insubscriptions_list_print(gui_t* gui, int wid)
@@ -332,6 +315,12 @@ int window_insubscriptions_list_run_command(gui_t* gui, int c)
 	return 0;
 }
 
+int window_insubscriptions_list_event(gui_t* gui, gui_event_t* ge)
+{
+    /* Nothing interesting yet */
+    return GUI_EVENT_CONTINUE;
+}
+
 gui_t* window_insubscriptions_list_new(ogmp_curses_t* topui)
 {
 	gui_window_insubscriptions_list.topui = topui;
@@ -343,3 +332,22 @@ int window_insubscriptions_list_done(gui_t* gui)
 {
 	return 0;
 }
+
+gui_t gui_window_insubscriptions_list =
+{
+  GUI_OFF,
+  0,
+  -999,
+  10,
+  -6,
+  NULL,
+  window_insubscriptions_list_event,
+  window_insubscriptions_list_print,
+  window_insubscriptions_list_run_command,
+  NULL,
+  window_insubscriptions_list_draw_commands,
+  -1,
+  -1,
+  -1,
+  NULL
+};

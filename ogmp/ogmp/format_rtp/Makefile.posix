@@ -6,13 +6,14 @@ PREFIX = /home/hling/timedia-project
 
 CC = gcc
 
-LIBS = -L$(PREFIX)/lib -ltmdbase -lxrtp
+LIBS = -L$(PREFIX)/lib -ltmdbase -lxrtp \
+			-L$(PREFIX)/lib/$(PROGNAME) -logmp
 
-INCLUDES = -I$(PREFIX)/include
+INCLUDES = -I$(PREFIX)/include -I.. -I../include
 
 INSTDIR = $(PREFIX)/lib/$(PROGNAME)
 
-FILES = rtp_format.c ../rtp_cap.c
+FILES = rtp_format.c
 
 LIBFILES = fmt_rtp.so
 
@@ -24,13 +25,13 @@ all:	 libs install
 	-$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $*.o
 
 libs: $(FILES:.c=.o)
-	gcc -shared $(LIBS) rtp_format.o ../rtp_cap.o -o $(LIBFILES)
+	gcc -shared $(LIBS) rtp_format.o -o $(LIBFILES)
 
 install: $(LIBFILES)
 	-@cp -f $(LIBFILES) $(INSTDIR)
 
 uninstall:
-	-@rm -f $(INSTDIR)/LIBFILES
+	-@rm -f $(INSTDIR)/$(LIBFILES)
 
 clean:
 	-@rm -f *.o

@@ -21,24 +21,6 @@
 /*#include "jcalls.h"*/
 #include "gui_sessions_list.h"
 
-gui_t gui_window_sessions_list = 
-{
-	GUI_OFF,
-	0,
-	-999,
-	10,
-	-6,
-	NULL,
-	window_sessions_list_print,
-	window_sessions_list_run_command,
-	NULL,
-	window_sessions_list_draw_commands,
-	-1,
-	-1,
-	-1,
-	NULL
-};
-
 int calllist_line = 0;
 
 int window_sessions_list_print(gui_t* gui, int wid)
@@ -462,6 +444,12 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 	return 0;
 }
 
+int window_sessions_list_event(gui_t* gui, gui_event_t* ge)
+{
+    /* Nothing interesting yet */
+    return GUI_EVENT_CONTINUE;
+}
+
 gui_t* window_sessions_list_new(ogmp_curses_t* topui)
 {
 	gui_window_sessions_list.topui = topui;
@@ -473,3 +461,22 @@ int window_sessions_list_done(gui_t* gui)
 {
 	return 0;
 }
+
+gui_t gui_window_sessions_list =
+{
+	GUI_OFF,
+	0,
+	-999,
+	10,
+	-6,
+	NULL,
+    window_sessions_list_event,
+	window_sessions_list_print,
+	window_sessions_list_run_command,
+	NULL,
+	window_sessions_list_draw_commands,
+	-1,
+	-1,
+	-1,
+	NULL
+};

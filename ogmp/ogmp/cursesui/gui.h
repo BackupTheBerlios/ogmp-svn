@@ -60,19 +60,42 @@
 #include <eXosip/eXosip_cfg.h>
 
 typedef struct ogmp_curses_s ogmp_curses_t;
+
 typedef struct gui gui_t;
+
+#define GUI_EVENT_END       0
+#define GUI_EVENT_CONTINUE  1
+
+typedef struct gui_event_s gui_event_t;
+struct gui_event_s
+{
+    int (*done)(gui_event_t* ge);
+
+#define GUI_EVENTID_NOTHING  0
+#define GUI_EVENTID_MYOWN    1
+#define GUI_EVENTID_UPDATE   2
+
+    int event_id;    
+    gui_t *gui;
+};
+
 struct gui
 {
+    
 #define GUI_DISABLED -1
 #define GUI_ON        0
 #define GUI_OFF       1
   
 	int on_off;
+    
 	int x0;
 	int x1;
+    
 	int y0;
 	int y1;
 
+	int (*event)(gui_t* gui, gui_event_t* ge);
+    
 	int (*gui_clear)(gui_t* gui);
 	int (*gui_print)(gui_t* gui, int wid);
 	int (*gui_run_command)(gui_t* gui, int c);
@@ -155,18 +178,24 @@ struct ogmp_curses_s
 	coding_t codings[MAX_CODING];
     
     char log_buf[LOG_LEN];
-};
 
+    xlist_t* event_queue;
+    xthr_lock_t* event_queue_lock;
+};
+/*
 char log_buf3[LOG_LEN];
 char log_buf2[LOG_LEN];
 char log_buf1[LOG_LEN];
-
+*/
 xthr_lock_t *log_lock;
 
 /* usefull method */
+
+
 int gui_show_window(gui_t* gui, int wid, int wid_parent);
 int gui_hide_window(gui_t* gui);
 int gui_activate_window(gui_t* gui, int wid);
+int gui_update(gui_t* gui);
 
 int gui_next_view(ogmp_curses_t* ocui);
 int gui_previous_view(ogmp_curses_t* ocui);

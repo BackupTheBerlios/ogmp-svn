@@ -32,25 +32,6 @@ static const char *icons[]=
     "        |__/      "
 };
 
-gui_t gui_window_icon = 
-{
-	GUI_DISABLED,
-	0,
-	20,
-	1,
-	10,
-	NULL,
-	window_icon_print,
-	NULL,
-	NULL,
-	NULL,
-	-1,
-	-1,
-	-1,
-	NULL,
-	NULL
-};
-
 int window_icon_print(gui_t* gui, int wid)
 {
 	int y,x;
@@ -76,7 +57,6 @@ int window_icon_print(gui_t* gui, int wid)
 	return 0;
 }
 
-
 gui_t* window_icon_new(ogmp_curses_t* topui)
 {
 	gui_window_icon.topui = topui;
@@ -88,3 +68,23 @@ int window_icon_done(gui_t* gui)
 {
 	return 0;
 }
+
+gui_t gui_window_icon =
+{
+	GUI_DISABLED,
+	0,
+	20,
+	1,
+	10,
+	NULL,
+    NULL, /* window_icon_event */
+	window_icon_print,
+	NULL,
+	NULL,
+	NULL,
+	-1,
+	-1,
+	-1,
+	NULL,
+	NULL
+};
