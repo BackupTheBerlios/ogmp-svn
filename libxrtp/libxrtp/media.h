@@ -42,7 +42,7 @@
      /* For media, this means the time to display
       * xrtp will schedule the time to send media by this parameter.
       */
-     int (*post)(xrtp_media_t * media, media_data_t * data, int len, int allow_usec);
+     int (*post)(xrtp_media_t * media, media_data_t *data, int bytes, uint32 timestamp);
 
      struct media_callbacks_s{
 

@@ -98,8 +98,9 @@
 
     xrtp_session_t * session;
     
+    rtime_t msec_arrival;
     rtime_t usec_arrival;
-    rtime_t lrt_arrival;
+    rtime_t nsec_arrival;
 
 	uint32 rtpts_playout;
     
@@ -148,8 +149,10 @@
 
     xrtp_session_t * session;
 
-    rtime_t usec_arrival;  /* used for media sync */
-    rtime_t msec_arrival;  /* used for lsr_delay */
+    //rtime_t usec_arrival;  /* used for media sync */
+    //rtime_t msec_arrival;  /* used for lsr_delay */
+
+    rtime_t msec,usec,nsec;  /* arrival time */
 
     int bytes_received;
 
@@ -342,7 +345,8 @@ extern "C"
  /**
   * Create an empty RTP packet associated to the given RTP session, detail done by Session.
   */
- xrtp_rtp_packet_t * rtp_new_packet(xrtp_session_t * session, int pt, enum xrtp_direct_e dir, session_connect_t * connect, xrtp_lrtime_t lrt_arrival, xrtp_hrtime_t usec_arrival);
+ xrtp_rtp_packet_t * rtp_new_packet(xrtp_session_t * session, int pt, enum xrtp_direct_e dir, session_connect_t * connect
+		, rtime_t ms_arrival, rtime_t us_arrival, rtime_t ns_arrival);
 
  /**
   * Get rtp buffer
@@ -381,7 +385,7 @@ rtp_packet_ssrc(xrtp_rtp_packet_t * packet);
  
 extern DECLSPEC
 uint 
-rtp_packet_length(xrtp_rtp_packet_t * packet);
+rtp_packet_bytes(xrtp_rtp_packet_t * packet);
  
  /* Validate the incoming packet is OK to access data */
  int rtp_packet_validate(xrtp_rtp_packet_t * pac);
@@ -449,11 +453,17 @@ extern DECLSPEC
 uint 
 rtp_packet_dump_payload(xrtp_rtp_packet_t * packet, char **ret_payload);
 
- uint rtp_packet_payload_bytes(xrtp_rtp_packet_t * packet);
+extern DECLSPEC
+uint 
+rtp_packet_payload_bytes(xrtp_rtp_packet_t * packet);
 
  /* Tag for Scheduling proposal */
  int rtp_packet_set_info(xrtp_rtp_packet_t * packet, int bytes); 
  int rtp_packet_info(xrtp_rtp_packet_t * packet, int *bytes);
+ 
+extern DECLSPEC
+int
+rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, rtime_t *ns);
  
  /* --------------------- RTCP Compound interface ------------------------ */
 
@@ -467,7 +477,8 @@ rtp_packet_dump_payload(xrtp_rtp_packet_t * packet, char **ret_payload);
   *
   * param in: Session that rtcp belonged to, if npacket = 0, set to default value
   */
- xrtp_rtcp_compound_t * rtcp_new_compound(xrtp_session_t * session, uint npacket, enum xrtp_direct_e dir, session_connect_t * conn, xrtp_hrtime_t hrts_arrival, xrtp_lrtime_t lrts_arrival);
+ xrtp_rtcp_compound_t * rtcp_new_compound(xrtp_session_t * session, uint npacket, enum xrtp_direct_e dir, session_connect_t * conn
+											, rtime_t ms_arrival, rtime_t us_arrival, rtime_t ns_arrival);
 
  /**
   * The incoming data buffer for rtcp compound
@@ -501,19 +512,23 @@ rtp_packet_dump_payload(xrtp_rtp_packet_t * packet, char **ret_payload);
   */
  int rtcp_padding(xrtp_rtcp_compound_t * compound);
 
- /**
-  * Get the RTCP Packet length
-  */
+/**
+ * Get the RTCP Packet length
+ */
 extern DECLSPEC
 uint 
 rtcp_length(xrtp_rtcp_compound_t * compound);
  
 int rtcp_set_maxlen(xrtp_rtp_packet_t * packet, uint maxlen);
 
- int rtcp_set_sender_info(xrtp_rtcp_compound_t * compound, uint32 SSRC,
+int rtcp_set_sender_info(xrtp_rtcp_compound_t * compound, uint32 SSRC,
                           uint32 hi_ntp, uint32 lo_ntp, uint32 rtp_ts,
                           uint32 packet_sent, uint32 octet_sent);
 
+extern DECLSPEC
+int
+rtcp_arrival_time(xrtp_rtcp_compound_t * compound, rtime_t *ms, rtime_t *us, rtime_t *ns);
+ 
 extern DECLSPEC
 int 
 rtcp_sender_info(xrtp_rtcp_compound_t * compound, uint32 * r_SSRC,
@@ -549,8 +564,13 @@ rtcp_report(xrtp_rtcp_compound_t * compound, uint32 SRC,
   */
  int rtcp_end_sdes(xrtp_rtcp_compound_t * compound, uint32 SRC);
 
- uint8 rtcp_sdes(xrtp_rtcp_compound_t * compound, uint32 SRC, uint8 type, char **r_sdes);
- uint8 rtcp_priv_sdes(xrtp_rtcp_compound_t * compound, uint32 SRC, uint8 prefix_len, char * prefix_value, char* *ret_value);
+ extern DECLSPEC
+ uint8
+ rtcp_sdes(xrtp_rtcp_compound_t * compound, uint32 SRC, uint8 type, char **r_sdes);
+
+ extern DECLSPEC
+ uint8
+ rtcp_priv_sdes(xrtp_rtcp_compound_t * compound, uint32 SRC, uint8 prefix_len, char * prefix_value, char* *ret_value);
 
  xrtp_rtcp_bye_t * rtcp_new_bye(xrtp_rtcp_compound_t * compound, uint32 SRCs[], uint8 n_SRC, uint8 len, char * why);
 

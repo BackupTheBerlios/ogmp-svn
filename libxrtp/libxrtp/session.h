@@ -92,13 +92,12 @@ typedef struct member_state_s{
     uint32 bad_seq;
     uint32 probation;
     
-    uint32 received;  /* number of rtp received by now */
-    
-    uint32 expected_prior;
-    uint32 received_prior;
-    
-    //rtime_t last_hrt_local;
-    //rtime_t last_hrt_rtpts;
+    uint n_payload_oct_received;  /* payload octet counter */
+    uint n_rtp_received;  /* number of rtp received by now */
+
+    uint n_rtp_received_prior;
+    uint32 n_rtp_expected_prior;
+
 
     uint32 last_transit;       /* For playout time computing, session_local_time() */
     uint32 last_last_transit;
@@ -126,18 +125,7 @@ typedef struct member_state_s{
 
     int we_sent;    /* we are a sender */
 
-    uint n_rtp_received;
-    uint n_rtp_received_prior;
-    uint n_payload_oct_received;  /* payload octet counter */
-
-    uint n_rtp_send;          /* reset when changed ssrc */
-    uint n_payload_oct_send;  /* payload octet counter, reset when changed ssrc */
-
     /* rtcp report elements: */
-    
-    /* uint8 frac_lost;    calc on_fly
-     * uint32 total_lost;  calc on_fly
-     */
     uint32 lsr_ts; 
     rtime_t lsr_usec;   /* time of last sr received */
     rtime_t lsr_msec;   /* time of last sr received */
@@ -163,14 +151,14 @@ typedef struct session_state_s{
    
    int receive_from_anonymous;
        
-	 int n_pack_recvd;
-	 int n_pack_sent;
+	 int n_pack_recvd; 
+	 int n_pack_sent;  /* reset when changed ssrc */
 
    rtime_t usec_start_send;
    xrtp_lrtime_t lrts_start_send;
     
-	 int oct_recvd;
-	 int oct_sent;
+	 int oct_recvd;  
+	 int oct_sent;  /* payload octet counter, reset when changed ssrc */
     
 	 int jitter;
 
@@ -218,12 +206,8 @@ struct session_callbacks_s{
     #define CALLBACK_SESSION_AFTER_RESET      0x9
     #define CALLBACK_SESSION_NEED_SIGNATURE   0xA
     #define CALLBACK_SESSION_NOTIFY_DELAY     0xB
-    #define CALLBACK_SESSION_SYNC_TIMESTAMP   0xC
-    #define CALLBACK_SESSION_RESYNC_TIMESTAMP 0xD
-    #define CALLBACK_SESSION_RTP_TIMESTAMP    0xE
-    #define CALLBACK_SESSION_NTP_TIMESTAMP    0xF
-    #define CALLBACK_SESSION_HRT2MT           0x10
-    #define CALLBACK_SESSION_MT2HRT           0x11
+    #define CALLBACK_SESSION_SYNC			  0xC
+    #define CALLBACK_SESSION_NTP			  0xD
     
     void * default_user;
 
@@ -277,20 +261,6 @@ struct session_callbacks_s{
     void * member_report_user;
 
     /**
-     * Callout type: CALLBACK_SESSION_RECEIVE_RTP
-     * Preempty current sending by a receive event
-    int (*receive_rtp)(void* user, rtime_t ts);
-    void * receive_rtp_user;
-     */
-
-    /**
-     * Callout type: CALLBACK_SESSION_RESUME_SEND_RTP
-     * After receiving, resume the sending
-    int (*resume_send_rtp)(void* user, rtime_t now);
-    void * resume_send_rtp_user;
-     */
-    
-    /**
      * Callout type: CALLBACK_SESSION_BEFORE_RESET
      * Notify right before the session reset
      */
@@ -319,44 +289,17 @@ struct session_callbacks_s{
     void * notify_delay_user;
 
     /**
-     * Callout type: CALLBACK_SESSION_SYNC_TIMESTAMP
-     * Get NTP and Local timestamp
-     */
-    int (*sync_timestamp)(void* user, uint32 * hi_ntp, uint32 * lo_ntp, rtime_t * hrts_local);
-    void * sync_timestamp_user;
-
-    /**
-     * Callout type: CALLBACK_SESSION_RESYNC_TIMESTAMP
-     * Sync Remote NTP and Local timestamp
-     */
-    int (*resync_timestamp)(void* user, xrtp_session_t * session, uint32 hi_ntp, uint32 lo_ntp, rtime_t hrts_local);
-    void * resync_timestamp_user;
-
-    /**
-     * Callout type: CALLBACK_SESSION_RTP_TIMESTAMP
-     * Get RTP timestamp
-     */
-    int (*rtp_timestamp)(void* user, rtime_t * rtp_ts);
-    void * rtp_timestamp_user;
-
-    /**
-     * Callout type: CALLBACK_SESSION_NTP_TIMESTAMP
+     * Callout type: CALLBACK_SESSION_NTP
      * Get NTP timestamp
      */
-    int (*ntp_timestamp)(void* user, uint32 * hi_ntp, uint32 * lo_ntp);
-    void * ntp_timestamp_user;
-
+    int (*ntp)(void* user, uint32 * hi_ntp, uint32 * lo_ntp);
+    void * ntp_user;
     /**
-     * Callout type: CALLBACK_SESSION_HRT2MT
+     * Callout type: CALLBACK_SESSION_SYNC
+     * Get NTP timestamp
      */
-    media_time_t (*hrtime_to_mediatime)(void* user, rtime_t hrt);
-    void * hrtime_to_mediatime_user;
-
-    /**
-     * Callout type: CALLBACK_SESSION_MT2HRT
-     */
-    rtime_t (*mediatime_to_hrtime)(void* user, media_time_t mt);
-    void * mediatime_to_hrtime_user;
+    int (*synchronise)(void* user, uint32 timestamp, uint32 hi_ntp, uint32 lo_ntp);
+    void * synchronise_user;
 };
 
 typedef struct param_members_s{
@@ -409,7 +352,7 @@ struct xrtp_session_s {
     member_state_t * self;
 
     uint n_sender;
-    xrtp_list_t * senders;
+    xlist_t *senders;
     
     uint n_member;
     xrtp_list_t * members;
@@ -623,7 +566,7 @@ int session_quit(xrtp_session_t * session, int silently);
 
 extern DECLSPEC
 int 
-session_member_update_rtp(member_state_t * mem, xrtp_rtp_packet_t * rtp);
+session_member_update_by_rtp(member_state_t * mem, xrtp_rtp_packet_t * rtp);
 
 extern DECLSPEC
 int 
@@ -638,10 +581,14 @@ rtime_t session_mt2hrt(xrtp_session_t * session, media_time_t mt);
 
 extern DECLSPEC
 uint32 
-session_member_mapto_local_time(member_state_t * member, uint32 rtpts_packet, uint32 rtpts_local);
+session_member_mapto_local_time(member_state_t * member, uint32 ts_packet, uint32 ts_local, int level);
+
+extern DECLSPEC
+int 
+session_member_synchronise(member_state_t * member, uint32 ts_packet, uint32 ts_local, uint32 hi_ntp, uint32 lo_ntp, int level);
 
 uint32
-session_signature(xrtp_session_t * session);
+session_signature(xrtp_session_t *session);
 
 extern DECLSPEC
 int
@@ -713,17 +660,27 @@ int session_cancel_rtp_sending(xrtp_session_t *session, rtime_t ts);
 int session_rtp_send_now(xrtp_session_t *session);
  
 int session_rtp_to_receive(xrtp_session_t *ses);
+
 /**
  * Check if the rtp packet is a cancelled one
  */
-int session_rtp_receiving_cancelled(xrtp_session_t * session, rtime_t ts);
+int 
+session_rtp_receiving_cancelled(xrtp_session_t * session, rtime_t ts);
 
 /**
  * send rtcp packet to pipeline
  * return the packet origional size
  */
-int session_need_rtcp(xrtp_session_t *session);
+int 
+session_need_rtcp(xrtp_session_t *session);
  
+/**
+ * Make RTCP report, rtp timestamp is set if it's a SR.
+ */
+extern DECLSPEC
+int 
+session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 timestamp);
+
 int session_rtcp_to_send(xrtp_session_t *session);
 
 int session_rtcp_to_receive(xrtp_session_t *session);

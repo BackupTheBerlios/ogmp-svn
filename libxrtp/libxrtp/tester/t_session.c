@@ -21,9 +21,9 @@
 #include <string.h>                          
 #include <stdlib.h>
 
-typedef struct subt_frame_s{
-
-   xrtp_hrtime_t start;
+typedef struct subt_frame_s
+{
+   rtime_t start;
    media_time_t dur;
 
    int len;
@@ -33,16 +33,15 @@ typedef struct subt_frame_s{
  
 typedef struct subt_sender_s subt_sender_t;
 
-struct subt_sender_s{
-
+struct subt_sender_s
+{
    xrtp_session_t *  session;
     
    xrtp_media_t *    subt;
     
    demux_sputext_t * spu;
     
-   int need_seek;
-   int seek_time;
+   int ms_seek;
 
    xrtp_clock_t * clock;
 
@@ -58,15 +57,15 @@ struct subt_sender_s{
  
 typedef struct subt_recvr_s subt_recvr_t;
 
-struct subt_recvr_s{
-
+struct subt_recvr_s
+{
    xrtp_session_t *  session;
    xrtp_media_t *    subt;
 
    media_time_t next_ts;
 
    xrtp_list_t * frames;
-   xrtp_clock_t * clock;
+   //xrtp_clock_t * clock;
    
    xthr_lock_t * lock;
    xthr_cond_t * wait;
@@ -77,8 +76,8 @@ struct subt_recvr_s{
 
 } recvr;
 
-void subt_show(subt_frame_t * frm){
-
+void subt_show(subt_frame_t * frm)
+{
    char str[SUB_MAXLEN];
 
    memcpy(str, frm->data, frm->len);
@@ -89,8 +88,8 @@ void subt_show(subt_frame_t * frm){
    return;
 }
 
-int cb_media_sent(void * u, xrtp_media_t * media){
-
+int cb_media_sent(void * u, xrtp_media_t * media)
+{
    subt_sender_t * s = (subt_sender_t *)u;
    printf("media_sent: one unit sent\n");
    xthr_cond_signal(s->wait);
@@ -98,23 +97,25 @@ int cb_media_sent(void * u, xrtp_media_t * media){
    return XRTP_OK;
 }
 
- int spu_sender_run(void * param){
-
+int spu_sender_run(void * param)
+{
     subtitle_t * subt;
     char str[1024];
     int slen = 0;
 
-    int delt = 0;
-
-    xrtp_lrtime_t lrnow, lrbegin;
+    rtime_t ms_now, ms_begin;
     
     int line, tryagain = 0, first = 1;
 
     printf("\nspu_sender_run: sender started ...\n");
     
+	sender.clock = time_start();    
+    
     while(1)
 	{
 	   int ret;
+	   rtime_t dms = 0;
+	   uint32 timestamp;
 
        xthr_lock(sender.lock);
        
@@ -127,10 +128,11 @@ int cb_media_sent(void * u, xrtp_media_t * media){
        
        if(!tryagain){
 
-         if(sender.need_seek){
+         if(sender.ms_seek > 0){
 
-            demux_sputext_seek_msec(sender.spu, sender.seek_time);
-            sender.need_seek = 0;
+            demux_sputext_seek_msec(sender.spu, sender.ms_seek);
+			time_adjust(sender.clock, sender.ms_seek,0,0);
+            sender.ms_seek = 0;
          }
          
          subt = demux_sputext_next_subtitle(sender.spu);
@@ -161,23 +163,22 @@ int cb_media_sent(void * u, xrtp_media_t * media){
        if(first){
 
           first = 0;
-          lrbegin = time_msec_now(sender.clock);
-          lrnow = lrbegin;
-          printf("\nspu_sender_run: Begin @ %dms\n", lrbegin);
+          ms_now = ms_begin = time_msec_now(sender.clock);
+          printf("\nspu_sender_run: Begin at %dms\n", ms_begin);
 
        }else{
 
-          lrnow = time_msec_now(sender.clock);
-          printf("\nspu_sender_run: %dms now\n", lrnow);
+          ms_now = time_msec_now(sender.clock);
+          printf("\nspu_sender_run: %dms now\n", ms_now);
        }
 
-       delt = subt->start_ms - lrnow;
-       if(delt > 0){
+       dms = subt->start_ms - ms_now;
+       if(dms > 0){
 
-          printf("spu_sender_run: sleep %u msec\n\n", (uint)delt);
+          printf("spu_sender_run: sleep %dms\n\n", dms);
           
           xthr_unlock(sender.lock);
-          time_msec_sleep(sender.clock, (xrtp_lrtime_t)delt, NULL);
+          time_msec_sleep(sender.clock, dms, NULL);
 
        }else{
 
@@ -189,7 +190,8 @@ int cb_media_sent(void * u, xrtp_media_t * media){
        */
        
        /* Send really */
-       ret = sender.subt->post(sender.subt, str, slen, 1);
+	   timestamp = time_msec_now(session_clock(sender.session));
+       ret = sender.subt->post(sender.subt, str, slen, timestamp);
        if(ret == XRTP_EAGAIN)
 	   {
 		   tryagain = 1;
@@ -222,66 +224,32 @@ int cb_media_sent(void * u, xrtp_media_t * media){
     return f_targ->start - f_patt->start;
  }
  
- int cb_media_recvd(void* u, char *data, int dlen, uint32 ssrc, xrtp_hrtime_t later, media_time_t dur){
+ int cb_media_recvd(void* u, char *data, int dlen, uint32 ssrc, uint32 ts){
 
     subt_recvr_t * r = (subt_recvr_t *)u;
     subt_frame_t * frm = NULL;
-    /* if the ts is passed, the frame is discarded, otherwise keep for show */
 
-    printf("test.cb_media_recvd: media is ready to play in %dns\n", later);
-    xthr_lock(r->lock);
-    
-    if(later < 0 ) {
+    printf("test.cb_media_recvd: Media[#%u] ready\n", ts);
 
-      if ( -later > r->tolerant_delay_ns ) {
-
-         /* the frame is stale, discard */
-         free(data);
-         
-         xthr_unlock(r->lock);
-         printf("< test.cb_media_recvd: discard staled media >\n");
-         return XRTP_OK;
-
-      } else {
-
-         later = 0;
-      }
-    }
-      
     frm = malloc(sizeof(struct subt_frame_s));
-    if(!frm){
-
+    if(!frm)
+	{
         xthr_unlock(r->lock);
         printf("< cb_media_recvd: Fail to allocated frame memery >\n");
         return XRTP_EMEM;
     }
       
-    frm->start = time_nsec_now(r->clock) + later;
-    frm->dur = dur;
+    frm->start = (rtime_t)ts;
     frm->len = dlen;
     frm->data = data;
     
-    xrtp_list_add_ascent_once(r->frames, frm, frame_cmp_mts);
-    
+    xthr_lock(r->lock);
+    xrtp_list_add_ascent_once(r->frames, frm, frame_cmp_mts);    
     xthr_unlock(r->lock);
 
     xthr_cond_signal(r->wait);
 
     return XRTP_OK;
- }
-
- /* make no sense */
- xrtp_hrtime_t cb_mt2hrt(media_time_t ts){
-
-
-    //printf("test.cb_mt2hrt: mt = %d, hrt = %d\n", ts, ts * 10000000);
-    return (xrtp_hrtime_t)(ts * 1000000);
- }
-
- /* make no sense */
- media_time_t cb_hrt2mt(xrtp_hrtime_t ts){
-
-    return ts / 1000000;
  }
 
  int cb_member_update(void* user, uint32 member_src, char * cname, int clen){
@@ -312,9 +280,11 @@ int cb_media_sent(void * u, xrtp_media_t * media){
 
     subt_frame_t *f;
     
-    xrtp_hrtime_t now, dt, mts;
+    xrtp_hrtime_t now, dt;
     
     struct xrtp_list_user_s lu;
+
+	xclock_t *sclock = session_clock(recvr.session);
     
     printf("\nspu_recvr_run: start thread ...\n");
     
@@ -332,25 +302,24 @@ int cb_media_sent(void * u, xrtp_media_t * media){
 
        if(!f && !recvr.end){
          
-          printf("spu_recvr_run: No more media to play, idle...\n");
+          printf("spu_recvr_run: wait next...\n");
+
           xthr_cond_wait(recvr.wait, recvr.lock);
-          printf("spu_recvr_run: Media received\n");
+
           f = (subt_frame_t *)xrtp_list_first(recvr.frames, &lu);
+		  printf("spu_recvr_run: play Media[#%d]\n", f->start);
        }
 
-       mts = f->start;
-       
-       printf("spu_recvr_run: Media ts is hrt[%d]\n", mts);
-       now = time_nsec_now(recvr.clock);
+       now = time_msec_now(sclock);
        
        dt = f->start - now;
-       printf("spu_recvr_run: hrt[%d] now, dt=%d\n", now, dt);
-       if(dt > 0){
-          
+       printf("spu_recvr_run: %dms now, wait %dms\n", now, dt);
+
+       if(dt > 0)
+	   {
           /* snap sometime */
           xthr_unlock(recvr.lock);
-          printf("spu_recvr_run: Media plays in %d nsecs, sleep\n", dt);
-          time_nsec_sleep(recvr.clock, dt, NULL);
+          time_msec_sleep(sclock, dt, NULL);
           continue;
        }
 
@@ -478,8 +447,6 @@ int cb_media_sent(void * u, xrtp_media_t * media){
     session_set_callback(ses, CALLBACK_SESSION_MEDIA_SENT, cb_media_sent, &sender);
     session_set_callback(ses, CALLBACK_SESSION_MEMBER_UPDATE, cb_member_update, &sender);
     session_set_callback(ses, CALLBACK_SESSION_MEMBER_DELETED, cb_member_deleted, &sender);
-    session_set_callback(ses, CALLBACK_SESSION_MT2HRT, cb_mt2hrt, &sender);
-    session_set_callback(ses, CALLBACK_SESSION_HRT2MT, cb_hrt2mt, &sender);
 
     sender.session = ses;
     sender.subt = med;
@@ -490,39 +457,9 @@ int cb_media_sent(void * u, xrtp_media_t * media){
     sender.wait_receiver = xthr_new_cond( XTHREAD_NONEFLAGS );
     
     /* seekable */
-    sender.clock = time_start();
-   time_adjust(sender.clock, 600000,0,0);
-    
-    sender.seek_time = 600000;
-    sender.need_seek = 1;
+    sender.ms_seek = 600000;
 
     printf("Sending tester: Sender session created\n");
-
-    /* Member management test
-    member_state_t * mem = NULL;
-    if(session_new_member(ses, 34567, NULL) < XRTP_OK)
-       printf("Session test: Can't create member 34567 state info!\n");
-
-    if(session_new_member(ses, 56789, NULL) < XRTP_OK)
-       printf("Session test: Can't create member 56789 state info!\n");
-
-    mem = session_member_state(ses, 56789);
-    if(!mem)
-	{
-       printf("Session test: Bug of finding a exist member!\n");
-       exit(1);
-    }
-
-    mem = session_member_state(ses, 87654);
-    if(mem)
-	{
-       printf("Session test: Bug of finding a none exist member!\n");
-       exit(1);
-    }
-
-    printf("Session test: Member management test passed !\n");
-
-    End of member management testing */
 
     session_set_scheduler(ses, xrtp_scheduler());
     printf("Sending tester: Scheduler added\n");
@@ -557,8 +494,6 @@ int cb_media_sent(void * u, xrtp_media_t * media){
 
     session_set_callback(ses, CALLBACK_SESSION_MEMBER_UPDATE, cb_member_update, &recvr);
     session_set_callback(ses, CALLBACK_SESSION_MEMBER_DELETED, cb_member_deleted, &recvr);
-    session_set_callback(ses, CALLBACK_SESSION_MT2HRT, cb_mt2hrt, &recvr);
-    session_set_callback(ses, CALLBACK_SESSION_HRT2MT, cb_hrt2mt, &recvr);
 
     recvr.session = ses;
     recvr.subt = med;
@@ -566,7 +501,7 @@ int cb_media_sent(void * u, xrtp_media_t * media){
     recvr.frames = xrtp_list_new();
     recvr.lock = xthr_new_lock();
     recvr.wait = xthr_new_cond( XTHREAD_NONEFLAGS );
-    recvr.clock = time_start();
+    //session clock instead: recvr.clock = time_start();
     printf("Receiving tester: Recvr session created\n");
     
     /* Put the session in schedule */

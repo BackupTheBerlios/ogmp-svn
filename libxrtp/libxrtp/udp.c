@@ -53,6 +53,7 @@
     
     rtime_t usec_arrival;
     rtime_t msec_arrival;
+	rtime_t nsec_arrival;
 
     struct sockaddr_in remote_addr;
     int addrlen;
@@ -128,7 +129,7 @@
              conn->remote_addr.sin_port == tport->portno;
   }
 
-  int connect_receive(session_connect_t * conn, char **r_buff, int bufflen, rtime_t *r_usec, rtime_t *r_msec){
+  int connect_receive(session_connect_t * conn, char **r_buff, int bufflen, rtime_t *ms, rtime_t *us, rtime_t *ns){
 
       int datalen = conn->datalen_in;
       *r_buff = conn->data_in;
@@ -136,8 +137,9 @@
       conn->data_in = NULL;
       conn->datalen_in = 0;
 
-      *r_msec = conn->msec_arrival;
-      *r_usec = conn->usec_arrival;
+      *ms = conn->msec_arrival;
+      *us = conn->usec_arrival;
+	  *ns = conn->nsec_arrival;
       
       return datalen;
   }
@@ -349,8 +351,6 @@
      int addrlen, datalen;
      session_connect_t * conn = NULL;
 
-	 int ns_dummy = 0; /* no use, just satisfy the api */
-
      /* Determine the incoming packet address from recvfrom return */
 	 addrlen = sizeof(remote_addr);
      datalen = recvfrom(port->socket, data, UDP_MAX_LEN, UDP_FLAGS, (struct sockaddr *)&remote_addr, &addrlen);
@@ -394,9 +394,9 @@
      if(conn->datalen_in > 0)
         memcpy(conn->data_in, data, datalen);
 
-     time_rightnow(port->session->clock, &(conn->msec_arrival), &(conn->usec_arrival), &ns_dummy);
+     time_rightnow(session_clock(port->session), &(conn->msec_arrival), &(conn->usec_arrival), &(conn->nsec_arrival));
      
-     udp_log(("port_incoming: received %d bytes from [%s:%d] on @%dms:%dus\n", datalen, inet_ntoa(conn->remote_addr.sin_addr), ntohs(conn->remote_addr.sin_port), conn->msec_arrival, conn->usec_arrival));
+     udp_log(("port_incoming: received %d bytes from [%s:%d] on @%dms/%dus/%dns\n", datalen, inet_ntoa(conn->remote_addr.sin_addr), ntohs(conn->remote_addr.sin_port), conn->msec_arrival, conn->usec_arrival, conn->nsec_arrival));
 
      if(port->type == RTP_PORT)
 	 {

@@ -44,9 +44,9 @@ extern DECLSPEC
 int 
 connect_from_teleport(session_connect_t * conn1, xrtp_teleport_t * tport);
 
-  int connect_receive(session_connect_t * conn, char **r_buff, int bufflen, xrtp_hrtime_t *r_hrts, xrtp_lrtime_t *r_lrts);
+int connect_receive(session_connect_t * conn, char **r_buff, int bufflen, rtime_t *ms, rtime_t *us, rtime_t *ns);
 
-  int connect_send(session_connect_t * conn, char *r_buff, int datalen);
+int connect_send(session_connect_t * conn, char *r_buff, int datalen);
 
 /* These are for old static port protocol, which is rtcp is rtp + 1, It's NOT suggest to use, Simply for back compatability */
 extern DECLSPEC

@@ -23,10 +23,21 @@
  
  #include "stdio.h"
 
+/*
+#define PACKET_LOG
+#define PACKET_DEBUG
+*/
+
 #ifdef PACKET_LOG
  #define packet_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define packet_log(fmtargs)
+#endif
+
+#ifdef PACKET_DEBUG
+ #define packet_debug(fmtargs)  do{printf fmtargs;}while(0)
+#else
+ #define packet_debug(fmtargs)
 #endif
 
  /* ------------------- General Packet interface ------------------------ */
@@ -62,11 +73,12 @@
  /**
   * See packet.h
   */
- xrtp_rtp_packet_t * rtp_new_packet(xrtp_session_t * ses, int pt, enum xrtp_direct_e dir, session_connect_t * conn, xrtp_lrtime_t lrt_arrival, xrtp_hrtime_t usec_arrival){
-
+ xrtp_rtp_packet_t * rtp_new_packet(xrtp_session_t * ses, int pt, enum xrtp_direct_e dir, session_connect_t * conn
+									, rtime_t ms_arrival, rtime_t us_arrival, rtime_t ns_arrival)
+ {
     xrtp_rtp_packet_t * rtp = (xrtp_rtp_packet_t *)malloc(sizeof(struct xrtp_rtp_packet_s));
-    if(!rtp){
-       
+    if(!rtp)
+	{
        packet_log(("< rtp_new_packet: Can't allocate resource >\n"));
        return NULL;
     }
@@ -81,10 +93,11 @@
     rtp->handler = NULL;
     rtp->valid_to_get = 0;
 
-    if(dir == RTP_RECEIVE){
-      
-        rtp->lrt_arrival = lrt_arrival;
-        rtp->usec_arrival = usec_arrival;
+    if(dir == RTP_RECEIVE)
+	{
+        rtp->msec_arrival = ms_arrival;
+        rtp->usec_arrival = us_arrival;
+		rtp->nsec_arrival = ns_arrival;
     }
     
     rtp->connect = conn;
@@ -160,7 +173,6 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t * pac, xrtp_rtp_payload_t * pay){
     }
        
     pac->$payload.data = NULL;
-    pac->$payload.len = 0;
     packet_log(("rtp_packet_done_payload: payload data freed\n"));
 
     return XRTP_OK;
@@ -176,7 +188,7 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t * pac, xrtp_rtp_payload_t * pay){
     if(pac->headext)
        rtp_packet_done_headext(pac, pac->headext);
     
-    if(pac->$payload.len != 0)
+    if(pac->$payload.data)
        rtp_packet_done_payload(pac, &(pac->$payload));
     
     if(pac->connect)
@@ -244,7 +256,7 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t * pac, xrtp_rtp_payload_t * pay){
     return len;
  }
 
- uint rtp_packet_length(xrtp_rtp_packet_t * pac){
+ uint rtp_packet_bytes(xrtp_rtp_packet_t * pac){
 
     uint len = RTP_HEAD_FIX_BYTE;
 
@@ -437,7 +449,7 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t * pac, xrtp_rtp_payload_t * pay){
     if(payload_buf == NULL)
 	{
 		rtp->$payload.data = NULL;
-		rtp->$payload.len = 0;
+		/*rtp->$payload.len = 0; use the value later*/
 		packet_log(("_rtp_packet_set_payload: unset payload\n"));
 
 		return XRTP_OK;
@@ -524,7 +536,6 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t * pac, xrtp_rtp_payload_t * pay){
     }
     
     rtp->$payload.data = NULL;
-    rtp->$payload.len = 0;
     
     return len;
  }
@@ -549,6 +560,15 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t * pac, xrtp_rtp_payload_t * pay){
     return XRTP_OK;
  }
 
+int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, rtime_t *ns)
+{
+	*ms = rtp->msec_arrival;
+	*us = rtp->usec_arrival;
+	*ns = rtp->nsec_arrival;
+
+	return XRTP_OK;
+}
+
  /* --------------------- RTCP Compound interface ------------------------ */
 
  /**
@@ -557,7 +577,7 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t * pac, xrtp_rtp_payload_t * pay){
   * param in: max number of packets allowed
   */
  xrtp_rtcp_compound_t * rtcp_new_compound(xrtp_session_t * ses, uint npack, enum xrtp_direct_e dir, session_connect_t * conn, 
-											rtime_t usec_arrival, rtime_t msec_arrival)
+										  rtime_t msec,	rtime_t usec, rtime_t nsec)
  {
 
     xrtp_rtcp_compound_t * comp = (xrtp_rtcp_compound_t *)malloc(sizeof(struct xrtp_rtcp_compound_s));
@@ -570,11 +590,11 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t * pac, xrtp_rtp_payload_t * pay){
     comp->session = ses;
     
     if(dir == RTP_RECEIVE)
-        comp->usec_arrival = usec_arrival;
-    else
-        comp->usec_arrival = HRTIME_INFINITY;
-
-    comp->msec_arrival = msec_arrival;
+	{
+		comp->msec = msec;
+        comp->usec = usec;
+		comp->nsec = nsec;
+	}
 
     comp->connect = conn;
 
@@ -1910,10 +1930,20 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t * pac, xrtp_rtp_payload_t * pay){
     return XRTP_OK;
  }
 
- int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
-                      uint32 * r_hntp, uint32 * r_lntp, uint32 * r_ts,
-                      uint32 * r_pnum, uint32 * r_onum){
+int
+rtcp_arrival_time(xrtp_rtcp_compound_t * rtcp, rtime_t *ms, rtime_t *us, rtime_t *ns)
+{
+	*ms = rtcp->msec;
+	*us = rtcp->usec;
+	*ns = rtcp->nsec;
 
+	return XRTP_OK;
+}
+ 
+int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
+                     uint32 * r_hntp, uint32 * r_lntp, uint32 * r_ts,
+                     uint32 * r_pnum, uint32 * r_onum)
+{
     xrtp_rtcp_senderinfo_t * info;
 
     if(com->first_head->type != RTCP_TYPE_SR){
@@ -1942,7 +1972,7 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t * pac, xrtp_rtp_payload_t * pay){
     xrtp_rtcp_sr_t * sr;
     xrtp_rtcp_rr_t * rr;
 
-    xrtp_rtcp_report_t * repo = NULL;
+	xrtp_rtcp_report_t * repo = NULL;
     
     switch(com->first_head->type){
 
@@ -1978,7 +2008,13 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t * pac, xrtp_rtp_payload_t * pay){
           return XRTP_EFORMAT;
     }
 
-    *ret_flost = repo->frac_lost;
+    if(!repo)
+	{
+		packet_debug(("rtcp_report: No report for ssrc[%u]\n", SRC));
+		return XRTP_INVALID;
+	}
+
+	*ret_flost = repo->frac_lost;
     *ret_tlost = repo->total_lost;
     *ret_seqn = repo->full_seqn;
     *ret_jit = repo->jitter;
