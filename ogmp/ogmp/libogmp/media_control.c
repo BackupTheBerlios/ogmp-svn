@@ -490,10 +490,6 @@ int cont_demux_next (media_control_t * cont, int strm_end)
 	rtime_t demux_us;
 	control_impl_t *impl;
 
-   cont_debug(("cont_demux_next: 1\n\n\n"));
-
-	return -1;
-
 	impl = (control_impl_t *)cont;
    
    if(impl->demuxing != 0)

@@ -67,8 +67,6 @@ int source_loop(void * gen)
          break;
       }
       
-      src_debug (("source_loop: 3\n"));
-
       {/*unlock*/ xthr_unlock(osource->lock);}
    }
    
@@ -167,7 +165,6 @@ int source_add_destinate(transmit_source_t *tsrc, char *mime, char *cname, char 
 {
 	int i;
 	ogmp_source_t *src = (ogmp_source_t*)tsrc;
-
 
 	for(i=0; i<src->nstream; i++)
 	{

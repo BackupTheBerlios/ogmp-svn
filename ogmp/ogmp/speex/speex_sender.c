@@ -181,6 +181,7 @@ char* spxs_media_type(media_player_t * mp)
 
 
 
+
 {
    return global_const.media_type;
 }
@@ -375,7 +376,7 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 
 	setting->done(setting);
 
-	spxs_log(("spxs_set_device: netcast device ok\n"));
+	spxs_debug(("spxs_set_device: mp->device@%x ok\n", (int)mp->device));
 
 	return MP_OK;
 }
@@ -407,7 +408,7 @@ int spxs_match_type (media_receiver_t *recvr, char *mime, char *fourcc)
    return 0;
 }
 
-int spxs_receive_next (media_receiver_t *recvr, media_frame_t* spxf, int64 samplestamp, int last_packet)
+int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 samplestamp, int last_packet)
 {
    media_pipe_t *output = NULL;
    rtp_frame_t *rtpf = NULL;
@@ -417,20 +418,15 @@ int spxs_receive_next (media_receiver_t *recvr, media_frame_t* spxf, int64 sampl
 
    media_frame_t* mf = (media_frame_t*)spxf;
 
-   //rtime_t usec_delta = 0;
    int new_group = 0;
-
-   xclock_t *clock = session_clock(ss->rtp_session);
 
    /* varibles for samples counting */
    speex_info_t *spxinfo;
 
-   /**
+   xclock_t *clock = session_clock(ss->rtp_session);
+   /*
     * packetno from 0,1 is head (maybe more if has extra header), then increase by 1 to last packet
-	* always granulepos[-1] in same spx file.
-	*
-   spxs_log(("spxs_receive_next: packetno[%llu]\n", ((ogg_packet*)spx_packet)->packetno));
-   spxs_log(("spxs_receive_next: granule[%lld]\n", ((ogg_packet*)spx_packet)->granulepos));
+	 * always granulepos[-1] in same spx file.
     */
 
    if (!mp->device)
@@ -441,7 +437,7 @@ int spxs_receive_next (media_receiver_t *recvr, media_frame_t* spxf, int64 sampl
 
    if(samplestamp != ss->recent_samplestamp)
    {
-       spxs_log(("....................................................\n"));
+      spxs_log(("....................................................\n"));
 	   spxs_log(("spxs_receive_next: samples(%lld) ", samplestamp));
 	   spxs_log(("start @%dus\n", time_usec_now(clock)));
 
@@ -455,9 +451,11 @@ int spxs_receive_next (media_receiver_t *recvr, media_frame_t* spxf, int64 sampl
 
    /**
     * Prepare frame for packet sending
-	*
     * NOTE: DATA IS CLONED!
     */
+    
+   spxs_debug(("spxs_receive_next: output->new_frame@%x\n", (int)output->new_frame));
+   
    rtpf = (rtp_frame_t *)output->new_frame(output, mf->bytes, mf->raw);
 
    rtpf->frame.eos = (last_packet == MP_EOS);
@@ -465,8 +463,9 @@ int spxs_receive_next (media_receiver_t *recvr, media_frame_t* spxf, int64 sampl
    rtpf->frame.eots = last_packet;
 
    /* Now samplestamp is 64 bits, for maximum media stamp possible
-	* All param for sending stored in the frame
-	*/
+	 * All param for sending stored in the frame
+	 */
+    
    spxinfo = ss->speex_info;
 
    rtpf->samples = spxinfo->nframe_per_packet * spxinfo->nsample_per_frame;

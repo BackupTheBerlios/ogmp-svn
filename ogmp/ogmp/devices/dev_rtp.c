@@ -66,7 +66,9 @@ control_setting_t* rtp_new_setting(media_device_t *dev)
 media_frame_t* rtp_new_frame (media_pipe_t *pipe, int bytes, char *init_data)
 {
    /* better recycle to garrantee */
-   rtp_frame_t * rtpf = (rtp_frame_t*)xmalloc(sizeof(struct rtp_frame_s));
+   rtp_frame_t * rtpf;
+   
+   rtpf = (rtp_frame_t*)xmalloc(sizeof(struct rtp_frame_s));
    if(!rtpf)
    {
       rtpdev_debug(("rtp_new_frame: No memory for frame\n"));
@@ -330,7 +332,7 @@ module_interface_t * rtp_new ()
 
    dev->done = rtp_done;
 
-   dev->pipe = rtp_in_pipe;
+   dev->pipe = rtp_out_pipe;
 
    dev->start = rtp_start;
    dev->stop = rtp_stop;
