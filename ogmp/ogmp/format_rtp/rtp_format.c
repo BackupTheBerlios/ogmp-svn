@@ -179,6 +179,7 @@ media_player_t * rtp_mime_player(media_format_t * mf, const char * mime)
 
 
 
+
    }                                                  
 
    return NULL;
@@ -289,7 +290,7 @@ int rtp_stream_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
 	   return MP_OK;
    }
 
-   rtp_debug(("rtp_stream_on_member_update: source[%s] connected\n\n\n", cn));   
+   rtp_log(("rtp_stream_on_member_update: source[%s] connected\n\n\n", cn));   
    return MP_OK;
 }
 

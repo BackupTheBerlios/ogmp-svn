@@ -309,9 +309,9 @@ int spxp_set_device(media_player_t* mp, media_control_t* cont, module_catalog_t*
    return MP_OK;
 }
 
-int spxp_match_type (media_receiver_t *recvr, char *mime, char *fourcc)
+int spxp_match_type(media_receiver_t *recvr, char *mime, char *fourcc)
 {
-    /* FIXME: due to no strncasecmp on win32 mime is case sensitive */
+   /* FIXME: due to no strncasecmp on win32 mime is case sensitive */
 	if (mime && strncmp(mime, "audio/speex", 11) == 0)
 	{
 		spxp_log(("spxp_match_type: mime = 'audio/speex'\n"));
@@ -340,6 +340,8 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
 
    output = mp->device->pipe(mp->device);
 
+   spxp_debug(("spxp_receive_next: 1\n"));
+   
    /* decode and submit */
    auf = spxc_decode(dec->speex_info, spxf, output);
    if(!auf)
@@ -348,6 +350,8 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
       return MP_FAIL;
    }
 
+   spxp_debug(("spxp_receive_next: 2\n"));
+   
    if (!dec->receiving_media)
    {
       dec->ts_usec_now = 0;
