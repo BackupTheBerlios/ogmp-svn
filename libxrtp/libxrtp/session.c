@@ -234,6 +234,7 @@
     return mem->max_seq + (65536 * mem->cycles);
  }
 
+
  int _session_free_rtp(void * gen){
 
     xrtp_rtp_packet_t * rtp = (xrtp_rtp_packet_t *)gen;
@@ -316,7 +317,7 @@
     return XRTP_OK;
  }
 
-clock_t* session_clock(xrtp_session_t *session)
+xclock_t* session_clock(xrtp_session_t *session)
 {
 	return session->clock;
 }
@@ -563,6 +564,7 @@ int session_set_bandwidth(xrtp_session_t * ses, int total_bw, int rtp_bw){
     xrtp_list_remove(ses->senders, (void *)senda, session_match_member);
 
     return XRTP_OK;
+
  }
 
  int session_delete_member(xrtp_session_t * ses, member_state_t *mem){
@@ -582,6 +584,7 @@ int session_set_bandwidth(xrtp_session_t * ses, int total_bw, int rtp_bw){
     }
 
     return XRTP_OK;
+
  }
 
  member_state_t * session_member_state(xrtp_session_t * ses, uint32 src){
@@ -1000,6 +1003,7 @@ int session_set_bandwidth(xrtp_session_t * ses, int total_bw, int rtp_bw){
         session_log(("session_update_member: New petential member coming\n"));
         
         /* Need Authorization */
+
         if(ses->$callbacks.member_apply){
 
            if(ses->$callbacks.member_apply(ses->$callbacks.member_apply_user, src, cname, cname_len, &user_info) < XRTP_OK){
@@ -2366,6 +2370,7 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
                     exseqno, (uint32)self->jitter, self->lsr_ts, lsr_delay);
 
     max_report--;
+
                             
     /* Add SDES packet */
     if(self->cname){

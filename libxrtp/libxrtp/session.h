@@ -121,6 +121,7 @@ typedef struct member_state_s{
 
     double jitter;
 
+
     int we_sent;    /* we are a sender */
 
     uint n_rtp_received;
@@ -478,6 +479,7 @@ extern DECLSPEC
 int 
 session_id(xrtp_session_t * session);
 
+
 int session_cname(xrtp_session_t * session, char * cname, int clen);
 
 /* set if an anonymous participant allowed in the session */
@@ -553,7 +555,7 @@ packet_pipe_t * session_process(xrtp_session_t * session, int type);
 uint32 session_ssrc(xrtp_session_t *session);
 
 extern DECLSPEC
-clock_t*
+xclock_t*
 session_clock(xrtp_session_t *session);
 
 /**
