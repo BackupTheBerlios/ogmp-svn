@@ -15,7 +15,8 @@
  *                                                                         *
  ***************************************************************************/
 
- #include "xthread.h"
+ #include <timedia/xthread.h>
+ #include <timedia/xmalloc.h>
  #include "timer.h"
 
  #include <signal.h>
@@ -74,7 +75,7 @@ int posix_time_now(xclock_t * clock)
 
  xclock_t * time_start(){
 
-    xclock_t * clock = (xclock_t *)malloc(sizeof(struct xrtp_clock_s));
+    xclock_t * clock = (xclock_t *)xmalloc(sizeof(struct xrtp_clock_s));
     if(clock){
 
         gettimeofday(&clock->now, NULL);
@@ -88,7 +89,7 @@ int posix_time_now(xclock_t * clock)
         clock->lock = xthr_new_lock();
         if(!clock->lock){
 
-          free(clock);
+          xfree(clock);
           return NULL;
         }
     }
@@ -100,7 +101,7 @@ int posix_time_now(xclock_t * clock)
 int time_end(xclock_t * clock){
 
    xthr_done_lock(clock->lock);
-   free(clock);
+   xfree(clock);
 
    return OS_OK;
 }
@@ -368,7 +369,7 @@ int time_ntp(xrtp_clock_t * clock, uint32 *hintp, uint32 *lontp)
 
  xclock_t * time_begin(rtime_t lrt, rtime_t hrt){
 
-    xclock_t * clock = (xclock_t *)malloc(sizeof(struct xrtp_clock_s));
+    xclock_t * clock = (xclock_t *)xmalloc(sizeof(struct xrtp_clock_s));
     if(clock){
 
         gettimeofday(&clock->now, NULL);
@@ -381,7 +382,7 @@ int time_ntp(xrtp_clock_t * clock, uint32 *hintp, uint32 *lontp)
         clock->lock = xthr_new_lock();
         if(!clock->lock){
 
-          free(clock);
+          xfree(clock);
           return NULL;
         }
     }
