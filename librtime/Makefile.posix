@@ -23,12 +23,13 @@ INCINST = $(TOPDIR)/include
 
 CC = gcc
 
-LIBS = -lpthread
+LIBS = -L$(LIBINST) -ltmdbase
+TLIBS = -L$(LIBINST) -lrtime -ltmdbase
 
 CFLAGS = -fPIC -I$(INCINST)
 
 LIBFILES:= librtime/librtime.so
-INCFILES:= librtime/timer.h librtime/xthread.h
+INCFILES:= librtime/timer.h
 
 #all: sharedlib libinstall tests
 all: sharedlib test
@@ -41,8 +42,9 @@ all: sharedlib test
 
 sharedlib:	librtime/timer_posix.c
 	$(CC) $(CFLAGS) -c librtime/timer_posix.c -o librtime/timer_posix.o
-	$(CC) $(CFLAGS) -c librtime/xthread_sdl.c -o librtime/xthread_sdl.o
-	$(CC) -shared librtime/timer_posix.o librtime/xthread_sdl.o -lSDL -o librtime/librtime.so
+#	$(CC) $(CFLAGS) -c librtime/xthread_sdl.c -o librtime/xthread_sdl.o
+#	$(CC) -shared librtime/timer_posix.o librtime/xthread_sdl.o -lSDL -o librtime/librtime.so
+	$(CC) $(LIBS) -shared librtime/timer_posix.o -o librtime/librtime.so
 
 install:	librtime/librtime.so
 	@cp -f $(INCFILES) $(INCINST)/$(PROJNAME)
@@ -51,7 +53,8 @@ install:	librtime/librtime.so
 test:
 	$(CC) $(CFLAGS) -c librtime/t_time.c -o librtime/t_time.o
 	$(CC) $(CFLAGS) -c librtime/spu_text.c -o librtime/spu_text.o
-	$(CC) librtime/t_time.o librtime/spu_text.o -L./librtime -lrtime -o librtime/subtime
+#	$(CC) librtime/t_time.o librtime/spu_text.o -L./librtime -lrtime -ltmdbase -o librtime/subtime
+	$(CC) $(TLIBS) librtime/t_time.o librtime/spu_text.o -o librtime/subtime
 
 clean:
 	-@rm -f librtime/*.o

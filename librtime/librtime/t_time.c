@@ -18,7 +18,7 @@
 #include "spu_text.h"
  
 #include "timer.h"
-#include "xthread.h"
+#include <timedia/xthread.h>
  
 #include <string.h>
 #include <stdlib.h>
