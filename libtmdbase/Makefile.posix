@@ -40,6 +40,7 @@ all: sharedlib test
 
 sharedlib:	libtmdbase/*.c
 	$(CC) $(CFLAGS) -c libtmdbase/list.c -o libtmdbase/list.o
+	$(CC) $(CFLAGS) -c libtmdbase/socket_posix.c -o libtmdbase/socket_posix.o
 	$(CC) $(CFLAGS) -c libtmdbase/buffer.c -o libtmdbase/buffer.o
 	$(CC) $(CFLAGS) -c libtmdbase/md5.c -o libtmdbase/md5.o
 	$(CC) $(CFLAGS) -c libtmdbase/spinqueue.c -o libtmdbase/spinqueue.o
@@ -48,9 +49,9 @@ sharedlib:	libtmdbase/*.c
 	$(CC) $(CFLAGS) -c libtmdbase/loader.c -o libtmdbase/loader.o
 	$(CC) $(CFLAGS) -c libtmdbase/catalog.c -o libtmdbase/catalog.o
 	$(CC) $(CFLAGS) -c libtmdbase/config.c -o libtmdbase/config.o
-	$(CC) -shared libtmdbase/list.o libtmdbase/buffer.o libtmdbase/md5.o  \
-		libtmdbase/spinqueue.o libtmdbase/xmap.o libtmdbase/xstring.o \
-		libtmdbase/loader.o libtmdbase/catalog.o libtmdbase/config.o  \
+	$(CC) -shared libtmdbase/list.o libtmdbase/buffer.o libtmdbase/md5.o libtmdbase/spinqueue.o \
+		libtmdbase/socket_posix.o libtmdbase/xmap.o libtmdbase/xstring.o libtmdbase/loader.o \
+		libtmdbase/catalog.o libtmdbase/config.o  \
 		-ldl -o  libtmdbase/libtmdbase.so
 
 install:	libtmdbase/libtmdbase.so
