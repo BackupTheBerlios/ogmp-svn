@@ -68,7 +68,7 @@ struct user_profile_s
 	
 	int seconds;		/* lifetime */
 	
-	char registrar[CNAME_MAXBYTES];
+	char* registrar;
 
 	char* cname;	/* username@netaddr */
 
@@ -89,9 +89,13 @@ struct user_s
 	char *uid;
 	char *loc;
 
-	xlist_t *profiles;
-
 	char *userloc;
+
+	xlist_t *profiles;
+	int modified;
+
+	char *tok;
+	int	tok_bytes;
 };
 
 int user_done(user_t* u);

@@ -40,10 +40,19 @@ gui_t gui_window_loglines =
 	NULL
 };
 
+char log_buf[LOG_MAXLINE][LOG_MAXLEN];
+int log_ln1=0, log_lnn=0;
+int log_maxline = LOG_MAXLINE, log_maxlen = LOG_MAXLEN, log_nline = 0;
+
+int cursor_log_view;
+int log_nview = 3;
+
 int window_loglines_print(gui_t* gui, int wid)
 {
 	char buf1[200];
 	int x, y;
+
+	int ln, n;
 
 	ogmp_curses_t* ocui = gui->topui;
 
@@ -51,40 +60,27 @@ int window_loglines_print(gui_t* gui, int wid)
   
 	getmaxyx(stdscr,y,x);
 
+	snprintf(buf1,199, "%199.199s", " ");
+
 	xthr_lock(log_lock);
 
-	if (log_buf1!='\0')
-    {
-		/* int xpos; */
-		snprintf(buf1,199, "%199.199s", " ");
+	ln = log_lnn;
+	n = 0;
 
+	while(log_buf[ln][0] != '\0')
+	{
+		if(n == log_nview)
+			break;
+
+		/* int xpos; */
 		attrset(COLOR_PAIR(4));
 
-		mvaddnstr(y-1,0,buf1,x);
-		mvaddnstr(y-1,0,log_buf1,x);
-    }
+		mvaddnstr(y-1-n, 0, buf1, x);
+		mvaddstr(y-1-n, 0, log_buf[ln]);
 
-	if (log_buf2!='\0')
-    {
-		/* int xpos; */
-		snprintf(buf1,199, "%199.199s", " ");
-
-		attrset(COLOR_PAIR(4));
-
-		mvaddnstr(y-2,0,buf1,x);
-		mvaddnstr(y-2,0,log_buf2,x);
-    }
-
-	if (log_buf3!='\0')
-    {
-		/* int xpos; */
-		snprintf(buf1,199, "%199.199s", " ");
-
-		attrset(COLOR_PAIR(4));
-
-		mvaddnstr(y-3,0,buf1,x);
-		mvaddnstr(y-3,0,log_buf3,x);
-    }
+		ln = (ln + log_maxline - 1) % log_maxline;
+		n++;
+	}
 
 	xthr_unlock(log_lock);
 

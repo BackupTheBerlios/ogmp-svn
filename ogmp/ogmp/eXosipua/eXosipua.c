@@ -607,12 +607,6 @@ int uas_regist(sipua_uas_t *sipuas, char *loc, char *registrar, char *id, int se
 
 	eXosip_lock();
 
-	if (jua->current_id[0] != '\0' && strcmp(jua->current_id, id) == 0)
-    {
-		eXosip_unlock();
-		return UA_OK;
-    }
-
 	regno = eXosip_register_init(id, registrar, loc);
 
 	if (regno < 0)
@@ -632,8 +626,6 @@ int uas_regist(sipua_uas_t *sipuas, char *loc, char *registrar, char *id, int se
 		return UA_FAIL;
 	}
 		
-	strcpy(jua->current_id, id);
-	
 	if(!jua->thread)
 	{
 		jua->thread = xthr_new(jua_loop, jua, XTHREAD_NONEFLAGS);
@@ -654,12 +646,6 @@ int uas_unregist(sipua_uas_t *sipuas, char *userloc, char *registrar, char *id)
 	
 	eXosip_lock();
 
-	if (jua->current_id[0] == '\0' || jua->registration_server[0] == '\0')
-    {
-		eXosip_unlock();
-		return UA_OK;
-    }
-
 	regno = eXosip_register_init(userloc, registrar, id);
 
 	if (regno < 0)
@@ -669,11 +655,6 @@ int uas_unregist(sipua_uas_t *sipuas, char *userloc, char *registrar, char *id)
 	}
 
 	ret = eXosip_register(regno, 0);
-
-	if(ret == 0)
-	{
-		strcpy(jua->current_id, "");
-	}
 
 	eXosip_unlock();
 
@@ -691,16 +672,13 @@ int uas_call(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_bo
 	char* proxy;
 
 	int ret;
+
+	char *current_id = call_info->user_prof->regname;
+
 	/*
 	OSIP_TRACE (osip_trace(__FILE__, __LINE__, OSIP_INFO2, NULL, "To: |%s|\n", to));
 	*/
-	if(jua->current_id[0] == '\0')
-	{
-		jua_log(("uas_call: sipua is not register yet!\n"));
-		return UA_FAIL;
-	}
-
-	if (0!=jua_check_url(jua->current_id))
+	if (0!=jua_check_url(current_id))
 	{
 		jua_log(("uas_call: illigal sip id!\n"));
 		return UA_FAIL;
@@ -717,7 +695,7 @@ int uas_call(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_bo
 	else
 		proxy = jua->sipuas.proxy;
 
-	if (eXosip_build_initial_invite(&invite, to, jua->current_id, proxy, call_info->subject) != 0)
+	if (eXosip_build_initial_invite(&invite, to, current_id, proxy, call_info->subject) != 0)
 		return UA_FAIL;
 
 	jua_log(("uas_call: 4\n"));

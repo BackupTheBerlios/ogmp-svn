@@ -162,36 +162,54 @@ void cursesoff()
 
 int log_printf(char *chfr, ...)
 {
-	va_list ap;  
-	char buf1[256];
+	va_list ap;
+	
+	char buf[256], *p;
+	int i=0;
+	int ln;
+
 	int ret;
   
 	VA_START (ap, chfr);
-	vsnprintf(buf1, 255, chfr, ap);
+
+	ret = vsnprintf(buf, 255, chfr, ap);
 
 	xthr_lock(log_lock);
 
-	if (log_buf1=='\0')
-	{
-		ret = snprintf(log_buf1,255, "[%s]", buf1);
-	}
-	else if (log_buf2=='\0')
-    {
-		if (log_buf1!='\0')
-			snprintf(log_buf2,255, "%s", log_buf1);
-      
-		ret = snprintf(log_buf1,255, "[%s]", buf1);
-    }
+	p = buf;
+
+	if(log_nline > 0)
+		ln = (log_lnn + 1) % log_maxline;
 	else
-    {
-		if (log_buf2!='\0')
-			snprintf(log_buf3,255, "%s", log_buf2);
-      
-		snprintf(log_buf2,255, "%s", log_buf1);
+		ln = log_lnn;
+
+	while(1)
+	{
+		if(*p == '\n' || i == log_maxlen-1)
+		{
+			log_buf[ln][i] = '\0';
+			i = 0;
+
+			log_lnn = ln;
+			if(log_lnn == log_ln1)
+				log_ln1 = (log_ln1 + 1) % log_maxline;
+
+			ln = (ln + 1) % log_maxline;
+
+			if(log_nline < log_maxline)
+				log_nline++;
+		}
+		else
+		{
+			log_buf[ln][i++] = *p;
 		
-		ret = snprintf(log_buf1,255, "[%s]", buf1);
-    }
-    
+			if(*p == '\0')
+				break;
+		}
+
+		p++;
+	}
+
 	xthr_unlock(log_lock);
 
 	va_end (ap);
@@ -443,11 +461,14 @@ int gui_key_pressed(ogmp_curses_t* ocui)
 
     refresh();
     halfdelay(1);
-      
+
+	fflush(stdin);
+
     if (ocui->active_gui->xcursor == -1)
 	{
 		noecho();
-		c= getch();
+
+		c = getch();
 	}
     else
 	{

@@ -567,8 +567,9 @@ int sipua_save_user_file(user_t* user, FILE* f, char* tok, int tsz)
 		snprintf(str, 63, "%i", prof->seconds);
 		fwrite(str, 1, strlen(str), f);
 
-		fwrite("\nphonebook.location=", 1, strlen("\nphonebook.loc="), f);
-		fwrite(prof->book_location, 1, strlen(prof->book_location), f);
+		fwrite("\nphonebook.location=", 1, strlen("\nphonebook.location="), f);
+		if(prof->book_location)
+			fwrite(prof->book_location, 1, strlen(prof->book_location), f);
 	
 		fwrite("\n", 1, 1, f);
 
@@ -599,54 +600,64 @@ int sipua_load_nchar(char* data, int len, char* buf, int* bsize, int* i, FILE* f
 	return n;
 }
 
+/**
+ * return length of the line, which include zero
+ * if eof, return -1
+ */
 int sipua_get_line(char* ln, int len, char* buf, int* bsize, int* i, FILE* f)
 {
 	int n=0;
+	int nr;
 
-	if(*bsize == 0)
-		return 0;
+	if(*i == *bsize)
+	{
+		*bsize = fread(buf, 1, *bsize, f);
+		*i = 0;
+
+		if(*bsize == 0)
+			return -1;
+	}
 
 	while(buf[*i] != '\n')
 	{
-		ln[n++] = buf[(*i)++];
+		ln[n++] = buf[*i];
+		(*i)++;
 
-		if(*i == *bsize)
+		if(*i == *bsize) 
 		{
-			if(!feof(f))
-				*bsize = fread(buf, 1, *bsize, f);
-			else
+			nr = fread(buf, 1, *bsize, f);
+			*i = 0;
+
+			if(nr == 0)
 			{
 				*bsize = 0;
-
-				ln[n] = '\0';
-				return n;
+				break;
 			}
 
-			*i = 0;
+			if(nr < *bsize)
+			{
+				/* last block extra opt */
+				buf[nr] = '\n';
+				*bsize = nr+1;
+			}
+			else
+				*bsize = nr;
 		}
 	}
 
-	(*i)++;
-	if(*i == *bsize)
-	{
-		if(!feof(f))
-			*bsize = fread(buf, 1, *bsize, f);
-		else
-			*bsize = 0;
-
-		*i = 0;
-	}
-
 	ln[n] = '\0';
+	(*i)++;
 
 	return n;
 }
 
-int sipua_verify_user_file(FILE* f, char* uid, char* tok, int tsz)
+/**
+ * if ok, return current buf pos;
+ * if failure, return -1
+ */
+int sipua_verify_user_file(FILE* f, char* uid, char* tok, int tsz, char *buf, int *bsize)
 {
-	char buf[256];
-	int bsize = 256;
-	int bi = 0;
+	int bi;
 	
 	char line[128];
 	char *start, *end;
@@ -656,11 +667,10 @@ int sipua_verify_user_file(FILE* f, char* uid, char* tok, int tsz)
 
 	char* tok0;
 
-	int veri = 0;
+	int veri = -1;
 
-	bsize = fread(buf, 1, 256, f);
-
-	len = sipua_get_line(line, 128, buf, &bsize, &bi, f);
+	bi = *bsize;
+	len = sipua_get_line(line, 128, buf, bsize, &bi, f);
 
 	/* check uid */
 	if(len < 4 || 0 != strncmp(line, "uid=", 4))
@@ -682,7 +692,7 @@ int sipua_verify_user_file(FILE* f, char* uid, char* tok, int tsz)
 	}
 
 	/* verify token */
-	len = sipua_get_line(line, 128, buf, &bsize, &bi, f);
+	len = sipua_get_line(line, 128, buf, bsize, &bi, f);
 	pc = line;
 
 	if(len < 4 || 0 != strncmp(pc, "tok[", 4))
@@ -720,11 +730,11 @@ int sipua_verify_user_file(FILE* f, char* uid, char* tok, int tsz)
 		{
 			strncpy(tok0, start, n);
 
-			len = sipua_load_nchar(tok0+n, tsz-n, buf, &bsize, &bi, f);
+			len = sipua_load_nchar(tok0+n, tsz-n, buf, bsize, &bi, f);
 		}
 
 		if(memcmp(tok0, tok, tsz) == 0)
-			veri = 1;
+			veri = bi;
 	}
 
 	xfree(tok0);
@@ -736,10 +746,13 @@ int sipua_save_user(user_t* user, char* loc, char* tok, int tsz)
 {
 	FILE* f;
 
+	char buf[256];
+	int bsize = 256;
+
 	f = fopen(loc, "r");
 	if(f)
 	{
-		if(!sipua_verify_user_file(f, user->uid, tok, tsz))
+		if(sipua_verify_user_file(f, user->uid, tok, tsz, buf, &bsize) == -1)
 		{
 			pbk_log(("sipua_save_user: Unauthrized operation to '%s' denied !\n", loc));
 			
@@ -758,7 +771,7 @@ int sipua_save_user(user_t* user, char* loc, char* tok, int tsz)
 	}
 
 	if(sipua_save_user_file(user, f, tok, tsz) >= UA_OK)
-		user->loc = xstr_clone(loc);
+		user->modified = 0;
 
 	fclose(f);
 
@@ -768,6 +781,7 @@ int sipua_save_user(user_t* user, char* loc, char* tok, int tsz)
 user_t* sipua_load_user_file(FILE* f, char* uid, char* tok, int tsz)
 {
 	char buf[256];
+
 	int bsize = 256;
 	int bi;
 	
@@ -777,9 +791,13 @@ user_t* sipua_load_user_file(FILE* f, char* uid, char* tok, int tsz)
 	char *pc;
 	int len;
 
+	int nitem = 0;
+
 	user_t* user = NULL;
 
-	if(!sipua_verify_user_file(f, uid, tok, tsz))
+	bi = sipua_verify_user_file(f, uid, tok, tsz, buf, &bsize);
+
+	if(bi == -1)
 		return NULL;
 	
 	user = xmalloc(sizeof(user_t));
@@ -787,6 +805,7 @@ user_t* sipua_load_user_file(FILE* f, char* uid, char* tok, int tsz)
 	{
 		return NULL;
 	}
+	memset(user, 0, sizeof(user_t));
 
 	user->profiles = xlist_new();
 	if(!user->profiles)
@@ -797,16 +816,16 @@ user_t* sipua_load_user_file(FILE* f, char* uid, char* tok, int tsz)
 
 	user->uid = xstr_clone(uid);
 
-	bsize = fread(buf, 1, 256, f);
-
-	while(!feof(f))
+	while(1)
 	{
 		user_profile_t* u;
 
 		len = sipua_get_line(line, 128, buf, &bsize, &bi, f);
-		if(len == 0)
+		if(len < 0)
 			break;
 
+		pc = line;
+	
 		if(len > 9 && 0==strncmp(pc, "fullname[", 9))
 		{
 			int n;
@@ -821,7 +840,7 @@ user_t* sipua_load_user_file(FILE* f, char* uid, char* tok, int tsz)
 
 			start = pc+1;
 			u->fbyte = strtol(start, &end, 10);
-			u->fullname = xmalloc(u->fbyte);
+			u->fullname = xmalloc(u->fbyte+1);
 
 			while(*end != '=')
 				end++;
@@ -831,7 +850,7 @@ user_t* sipua_load_user_file(FILE* f, char* uid, char* tok, int tsz)
 			n = len-(start-line);
 			if(n >= u->fbyte)
 			{
-				strncpy(u->fullname, start, u->fbyte);
+				u->fullname = xstr_nclone(start, u->fbyte);
 			}
 			else
 			{
@@ -839,52 +858,37 @@ user_t* sipua_load_user_file(FILE* f, char* uid, char* tok, int tsz)
 
 				len = sipua_load_nchar(u->fullname+n, u->fbyte-n, buf, &bsize, &bi, f);
 			}
-		}
 
-		u->username = user->uid;
+			u->fullname[u->fbyte] = '\0';
 		
-		len = sipua_get_line(line, 128, buf, &bsize, &bi, f);
-		if(len == 0)
-			break;
-		pc = line;
+			u->username = user->uid;
 
-		if(0==strncmp(pc, "reg.home=", 9))
+			nitem++;
+		}
+		else if(len > 9 && 0==strncmp(pc, "reg.home=", 9))
 		{
 			while(*pc != '=')
 				pc++;
 
-			end = start = pc+1;
-			while(*end != '\n' || *end != '\t' || *end != ' ')
-				end++;
+			start = pc+1;
 
-			strncpy(u->registrar, start, end-start);
-			u->registrar[end-start] = '\0';
+			u->registrar = xstr_clone(start);
+
+			nitem++;
 		}
-
-		len = sipua_get_line(line, 128, buf, &bsize, &bi, f);
-		if(len == 0)
-			break;
-		pc = line;
-
-		if(0==strncmp(pc, "reg.name=", 9))
+		else if(len > 9 && 0==strncmp(pc, "reg.name=", 9))
 		{
 			while(*pc != '=')
 				pc++;
 
-			end = start = pc+1;
-			while(*end != '\n' || *end != '\t' || *end != ' ')
-				end++;
+			start = pc+1;
 
-			strncpy(u->regname, start, end-start);
-			u->regname[end-start] = '\0';
+			u->regname = xstr_clone(start);
+
+			nitem++;
 		}
 
-		len = sipua_get_line(line, 128, buf, &bsize, &bi, f);
-		if(len == 0)
-			break;
-		pc = line;
-
-		if(0==strncmp(pc, "reg.seconds=", 11))
+		if(len > 11 && 0==strncmp(pc, "reg.seconds=", 11))
 		{
 			while(*pc != '=')
 				pc++;
@@ -892,28 +896,28 @@ user_t* sipua_load_user_file(FILE* f, char* uid, char* tok, int tsz)
 			start = pc+1;
 
 			u->seconds = strtol(start, &end, 10);
+
+			nitem++;
 		}
-
-		len = sipua_get_line(line, 128, buf, &bsize, &bi, f);
-		if(len == 0)
-			break;
-		pc = line;
-
-		if(0==strncmp(pc, "phonebook.location=", 19))
+		else if(len >= 19 && 0==strncmp(pc, "phonebook.location=", 19))
 		{
 			while(*pc != '=')
 				pc++;
 
-			end = start = pc+1;
-			while(*end != '\n' || *end != '\t' || *end != ' ')
-				end++;
+			start = pc+1;
 
-			strncpy(u->book_location, start, end-start);
-			u->book_location[end-start] = '\0';
+			u->book_location = xstr_clone(start);
+
+			nitem++;
 		}
 
+		if(nitem < 5)
+			continue;
+
 		xlist_addto_first(user->profiles, u);
+		nitem = 0;
 	}
+
 
 	return user;
 }
@@ -935,7 +939,12 @@ user_t* sipua_load_user(char* loc, char *uid, char* tok, int tsz)
 	user = sipua_load_user_file(f, uid, tok, tsz);
 	
 	if(user)
+	{
 		user->loc = xstr_clone(loc);
+
+		user->tok = xstr_nclone(tok, tsz);
+		user->tok_bytes = tsz;
+	}
 
 	fclose(f);
 
@@ -949,6 +958,8 @@ int user_done_profile(void* gen)
 	xfree(prof->fullname);		/* could be multibytes char */
 
 	xfree(prof->regname);		/* sip name notation */
+
+	xfree(prof->registrar);		/* sip name notation */
 
 	if(prof->reg_reason_phrase)
 		xfree(prof->reg_reason_phrase);
@@ -984,24 +995,26 @@ int user_add_profile(user_t* user, char* fullname, int fbytes, char* book_loc, c
 	prof->fullname = xstr_nclone(fullname, fbytes);
 	prof->fbyte = fbytes;
 
-	strcpy(prof->registrar, home);
+	prof->registrar = xstr_clone(home);
 	prof->regname = xstr_clone(regname);
 	prof->seconds = sec;
 
 	if(book_loc)
 		prof->book_location = xstr_clone(book_loc);
 
-	xlist_addto_first(user->profiles, prof);
+	if(xlist_addto_first(user->profiles, prof) >= OS_OK)
+		user->modified = 1;
 
 	return xlist_size(user->profiles);
 }
 
 int user_remove_profile(user_t* user, user_profile_t* prof)
 {
-	if(xlist_remove_item(user->profiles, prof) >= OS_OK)
-		user_done_profile(prof);
-	else
+	if(xlist_remove_item(user->profiles, prof) < OS_OK)
 		return -1;
+
+	user_done_profile(prof);
+	user->modified = 1;
 
 	return xlist_size(user->profiles);
 }

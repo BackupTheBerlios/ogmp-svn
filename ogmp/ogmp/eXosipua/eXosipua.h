@@ -209,8 +209,6 @@ struct eXosipua_s
 
 	char owner[MAXBYTES_ID];
 	
-	char current_id[MAXBYTES_ID];
-
 	jcall_t jcalls[MAX_NUMBER_OF_CALLS];
 
 	jsubscription_t jsubscriptions[MAX_NUMBER_OF_SUBSCRIPTIONS];

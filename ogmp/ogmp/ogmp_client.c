@@ -547,11 +547,14 @@ int client_set_default_profile(sipua_t* sipua, user_profile_t* prof)
 
 int client_regist(sipua_t *sipua, user_profile_t *user, char * userloc)
 {
+	int ret;
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
 	/* before start, check if already have a register transaction */
 	if(client->reg_profile)
+	{
 		return UA_FAIL;
+	}
 
 	if(!client->action)
 	{
@@ -561,17 +564,22 @@ int client_regist(sipua_t *sipua, user_profile_t *user, char * userloc)
 								client_action_onconnect,
 								client_action_onreset,
 								client_action_onbye);
-
 	}
 
+	ret = sipua_regist(sipua, user, userloc);
+
+	if(ret < UA_OK)
+		return ret;
+		
 	client->reg_profile = user;
 
-	return sipua_regist(sipua, user, userloc);
+	return ret;
 }
 
 int client_unregist(sipua_t *sipua, user_profile_t *user)
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
+	int ret;
 
 	/* before start, check if already have a register transaction */
 	if(client->reg_profile)
@@ -579,9 +587,14 @@ int client_unregist(sipua_t *sipua, user_profile_t *user)
 
 	client->reg_profile = user;
 
-	clie_log(("sipua_unregist: unregistering [%s] from [%s] ...\n", user->regname, user->registrar));
+	ret = sipua_unregist(sipua, user);
 
-	return sipua_unregist(sipua, user);
+	if(ret < UA_OK)
+		return ret;
+		
+	client->reg_profile = user;
+
+	return ret;
 }
 
 sipua_set_t* client_create_call(ogmp_client_t* clie, char* subject, int sbytes, char *desc, int dbytes)
@@ -693,17 +706,14 @@ int client_start(sipua_t* sipua)
 int main(int argc, char** argv)
 {
 	sipua_uas_t* uas = sipua_uas(5060, "IN", "IP4", NULL, NULL);
+
 	if(uas)
 	{
 		sipua_t* sipua = client_new_sipua(uas, 64*1024);
 
 		client_start(sipua);
 	}
-	/*
-	cmd.type = COMMAND_TYPE_REGISTER;
-	cmd.instruction = NULL;
-	client_command(client, &cmd);
-	*/
+
 	return 0;
 }
 

@@ -231,7 +231,7 @@ int window_new_identity_run_command(gui_t* gui, int c)
 			
 			if(newid_fullname[0] && newid_registary[0] && newid_regname[0])
 			{
-				int n = user_add_profile(ocui->user, newid_fullname, strlen(newid_fullname)+1,
+				int n = user_add_profile(ocui->user, newid_fullname, strlen(newid_fullname),
 											newid_bookloc, newid_registary, 
 											newid_regname, sec);
 				
@@ -303,5 +303,11 @@ gui_t* window_new_identity_new(ogmp_curses_t* topui)
 
 int window_new_identity_done(gui_t* gui)
 {
+	editline_done(newid_edit[NEWID_FULLNAME]);
+	editline_done(newid_edit[NEWID_BOOKLOC]);
+	editline_done(newid_edit[NEWID_REGISTARY]);
+	editline_done(newid_edit[NEWID_REGNAME]);
+	editline_done(newid_edit[NEWID_REGSEC]);
+
 	return 0;
 }

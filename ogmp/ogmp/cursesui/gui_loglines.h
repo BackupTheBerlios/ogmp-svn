@@ -23,6 +23,13 @@
 
 #include "gui.h"
 
+#define LOG_MAXLINE 10
+#define LOG_MAXLEN	100
+
+char log_buf[LOG_MAXLINE][LOG_MAXLEN];
+int log_maxline, log_maxlen, log_nline;
+int log_ln1, log_lnn;
+
 int window_loglines_print(gui_t* gui, int wid);
 
 gui_t* window_loglines_new(ogmp_curses_t* topui);
