@@ -1,0 +1,39 @@
+#include "nsISupports.idl"
+[scriptable, uuid(f728830e-1dd1-4444-6666-fb9f414f2465)]
+interface nsIScriptableWMPPlugin : nsISupports
+{
+	void play();
+	void pause();
+	void stop();
+};
+
+[scriptable, uuid(f728830f-1dd1-4444-6666-fb9f414f2465)]
+interface nsIScriptableOgmpPlugin : nsISupports
+{
+	readonly attribute string version;
+	/*
+	void Play();
+	void Pause();
+	void Stop();
+	void quit();
+	void DoPlay();
+	void DoPause();
+	void FastForward();
+	void FastReverse();
+	void ff();
+	void rew();
+	void rewind();
+	void Seek(in double value);
+	void Open(in string filename);
+	double getTime();
+	double getDuration();
+	double getPercent();
+	attribute string filename;
+	attribute boolean ShowControls;
+	attribute boolean fullscreen;
+	attribute boolean showlogo;
+	
+	readonly attribute long playState;
+	*/
+	readonly attribute nsIScriptableWMPPlugin controls;
+};
