@@ -116,25 +116,7 @@ int jcall_new(eXosipua_t *jua, eXosip_event_t *je)
 		call_e.reason_phrase = je->reason_phrase;
 		call_e.status_code = je->status_code;
     }
-/*
-#if defined(XRTP_SUPPORT)
-	{
-		sdp_message_t *sdp;
-		sdp_message_init(&sdp);
 
-		if (sdp_message_parse(sdp, je->sdp_body) == 0)
-		{
-			if(ca->callin_info)
-			{
-				rtp_capable_done_set(ca->callin_info);
-				ca->callin_info = NULL;
-			}
-
-			ca->callin_info = rtp_capable_from_sdp(sdp);
-		}
-	}
-#endif
-*/
 	/* event notification */
 	jua->sipuas.notify_event(jua->sipuas.lisener, &call_e.event);
 

@@ -300,6 +300,9 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 	rtpcapset->nettype = xstr_clone(sdp_message_c_nettype_get (sdp, -1, 0));
 	rtpcapset->addrtype = xstr_clone(sdp_message_c_addrtype_get (sdp, -1, 0));
 
+	rtpcapset->subject = xstr_clone(sdp_message_s_name_get(sdp));
+	rtpcapset->info = xstr_clone(sdp_message_i_info_get(sdp, -1));
+
 	addr = sdp_message_c_addr_get (sdp, -1, 0);
 
 	if(0==strcmp(rtpcapset->nettype, "IN") && 0==strcmp(rtpcapset->addrtype, "IP4"))
@@ -483,6 +486,8 @@ int rtp_capable_done_set(rtpcap_set_t* rtpcapset)
 	xfree(rtpcapset->nettype);
 	xfree(rtpcapset->addrtype);
 	xfree(rtpcapset->netaddr);
+	xstr_done_string(rtpcapset->subject);
+	xstr_done_string(rtpcapset->info);
 
 	if(rtpcapset->rtpcaps)
 		xlist_done(rtpcapset->rtpcaps, rtpcap_done);

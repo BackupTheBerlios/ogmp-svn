@@ -144,6 +144,7 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 
 	set->subject = xstr_clone(subject);
 	set->sbyte = sbyte;
+
 	set->info = xstr_clone(info);
 	set->ibyte = ibyte;
 
@@ -188,6 +189,7 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 								xstr_clone(netaddr));
 
 	sdp_message_s_name_set (sdp_info->sdp_message, xstr_clone(set->subject));
+	sdp_message_i_info_set (sdp_info->sdp_message, -1, xstr_clone(set->info));
 
 	sdp_message_c_connection_add (sdp_info->sdp_message, 
 									-1, /* media_pos */
@@ -296,7 +298,9 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 	set->user_prof = user_prof;
 
 	set->subject = xstr_clone(rtpcapset->subject);
+
 	set->sbyte = rtpcapset->sbytes;
+
 	set->info = xstr_clone(rtpcapset->info);
 	set->ibyte = rtpcapset->ibytes;
 
@@ -316,6 +320,7 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 
 	/* generate sdp message */
 	sdp_info = xmalloc(sizeof(rtpcap_sdp_t));
+
 	sdp_info->sdp_media_pos = 0;
 	sdp_message_init(&sdp_info->sdp_message);
 

@@ -29,7 +29,7 @@
 
 #define NEWCALL_TO		0
 #define NEWCALL_SUBJ	1
-#define NEWCALL_MSG		2
+#define NEWCALL_DESC	2
 
 char newcall_inputs[3][LINE_MAX];
 
@@ -91,7 +91,7 @@ int window_new_call_print(gui_t* gui, int wid)
 	else
 		attrset(COLOR_PAIR(1));
 
-	snprintf(buf, 25, "%10.10s", "To :");
+	snprintf(buf, 25, "%15.15s", "To :");
 	mvaddstr(gui->y0+1, gui->x0, buf);
   
 	
@@ -100,16 +100,16 @@ int window_new_call_print(gui_t* gui, int wid)
 	else
 		attrset(COLOR_PAIR(1));
 
-	snprintf(buf, 25, "%10.10s", "Subject :");
+	snprintf(buf, 25, "%15.15s", "Subject :");
 	mvaddstr(gui->y0+2, gui->x0, buf);
 
 
-	if(cursor_newcall == NEWCALL_MSG)
+	if(cursor_newcall == NEWCALL_DESC)
 		attrset(COLOR_PAIR(10));
 	else
 		attrset(COLOR_PAIR(1));
 
-	snprintf(buf, 25, "%10.10s", "Message :");
+	snprintf(buf, 25, "%15.15s", "Description :");
 	mvaddstr(gui->y0+3, gui->x0, buf);
 
 	if(newcall_inputs[NEWCALL_TO][0] == '\0' && ocui->contact)
@@ -120,16 +120,16 @@ int window_new_call_print(gui_t* gui, int wid)
 	}
   
 	attrset(COLOR_PAIR(0));
-	mvaddstr(gui->y0+1, gui->x0+11, newcall_inputs[NEWCALL_TO]);
+	mvaddstr(gui->y0+1, gui->x0+16, newcall_inputs[NEWCALL_TO]);
 
 	attrset(COLOR_PAIR(0));
-	mvaddstr(gui->y0+2, gui->x0+11, newcall_inputs[NEWCALL_SUBJ]);
+	mvaddstr(gui->y0+2, gui->x0+16, newcall_inputs[NEWCALL_SUBJ]);
 
 	attrset(COLOR_PAIR(0));
-	mvaddstr(gui->y0+3, gui->x0+11, newcall_inputs[NEWCALL_MSG]);
+	mvaddstr(gui->y0+3, gui->x0+16, newcall_inputs[NEWCALL_DESC]);
 
 	attrset(COLOR_PAIR(10));
-	mvaddch(gui->y0+1+cursor_newcall, gui->x0+11+pos, c);
+	mvaddch(gui->y0+1+cursor_newcall, gui->x0+16+pos, c);
 
 	window_new_call_draw_commands(gui);
 
@@ -196,7 +196,7 @@ int window_new_call_run_command(gui_t* gui, int c)
 		case 1: /* Ctrl-A */
 		{
 			/* if (_josua_start_call(cfg.identity, to, subject, route) != 0) beep(); */
-			sipua_set_t* call = ocui->sipua->new_call(ocui->sipua, newcall_inputs[NEWCALL_SUBJ], strlen(newcall_inputs[NEWCALL_SUBJ]), newcall_inputs[NEWCALL_MSG], strlen(newcall_inputs[NEWCALL_MSG]));
+			sipua_set_t* call = ocui->sipua->new_call(ocui->sipua, newcall_inputs[NEWCALL_SUBJ], strlen(newcall_inputs[NEWCALL_SUBJ]), newcall_inputs[NEWCALL_DESC], strlen(newcall_inputs[NEWCALL_DESC]));
 			
 			if(call)
 				ocui->sipua->call(ocui->sipua, call, newcall_inputs[NEWCALL_TO]);
@@ -274,7 +274,7 @@ gui_t* window_new_call_new(ogmp_curses_t* topui)
 
 	newcall_edit[NEWCALL_TO] = editline_new(newcall_inputs[NEWCALL_TO], LINE_MAX);
 	newcall_edit[NEWCALL_SUBJ] = editline_new(newcall_inputs[NEWCALL_SUBJ], LINE_MAX);
-	newcall_edit[NEWCALL_MSG] = editline_new(newcall_inputs[NEWCALL_MSG], LINE_MAX);
+	newcall_edit[NEWCALL_DESC] = editline_new(newcall_inputs[NEWCALL_DESC], LINE_MAX);
 
 	return &gui_window_new_call;
 }
@@ -283,7 +283,7 @@ int window_new_call_done(gui_t* gui)
 {
 	editline_done(newcall_edit[NEWCALL_TO]);
 	editline_done(newcall_edit[NEWCALL_SUBJ]);
-	editline_done(newcall_edit[NEWCALL_MSG]);
+	editline_done(newcall_edit[NEWCALL_DESC]);
 
 	return 0;
 }

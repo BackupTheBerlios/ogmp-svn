@@ -185,9 +185,9 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				break;
 			}
 
-			call_info->cid = call_e->cid;
-			call_info->did = call_e->did;
-			call_info->rtpcapset = rtpcapset;
+			call->cid = call_e->cid;
+			call->did = call_e->did;
+			call->rtpcapset = rtpcapset;
 
 			for(i=0; i<MAX_SIPUA_LINES; i++)
 			{
@@ -195,6 +195,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				{
 					client->lines[i] = call;
 					sipua->uas->accept(sipua->uas, lineno);
+
+					client->ogui->ui.beep(&client->ogui->ui);
 
 					break;
 				}
