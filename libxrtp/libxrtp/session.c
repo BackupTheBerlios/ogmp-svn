@@ -28,8 +28,8 @@
 #define RENEW_MINFO_LEVEL 5
 #define BUDGET_PERIOD_MSEC	1000  /* reset budget when large than one second */
 /*
-*/
 #define SESSION_LOG
+*/
 #define SESSION_DEBUG
 
 #ifdef SESSION_LOG
@@ -419,8 +419,6 @@ xrtp_session_t* session_new(xrtp_set_t* set, char *cname, int clen, char *ip, ui
        xfree(name);
        xfree(ses);
 
-       exit(1);
-
        return NULL;
     }
 
@@ -437,10 +435,6 @@ xrtp_session_t* session_new(xrtp_set_t* set, char *cname, int clen, char *ip, ui
 
     ses->self->valid = XRTP_YES;
     ses->n_member = 1;
-
-
-
-
 
 	ses->set = set;
     
@@ -1704,13 +1698,15 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 {
     uint32 ssrc = rtcp_sender(rtcp);
 
-
     char * cname = NULL;
     int cname_len;
+
     session_connect_t *rtp_conn = NULL;
     session_connect_t *rtcp_conn = NULL;
     member_state_t * mem = NULL;
 	int ssrc_collise = 0;
+
+	session_debug(("session_update_member_by_rtcp: my ssrc[%u], incoming ssrc[%u]\n", ses->self->ssrc, ssrc));
 
     cname_len = rtcp_sdes(rtcp, ssrc, RTCP_SDES_CNAME, &cname);
 
@@ -1720,7 +1716,8 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 
 	if(ssrc == 0)
 	{
-		session_log(("session_update_member_by_rtcp: refuse invalid ssrc\n"));
+		session_debug(("session_update_member_by_rtcp: refuse illegal ssrc\n"));
+
         return NULL;
 	}
 
@@ -1730,7 +1727,6 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 		/* collise with me, i need to change ssrc */
 		uint32 my_ssrc;
 
-
 		ses->self->in_collision = 1;
 		my_ssrc = session_make_ssrc(ses);
 		ses->self->in_collision = 0;
@@ -1738,14 +1734,25 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 		ssrc_collise = 1;
 
 		session_log(("session_update_member_by_rtcp: ssrc collises with cn[%s], [%s]'s new ssrc[%u]\n", cname, ses->self->cname, my_ssrc));
+        
+        if(rtp_conn) 
+			connect_done(rtp_conn);
+
+        if(rtcp_conn) 
+			connect_done(rtcp_conn);
+
+		return NULL;
 	}
 
     /* search by ssrc */
 	mem = session_member_state(ses, ssrc);
 	if(!mem)
 	{
-		/* by cname */
+		/* search by cname */
 		xlist_user_t lu;
+
+		session_log(("session_update_member_by_rtcp: search by cname[%u]\n", cname));
+
 		mem = xlist_find(ses->members, cname, session_match_cname, &lu);
 	}
 
@@ -1753,50 +1760,69 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 	{
         void * user_info = NULL;
 
-        session_log(("session_update_member_by_rtcp: New visitor[%d] coming\n", ssrc));
+        session_debug(("session_update_member_by_rtcp: New visitor[%d] coming\n", ssrc));
+
         /* Need Authorization */
         if(ses->$callbacks.member_apply)
 		{
            if(ses->$callbacks.member_apply(ses->$callbacks.member_apply_user, ssrc, cname, cname_len, &user_info) < XRTP_OK)
 		   {
                /* Member application fail */
-               if(rtp_conn) connect_done(rtp_conn);
-               if(rtcp_conn) connect_done(rtcp_conn);
+               if(rtp_conn) 
+				   connect_done(rtp_conn);
+
+               if(rtcp_conn) 
+				   connect_done(rtcp_conn);
                
                session_debug(("session_update_member_by_rtcp: SSRC[%d]'s member application refused\n", ssrc));
-               return NULL;
+               
+			   return NULL;
            }
         }   
 
         if(cname_len==0 && !ses->$state.receive_from_anonymous)
 		{
-           /* Anonymous intended */
-           if(rtp_conn) connect_done(rtp_conn);
+           /* Anonymous intend */
+           if(rtp_conn) 
+			   connect_done(rtp_conn);
 
-           if(rtcp_conn) connect_done(rtcp_conn);
+           if(rtcp_conn) 
+			   connect_done(rtcp_conn);
 
-           session_log(("session_update_member_by_rtcp: Anonymous refused\n"));
+           session_debug(("session_update_member_by_rtcp: Anonymous refused\n"));
            return NULL;
         }
 
         mem = session_new_member(ses, ssrc, user_info);
+
         if(!mem)
 		{
-           if(rtp_conn) connect_done(rtp_conn);
-           if(rtcp_conn) connect_done(rtcp_conn);
+           if(rtp_conn) 
+			   connect_done(rtp_conn);
+           
+		   if(rtcp_conn) 
+			   connect_done(rtcp_conn);
+
+           session_debug(("session_update_member_by_rtcp: Member[%d] is not available\n", ssrc));
 
            return NULL;
         }
+
+        session_debug(("session_update_member_by_rtcp: new member ssrc[%u] created\n", ssrc));
     }
-	else if(mem->valid || cname_len == 0)
+	else
 	{
         /* Free as member has connects already, Can't be validated yet */
-        if(!mem->valid)
+
+        if(!mem->valid && cname_len == 0)
 		{
-        if(rtp_conn) connect_done(rtp_conn);
-        if(rtcp_conn) connect_done(rtcp_conn);
+			if(rtp_conn) 
+				connect_done(rtp_conn);
+			if(rtcp_conn) 
+				connect_done(rtcp_conn);
         
-            session_log(("session_update_member_by_rtcp: Member[%d] is not verified yet\n", ssrc));
+            session_debug(("session_update_member_by_rtcp: No cname yet to validate member[%u]\n", ssrc));
+
             return NULL;
 		}
 
@@ -1814,46 +1840,64 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 		}
 		else if(mem->in_collision == 1)
 		{
-            session_log(("session_update_member_by_rtcp: WARNING! for security or in multicast environment, ssrc need to be authenticated before accept\n"));
+            session_debug(("session_update_member_by_rtcp: WARNING! for security or in multicast environment, ssrc need to be authenticated before accept\n"));
 			
 			mem->ssrc = ssrc;
-            session_log(("session_update_member_by_rtcp: mem[%s] ssrc[%u], collision solved\n", mem->cname, ssrc));
-		}
 
-        if(rtp_conn) connect_done(rtp_conn);
-        if(rtcp_conn) connect_done(rtcp_conn);
+            session_debug(("session_update_member_by_rtcp: mem[%s] ssrc[%u], collision solved\n", mem->cname, ssrc));
+		}
 
 		mem->in_collision = 0;
         
-		return mem;
+		if(mem->valid)
+		{
+			session_debug(("session_update_member_by_rtcp: return validated member[%s]\n", mem->cname));
+
+			if(rtp_conn) 
+				connect_done(rtp_conn);
+
+			if(rtcp_conn) 
+				connect_done(rtcp_conn);
+
+			/* callback when the member is valid */
+			if(ses->$callbacks.member_update)
+				ses->$callbacks.member_update(ses->$callbacks.member_update_user, ssrc, cname, cname_len);
+
+			return mem;
+		}
     }
 
+	session_debug(("session_update_member_by_rtcp: To validate a petential member\n"));
+
 	/* Validate a petential member */
-    if(!mem->valid && cname_len)
+    if(!mem->valid && cname_len > 0)
 	{    
-        if(!mem->cname)
+		if(!mem->cname)
 		{
 			mem->cname = xstr_nclone(cname, cname_len);
-			if(!mem->cname)
-			{
-				/* Free as member has connects already */
-				if(rtp_conn) connect_done(rtp_conn);
-				if(rtcp_conn) connect_done(rtcp_conn);
-
-				return mem;
-			}
 			mem->cname_len = cname_len;
 
-			session_log(("session_update_member_by_rtcp: ssrc[%u] identified as cn[%s]\n", ssrc, cname));
+			/* Free as member has connects already */
+			if(rtp_conn) 
+				connect_done(rtp_conn);
+			if(rtcp_conn) 
+				connect_done(rtcp_conn);
+
+			session_log(("session_update_member_by_rtcp: ssrc[%u] identified as member[%s]\n", ssrc, cname));
+
+			return mem;
 		}
                 
         if(mem->rtcp_port && !connect_from_teleport(rtcp_conn, mem->rtcp_port))
 		{
 			/* WARNING: Someone else tempt to break in */
-			if(rtp_conn) connect_done(rtp_conn);
-			if(rtcp_conn) connect_done(rtcp_conn);
+			if(rtp_conn) 
+				connect_done(rtp_conn);
+			if(rtcp_conn) 
+				connect_done(rtcp_conn);
 
-			session_log(("session_update_member_by_rtcp: Warning, ssrc[%u] intrusion detected!!!\n", ssrc));
+			session_debug(("session_update_member_by_rtcp: Warning, ssrc[%u] intrusion detected!!!\n", ssrc));
+
 			return NULL;
 		}
 
@@ -1863,9 +1907,12 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 			if(rtp_conn) connect_done(rtp_conn);
 			if(rtcp_conn) connect_done(rtcp_conn);
 
-			session_log(("session_update_member_by_rtcp: Warning, cname intrusion detected!!!\n"));
+			session_debug(("session_update_member_by_rtcp: Warning, member[%s] collide with cname[%s]!!!\n", mem->cname, cname));
+			
 			return NULL;
 		}
+
+		session_debug(("session_update_member_by_rtcp: to validate member[%s]\n", mem->cname));
 
 		session_member_set_connects(mem, rtp_conn, rtcp_conn);
 
@@ -1873,7 +1920,7 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
         mem->valid = XRTP_YES;
         ses->n_member++;
 
-        session_log(("session_update_member_by_rtcp: [%s],ssrc[%u]\n", cname, ssrc));
+        session_debug(("session_update_member_by_rtcp: [%s],ssrc[%u]\n", cname, ssrc));
 
         if(ses->join_to_rtcp_port && connect_from_teleport(rtcp_conn, ses->join_to_rtcp_port))
 		{
@@ -2314,7 +2361,6 @@ xrtp_media_t * session_new_media(xrtp_session_t * ses, uint8 profile_no, char *p
 			port_set_session(ses->rtcp_port, ses);
 		}
 	}
-
 
 	ses->bandwidth_rtp = ses->media->bps / OS_BYTE_BITS;
 	ses->bandwidth = (int)((2 * ses->bandwidth_rtp) * 1.05);

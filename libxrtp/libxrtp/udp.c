@@ -137,8 +137,8 @@ int connect_match(session_connect_t * conn1, session_connect_t * conn2)
 
 int connect_from_teleport(session_connect_t * conn, xrtp_teleport_t * tport)
 {
-      return conn->remote_addr.sin_family == AF_INET &&
-             conn->remote_addr.sin_addr.s_addr == tport->addr &&
+	 return conn->remote_addr.sin_family == AF_INET &&
+            conn->remote_addr.sin_addr.s_addr == tport->addr &&
              conn->remote_addr.sin_port == tport->portno;
 }
 
@@ -297,34 +297,6 @@ xrtp_port_t * port_new(char *local_addr,  uint16 local_portno, enum port_type_e 
      
      if(bind(port->socket, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) == SOCKET_FAIL)
 	 {
-        /* Win32 debug *
-		int err_no = WSAGetLastError();
-		
-		udp_debug(("port_new: Fail to name socket '%s:%d'\n", local_addr, local_portno));
-		
-		switch(err_no)
-		{
-		case WSANOTINITIALISED :
-			udp_debug(("port_new: WSANOTINITIALISED\n")); break;
-		case WSAENETDOWN :
-			udp_debug(("port_new: WSAENETDOWN\n")); break;
-		case WSAEADDRINUSE :
-			udp_debug(("port_new: WSAEADDRINUSE\n")); break;
-		case WSAEADDRNOTAVAIL :
-			udp_debug(("port_new: WSAEADDRNOTAVAIL\n")); break;
-		case WSAEFAULT:
-			udp_debug(("port_new: WSAEFAULT\n")); break;
-		case WSAEINPROGRESS:
-			udp_debug(("port_new: WSAEINPROGRESS\n")); break;
-		case WSAEINVAL:
-			udp_debug(("port_new: WSAEINVAL\n")); break;
-		case WSAENOBUFS:
-			udp_debug(("port_new: WSAENOBUFS\n")); break;
-		case WSAENOTSOCK:
-			udp_debug(("port_new: WSAENOTSOCK\n")); break;
-		}
-		* end of win32 debug */
-        
 		socket_close(port->socket);
         port->socket = 0;
         xfree(port);
@@ -483,13 +455,16 @@ int port_incoming(xrtp_port_t * port)
 xrtp_teleport_t * teleport_new(char * addr_str, uint16 pno){
 
      xrtp_teleport_t * tp = xmalloc(sizeof(struct xrtp_teleport_s));
-     if(tp){
-
+     if(tp)
+	 {
         tp->portno = htons(pno);
         tp->addr = inet_addr(addr_str);
-        if(inet_aton(addr_str, (struct in_addr *)&(tp->addr)) == 0){ /* string to int addr */
 
+        if(inet_aton(addr_str, (struct in_addr *)&(tp->addr)) == 0)
+		{ 
+			/* string to int addr */
             udp_log(("teleport_new: Illegal ip address\n"));
+
             xfree(tp);
 
             return NULL;

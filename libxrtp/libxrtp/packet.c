@@ -2095,8 +2095,6 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
  {
     int i;
 
-    packet_debug(("rtcp_compound_done: 1\n"));
-
     for(i=0; i<com->n_packet; i++)
     {
        rtcp_done_packet(com, com->heads[i]);
