@@ -362,12 +362,6 @@ xrtp_session_t* session_new(xrtp_set_t* set, char *cname, int clen, char *ip, ui
     ses->self->valid = XRTP_YES;
     ses->n_member = 1;
 
-	if(xrtp_add_session(set, ses) < XRTP_OK)
-	{
-		session_done(ses);
-		return NULL;
-	}
-
 	ses->set = set;
     
     return ses;
@@ -407,7 +401,7 @@ int session_match(xrtp_session_t *ses, char *cn, int cnlen, char *ip, uint16 rtp
 	return 1;
 }
 
-int session_cname(xrtp_session_t * ses, char * cname, int clen)
+int session_copy_cname(xrtp_session_t * ses, char * cname, int clen)
 {
    int n;
    if(!cname || !clen)
@@ -419,7 +413,14 @@ int session_cname(xrtp_session_t * ses, char * cname, int clen)
    n = ses->self->cname_len < clen ? ses->self->cname_len : clen;
    memcpy(cname, ses->self->cname, n);
 
+   cname[n-1] = '\0';
+
    return n;
+}
+
+char* session_cname(xrtp_session_t * ses)
+{
+   return ses->self->cname;
 }
 
 int session_allow_anonymous(xrtp_session_t * ses, int allow)
@@ -634,12 +635,12 @@ double session_determistic_interval(int members,
 
        if(t < rtcp_min_time)
 		   t = rtcp_min_time; 
-   
+	   /*
 	   session_debug(("session_determistic_interval: rtcp_avg[%dB]\n", avg_rtcp_size));
 	   session_debug(("session_determistic_interval: rtcp_bw[%dB]\n", rtcp_bw));
 	   session_debug(("session_determistic_interval: member[%d]\n", n));
 	   session_debug(("session_determistic_interval: sender[%d]\n", senders));
-       
+       */
 	   return t;
 }
  
@@ -1520,6 +1521,8 @@ int session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, u
 		return XRTP_OK;
 	}
 
+	printf("session_add_cname: 2\n");
+
     mem = (member_state_t *)xmalloc(sizeof(struct member_state_s));
     if(!mem)
 	{
@@ -1565,6 +1568,8 @@ int session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, u
 	mem->cname = xstr_nclone(cn, cnlen);
 	mem->cname_len = cnlen;
 
+	printf("session_add_cname: 3\n");
+
 	/* used to verify the incoming */
 	mem->rtp_port = teleport_new(ipaddr, rtp_portno);
 	mem->rtcp_port = teleport_new(ipaddr, rtcp_portno);
@@ -1574,10 +1579,14 @@ int session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, u
 
 	xthr_unlock(ses->members_lock);
 
+	printf("session_add_cname: 4\n");
+
 	if(rtp_capable)
 		mem->mediainfo = ses->media->info(ses->media, rtp_capable);
 	
-	session_log(("session_add_cname: verify [%s@%s:%u|%u], %d participants\n", cn, ipaddr, rtp_portno, rtcp_portno, nmem));
+	session_log(("session_add_cname: cn[%s]@[%s:%u|%u] added, %d participants\n", cn, ipaddr, rtp_portno, rtcp_portno, nmem));
+
+	session_log(("session_add_cname: sched@%x\n", ses->sched));
 
 	/* start the rtcp schedule */
 	if(nmem > 1)
@@ -3101,8 +3110,6 @@ int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 time
     
    max_report = XRTP_MAX_REPORTS > ses->n_member ? ses->n_member : XRTP_MAX_REPORTS;
 
-   session_log(("session_report: self.ssrc[%u]\n", self->ssrc));
-
    /* Set sender info */
 
    if(self->we_sent)
@@ -3158,8 +3165,6 @@ int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 time
       {
          mem = session_next_valid_member_of(ses, self->ssrc);
          ses->next_report_ssrc = mem->ssrc;
-   
-		 session_log(("session_report: next[%u]\n", mem->ssrc));
       }
       else
       {
@@ -3360,9 +3365,6 @@ int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 time
  */
 int session_set_scheduler(xrtp_session_t *ses, session_sched_t *sched)
 {
-
-    session_log(("session_set_scheduler: sched[%x]\n", (int)sched));
-
     if(ses->sched == sched)
 		return XRTP_OK;
        
@@ -3372,9 +3374,12 @@ int session_set_scheduler(xrtp_session_t *ses, session_sched_t *sched)
     ses->sched = sched;
     
     if(sched)
+	{
 		sched->add(sched, ses);
-    
-    return XRTP_OK;
+    	return xrtp_add_session(ses->set, ses);
+	}
+
+	return xrtp_remove_session(ses->set, ses);
 }
 
  session_sched_t * session_scheduler(xrtp_session_t *ses){

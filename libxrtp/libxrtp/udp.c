@@ -25,8 +25,8 @@
 #include <timedia/xmalloc.h>
 #include <timedia/socket.h> 
 #include <timedia/inet.h> 
-/*
 #define UDP_LOG
+/*
 #define UDP_DEBUG
 */
 #ifdef UDP_LOG

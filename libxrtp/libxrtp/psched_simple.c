@@ -24,8 +24,8 @@
 
 #include <timedia/xmalloc.h>
 /*
-*/
 #define PSCHED_SIMPLE_LOG
+*/
 #ifdef PSCHED_SIMPLE_LOG
  #define simple_sched_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -570,7 +570,6 @@ int simple_schedule_rtcp(void * gen)
          break;
 
       now = time_msec_now(ssch->clock);
-	  simple_sched_log(("simple_schedule_rtcp: ssch[@%x] %dms now\n", (int)ssch, now));
 
       /* Scan if some deadline is reached */
 
@@ -672,11 +671,10 @@ int simple_schedule_rtcp(void * gen)
 
             if(ssch->rtcp_queue[i].expired)
 			{
-				char cname[16];
-				memset(cname, 0, 16);
+				char* cname;
 
 				unit = ssch->rtcp_queue[i].ssch_unit;
-				session_cname(unit->session, cname, 16);
+				cname = session_cname(unit->session);
 
                if(unit->rtcp_arrived)
 			   {

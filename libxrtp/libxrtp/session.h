@@ -500,7 +500,8 @@ extern DECLSPEC
 int
 session_match(xrtp_session_t * session, char *cn, int cnlen, char *ip, uint16 rtp_pno, uint16 rtcp_pno, uint8 profno, char *prof_type);
 
-int session_cname(xrtp_session_t * session, char * cname, int clen);
+int session_copy_cname(xrtp_session_t* session, char* cname, int clen);
+char* session_cname(xrtp_session_t* ses);
 
 /* set if an anonymous participant allowed in the session */
 extern DECLSPEC
