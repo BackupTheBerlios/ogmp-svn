@@ -22,16 +22,13 @@
  */
 
 #include "list.h"
+#include "xmalloc.h"
 
 #include <stdlib.h>
 #include <string.h>
-
-#include <stdio.h>
-
 /*
 #define XLIST_LOG
 */
-
 #ifdef XLIST_LOG
  #define xlist_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -44,7 +41,7 @@ xlist_t * xlist_new(){
   
    xlist_t * list;
 
-   list = (xlist_t *)malloc(sizeof(xlist_t));
+   list = (xlist_t *)xmalloc(sizeof(xlist_t));
    if(list != NULL){
      
       list->num = 0;
@@ -74,7 +71,7 @@ int xlist_done(xlist_t *list, int(*free_item)(void *)){
       curr = list->head;
    }
 
-   free(list);
+   xfree(list);
    return OS_OK;
 }
 
@@ -112,7 +109,7 @@ xrtp_list_user_t * xlist_new_user(xlist_t * list)
    if(list == NULL) return NULL;
    */
 
-   user = (xrtp_list_user_t *)malloc(sizeof(xrtp_list_user_t));
+   user = (xrtp_list_user_t *)xmalloc(sizeof(xrtp_list_user_t));
    if(user != NULL){
       user->curr = user->prev = user->next = NULL;
    }
@@ -121,7 +118,7 @@ xrtp_list_user_t * xlist_new_user(xlist_t * list)
 }
 
 int xlist_done_user(xlist_user_t * user){
-   free(user);
+   xfree(user);
 	return OS_OK;
 }
 
@@ -173,7 +170,7 @@ xrtp_list_node_t * _xrtp_list_newnode(){
 
    xrtp_list_node_t * node;
 
-   node = (xrtp_list_node_t *)malloc(sizeof(xrtp_list_node_t));
+   node = (xrtp_list_node_t *)xmalloc(sizeof(xrtp_list_node_t));
 
    if(!node){
 
@@ -188,7 +185,7 @@ xrtp_list_node_t * _xrtp_list_newnode(){
 
 int _xrtp_list_freenode(xrtp_list_node_t * node){
 
-   free(node);
+   xfree(node);
 	return OS_OK;
 }
 
@@ -372,7 +369,7 @@ void * xlist_remove_first(xlist_t * list){
    list->head = node->next;
    list->num--;
 
-   if(list->num==0)  xlist_log(("xrtp_list_remove_first: list empty now\n"));
+   if(list->num==0)  xlist_log(("xlist_remove_first: list empty now\n"));
 
    data = node->data;
    _xrtp_list_freenode(node);
@@ -621,6 +618,7 @@ void * xrtp_list_remove_first(xrtp_list_t * list){return xlist_remove_first(list
 int xrtp_list_remove_item (xrtp_list_t * list, void *data) {return xlist_remove_item(list,data);}
 
 void * xrtp_list_remove(xrtp_list_t * list, void *item, int (*match)(void*, void*)){return xlist_remove(list,item,match);}
+
 
 int xrtp_list_delete_if(xrtp_list_t * list, void * cdata, int(*condition)(void*, void*), int(*free_item)(void*))
 {return xlist_delete_if(list, cdata, condition, free_item);}

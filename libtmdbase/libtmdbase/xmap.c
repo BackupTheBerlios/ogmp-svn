@@ -18,7 +18,7 @@
  #include "xmap.h"
  
  #include <string.h>
- #include <stdlib.h>
+ #include "xmalloc.h"
 
  #define MAP_MAX_SIZE 1024 /* equal to select.FD_SETSIZE */
 
@@ -42,7 +42,7 @@
 
     int sz = (size > 0) ? size : MAP_MAX_SIZE;
     
-    xrtp_map_t * map = malloc(sizeof(struct xrtp_map_s) + sizeof(void *) * sz);
+    xrtp_map_t * map = xmalloc(sizeof(struct xrtp_map_s) + sizeof(void *) * sz);
     if(map){
 
        map->max_key = 0;
@@ -57,7 +57,7 @@
 
  int map_done(xrtp_map_t * map){
 
-    free(map);
+    xfree(map);
 
     return OS_OK;
  }

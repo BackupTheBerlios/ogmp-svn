@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <stdio.h>
+#include "xmalloc.h"
 /*
 #define BUFFER_LOG
 */
@@ -33,7 +33,7 @@
 
 buffer_t * buffer_new(uint size, enum byte_order_e order)
 {
-   buffer_t * buf = (buffer_t *)malloc(sizeof(struct buffer_s));
+   buffer_t * buf = (buffer_t *)xmalloc(sizeof(struct buffer_s));
 
    if(!buf || size < 0)
    {
@@ -45,11 +45,11 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
 
    if(size !=0)
    {
-      buf->data = malloc(size);
+      buf->data = xmalloc(size);
       if(!buf->data)
       {
          buffer_log(("buffer_new: No memory for data\n"));
-         free(buf);
+         xfree(buf);
 
          return NULL;
       }
@@ -68,18 +68,18 @@ int buffer_done(xrtp_buffer_t * buf)
    if(buf->mounted == 1)
    {
       buffer_log(("buffer_done: free mounted data[@%d]\n", (int)(buf->data)));
-      free(buf->data);
+      xfree(buf->data);
    }
             
    buffer_log(("buffer_done: free Buf[@%d]\n", (int)buf));
-   free(buf);
+   xfree(buf);
 
    return OS_OK;
 }
 
  int buffer_mount(xrtp_buffer_t * buf, char *data, int len){
 
-	if(buf->data) free(buf->data);
+	if(buf->data) xfree(buf->data);
 
 	buf->len = buf->len_data = len;
     buf->data = data;
@@ -102,7 +102,7 @@ int buffer_done(xrtp_buffer_t * buf)
 
  xrtp_buffer_t * buffer_clone(xrtp_buffer_t * buf){
 
-    xrtp_buffer_t * newbuf = (xrtp_buffer_t *)malloc(sizeof(struct xrtp_buffer_s) + sizeof(char) * buf->len);
+    xrtp_buffer_t * newbuf = (xrtp_buffer_t *)xmalloc(sizeof(struct xrtp_buffer_s) + sizeof(char) * buf->len);
     if(!newbuf){
 
        return NULL;
@@ -127,14 +127,14 @@ int buffer_done(xrtp_buffer_t * buf)
 
 	if(size == buf->len) return OS_OK;
 
-    newdata = malloc(size);
+    newdata = xmalloc(size);
     if(!newdata){
 
 		buffer_log(("buffer_newsize: No memory\n"));
 		return OS_EMEM;
     }
 
-	free(buf->data);
+	xfree(buf->data);
 
     buf->len = size;
     buf->pos = 0;
@@ -164,6 +164,7 @@ int buffer_done(xrtp_buffer_t * buf)
 
 		 buf->len_data = buf->pos = 0;
 	 }
+
 
 	 return OS_OK;
  }

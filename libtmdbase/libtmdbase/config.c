@@ -18,7 +18,8 @@
 #include "config.h"
 #include "list.h"
 
-#include <stdlib.h>
+#include "xmalloc.h"
+
 #include <stdio.h>
 #include <string.h>
 
@@ -63,7 +64,7 @@ int conf_parse (config_t *conf, FILE * file) {
 
 config_t * conf_new (char *fname) {
 
-   config_t * conf = (config_t*)malloc(sizeof(struct config_s));
+   config_t * conf = (config_t*)xmalloc(sizeof(struct config_s));
    if (!conf) {
 
       config_debug(("config_new: No memory\n"));
@@ -81,7 +82,11 @@ config_t * conf_new (char *fname) {
    return conf;
 }
 
-int conf_done(config_t *conf);
+int conf_done(config_t *conf)
+{
+   xfree(conf);
+   return OS_OK;
+}
 
 int conf_save(config_t *conf, char * fname);
 

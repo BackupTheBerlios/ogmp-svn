@@ -16,9 +16,8 @@
  ***************************************************************************/
 
  #include "spinqueue.h"
+ #include "xmalloc.h"
 
- #include <stdlib.h>
- 
  #ifdef QUEUE_LOG
    const int spin_queue_log = 1;
  #else
@@ -28,13 +27,13 @@
 
  spin_queue_t * queue_new(int size){
 
-    spin_queue_t * q = malloc(sizeof(struct spin_queue_s));
+    spin_queue_t * q = xmalloc(sizeof(struct spin_queue_s));
     if(q){
 
-        q->nodes = malloc(sizeof(struct queue_node_s) * size);
+        q->nodes = xmalloc(sizeof(struct queue_node_s) * size);
         if(!q->nodes){
 
-          free(q);
+          xfree(q);
           return NULL;
         }
 
@@ -50,8 +49,8 @@
     if(q->n_node != 0)
        return OS_EBUSY;
     
-    free(q->nodes);
-    free(q);
+    xfree(q->nodes);
+    xfree(q);
 
     return OS_OK;
  }

@@ -16,19 +16,21 @@
 # The dir which the librtime install to
 
 TOPDIR = /home/hling/timedia-project
+PROJNAME = timedia
 
 LIBINST = $(TOPDIR)/lib
-INCINST = $(TOPDIR)/include/timedia
+INCINST = $(TOPDIR)/include
 
 CC = gcc
 
-CFLAGS = -fPIC
+CFLAGS = -fPIC -I$(INCINST)
 
 LIBFILES:= libtmdbase/libtmdbase.so
 INCFILES:= libtmdbase/list.h libtmdbase/buffer.h libtmdbase/md5.h libtmdbase/os.h \
 	   libtmdbase/spinqueue.h libtmdbase/xmap.h libtmdbase/xstring.h	\
 	   libtmdbase/loader.h libtmdbase/catalog.h libtmdbase/config.h \
-	   libtmdbase/socket.h libtmdbase/inet.h libtmdbase/io.h
+	   libtmdbase/socket.h libtmdbase/inet.h libtmdbase/io.h \
+		libtmdbase/xmalloc.h libtmdbase/xthread.h
 
 all: sharedlib test
 
@@ -49,13 +51,16 @@ sharedlib:	libtmdbase/*.c
 	$(CC) $(CFLAGS) -c libtmdbase/loader.c -o libtmdbase/loader.o
 	$(CC) $(CFLAGS) -c libtmdbase/catalog.c -o libtmdbase/catalog.o
 	$(CC) $(CFLAGS) -c libtmdbase/config.c -o libtmdbase/config.o
+	$(CC) $(CFLAGS) -c libtmdbase/xmalloc.c -o libtmdbase/xmalloc.o
+	$(CC) $(CFLAGS) -c libtmdbase/libsdl/xthread_sdl.c -o libtmdbase/libsdl/xthread_sdl.o
+
 	$(CC) -shared libtmdbase/list.o libtmdbase/buffer.o libtmdbase/md5.o libtmdbase/spinqueue.o \
 		libtmdbase/socket_posix.o libtmdbase/xmap.o libtmdbase/xstring.o libtmdbase/loader.o \
-		libtmdbase/catalog.o libtmdbase/config.o  \
-		-ldl -o  libtmdbase/libtmdbase.so
+		libtmdbase/catalog.o libtmdbase/config.o libtmdbase/xmalloc.o libtmdbase/libsdl/xthread_sdl.o \
+		-ldl -lSDL -o  libtmdbase/libtmdbase.so
 
 install:	libtmdbase/libtmdbase.so
-	@cp -f $(INCFILES) $(INCINST)
+	@cp -f $(INCFILES) $(INCINST)/$(PROJNAME)
 	@cp -f $(LIBFILES) $(LIBINST)
 
 test:

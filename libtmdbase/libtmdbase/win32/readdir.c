@@ -13,7 +13,8 @@
  * 
  * The DIR typedef is not compatible with Unix. 
  **********************************************************************/ 
-#include <malloc.h> 
+#include "../xmalloc.h"
+ 
 #include <string.h> 
 #include <errno.h> 
 
@@ -28,7 +29,7 @@ DIR *opendir(char *dir)
     int index; 
 
 
-    filespec = malloc(strlen(dir) + 2 + 1); 
+    filespec = xmalloc(strlen(dir) + 2 + 1); 
     strcpy(filespec, dir); 
     index = strlen(filespec) - 1; 
     if (index >= 0 && (filespec[index] == '/' || filespec[index] == '\\')) 
@@ -36,7 +37,7 @@ DIR *opendir(char *dir)
     strcat(filespec, "/*"); 
 
 
-    dp = (DIR *)malloc(sizeof(DIR)); 
+    dp = (DIR *)xmalloc(sizeof(DIR)); 
     dp->offset = 0; 
     dp->finished = 0; 
     dp->dir = strdup(dir); 
@@ -51,7 +52,7 @@ DIR *opendir(char *dir)
 
 
     dp->handle = handle; 
-    free(filespec); 
+    xfree(filespec); 
 
 
     return dp; 
@@ -86,8 +87,8 @@ int closedir(DIR *dp)
 { 
     if (!dp) return 0; 
     _findclose(dp->handle); 
-    if (dp->dir) free(dp->dir); 
-    if (dp) free(dp); 
+    if (dp->dir) xfree(dp->dir); 
+    if (dp) xfree(dp); 
 
 
     return 0; 

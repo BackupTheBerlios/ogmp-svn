@@ -17,7 +17,7 @@
 
  #include "xstring.h"
  
- #include <stdlib.h>
+ #include "xmalloc.h"
 
  #ifdef XSTRING_LOG
    const int xstring_log = 1;
@@ -28,7 +28,7 @@
 
  char * xstr_clone(char *str)
  {
-     char * new_str = (char *)malloc(sizeof(char) * strlen(str));
+     char * new_str = (char *)xmalloc(sizeof(char) * strlen(str));
 
      strcpy(new_str, str);
 
@@ -37,7 +37,7 @@
 
  char * xstr_nclone(char *str, int len)
  {
-     char * new_str = (char *)malloc(sizeof(char) * (len+1));
+     char * new_str = (char *)xmalloc(sizeof(char) * (len+1));
 
      strncpy(new_str, str, len);
 	 new_str[len] = '\0';
@@ -52,7 +52,7 @@
 
  char * xstr_new_string(char str[]){
 
-    char * s = (char *)malloc(strlen(str) + 1);
+    char * s = (char *)xmalloc(strlen(str) + 1);
     if(!s)
        return NULL;
     
@@ -63,7 +63,7 @@
 
  int xstr_done_string(char * str){
 
-    free(str);
+    xfree(str);
     
     return OS_OK;
  }

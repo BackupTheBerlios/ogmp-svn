@@ -24,6 +24,7 @@
 #include "xstring.h"
 #include "catalog.h"
 #include "loader.h"
+#include "xmalloc.h"
 
 #ifdef WIN32
  #include "win32/dirent.h"
@@ -55,7 +56,7 @@ module_catalog_t* catalog_new( char * type ){
    
    module_catalog_t *catalog;
 
-   catalog = (module_catalog_t *)malloc(sizeof(module_catalog_t));
+   catalog = (module_catalog_t *)xmalloc(sizeof(module_catalog_t));
    if (!catalog) {
      
       catalog_debug(("catalog_new: NO more memory\n"));
@@ -77,7 +78,7 @@ int catalog_freeitem(void* generic){
    
    modu_dlclose(minfo->lib);
    
-   free(minfo);
+   xfree(minfo);
     
    return OS_OK;
 }
@@ -107,14 +108,13 @@ int catalog_free(module_catalog_t *cata){
 
    catalog_done(cata);
 
-   free(cata);
+   xfree(cata);
 
    return OS_OK;
 }
 
 int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* path)
 {
-   xrtp_list_user_t *list_u;
    int num_plugin;
 
    DIR* dir;
@@ -140,17 +140,15 @@ int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* pat
       return OS_EPARAM;
    }      
           
-   list_u = xrtp_list_newuser(catalog->infos);
-
    while((entry = readdir(dir)) != NULL)
    {
-      char * entname = (char *)malloc(strlen(path) + strlen(entry->d_name) + 2);
+      char * entname = (char *)xmalloc(strlen(path) + strlen(entry->d_name) + 2);
       sprintf(entname, "%s/%s", path, entry->d_name);
 
       if(stat(entname, &entinfo) == -1)
 	  {
          catalog_log(("catalog_scan_modules: Fail to get (%s) info\n", entname));
-         free(entname);
+         xfree(entname);
          continue;
       }
 
@@ -163,9 +161,8 @@ int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* pat
             lib = modu_dlopen(entname, XRTP_DLFLAGS);
             if(lib != NULL)
 			{
-				/*
                catalog_log(("catalog_scan_modules: Check module (%s)\n", entname));
-			   */
+
                loadin = (module_loadin_t *)modu_dlsym(lib, catalog->module_type);
                if(loadin)
 			   {
@@ -176,14 +173,14 @@ int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* pat
                      continue;
                   }
                
-                  minfo = (module_info_t *)malloc(sizeof(module_info_t));
+                  minfo = (module_info_t *)xmalloc(sizeof(module_info_t));
                   minfo->filename = xstr_clone(entname);
                   minfo->lib = lib;
                   minfo->loadin = loadin;
-				  /*
+
                   catalog_log(("catalog_scan_modules: Found module (%s)\n", loadin->label));
-				  */
-                  xrtp_list_add_first(catalog->infos, minfo);
+
+                  xlist_addto_first(catalog->infos, minfo);
                }
             }
 			else
@@ -193,12 +190,12 @@ int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* pat
          }
       }
 
-      free(entname);
+      catalog_log(("catalog_scan_modules: next\n"));
+
+      xfree(entname);
    }
    
    num_plugin = xrtp_list_size(catalog->infos);
-   
-   xrtp_list_freeuser(list_u);
    
    return num_plugin;
 }
@@ -239,6 +236,7 @@ module_interface_t * catalog_new_module (module_catalog_t *cata, char *label){
      catalog_log(("catalog_new_module: Found module %s\n", label));
      
      if(!minfo->lib || !minfo->loadin){
+
        
         lib = modu_dlopen(minfo->filename, XRTP_DLFLAGS);
         if(!lib){
@@ -300,7 +298,7 @@ int catalog_create_modules(module_catalog_t *cata, char *label, xrtp_list_t *lis
 
    xrtp_list_freeuser(u);
    
-   nmod = xrtp_list_size(list);
+   nmod = xlist_size(list);
 
    catalog_log(("catalog_create_modules: %d '%s' modules found\n", nmod, label));
 
