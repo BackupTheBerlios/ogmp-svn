@@ -40,6 +40,26 @@
 #include "nsISupportsUtils.h"	// this is where some useful macros defined
 #include <errno.h>
 
+#define CLIE_LOG
+#define CLIE_DEBUG
+
+#ifdef CLIE_LOG
+ #define clie_log(fmtargs)  do{printf fmtargs;}while(0)
+#else
+ #define clie_log(fmtargs)
+#endif
+
+#ifdef CLIE_DEBUG
+ #define clie_debug(fmtargs)  do{printf fmtargs;}while(0)
+#else
+ #define clie_debug(fmtargs)
+#endif
+
+#define OGMP_VERSION  1
+
+#define SIPUA_MAX_RING 6
+#define MAX_CALL_BANDWIDTH  5000  /* in Bytes */
+
 extern int errno;
 
 // service manager which will give the access to all public browser services
@@ -71,16 +91,16 @@ NPError NS_PluginInitialize()
     // note that Mozilla will add reference, so do not forget to release
     nsISupports *sm = NULL;
 
-
     NPN_GetValue(NULL, NPNVserviceManager, &sm);
 
     // Mozilla returns nsIServiceManager so we can use it directly; doing QI on
     // nsISupports here can still be more appropriate in case something is changed
     // in the future so we don't need to do casting of any sort.
-    if (sm) {
-	sm->QueryInterface(NS_GET_IID(nsIServiceManager),
-			   (void **) &gServiceManager);
-	NS_RELEASE(sm);
+    if (sm)
+    {
+        sm->QueryInterface(NS_GET_IID(nsIServiceManager),
+                            (void **) &gServiceManager);
+        NS_RELEASE(sm);
     }
 
     return NPERR_NO_ERROR;
@@ -111,8 +131,8 @@ nsPluginInstanceBase *NS_NewPluginInstance(nsPluginCreateData *aCreateDataStruct
 
 void NS_DestroyPluginInstance(nsPluginInstanceBase * aPlugin)
 {
-   if (aPlugin)
-		delete(nsPluginInstance *) aPlugin;
+    if (aPlugin)
+        delete(nsPluginInstance *) aPlugin;
 }
 
 ////////////////////////////////////////
@@ -125,31 +145,32 @@ nsPluginInstance::nsPluginInstance(NPP aInstance) : nsPluginInstanceBase(),
 													mScriptablePeer(NULL),
 													mControlsScriptablePeer(NULL)
 {
-  mString[0] = '\0';
+    mString[0] = '\0';
 }
 
 nsPluginInstance::~nsPluginInstance()
 {
-  // mScriptablePeer may be also held by the browser
-  // so releasing it here does not guarantee that it is over
-  // we should take precaution in case it will be called later
-  // and zero its mPlugin member
-  mScriptablePeer->SetInstance(NULL);
-  NS_IF_RELEASE(mScriptablePeer);
+    // mScriptablePeer may be also held by the browser
+    // so releasing it here does not guarantee that it is over
+    // we should take precaution in case it will be called later
+    // and zero its mPlugin member
+    mScriptablePeer->SetInstance(NULL);
+    NS_IF_RELEASE(mScriptablePeer);
 }
 
 NPBool nsPluginInstance::init(NPWindow * aWindow)
 {
     if (aWindow == NULL)
-	return FALSE;
+        return FALSE;
 
     mInitialized = TRUE;
+    
     return TRUE;
 }
 
 void nsPluginInstance::shut()
 {
-  mInitialized = FALSE;
+    mInitialized = FALSE;
 }
 
 NPBool nsPluginInstance::isInitialized()
@@ -176,13 +197,13 @@ NPError nsPluginInstance::DestroyStream(NPStream * stream, NPError reason)
 
 int32 nsPluginInstance::WriteReady(NPStream * stream)
 {
-	 return -1;
+	return -1;
 }
 
 int32 nsPluginInstance::Write(NPStream * stream, int32 offset, int32 len,
 			      void *buffer)
 {
-	 return -1;
+	return -1;
 }
 
 // methods called from nsScriptablePeer
@@ -200,12 +221,11 @@ void nsPluginInstance::getVersion(char* *aVersion)
 	// the memory service provided by Mozilla
 	nsIMemory * nsMemoryService = NULL;
 
-	if (gServiceManager){
-
+	if (gServiceManager)
+    {
 		// get service using its contract id and use it to allocate the memory
 		gServiceManager->GetServiceByContractID("@mozilla.org/xpcom/memory-service;1",
-																NS_GET_IID(nsIMemory), (void **)&nsMemoryService);
-
+												NS_GET_IID(nsIMemory), (void **)&nsMemoryService);
 		if(nsMemoryService)
 			version = (char *)nsMemoryService->Alloc(strlen(ua) + 1);
 	}
@@ -217,17 +237,120 @@ void nsPluginInstance::getVersion(char* *aVersion)
 	NS_IF_RELEASE(nsMemoryService);
 }
 
-void nsPluginInstance::func_one()
+void nsPluginInstance::func_one(PRInt32 value)
 {
 	/* display on status bar */
 	NPN_Status(mInstance, "func_one invoked");
 }
 
-void nsPluginInstance::func_two()
+void nsPluginInstance::func_two(const char *str)
 {
 	/* return to javascript */
-	NPN_GetURL(mInstance, "javascript:func_two_return('sipua: func_two invoked');", NULL);
+    char javascript[128];
+    sprintf(javascript, "javascript:func_two_return('sip got: %s');", str);
+    
+	NPN_GetURL(mInstance, javascript, NULL);
 }
+
+NPError nsPluginInstance::sipua_init()
+{
+    int sip_port = 5060;
+    
+    this->sipua = NULL;
+    this->uas = NULL;
+    this->mod_cata = NULL;
+
+    clie_log (("main: sip port is %d\n", sip_port));
+    clie_log (("main: modules in dir:'%s'\n", MOD_DIR));
+
+    mod_cata = catalog_new( "mediaformat" );
+
+    catalog_scan_modules ( this->mod_cata, OGMP_VERSION, MOD_DIR );
+
+    this->uas = client_new_uas(this->mod_cata, "eXosipua");
+    if(!this->uas)
+    {
+		clie_log (("main: fail to create sipua server!\n"));
+		return NPERR_MODULE_LOAD_FAILED_ERROR;
+    }
+
+	if(this->uas->init(this->uas, sip_port, "IN", "IP4", NULL, NULL) < UA_OK)
+    {
+		clie_log (("main: fail to initialize sipua server!\n"));
+		return NPERR_MODULE_LOAD_FAILED_ERROR;
+    }
+    
+	this->sipua = client_new("dummyui", this->uas, this->mod_cata, 64*1024);
+
+	if(!this->sipua)
+	{
+        clie_log(("main: fail to create sipua!\n"));
+        return NPERR_MODULE_LOAD_FAILED_ERROR;
+	}
+
+	client_start(this->sipua);
+
+	/* locate user when plugin initialized */
+	this->sipua->locate_user(this->sipua, this->user);
+    return NPERR_NO_ERROR;
+}
+
+void nsPluginInstance::load_user(const char *uid, PRInt32 uidsz)
+{
+    char javascript_callback[128];
+    
+    if(!this->user)
+        this->user = user_new((char*)uid, uidsz);
+
+    if(this->user)
+        sprintf(javascript_callback, "javascript:load_user_return(0);");
+    else
+        sprintf(javascript_callback, "javascript:load_user_return(-1);");
+
+    NPN_GetURL(mInstance, javascript_callback, NULL);
+}
+
+void nsPluginInstance::regist(const char *fullname, PRInt32 fnsz, const char *home_router, const char *user_at_domain, PRInt32 seconds)
+{
+    char javascript_callback[128];
+
+    char sip_router[256];
+    char sip_user[256];
+
+    user_profile_t* prof;
+    
+    sprintf(sip_router, "sip:%s", home_router);
+    sprintf(sip_user, "sip:%s", user_at_domain);
+
+    prof = user_add_profile(this->user, (char*)fullname, fnsz, NULL/*char* book_loc*/, (char*)sip_router, (char*)sip_user, seconds);
+    if(!prof)
+    {
+        sprintf(javascript_callback, "javascript:regist_return(%d);", SIPUA_STATUS_REG_FAIL);
+        NPN_GetURL(mInstance, javascript_callback, NULL);
+        return;
+    }
+
+    this->sipua->regist(this->sipua, prof, this->user->userloc);
+
+    sprintf(javascript_callback, "javascript:regist_return(%d);", SIPUA_STATUS_REG_DOING);
+    NPN_GetURL(mInstance, javascript_callback, NULL);
+    
+    return;
+}
+
+void nsPluginInstance::unregist(const char *home_router, const char *user_at_domain)
+{
+    
+}
+
+void nsPluginInstance::new_call(const char *subject, const char *info)
+{}
+void nsPluginInstance::call(const char *callee_at_domain)
+{}
+void nsPluginInstance::answer(PRInt32 lineno)
+{}
+void nsPluginInstance::bye(PRInt32 lineno)
+{}
 
 #if 0
 void nsPluginInstance::Play()
@@ -467,31 +590,43 @@ void nsPluginInstance::SetFullscreen(PRBool value)
     if (threadlaunched == 0)
 	return;
 
-    if (mode == NP_EMBED) {
-	win_height = embed_height;
-	win_width = embed_width;
-    } else {
-	win_height = window_height;
-	win_width = window_width;
+    if (mode == NP_EMBED)
+    {
+        win_height = embed_height;
+        win_width = embed_width;
+    }
+    else
+    {
+        win_height = window_height;
+        win_width = window_width;
     }
 
     if (win_height == 0 || win_width == 0 || hidden == 1)
-	return;
+        return;
 
-    if (fullscreen) {
-	if (value) {
-	    // do nothing
-	    fullscreen = 1;
-	} else {
-	    fullscreen = 0;
-	}
-    } else {
-	if (value) {
-	    fullscreen = 1;
-	} else {
-	    // do nothing
-	    fullscreen = 0;
-	}
+    if (fullscreen)
+    {
+        if (value)
+        {
+            // do nothing
+            fullscreen = 1;
+        }
+        else
+        {
+            fullscreen = 0;
+        }
+    }
+    else
+    {
+        if (value)
+        {
+            fullscreen = 1;
+        }
+        else
+        {
+            // do nothing
+            fullscreen = 0;
+        }
     }
 }
 
@@ -519,25 +654,27 @@ NPError nsPluginInstance::GetValue(NPPVariable aVariable, void *aValue)
 {
     NPError rv = NPERR_NO_ERROR;
 
-    switch (aVariable) {
-
-    	case NPPVpluginScriptableInstance:{
-		
+    switch (aVariable)
+    {
+    	case NPPVpluginScriptableInstance:
+        {
 	    	// addref happens in getter, so we don't addref here
 	    	nsIScriptableOgmpPlugin *scriptablePeer =
 			getScriptablePeer();
-	    	if (scriptablePeer) {
+	    	if (scriptablePeer)
+            {
 				*(nsISupports **) aValue = scriptablePeer;
 	    	} else
 				rv = NPERR_OUT_OF_MEMORY_ERROR;
 		}
 		break;
 
-    	case NPPVpluginScriptableIID:{
-
+    	case NPPVpluginScriptableIID:
+        {
 	    	static nsIID scriptableIID = NS_ISCRIPTABLEOGMPPLUGIN_IID;
 	    	nsIID *ptr = (nsIID *) NPN_MemAlloc(sizeof(nsIID));
-	    	if (ptr) {
+	    	if (ptr)
+            {
 				*ptr = scriptableIID;
 				*(nsIID **) aValue = ptr;
 	    	} else
@@ -559,32 +696,38 @@ NPError nsPluginInstance::GetValue(NPPVariable aVariable, void *aValue)
 // this method will return the scriptable object (and create it if necessary)
 nsScriptablePeer *nsPluginInstance::getScriptablePeer()
 {
-   if (!mScriptablePeer) {
-		mScriptablePeer = new nsScriptablePeer(this);
-		if (!mScriptablePeer)
-			return NULL;
+    if (!mScriptablePeer)
+    {
+        mScriptablePeer = new nsScriptablePeer(this);
+        
+        if (!mScriptablePeer)
+            return NULL;
 
-		NS_ADDREF(mScriptablePeer);
-   }
+        NS_ADDREF(mScriptablePeer);
 
-	// add reference for the caller requesting the object
-   NS_ADDREF(mScriptablePeer);
-   return mScriptablePeer;
+        /* Initialize sipua when it is created */
+        this->sipua_init();
+    }
+
+    // add reference for the caller requesting the object
+    NS_ADDREF(mScriptablePeer);
+   
+    return mScriptablePeer;
 }
 
 nsControlsScriptablePeer *nsPluginInstance::getControlsScriptablePeer()
 {
-	if (!mControlsScriptablePeer) {
+    if (!mControlsScriptablePeer)
+    {
+        mControlsScriptablePeer = new nsControlsScriptablePeer(this);
+        if (!mControlsScriptablePeer)
+            return NULL;
 
-		mControlsScriptablePeer = new nsControlsScriptablePeer(this);
-		if (!mControlsScriptablePeer)
-			return NULL;
+        NS_ADDREF(mControlsScriptablePeer);
+    }
 
-		NS_ADDREF(mControlsScriptablePeer);
-   }
+    // add reference for the caller requesting the object
+    NS_ADDREF(mControlsScriptablePeer);
 
-	// add reference for the caller requesting the object
-   NS_ADDREF(mControlsScriptablePeer);
-
-   return mControlsScriptablePeer;
+    return mControlsScriptablePeer;
 }

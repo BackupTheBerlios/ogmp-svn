@@ -10,10 +10,16 @@
 
   function func_two(sipua)
   {
-	 document.sipua.func_two();
+	 document.sipua.func_two("this is an input");
   }
 
   function func_two_return(result)
+  {
+	 document.formname.status.value=result;
+	 alert(result);
+  }
+
+  function regist_return(result)
   {
 	 document.formname.status.value=result;
 	 alert(result);
@@ -39,22 +45,46 @@ in the alert box.
 
 <center>
 
-<embed name="sipua" type="application/x-vnd-callnet-sipua" width=1 height=1 hidden="true" />
+<embed name="sipua" type="application/x-vnd-realmtel-sipua" width=1 height=1 hidden="true" />
 
 <br>
 
-<script language="javascript">
+<!--
 
-  var sipua = document.sipua;
-  if (sipua)
+//Load user with userid('bin1').
+document.sipua.load_user(userid);
+
+//register user with user fullname('Bin Zhang'), strlen(fullname), home_sip_router('hubble.realmtel.net'), user_sipid('bin1@realmtel.net'), expire_seconds(1800)
+document.sipua.regist(user_fullname, user_fnsz, home_router, user_at_domain, expire_seconds);
+
+//unregister home_sip_router('hubble.realmtel.net') user('bin1@realmtel.net')
+document.sipua.unregist(home_router, user_at_domain);
+
+//Create a call with title('Hello') and description('Discuss tech issue with you')
+document.sipua.new_call(title, description);
+
+//call destination('bin8@realmtel.net')
+document.sipua.call(callee_at_dest_domain);
+
+//answer call on lineno(2)
+document.sipua.answer(lineno);
+
+//hangup call on lineno(3)
+document.sipua.bye(lineno);
+
+//-->
+
+<script language="javascript">
+<!--
+  if (document.sipua)
   {
-    document.write(sipua.version);
+	document.write(document.sipua.version);
   }
   else
   {
     alert("No plugin");
   }
-
+//-->
 </script>
 
 <br>

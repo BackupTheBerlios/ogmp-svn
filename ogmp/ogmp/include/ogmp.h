@@ -32,9 +32,7 @@
 
 #include "sipua.h"
 #include "rtp_cap.h"
-/*
-#define VERSION 1
-*/
+
 #define SEND_IP "127.0.0.1"
 #define SIP_SESSION_ID "20040922"
 #define SIP_SESSION_NAME "ogmp voip"
@@ -46,6 +44,8 @@
 #define SESSION_DESCRIPT "ogmp source and client connectivity"
 
 #define MAX_NCAP 16
+
+#define OGMP_VERSION  1
 
 #ifndef MOD_DIR
  #define MOD_DIR "."
@@ -78,7 +78,7 @@ struct ogmp_ui_s
     int (*print_log)(ogmp_ui_t *ui, char* buf);
     int (*beep)(ogmp_ui_t *ui);
     */
-    int (*set_sipua)(ogmp_ui_t *ui, sipua_t* sipua);
+    int (*set_sipua)(ui_t *ui, sipua_t* sipua);
 
 	ogmp_command_t*(*wait_command)(ogmp_ui_t *ui);
 };
@@ -204,5 +204,16 @@ media_source_t*
 source_open(char* name, media_control_t* control, char* mode, void* mode_param);
 
 sipua_setting_t* source_setting(media_control_t *control);
+
+#include <timedia/ui.h>
+
+extern ogmp_ui_t* global_ui;
+
+/****************************************************************************************/
+sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, int bandwidth);
+
+int client_start(sipua_t* sipua);
+
+sipua_uas_t* client_new_uas(module_catalog_t* mod_cata, char* type);
 
 #endif

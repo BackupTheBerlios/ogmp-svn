@@ -152,6 +152,7 @@ void curseson()
 }
 
 void cursesoff()
+
 {
 	if (cursesareon) 
 	{
@@ -527,6 +528,7 @@ gui_event_t* gui_event(ogmp_ui_t* ogui)
     
     ge = xlist_remove_first(ocui->event_queue);
     
+
     xthr_unlock(ocui->event_queue_lock);
 
     return ge;
@@ -750,7 +752,7 @@ gui_show(ui_t* ui)
 	return UA_OK;
 }
 
-int gui_set_sipua(ogmp_ui_t* ui, sipua_t* sipua)
+int gui_set_sipua(ui_t* ui, sipua_t* sipua)
 {
 	ogmp_curses_t *ocui = (ogmp_curses_t*)ui;
 

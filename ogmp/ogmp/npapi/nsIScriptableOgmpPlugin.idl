@@ -10,9 +10,19 @@ interface nsIScriptableWMPPlugin : nsISupports
 [scriptable, uuid(f728830f-1dd1-4444-6666-fb9f414f2465)]
 interface nsIScriptableOgmpPlugin : nsISupports
 {
-	void func_one();
-	void func_two();
+	void func_one(in long value);
+	void func_two(in string str);
 
+    /* SIP UA interface */
+	void load_user(in string uid, in long uidsz);
+   void regist(in string fullname, in long fnsz, in string home_router,
+					in string user_at_domain, in long seconds);
+   void unregist(in string home_router, in string user_at_domain);
+   void new_call(in string subject, in string info);
+   void call(in string callee_at_domain);
+   void answer(in long lineno);
+   void bye(in long lineno);
+    
 	/*
 	void Play();
 	void Pause();

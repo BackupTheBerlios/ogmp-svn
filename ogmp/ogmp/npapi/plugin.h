@@ -37,6 +37,9 @@
 
 #ifndef __PLUGIN_H__
 #define __PLUGIN_H__
+
+#define OS_IGNORE_INTEGER_TYPE
+
 #ifdef BSD
 #include <cmath>
 #endif
@@ -46,10 +49,12 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
+
 #endif
 #ifdef GECKOSDK_ENABLED
 #include "mozilla-config.h"
 #endif
+
 #include "pluginbase.h"
 #include "nsScriptablePeer.h"
 #include "plugin-setup.h"
@@ -59,6 +64,11 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <string.h>
+
+extern "C" {
+#include "sipua.h"
+#include "ogmp_client.h"
+}
 
 class nsPluginInstance:public nsPluginInstanceBase {
   public:
@@ -76,12 +86,31 @@ class nsPluginInstance:public nsPluginInstanceBase {
     int32 Write(NPStream * stream, int32 offset, int32 len, void *buffer);
 
     // JS Methods
-  	 void getVersion(char* *aVersion);
-	 
-  	 void func_one();
-  	 void func_two();
+    void getVersion(char* *aVersion);
+    
+  private:
+    user_t *user;
+    sipua_t *sipua;
+    sipua_uas_t *uas;
+    module_catalog_t *mod_cata;
+    
+  public:
+    /* SIP UA interface */
+    void func_one(PRInt32 value);
+    void func_two(const char *str);
 
-	 /*
+    /* SIP UA interface */
+    NPError sipua_init();
+    
+    void load_user(const char *uid, PRInt32 uidsz);
+    void regist(const char *fullname, PRInt32 fnsz, const char *home_router, const char *user_at_domain, PRInt32 seconds);
+    void unregist(const char *home_router, const char *user_at_domain);
+    void new_call(const char *subject, const char *info);
+    void call(const char *callee_at_domain);
+    void answer(PRInt32 lineno);
+    void bye(PRInt32 lineno);
+    
+    /*
     void Play();
     void Pause();
     void Stop();
@@ -112,7 +141,7 @@ class nsPluginInstance:public nsPluginInstanceBase {
     nsControlsScriptablePeer *getControlsScriptablePeer();
     
   public:
-     NPP mInstance;
+    NPP mInstance;
     NPBool mInitialized;
     nsScriptablePeer *mScriptablePeer;
     nsControlsScriptablePeer *mControlsScriptablePeer;
@@ -160,7 +189,6 @@ class nsPluginInstance:public nsPluginInstanceBase {
     Window player_window;
     Display *display;
     Widget widget;
-	*/
     uint32 nQtNext;
     char *qtNext[256];
     int panel_height;
@@ -177,7 +205,6 @@ class nsPluginInstance:public nsPluginInstanceBase {
     int DPMSEnabled;
     int hidden;
     int black_background;
-    /*
     pthread_t player_thread;
     pthread_attr_t thread_attr;
     pthread_cond_t playlist_complete_cond;

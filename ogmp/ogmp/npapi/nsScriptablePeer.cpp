@@ -63,7 +63,6 @@ nsScriptablePeer::nsScriptablePeer(nsPluginInstance * aPlugin)
 
 nsScriptablePeer::~nsScriptablePeer()
 {
-
 }
 
 void nsScriptablePeer::InitControls(nsControlsScriptablePeer * aControls)
@@ -75,18 +74,20 @@ void nsScriptablePeer::InitControls(nsControlsScriptablePeer * aControls)
 // be implemented for any interface
 NS_IMETHODIMP_(nsrefcnt) nsScriptablePeer::AddRef()
 {
-    ++mRefCnt;
-    return mRefCnt;
+   ++mRefCnt;
+   return mRefCnt;
 }
 
 NS_IMETHODIMP_(nsrefcnt) nsScriptablePeer::Release()
 {
-    --mRefCnt;
-    if (mRefCnt == 0) {
-	delete this;
-	return 0;
-    }
-    return mRefCnt;
+   --mRefCnt;
+   if (mRefCnt == 0)
+	{
+		delete this;
+		return 0;
+   }
+
+   return mRefCnt;
 }
 
 // here nsScriptablePeer should return three interfaces it can be asked for by their iid's
@@ -94,36 +95,37 @@ NS_IMETHODIMP_(nsrefcnt) nsScriptablePeer::Release()
 NS_IMETHODIMP nsScriptablePeer::QueryInterface(const nsIID & aIID,
 					       void **aInstancePtr)
 {
-    if (!aInstancePtr)
+   if (!aInstancePtr)
 	return NS_ERROR_NULL_POINTER;
 
-    if (aIID.Equals(kIScriptableOgmpPluginIID)) {
-	*aInstancePtr = NS_STATIC_CAST(nsIScriptableOgmpPlugin *, this);
-	AddRef();
-	return NS_OK;
-    }
+   if (aIID.Equals(kIScriptableOgmpPluginIID))
+	{
+		*aInstancePtr = NS_STATIC_CAST(nsIScriptableOgmpPlugin *, this);
+		AddRef();
+		return NS_OK;
+   }
 
-    if (aIID.Equals(kIClassInfoIID)) {
-	*aInstancePtr = NS_STATIC_CAST(nsIClassInfo *, this);
-	AddRef();
-	return NS_OK;
-    }
+   if (aIID.Equals(kIClassInfoIID))
+	{
+		*aInstancePtr = NS_STATIC_CAST(nsIClassInfo *, this);
+		AddRef();
+		return NS_OK;
+   }
 
-    if (aIID.Equals(kISupportsIID)) {
-	*aInstancePtr =
-	    NS_STATIC_CAST(nsISupports *,
-			   (NS_STATIC_CAST
-			    (nsIScriptableOgmpPlugin *, this)));
-	AddRef();
-	return NS_OK;
-    }
+   if (aIID.Equals(kISupportsIID))
+	{
+		*aInstancePtr = NS_STATIC_CAST(nsISupports *, (NS_STATIC_CAST(nsIScriptableOgmpPlugin *, this)));
 
-    return NS_NOINTERFACE;
+		AddRef();
+		return NS_OK;
+   }
+
+   return NS_NOINTERFACE;
 }
 
 void nsScriptablePeer::SetInstance(nsPluginInstance * plugin)
 {
-    mPlugin = plugin;
+   mPlugin = plugin;
 }
 
 //
@@ -139,18 +141,74 @@ NS_IMETHODIMP nsScriptablePeer::GetVersion(char* *aVersion)
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsScriptablePeer::Func_one()
+NS_IMETHODIMP nsScriptablePeer::Func_one(PRInt32 value)
 {
     printf("JS Func_one issued\n");
-    mPlugin->func_one();
+    mPlugin->func_one(value);
 
     return NS_OK;
 }
 
-NS_IMETHODIMP nsScriptablePeer::Func_two()
+NS_IMETHODIMP nsScriptablePeer::Func_two(const char *str)
 {
     printf("JS Func_two issued\n");
-    mPlugin->func_two();
+    mPlugin->func_two(str);
+
+    return NS_OK;
+}
+
+/* void load_user (in string fullname, in long fnsz, in string router, in string regid, in long second); */
+NS_IMETHODIMP nsScriptablePeer::Load_user(const char *uid, PRInt32 uidsz)
+{
+    mPlugin->load_user(uid, uidsz);
+
+    return NS_OK;
+}
+
+/* void regist (); */
+NS_IMETHODIMP nsScriptablePeer::Regist(const char *fullname, PRInt32 fnsz, const char *home_router, const char *user_at_domain, PRInt32 seconds)
+{
+    mPlugin->regist(fullname, fnsz, home_router, user_at_domain, seconds);
+
+    return NS_OK;
+}
+
+/* void unrigst (); */
+NS_IMETHODIMP nsScriptablePeer::Unregist(const char *home_router, const char *user_at_domain)
+{
+    mPlugin->unregist(home_router, user_at_domain);
+
+    return NS_OK;
+}
+
+/* void new_call (); */
+NS_IMETHODIMP nsScriptablePeer::New_call(const char *subject, const char *info)
+{
+    mPlugin->new_call(subject, info);
+
+    return NS_OK;
+}
+
+/* void call (); */
+NS_IMETHODIMP nsScriptablePeer::Call(const char *callee_at_domain)
+{
+    mPlugin->call(callee_at_domain);
+
+    return NS_OK;
+}
+
+/* void answer (); */
+NS_IMETHODIMP nsScriptablePeer::Answer(PRInt32 lineno)
+{
+    mPlugin->answer(lineno);
+
+    return NS_OK;
+}
+
+/* void bye (); */
+NS_IMETHODIMP nsScriptablePeer::Bye(PRInt32 lineno)
+{
+    mPlugin->bye(lineno);
 
     return NS_OK;
 }

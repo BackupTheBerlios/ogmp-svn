@@ -293,6 +293,7 @@ struct sipua_s
  	sipua_set_t* (*line)(sipua_t* sipua, int line);
 
 	/* switch current call session */
+
  	sipua_set_t* (*pick)(sipua_t* sipua, int line);
  	int (*hold)(sipua_t* sipua);
 
@@ -350,6 +351,7 @@ sipua_unregist(sipua_t *sipua, user_profile_t *user);
 sipua_set_t* 
 sipua_create_call(sipua_t *sipua, user_profile_t* user_prof, char* id, 
 							   char* subject, int sbyte, char* info, int ibyte,
+
 							   char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
 							   int nmedia, media_control_t* control, 
 							   rtp_coding_t codings[], int ncoding, int pt_pool[]);

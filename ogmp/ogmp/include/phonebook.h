@@ -149,7 +149,7 @@ int
 sipua_save_user(user_t* user, char* loc, char* tok, int tsz);
 
 DECLSPEC
-int 
+user_profile_t*
 user_add_profile(user_t* user, char* fullname, int fbytes, char* book_loc, char* home, char* regname, int sec);
 
 DECLSPEC

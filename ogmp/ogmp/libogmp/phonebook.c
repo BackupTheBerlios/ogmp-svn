@@ -544,6 +544,7 @@ int sipua_save_user_file(user_t* user, FILE* f, char* tok, int tsz)
 
 		if(prof->book_location)
 			fwrite(prof->book_location, 1, strlen(prof->book_location), f);
+
 	
 		fwrite("\n", 1, 1, f);
 
@@ -918,6 +919,7 @@ user_t* sipua_load_user(char* loc, char *uid, char* tok, int tsz)
 	/* load locally currently */
 	user = sipua_load_user_file(f, uid, tok, tsz);
 	
+
 	if(user)
 	{
 		user->loc = xstr_clone(loc);
@@ -962,11 +964,12 @@ int user_done_profile(void* gen)
  * reg_seconds
  * book_loc
  */
-int user_add_profile(user_t* user, char* fullname, int fbytes, char* book_loc, char* home, char* regname, int sec)
+user_profile_t* user_add_profile(user_t* user, char* fullname, int fbytes, char* book_loc, char* home, char* regname, int sec)
 {
 	user_profile_t* prof = xmalloc(sizeof(user_profile_t));
 
-	if(!prof) return -1;
+	if(!prof)
+        return NULL;
 
 	memset(prof, 0, sizeof(user_profile_t));
 
@@ -988,7 +991,7 @@ int user_add_profile(user_t* user, char* fullname, int fbytes, char* book_loc, c
 	if(xlist_addto_first(user->profiles, prof) >= OS_OK)
 		user->modified = 1;
 
-	return xlist_size(user->profiles);
+	return prof;
 }
 
 int user_set_profile(user_t* user, user_profile_t* prof, char* fullname, int fbytes, char* book_loc, char* home, char* regname, int sec)

@@ -44,6 +44,7 @@ int done_stream_handler(void *gen)
 
    handler->done(handler);
 
+
    return MP_OK;
 }
 
@@ -72,8 +73,6 @@ int ogm_done_format(media_format_t * mf)
 
    return MP_OK;
 }
-
-
 
 /* New detected stream add to group */
 int ogm_add_stream(media_format_t * ogm, media_stream_t *strm, int sno, unsigned char type)
@@ -120,7 +119,6 @@ int ogm_add_stream(media_format_t * ogm, media_stream_t *strm, int sno, unsigned
 
 media_stream_t * ogm_find_stream(media_format_t * mf, int strmno)
 {
-
   media_stream_t *cur = mf->first;
 
   while (cur != NULL)
@@ -939,6 +937,7 @@ int ogm_demux_next (media_format_t *mf, int stream_end)
 
       if (stream == NULL)
 	  {
+
          ogm_log(("ogm_demux_next: Encountered packet for an unknown serial %d !?\n", sno));
          if(!ogg_sync_pageseek(&(ogm->sync), &(ogm->page)))
 		 {
@@ -973,6 +972,7 @@ int ogm_demux_next (media_format_t *mf, int stream_end)
          
          while (ogg_stream_packetout(ogm_strm->instate, dual_pack[recv]) == 1)
 		 {
+
             n_pack++;
 
             ret = demux_ogm_process_packet(ogm, ogm_strm, &(ogm->page), dual_pack[send], page_granul, 0, stream_end);
@@ -1072,6 +1072,7 @@ int ogm_players(media_format_t * mf, char *play_type, media_player_t* players[],
 	}
 
 	ogm_log (("ogm_players: %d '%s' players in ogm format\n", n, play_type));
+
 
 	return n;
 }
