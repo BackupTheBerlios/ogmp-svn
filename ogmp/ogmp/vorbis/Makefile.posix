@@ -6,7 +6,7 @@ PREFIX = /home/hling/timedia-project
 
 CC = gcc
 
-LIBS = -L$(PREFIX)/lib -lxrtp
+LIBS = -L$(PREFIX)/lib -lxrtp -lvorbis
 
 INCLUDES = -I$(PREFIX)/include
 
@@ -27,7 +27,7 @@ libs: $(FILES:.c=.o)
 	gcc -shared -lvorbis vorbis_player.o vorbis_decoder.o  -o vorbis_player.so
 	gcc -shared -lvorbis ogm_vorbis.o -o ogm_vorbis.so
 
-	gcc -shared -lvorbis vorbis_sender.o -o vorbis_sender.so
+	gcc -shared $(LIBS) vorbis_sender.o -o vorbis_sender.so
 	gcc -shared $(LIBS) vorbis_rtp.o -o vorbis_rtp.so
 
 install: $(LIBFILES)

@@ -63,6 +63,8 @@ struct vorbis_sender_s{
 
    int group_packets;
 
+
+
    char *cname;
    int cnlen;
 
@@ -124,6 +126,7 @@ int vsend_open_stream (media_player_t *mp, media_info_t *media_info) {
    
    vorbis_info_t *vinfo = (vorbis_info_t *)media_info;
    
+
    struct audio_info_s ai;
    
    if (!mp->device) {
@@ -168,10 +171,10 @@ int vsend_receive_next (media_player_t *mp, void * vorbis_packet, int64 samplest
    vorbis_sender_t *vs = (vorbis_sender_t *)mp;
    ogg_packet *pack = (ogg_packet*)vorbis_packet;
 
-   rtime_t usec_delta = 0;
+   //rtime_t usec_delta = 0;
    int new_group = 0;
 
-   clock_t *clock = session_clock(vs->rtp_session);
+   xclock_t *clock = session_clock(vs->rtp_session);
 
    /* varibles for samples counting */
    vorbis_info_t *vinfo;
@@ -189,6 +192,7 @@ int vsend_receive_next (media_player_t *mp, void * vorbis_packet, int64 samplest
    }
 
    /* verify ogg/vorbis packet */
+
 
 
    if(samplestamp != vs->recent_samplestamp)
@@ -287,6 +291,7 @@ int vsend_receive_next (media_player_t *mp, void * vorbis_packet, int64 samplest
 			   */
 			   rtpf->samples = blocksize/2;
 		   }
+
 		   else
 		   {
 			   shortsize = vinfo->some_csi->blocksizes[vinfo->vb.lW];
@@ -322,6 +327,7 @@ int vsend_receive_next (media_player_t *mp, void * vorbis_packet, int64 samplest
 		   blocksize = vinfo->some_csi->blocksizes[vinfo->vb.W];
 		   rtpf->samples = blocksize/2;
 	   }
+
    }
 
    vinfo->audio_start = 1;
@@ -372,6 +378,7 @@ int vsend_done(media_player_t *mp) {
 }
 
 int vsend_set_options (media_player_t * mp, char *opt, void *value) {
+
 
    vsend_log(("vorbis_set_options: NOP function\n"));
 

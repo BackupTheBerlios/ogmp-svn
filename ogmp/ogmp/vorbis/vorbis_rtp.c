@@ -290,12 +290,13 @@ int vrtp_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
 int vrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp) {
 
    vrtp_handler_t * vh = (vrtp_handler_t *)handler;
-   vrtp_media_t *vm = (vrtp_media_t *)vh->vorbis_media;
+   //vrtp_media_t *vm = (vrtp_media_t *)vh->vorbis_media;
 
    /* Mark always '0', Audio silent suppression not used */
    rtp_packet_set_mark(rtp, 0);
 
    rtp_packet_set_payload(rtp, vh->payload_buf);
+
 
    vrtp_log(("audio/vorbis.vrtp_rtp_out: new payload %d bytes\n", buffer_datalen(vh->payload_buf)));
 
@@ -598,9 +599,9 @@ int rtp_vorbis_loop(void *gen)
 
 	int in_group = 0;
 
-	int current_group_end = 0;
+	//int current_group_end = 0;
 
-	clock_t *clock = session_clock(profile->session);
+	xclock_t *clock = session_clock(profile->session);
 
 	int64 stream_samples = 0;
 	int group_samples = 0;
@@ -690,6 +691,7 @@ int rtp_vorbis_loop(void *gen)
 		/* check time when new group arrived */
 		if(profile->new_group && !first_payload)
 		{
+
 			usec_now = time_usec_now(clock);
 			if(in_group && usec_now > usec_group_end)
 			{
@@ -912,6 +914,7 @@ int rtp_vorbis_loop(void *gen)
 			/* Test purpose */
 			//vrtp_log(("audio/vorbis.rtp_vorbis_loop: payload %dP,%dS,%dus...%dus\n", n_packet, payload_samples, usec_payload, usec_payload_deadline));
 			vrtp_log(("audio/vorbis.rtp_vorbis_loop: %dus now, payload @%dus...#%dus\n", usec_now, usec_payload_deadline, usec_payload_schedule));
+
 			/* Test end */
 
 			/* call for session sending 
