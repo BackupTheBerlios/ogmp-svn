@@ -81,6 +81,7 @@ int jcall_get_number_of_pending_calls(eXosipua_t *jua);
 
 int jcall_new(eXosipua_t *jua, eXosip_event_t *je);
 int jcall_answered(eXosipua_t *jua, eXosip_event_t *je);
+int jcall_ack(eXosipua_t *jua, eXosip_event_t *je);
 int jcall_proceeding(eXosipua_t *jua, eXosip_event_t *je);
 int jcall_ringing(eXosipua_t *jua, eXosip_event_t *je);
 int jcall_redirected(eXosipua_t *jua, eXosip_event_t *je);

@@ -274,6 +274,7 @@ int client_action_onbye(void *user, char *from_cn)
 
 	return UA_OK;
 }
+
 /****************************************************************************************/
 
 int client_done(ogmp_client_t *client)
@@ -297,7 +298,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 {
 	sipua_t *sipua = (sipua_t*)lisener;
 
-	ogmp_client_t *ua = (ogmp_client_t*)lisener;
+	ogmp_client_t *client = (ogmp_client_t*)lisener;
 
 	sipua_set_t *call_info = e->call_info;
 
@@ -307,7 +308,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		case(SIPUA_EVENT_UNREGISTRATION_SUCCEEDED):
 		{
 			sipua_reg_event_t *reg_e = (sipua_reg_event_t*)e;
-			user_profile_t* user_prof = ua->reg_profile;
+			user_profile_t* user_prof = client->reg_profile;
 
 			if(user_prof->reg_reason_phrase) 
 				xfree(user_prof->reg_reason_phrase);
@@ -318,7 +319,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				
 				user_prof->reg_reason_phrase = xstr_clone(reg_e->server_info);
 
-				ua->user_prof = ua->reg_profile;
+				client->user_prof = client->reg_profile;
 
 				user_prof->reg_status = SIPUA_STATUS_REG_OK;
 			}
@@ -327,18 +328,17 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				user_prof->reg_status = SIPUA_STATUS_NORMAL;
 
 			/* registering transaction completed */
-			ua->reg_profile = NULL;
+			client->reg_profile = NULL;
 
 			break;
 		}
-
 		case(SIPUA_EVENT_REGISTRATION_FAILURE):
 		case(SIPUA_EVENT_UNREGISTRATION_FAILURE):
 		{
 			char buf[100];
 
 			sipua_reg_event_t *reg_e = (sipua_reg_event_t*)e;
-			user_profile_t* user_prof = ua->reg_profile;
+			user_profile_t* user_prof = client->reg_profile;
 
 			snprintf(buf, 99, "Register %s Error[%i]: %s",
 					reg_e->server, reg_e->status_code, reg_e->server_info);
@@ -352,26 +352,20 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			user_prof->reg_reason_phrase = xstr_clone(reg_e->server_info);
 
 			/* registering transaction completed */
-			ua->reg_profile = NULL;
+			client->reg_profile = NULL;
 
 			break;
 		}
-
 		case(SIPUA_EVENT_NEW_CALL):
 		{
+			/* Callee receive a new call, now in negotiation stage */
 			int i;
 			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
 			sipua_set_t *call;
 
-			rtp_coding_t *codings;
-			int ncoding=0;
-
 			int lineno = e->lineno;
 
 			rtpcap_set_t* rtpcapset;
-			rtpcap_descript_t* rtpcap;
-
-			xlist_user_t u;
 
 			sdp_message_t *sdp_message;
 			char* sdp_body = (char*)e->content;
@@ -388,27 +382,13 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			rtpcapset = rtp_capable_from_sdp(sdp_message);
 
-			codings = xmalloc(sizeof(rtp_coding_t) * xlist_size(rtpcapset->rtpcaps));
-
-			rtpcap = xlist_first(rtpcapset->rtpcaps, &u);
-			while(rtpcap)
-			{
-				strncpy(codings[ncoding].mime, rtpcap->profile_mime, MAX_MIME_BYTES);
-				codings[ncoding].clockrate = rtpcap->clockrate;
-				codings[ncoding].param = rtpcap->coding_param;
-				codings[ncoding].pt = rtpcap->profile_no;
-			
-				rtpcap = xlist_next(rtpcapset->rtpcaps, &u);
-				ncoding++;
-			}
-
 			/* now to negotiate call, which will generate call structure with sdp message for reply
 			 * still no rtp session created !
 			 */
-			call = sipua_negotiate_call(&ua->sipua, ua->user_prof, rtpcapset,
-							ua->mediatypes, ua->default_rtp_ports, 
-							ua->default_rtcp_ports, ua->nmedia,
-							ua->control);
+			call = sipua_negotiate_call(sipua, client->user_prof, rtpcapset,
+							client->mediatypes, client->default_rtp_ports, 
+							client->default_rtcp_ports, client->nmedia,
+							client->control);
 			
 			if(!call)
 			{
@@ -422,9 +402,9 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			for(i=0; i<MAX_SIPUA_LINES; i++)
 			{
-				if(ua->lines[i] == NULL)
+				if(client->lines[i] == NULL)
 				{
-					ua->lines[i] = call;
+					client->lines[i] = call;
 					sipua->uas->accept(sipua->uas, lineno);
 
 					break;
@@ -435,16 +415,55 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			break;
 		}
-
 		case(SIPUA_EVENT_PROCEEDING):
+		{
 			break;
-
+		}
 		case(SIPUA_EVENT_RINGING):
+		{	
 			break;
-
+		}
 		case(SIPUA_EVENT_ANSWERED):
 		{
-			ua->action->onconnect(ua->action->sip_user, e->from, e->content);
+			/* Caller establishs call when callee is answered */
+
+			sipua_set_t *call = e->call_info;
+			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
+
+			rtpcap_set_t* rtpcapset;
+
+			sdp_message_t *sdp_message;
+			char* sdp_body = (char*)e->content;
+
+			sdp_message_init(&sdp_message);
+
+			if (sdp_message_parse(sdp_message, sdp_body) != 0)
+			{
+				clie_log(("\nsipua_event: fail to parse sdp\n"));
+				sdp_message_free(sdp_message);
+				
+				break;
+			}
+
+			rtpcapset = rtp_capable_from_sdp(sdp_message);
+
+			sipua_establish_call(sipua, call, rtpcapset, client->control, client->pt);
+
+			client->action->onconnect(client->action->sip_user, e->from, e->content);
+
+			sdp_message_free(sdp_message);
+
+			break;
+		}
+		case(SIPUA_EVENT_ACK):
+		{
+			/* Callee establishs call after its answer is acked */
+			sipua_set_t *call = e->call_info;
+
+			sipua_establish_call(sipua, e->call_info, e->call_info->rtpcapset, client->control, client->pt);
+
+			client->action->onconnect(client->action->sip_user, e->from, e->content);
+
 			break;
 		}
 	}

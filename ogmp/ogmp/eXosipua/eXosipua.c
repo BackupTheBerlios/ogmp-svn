@@ -89,6 +89,16 @@ int jua_process_event(eXosipua_t *jua)
 
 			jcall_answered(jua, je);
 		}
+		else if (je->type==EXOSIP_CALL_ACK)
+		{
+			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
+					je->cid, je->did, je->status_code,
+					je->reason_phrase, je->remote_uri);
+	  
+			/*josua_printf(buf);*/
+
+			jcall_ack(jua, je);
+		}
 		else if (je->type==EXOSIP_CALL_PROCEEDING)
 		{
 			/*

@@ -92,6 +92,8 @@ int jcall_new(eXosipua_t *jua, eXosip_event_t *je)
 	/*event back to sipuac */
 	sipua_call_event_t call_e;
 
+	memset(&call_e, 0, sizeof(sipua_call_event_t));
+
 	if(jua->ncall == MAX_SIPUA_LINES-1)
 	{
 		/* All lines are busy */
@@ -309,56 +311,25 @@ int jcall_ringing(eXosipua_t *jua, eXosip_event_t *je)
 
 int jcall_answered(eXosipua_t *jua, eXosip_event_t *je)
 {
-	jcall_t *ca;
-	int k;
+	sipua_call_event_t call_e;
 
 	/* event back to sipuac */
-	sipua_event_t sip_e;
-	sip_e.call_info = (sipua_set_t*)je->external_reference;
-	sip_e.type = SIPUA_EVENT_ANSWERED;
+	memset(&call_e, 0, sizeof(sipua_call_event_t));
 
-	for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
+	call_e.event.call_info = (sipua_set_t*)je->external_reference;
+
+	call_e.event.type = SIPUA_EVENT_ANSWERED;
+	call_e.event.content = je->sdp_body;
+
+	if (je->cid != call_e.cid && je->did != call_e.did)
+		return -1; 
+	
+	if (je->reason_phrase[0]!='\0')
     {
-		if (jua->jcalls[k].state != NOT_USED
-			&& jua->jcalls[k].cid==je->cid
-			&& jua->jcalls[k].did==je->did)
-		break;
+		call_e.reason_phrase = je->reason_phrase;
+		call_e.status_code = je->status_code;
     }
-  
-	if (k==MAX_NUMBER_OF_CALLS)
-    {
-		for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
-		{
-			if (jua->jcalls[k].state == NOT_USED)
-				break;
-		}
-		
-		if (k==MAX_NUMBER_OF_CALLS)
-			return -1;
-      
-		ca = &(jua->jcalls[k]);
-      
-		memset(&(jua->jcalls[k]), 0, sizeof(jcall_t));
-      
-		ca->cid = je->cid;
-		ca->did = je->did;
-      
-		if (ca->did<1 && ca->cid<1)
-		{
-			exit(0);
-			return -1; /* not enough information for this event?? */
-		}
-    }
-
-	sip_e.lineno = k;
-
-	ca = &(jua->jcalls[k]);
-	osip_strncpy(ca->textinfo,   je->textinfo, 255);
-	osip_strncpy(ca->req_uri,    je->req_uri, 255);
-	//osip_strncpy(ca->local_uri,  je->local_uri, 255);
-	osip_strncpy(ca->remote_uri, je->remote_uri, 255);
-	osip_strncpy(ca->subject,    je->subject, 255);
-
+/*
 #ifdef MEDIASTREAMER_SUPPORT
 	if (ca->remote_sdp_audio_ip[0]=='\0')
     {
@@ -367,26 +338,35 @@ int jcall_answered(eXosipua_t *jua, eXosip_event_t *je)
 		ca->payload = je->payload;
 		osip_strncpy(ca->payload_name, je->payload_name, 49);
 
-		if (0!=os_sound_start(ca))
-		{
-		}
-		else
-		{
-			ca->enable_audio=1; /* audio is started */
-		}
+		if (0==os_sound_start(ca))
+			ca->enable_audio=1; //audio is started
     }
 #endif
-
-	if (je->reason_phrase[0]!='\0')
-    {
-		osip_strncpy(ca->reason_phrase, je->reason_phrase, 49);
-		ca->status_code = je->status_code;
-    }
-  
-	ca->state = je->type;
-  
+*/
 	/* event notification */
-	jua->sipuas.notify_event(jua->sipuas.lisener, &sip_e);
+	jua->sipuas.notify_event(jua->sipuas.lisener, &call_e.event);
+
+	return 0;
+}
+
+int jcall_ack(eXosipua_t *jua, eXosip_event_t *je)
+{
+	sipua_event_t e;
+	sipua_set_t* call;
+
+	/* event back to sipuac */
+	memset(&e, 0, sizeof(sipua_event_t));
+
+	call = e.call_info = (sipua_set_t*)je->external_reference;
+
+	if (je->cid != call->cid && je->did != call->did)
+		return -1; 
+	
+	e.type = SIPUA_EVENT_ACK;
+	e.content = NULL;
+
+	/* event notification */
+	jua->sipuas.notify_event(jua->sipuas.lisener, &e);
 
 	return 0;
 }
