@@ -17,6 +17,8 @@
 
 #include "../devices/dev_rtp.h"
 #include "vorbis_info.h"
+
+#include <timedia/xthread.h>
  
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,6 +38,10 @@
 #else
  #define vrtp_debug(fmtargs)
 #endif
+
+#define MAX_PAYLOAD_BYTES 1280 /* + udp header < 1500 bytes */
+#define MAX_BUNDLE_PACKET_BYTES 256
+#define MAX_PACKET_BUNDLE 32
 
 const char vorbis_mime[] = "audio/vorbis";
 
@@ -64,6 +70,23 @@ struct vrtp_handler_s{
    uint rtcp_size;
 
    uint32 seqno_next_unit;
+
+   /* a queue of vorbis packet to bundle into one rtp packet */
+   xlist_t *packets;
+
+   buffer_t *payload_buf; /* include paylaod head */
+
+   /* thread attribute */
+   xthread_t *thread;
+
+   int64 recent_samplestamp;
+   rtp_frame_t *recent_frame;
+
+   int run;
+   int idle;
+
+   xthr_lock_t *packets_lock;
+   xthr_cond_t *pending;
 };
 
 struct vrtp_media_s{
@@ -74,9 +97,6 @@ struct vrtp_media_s{
 
    uint32 dolen;
    media_data_t * data_out;
-
-   /* a queue of vorbis packet to bundle into one rtp packet */
-   xlist_t *vorbis_pending;
 };
 
 /**
@@ -260,36 +280,7 @@ int vrtp_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
 }
 
 /**
- * Handle outward rtp packet
- * Several packets in same timestamp are bundled together according to rtp-profile-vorbis
- *
- * RFC3550 indicate: 
- * Timestamp: 32 bits, representing the sampling time of the first sample of the first vorbis packet in the RTP packet;
- * Timestamp initial value is random, generate timestamp CAN NOT relay on stamp in the media storage, MUST generate on the fly
- * according to the media clock that increase in a linear and monotonic fashion (except wrap-around); 
- *
- * The whole rtp packet maxmum size limited to MTU size, typically 1500 bytes include RTP and Payload header;
- * Normal vorbis packet in average 800 bytes, but header packets are 4-12k, maximum header block is 64k;
- * 
- * Vorbis payload header:
- * [C|F|R=0|# of packets]+[len of vorbis]+[ vorbis data ]
- * [1|1| 1 |<----5----->]+[<-----8----->]+[<-len--byte->] bits
- * c=1: the first packet is a continued fragment;
- * f=1: have a completed packet or the last fragment;
- * r=0: reserved as '0'
- *
- * For single complete vorbis: 
- *  {rtp header}{[(C=0)|(F=1)|(0)|(1)]+[ len ][  vorbis  ]}
- *
- * For fragment: 
- *  {rtp header}{[(C=1)|(F=?)|(0)|(0)]+[ len ][ fragment ]}
- *
- * For multi-packet: 
- *  {rtp header}{[(C=0)|(F=1)|(0)|n=(2...32)]+[len#1][vorbis#1]+[len#2][vorbis#2]+...+[len#n][vorbis#n]} 
- *
- * NOTE: 
- * Only complete packet no more than 256 bytes can be bundled together, 
- * so a Fragment or a Packet larger than 256 bytes must in a rtp packet by itself.
+ * put payload into the outward rtp packet
  */
 int vrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp) {
 
@@ -514,27 +505,306 @@ uint32 rtp_vorbis_sign(xrtp_media_t * media){
 }
 
 /**
+ * Make rtp packet payload
+ *
+ * Several packets in same timestamp are bundled together according to rtp-profile-vorbis
+ *
+ * RFC3550 indicate: 
+ * Timestamp: 32 bits, representing the sampling time of the first sample of the first vorbis packet in the RTP packet;
+ * Timestamp initial value is random, generate timestamp CAN NOT relay on stamp in the media storage, MUST generate on the fly
+ * according to the media clock that increase in a linear and monotonic fashion (except wrap-around); 
+ *
+ * The whole rtp packet maxmum size limited to MTU size, typically 1500 bytes include RTP and Payload header;
+ * Normal vorbis packet in average 800 bytes, but header packets are 4-12k, maximum header block is 64k;
  * 
+ * Vorbis payload header:
+ * [C|F|R=0|# of packets]+[(len of vorbis)|NULL]+[ vorbis data ]
+ * [1|1| 1 |<----5----->]+[<--------8--------->]+[<-len--byte->] bits
+ * c=1: the first packet is a continued fragment;
+ * f=1: have a completed packet or the last fragment;
+ * r=0: reserved as '0'
+ *
+ * For single complete vorbis, no len byte: 
+ *  {rtp header}{[(C=0)|(F=1)|(0)|(1)]+[  vorbis  ]}
+ *
+ * For fragment, no len byte: 
+ *  {rtp header}{[(C=1)|(F=?)|(0)|(0)]+[ fragment ]}
+ *
+ * For multi-packet: 
+ *  {rtp header}{[(C=0)|(F=1)|(0)|n=(2...32)]+[len#1][vorbis#1]+[len#2][vorbis#2]+...+[len#n][vorbis#n]} 
+ *
+ * NOTE: 
+ * Only complete packet no more than 256 bytes can be bundled together, 
+ * so a Fragment or a Packet larger than 256 bytes must in a rtp packet by itself.
+ *
+ * If all packet on hold could be bundle into a payload, create payload ready to send
+ * if not, put on hold.
  *
  * Param:
- * last - the last packet of the same samplestamp
- *
+ * last - the last packet of the same samplestamp, all packet on hold will be send.
+ **/
+uint8 vorbis_rtp_mark_continue(uint8 h, int cont){
+
+	if (cont) return h | 0x80; /* '10000000' */
+
+	return h & 0x7F; /* '01111111' */
+}
+uint8 vorbis_rtp_mark_complete(uint8 h, int comp){
+
+	if (comp) return h | 0x40;  /* '01000000' */
+
+	return h & 0xBF; /* '10111111' */
+}
+uint8 vorbis_rtp_set_number(uint8 h, uint8 n){
+
+	return (h&0xE0 | n&0x1F);  /* '11100000' '00011111' */
+}
+
+int rtp_vorbis_loop(void *gen){
+
+	rtp_frame_t *rtpf = NULL;
+	vorbis_info_t *vinfo = NULL;
+	int eos=0, eots=0;
+	int first_loop= 1;
+
+	vrtp_handler_t *profile = (vrtp_handler_t*)gen;
+
+	xrtp_session_t *session = profile->vorbis_media->rtp_media.session;
+   
+	rtp_frame_t *remain_frame = NULL;
+	char *packet_data = NULL;
+	int packet_bytes = 0;
+	uint8 n_packet = 0;
+	int payload_done = 0;
+
+	profile->run = 1;
+
+	while(1)
+	{
+		uint8 vorbis_header;
+		int space;
+
+		xthr_lock(profile->packets_lock);
+
+		if (profile->run == 0 || eos)
+		{			
+			profile->run = 0;
+			xthr_unlock(profile->packets_lock);
+			break;
+		}
+
+		if (xlist_size(profile->packets) == 0) 
+		{
+			profile->idle = 1;
+			/* vrtp_log(("rtp_vorbis_loop: no packet waiting, sleep!\n")); */
+
+			xthr_cond_wait(profile->pending, profile->packets_lock);
+
+			profile->idle = 0;
+			/* vrtp_log(("rtp_vorbis_loop: wakeup! %d packets pending\n", xlist_size(profile->packets))); */
+		}
+
+		/* sometime it's still empty, weired? */
+		if (xlist_size(profile->packets) == 0)
+		{
+			xthr_unlock(profile->packets_lock);
+			continue;
+		}
+
+		/* if already has a packet retrieved */
+		if(!remain_frame)
+		{
+			rtpf = (rtp_frame_t*)xlist_remove_first(profile->packets);
+			packet_data = rtpf->media_unit;
+			packet_bytes = rtpf->unit_bytes;
+		}
+		else
+			rtpf = remain_frame;
+
+		xthr_unlock(profile->packets_lock);
+
+		/* Test purpose */
+		vrtp_log(("audio/vorbis.rtp_vorbis_post: process packet %d bytes\n", rtpf->unit_bytes));
+		/* Test end */
+		
+		/* frame is retrieved, process ... */
+		eots = rtpf->frame.eots;
+		eos = rtpf->frame.eos;
+		
+		vinfo = (vorbis_info_t*)rtpf->media_info;
+	
+		/* start to make payload */
+
+		/* If a new timestamp coming */
+		if(rtpf->samplestamp != profile->recent_samplestamp || first_loop){
+			
+			vrtp_log(("rtp_vorbis_loop: new stamp[%lld] start\n", rtpf->samplestamp));
+
+			profile->recent_samplestamp = rtpf->samplestamp;
+			first_loop = 0;
+
+			vorbis_header = 0;
+
+			buffer_clear(profile->payload_buf, BUFFER_QUICKCLEAR);
+		}
+
+		if(n_packet == 0)
+			space = buffer_space(profile->payload_buf) - 1; /*one header byte*/
+		else
+			space = buffer_space(profile->payload_buf);
+
+		/* make payload now */
+		payload_done = 0;
+		
+		/* send small packet bundled up to 32 */
+		if(packet_bytes < MAX_BUNDLE_PACKET_BYTES)
+		{
+			/*
+			vrtp_log(("rtp_vorbis_loop: bundle packet[%lld]...", rtpf->samplestamp));
+			vrtp_log(("%d bytes\n", packet_bytes));
+			*/
+
+			if(n_packet == 0)
+			{
+				buffer_add_uint8(profile->payload_buf, vorbis_header);
+			}
+				
+			if(space > packet_bytes+1 && n_packet < MAX_PACKET_BUNDLE)
+			{
+				buffer_add_uint8(profile->payload_buf, (uint8)(packet_bytes-1));
+				buffer_add_data(profile->payload_buf, packet_data, packet_bytes);
+				n_packet++;
+
+				/* frame is done, ask owner to recycle it */
+				rtpf->frame.owner->recycle_frame(rtpf->frame.owner, (media_frame_t*)rtpf);
+				remain_frame = NULL;
+
+				if(eots)
+				{
+					vrtp_log(("rtp_vorbis_loop: Last packet of the stamp[%lld]\n", rtpf->samplestamp));
+			
+					buffer_seek(profile->payload_buf, 0);
+					vorbis_header = vorbis_rtp_set_number(vorbis_header, (uint8)(n_packet-1));
+					buffer_add_uint8(profile->payload_buf, vorbis_header);
+
+					payload_done = 1;			
+				}
+			}
+			else
+			{			
+				/* wait for next turn, if no more room */
+				remain_frame = rtpf;
+			}
+		}
+
+		/* If a continue packet, a fragment or a packet larger then 256 bytes, send individually */
+		if(remain_frame || packet_bytes > space || packet_bytes > MAX_BUNDLE_PACKET_BYTES)
+		{
+			int complete;
+			int payload_bytes = space < packet_bytes ? space : packet_bytes;
+
+			if(n_packet > 0 || payload_done)
+			{
+				/*
+				vrtp_log(("rtp_vorbis_loop: %d packets bundle waiting to send, skip me!\n", n_packet));
+				*/
+				remain_frame = rtpf;
+			}
+			else
+			{
+				if(remain_frame && packet_bytes < remain_frame->unit_bytes)
+					vorbis_header = vorbis_rtp_mark_continue(vorbis_header, 1);
+				else
+					vorbis_header = vorbis_rtp_mark_continue(vorbis_header, 0);
+
+				if(payload_bytes == packet_bytes)
+				{
+					complete = 1;
+					n_packet = 1;
+				}
+				else
+				{
+					complete = 0;
+					n_packet = 0;
+				}
+				
+				vorbis_header = vorbis_rtp_mark_complete(vorbis_header, complete);
+				vorbis_header = vorbis_rtp_set_number(vorbis_header, n_packet);
+
+				/* [C|F|R=0|# of packets]+[ vorbis data ] */
+				buffer_add_uint8(profile->payload_buf, vorbis_header);
+				buffer_add_data(profile->payload_buf, packet_data, packet_bytes);
+
+				if(payload_bytes == packet_bytes)
+				{
+					remain_frame = NULL;
+					packet_data = NULL;
+					packet_bytes = 0;
+
+					/* frame is done, ask owner to recycle it */
+					rtpf->frame.owner->recycle_frame(rtpf->frame.owner, (media_frame_t*)rtpf);
+					rtpf = NULL;
+				}
+				else
+				{
+					remain_frame = rtpf;
+					packet_data += payload_bytes;
+					packet_bytes -= payload_bytes;
+				}
+			}
+
+			payload_done = 1;
+		}
+
+		/* start to make payload */
+		if(payload_done)
+		{
+			/* Test purpose */
+			vrtp_log(("audio/vorbis.rtp_vorbis_post: send %d bytes in payload... [%d packets]\n", buffer_datalen(profile->payload_buf), n_packet));
+			/* Test end */
+
+			/* call for session sending 
+			 * first '0' means the quickness decided by bandwidth
+			 * second '0' means more packet following.
+			 */
+			//session_rtp_to_send(session, 0, eots);  
+
+			/* buffer ready to next payload */
+			buffer_clear(profile->payload_buf, BUFFER_QUICKCLEAR);
+			n_packet = 0;
+		}
+
+		/* when the stream ends, quit the thread */
+		if(eos && remain_frame==NULL){
+
+			vrtp_log(("rtp_vorbis_loop: End of Media, quit\n"));
+			break;
+		}
+	}
+
+	return MP_OK;
+}
+
+/* the media enter point of the rtp session 
  * NOTE: '*data' is NOT what 'mlen' indicated.
  */
-int rtp_vorbis_post(xrtp_media_t * media, media_data_t *data, int mlen, int last){
+int rtp_vorbis_post(xrtp_media_t * media, media_data_t *frame, int len_useless, int last_useless){
 
-   rtp_frame_t *rf = (rtp_frame_t*)data;   
-   long  media_bytes = rf->unit_bytes;
+   rtp_frame_t *rtpf = (rtp_frame_t*)frame;
+
+   long  media_bytes = rtpf->unit_bytes;
    
-   vorbis_info_t *vinfo = (vorbis_info_t*)rf->media_info;
+   vrtp_handler_t *profile = ((vrtp_media_t*)media)->vorbis_profile;
 
-   /* Test purpose */
-   vrtp_log(("audio/vorbis.rtp_vorbis_post: packet %d bytes\n", media_bytes));
+   xthr_lock(profile->packets_lock);
+   
+   xlist_addto_last(profile->packets, rtpf);
+
+   xthr_unlock(profile->packets_lock);
+
+   if(profile->idle) xthr_cond_signal(profile->pending);
 
    return MP_OK;
-   /* Test end */
-
-   //return session_rtp_to_send(media->session, 0, last);  /* '0' means the quickness decided by xrtp */
 }
 
 xrtp_media_t * rtp_vorbis(profile_handler_t *handler){
@@ -552,13 +822,23 @@ xrtp_media_t * rtp_vorbis(profile_handler_t *handler){
 
       memset(h->vorbis_media, 0, sizeof(struct vrtp_media_s));
 
-	  h->vorbis_media->vorbis_pending = xlist_new();
-	  if(!h->vorbis_media->vorbis_pending){
+	  h->packets = xlist_new();
+	  if(!h->packets){
 
-		vrtp_debug(("audio/vorbis.rtp_vorbis: no memory to allocate for pending list\n"));
+		vrtp_debug(("audio/vorbis.rtp_vorbis: no input buffer created\n"));
+
 		free(h->vorbis_media);
 		h->vorbis_media = NULL;
 		return NULL;
+	  }
+	   
+	  h->thread = xthr_new(rtp_vorbis_loop, h, XTHREAD_NONEFLAGS); 
+	  if(!h->thread){
+		
+		  xlist_done(h->packets, NULL);
+		  free(h->vorbis_media);
+		  h->vorbis_media = NULL;
+		  return NULL;
 	  }
 
       h->vorbis_media->vorbis_profile = h;
@@ -618,15 +898,23 @@ int vrtp_done(profile_class_t * clazz){
 
 profile_handler_t * vrtp_new_handler(profile_class_t * clazz, xrtp_session_t * ses){
 
-   vrtp_handler_t * _h;
+   vrtp_handler_t * vh;
    profile_handler_t * h;
 
-   _h = (vrtp_handler_t *)malloc(sizeof(vrtp_handler_t));
-   memset(_h, 0, sizeof(vrtp_handler_t));
+   vh = (vrtp_handler_t *)malloc(sizeof(vrtp_handler_t));
+   memset(vh, 0, sizeof(vrtp_handler_t));
 
-   _h->session = ses;
+   vh->session = ses;
 
-   h = (profile_handler_t *)_h;
+   /* thread oriented */
+   vh->packets = xlist_new();
+   vh->packets_lock = xthr_new_lock();
+   vh->pending = xthr_new_cond(XTHREAD_NONEFLAGS);
+
+   vh->payload_buf = buffer_new(MAX_PAYLOAD_BYTES, NET_ORDER);
+   vrtp_log(("audio/vorbis.vrtp_new_handler: FIXME - error probe\n"));
+
+   h = (profile_handler_t *)vh;
 
    vrtp_log(("audio/vorbis.vrtp_new_handler: New handler created\n"));
 

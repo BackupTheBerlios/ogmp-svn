@@ -20,10 +20,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-/*
 #define VORBIS_PLAYER_LOG
 #define VORBIS_PLAYER_DEBUG
-*/
 
 #ifdef VORBIS_PLAYER_LOG
    const int vorbis_pa_log = 1;
@@ -236,7 +234,9 @@ int vorbis_receive_next (media_player_t *mp, void *vorbis_packet, int64 samplest
    }
 
    output = mp->device->pipe(mp->device);
-
+   /*
+   vorbis_player_log(("vorbis_receive_next: packet %d bytes\n", ((ogg_packet*)vorbis_packet)->bytes));
+   */
    /* decode and submit */
    auf = vorbis_decode (vp->vorbis_info, (ogg_packet*)vorbis_packet, output);
    if(!auf){

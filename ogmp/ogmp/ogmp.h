@@ -16,7 +16,6 @@
  ***************************************************************************/
 
 #include "devices/dev_rtp.h"
-
 #include "media_format.h"
 
 #include <timedia/timer.h>

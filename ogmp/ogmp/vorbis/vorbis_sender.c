@@ -77,16 +77,6 @@ struct vorbis_sender_s{
 
    int (*stop_media) (void * user);
    void * stop_media_user;
-
-   /* parallel with demux thread */
-   xthread_t *thread;
-   /* stop the thread */
-   int stop;
-   /* queue protected by lock*/
-   xlist_t *pending_queue;
-   xthr_lock_t *pending_lock;
-   /* thread running condiftion */
-   xthr_cond_t *packet_pending;
 };
 
 int vsend_send (vorbis_sender_t *sender, ogg_packet * packet);
@@ -129,50 +119,6 @@ int vsend_match_type (media_player_t * mp, char *mime, char *fourcc) {
    return 0;
 }
 
-int vsend_loop(void *gen){
-
-	vorbis_sender_t *vs = (vorbis_sender_t*)gen;
-	media_player_t *mp = (media_player_t*)vs;
-
-	rtp_frame_t *rtpf = NULL;
-
-    media_pipe_t *output = mp->device->pipe(mp->device);
-	vs->stop = 0;
-	while(1)
-	{
-		xthr_lock(vs->pending_lock);
-
-		if (vs->stop)
-		{			
-			xthr_unlock(vs->pending_lock);
-			break;
-		}
-
-		if (xlist_size(vs->pending_queue) == 0) 
-		{
-			//vsend_log(("vsend_loop: no packet waiting, sleep!\n"));
-			xthr_cond_wait(vs->packet_pending, vs->pending_lock);
-			//vsend_log(("vsend_loop: wakeup! %d packets pending\n", xlist_size(vs->pending_queue)));
-		}
-
-		/* sometime it's still empty, weired? */
-		if (xlist_size(vs->pending_queue) == 0)
-		{
-			xthr_unlock(vs->pending_lock);
-			continue;
-		}
-
-		rtpf = (rtp_frame_t*)xlist_remove_first(vs->pending_queue);
-
-		xthr_unlock(vs->pending_lock);
-
-		output->put_frame (output, (media_frame_t*)rtpf, rtpf->rtp_flag & MP_RTP_LAST);
-		output->recycle_frame(output, (media_frame_t*)rtpf);
-	}
-
-	return MP_OK;
-}
-
 int vsend_open_stream (media_player_t *mp, media_info_t *media_info) {
 
    vorbis_sender_t *vs = NULL;
@@ -206,12 +152,6 @@ int vsend_open_stream (media_player_t *mp, media_info_t *media_info) {
       return ret;
    }
 
-   /* thread start */
-   vs->pending_queue = xlist_new();
-   vs->pending_lock = xthr_new_lock();
-   vs->packet_pending = xthr_new_cond(XTHREAD_NONEFLAGS);
-   vs->thread = xthr_new(vsend_loop, vs, XTHREAD_NONEFLAGS);
-   
    return ret;
 }
 
@@ -253,28 +193,18 @@ int vsend_receive_next (media_player_t *mp, void * vorbis_packet, int64 samplest
     */
    rtpf = (rtp_frame_t *)output->new_frame(output, pack->bytes, pack->packet);
 
+   rtpf->frame.eos = (last_packet == MP_EOS);
+   rtpf->frame.eots = last_packet;
+
    /* Now samplestamp is 64 bits, for maximum media stamp possible
 	* All param for sending stored in the frame
 	*/
-   rtpf->samplestamp = samplestamp; 
+   rtpf->samplestamp = samplestamp;
+   
    rtpf->media_info = vs->vorbis_info;
-
-   if(last_packet) rtpf->rtp_flag |= MP_RTP_LAST;
-
-   xthr_lock(vs->pending_lock);
-   xlist_addto_last(vs->pending_queue, rtpf);
-   xthr_unlock(vs->pending_lock);
    
-   xthr_cond_signal(vs->packet_pending);
-
-   /* job done by new_frame
-   rtpf->unit_bytes = pack->bytes;
-   memcpy(rtpf->media_unit, pack->packet, pack->bytes);
-
    output->put_frame (output, (media_frame_t*)rtpf, last_packet);
-   output->recycle_frame(output, (media_frame_t*)rtpf);
-   */
-   
+
    return MP_OK;
 }
 

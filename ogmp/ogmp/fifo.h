@@ -49,3 +49,6 @@ struct fifo_s {
    /* thread running condiftion */
    xthr_cond_t *in_queue;
 };
+
+media_pipe_t * fifo_new();
+

@@ -37,6 +37,20 @@
 #endif
 #define rtp_debug(fmtargs)  do{if(rtp_debug) printf fmtargs;}while(0)
 
+typedef struct dev_rtp_s dev_rtp_t;
+struct dev_rtp_s{
+
+   struct media_device_s dev;
+
+   char *cname;
+   int cnlen;
+
+   xrtp_session_t *session;
+   xrtp_media_t *media;
+
+   rtp_pipe_t * pipe;
+};
+
 int rtp_done_setting(control_setting_t *gen){
 
    free(gen);
@@ -61,20 +75,6 @@ control_setting_t* rtp_new_setting(media_device_t *dev){
    return (control_setting_t*)set;
 }
 
-typedef struct dev_rtp_s dev_rtp_t;
-struct dev_rtp_s{
-
-   struct media_device_s dev;
-
-   char *cname;
-   int cnlen;
-
-   xrtp_session_t *session;
-   xrtp_media_t *media;
-
-   rtp_pipe_t * pipe;
-};
-
 media_frame_t* rtp_new_frame (media_pipe_t *pipe, int bytes, char *init_data) {
 
    /* better recycle to garrantee */
@@ -85,6 +85,8 @@ media_frame_t* rtp_new_frame (media_pipe_t *pipe, int bytes, char *init_data) {
       return NULL;
    }   
    memset(rtpf, 0, sizeof(*rtpf));
+
+   rtpf->frame.owner = pipe;
 
    rtpf->media_unit = (char*)malloc(bytes);
    if(rtpf->media_unit == NULL){

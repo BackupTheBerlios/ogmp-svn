@@ -65,7 +65,7 @@ struct rtp_frame_s {
 
    struct media_frame_s frame;
 
-   uint rtp_flag;
+   //uint rtp_flag;
    int64 samplestamp;
    void *media_info;
    

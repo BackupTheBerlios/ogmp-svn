@@ -743,6 +743,9 @@ int demux_ogm_process_packet(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_pag
      
       stream->eos = 1;
       pack->e_o_s = 1;
+
+	  /* flag the end of a stream */
+	  stream_end = 1;
    }
 
    /*
@@ -855,7 +858,6 @@ int ogm_demux_next (media_format_t *mf, int stream_end) {
 
             n_pack++;
 
-			//ogm_log(("ogm_demux_next: packet %d bytes\n", dual_pack[send]->bytes));            
             ret = demux_ogm_process_packet(ogm, ogm_strm, &(ogm->page), dual_pack[send], page_granul, 0, stream_end);
             if(ret < MP_OK) return ret;
             
@@ -866,7 +868,6 @@ int ogm_demux_next (media_format_t *mf, int stream_end) {
          }
          
          /* last packet of the page */          
-		 //ogm_log(("ogm_demux_next: packet %d bytes\n", dual_pack[send]->bytes));
          ret = demux_ogm_process_packet(ogm, ogm_strm, &(ogm->page), dual_pack[send], page_granul, 1, stream_end);
          if(ret < 0) {
 

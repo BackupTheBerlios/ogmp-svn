@@ -179,10 +179,12 @@ struct media_stream_s {
    media_stream_t *next;
 };
 
+typedef struct media_pipe_s media_pipe_t;
 typedef struct media_frame_s media_frame_t;
 struct media_frame_s {
 
    media_frame_t *next;
+   media_pipe_t *owner; /* the pipe that created the frame */
    
    int bytes;        /* frame raw size >= nraw */
    int eos;          /* last frame of the stream */
@@ -200,7 +202,6 @@ struct media_frame_s {
 
 typedef struct media_input_s media_input_t;
 
-typedef struct media_pipe_s media_pipe_t;
 struct media_pipe_s {
 
    int (*done) (media_pipe_t *pipe);
