@@ -136,27 +136,27 @@ DECLSPEC
 int 
 user_done(user_t* u);
 
-DECLSPEC
+extern DECLSPEC
 user_t* 
 user_new(char* uid, int sz);
 
-DECLSPEC
+extern DECLSPEC
 user_t* 
 sipua_load_user(char* loc, char *uid, char* tok, int tsz);
 
-DECLSPEC
+extern DECLSPEC
 int 
 sipua_save_user(user_t* user, char* loc, char* tok, int tsz);
 
-DECLSPEC
+extern DECLSPEC
 user_profile_t*
 user_add_profile(user_t* user, char* fullname, int fbytes, char* book_loc, char* home, char* regname, int sec);
 
-DECLSPEC
+extern DECLSPEC
 int 
 user_set_profile(user_t* user, user_profile_t* profile, char* fullname, int fbytes, char* book_loc, char* home, char* regname, int sec);
 
-DECLSPEC
+extern DECLSPEC
 int 
 user_remove_profile(user_t* user, user_profile_t* prof);
 

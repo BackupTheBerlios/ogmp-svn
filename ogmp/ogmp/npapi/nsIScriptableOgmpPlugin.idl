@@ -1,5 +1,5 @@
 #include "nsISupports.idl"
-[scriptable, uuid(f728830e-1dd1-4444-6666-fb9f414f2465)]
+[scriptable, uuid(7639221F-8E7A-4ad6-A968-917D4137EB3C)]
 interface nsIScriptableWMPPlugin : nsISupports
 {
 	void play();
@@ -7,7 +7,7 @@ interface nsIScriptableWMPPlugin : nsISupports
 	void stop();
 };
 
-[scriptable, uuid(f728830f-1dd1-4444-6666-fb9f414f2465)]
+[scriptable, uuid(7639221F-8E7A-4ad6-A968-917D4137EB3C)]
 interface nsIScriptableOgmpPlugin : nsISupports
 {
 	void get_ip();
@@ -35,14 +35,14 @@ interface nsIScriptableOgmpPlugin : nsISupports
 /***
  * http://www.mozilla.org/projects/plugins/bi-directional-plugin-scripting.html
  */
-[scriptable, uuid(f728830e-1dd1-4444-6666-fb9f414f2465)]
+[scriptable, uuid(7639221F-8E7A-4ad6-A968-917D4137EB3C)]
 interface acmeJSObject : nsISupports
 {
 	string getProperty(in string name);
 	void setProperty(in string name, in string value);
 };
 
-[scriptable, uuid(f728830e-1dd1-4444-6666-fb9f414f2465)]
+[scriptable, uuid(7639221F-8E7A-4ad6-A968-917D4137EB3C)]
 interface acmeScriptablePlugin : nsISupports
 {
 	attribute acmeJSObject document;
