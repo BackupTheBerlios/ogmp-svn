@@ -22,31 +22,11 @@ interface nsIScriptableOgmpPlugin : nsISupports
    void answer(in long lineno);
    void bye(in long lineno);
     
-	/*
-	void Play();
-	void Pause();
-	void Stop();
-	void quit();
-	void DoPlay();
-	void DoPause();
-	void FastForward();
-	void FastReverse();
-	void ff();
-	void rew();
-	void rewind();
-	void Seek(in double value);
-	void Open(in string filename);
-	double getTime();
-	double getDuration();
-	double getPercent();
-	attribute string filename;
-	attribute boolean ShowControls;
-	attribute boolean fullscreen;
-	attribute boolean showlogo;
-	
-	readonly attribute long playState;
-	*/
+    /* SIP UA attributes */
+	readonly attribute string useragent;
 	readonly attribute string version;
+	readonly attribute string licence;
+	
 	readonly attribute string netaddr;
 
 	readonly attribute nsIScriptableWMPPlugin controls;

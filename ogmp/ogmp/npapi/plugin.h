@@ -41,18 +41,19 @@
 #define OS_IGNORE_INTEGER_TYPE
 
 #ifdef BSD
-#include <cmath>
+ #include <cmath>
 #endif
+
 #define _XOPEN_SOURCE 500
 
 #ifndef BSD
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
+ #ifndef _GNU_SOURCE
+  #define _GNU_SOURCE
+ #endif
 #endif
 
-#endif
 #ifdef GECKOSDK_ENABLED
-#include "mozilla-config.h"
+ #include "mozilla-config.h"
 #endif
 
 #include "pluginbase.h"
@@ -69,7 +70,8 @@ extern "C" {
 #include "ogmp.h"
 }
 
-class nsPluginInstance:public nsPluginInstanceBase {
+class nsPluginInstance:public nsPluginInstanceBase
+{
   public:
     nsPluginInstance(NPP aInstance);
     virtual ~ nsPluginInstance();
@@ -94,11 +96,21 @@ class nsPluginInstance:public nsPluginInstanceBase {
     module_catalog_t *mod_cata;
     
   public:
-    /* SIP UA interface */
+  
+    /*********************/
+    /* SIP UA Attritudes */
+    /*********************/
+    void getUseragent(char * *aUseragent);
+    void getLicence(char * *aLicence);
     void getNetaddr(char* *addr);
+    
+    /********************/
+    /* SIP UA Methods */
+    /********************/
+    
+    /* Test only */
     void get_ip();
 
-    /* SIP UA interface */
     NPError sipua_init();
     
     void load_user(const char *uid, PRInt32 uidsz);
@@ -109,28 +121,6 @@ class nsPluginInstance:public nsPluginInstanceBase {
     void answer(PRInt32 lineno);
     void bye(PRInt32 lineno);
     
-    /*
-    void Play();
-    void Pause();
-    void Stop();
-    void Quit();
-    void FastForward();
-    void FastReverse();
-    void Seek(double counter);
-    void GetPlayState(PRInt32 * playstate);
-    void GetTime(double *_retval);
-    void GetDuration(double *_retval);
-    void GetPercent(double *_retval);
-    void GetFilename(char * *filename);
-    void SetFilename(const char *filename);
-    void GetShowControls(PRBool *_retval);
-    void SetShowControls(PRBool value);
-    void GetFullscreen(PRBool *_retval);
-    void SetFullscreen(PRBool value);
-    void GetShowlogo(PRBool *_retval);
-    void SetShowlogo(PRBool value);
-	 */
-
     // we need to provide implementation of this method as it will be
     // used by Mozilla to retrive the scriptable peer
     // and couple of other things on Unix
@@ -145,98 +135,14 @@ class nsPluginInstance:public nsPluginInstanceBase {
     nsScriptablePeer *mScriptablePeer;
     nsControlsScriptablePeer *mControlsScriptablePeer;
     
+    /*
     char mString[128];
     // put member data here
 
-    char *mimetype;
-    int state;
-    char *url;
-    char *fname;
-    char *href;
-    char *lastmessage;
-    uint16 mode;
-    uint32 window_width;
-    uint32 window_height;
-    uint32 embed_width;
-    uint32 embed_height;
-    uint32 movie_width;
-    uint32 movie_height;
-    int setwindow;
-    char *baseurl;
-    char *hostname;
-    int control;
-    FILE *player;
-    /*pid_t pid;*/
-    int noredraw;
-    int hrefrequested;
-    int threadsetup;
-    int threadlaunched;
-    int threadsignaled;
-    int cancelled;
-    int autostart;
-    int controlwindow;
-    int showcontrols;
-    int showtracker;
-    int showbuttons;
-    int showfsbutton;
-    int mmsstream;
-	/*
-    Node *list;
-    Node *currentnode;
-    ThreadData *td;
-    Window window;
-    Window player_window;
-    Display *display;
-    Widget widget;
-    uint32 nQtNext;
-    char *qtNext[256];
-    int panel_height;
-    int panel_drawn;
-    float percent;
-    char *mediaCompleteCallback;
-    float mediaLength;			// length of media in seconds
-    int mediaPercent;			// percentage of media played
-    float mediaTime; 			// time in seconds
-    int nomediacache;
-    int controlsvisible;
-    int fullscreen;
-    int showlogo;
-    int DPMSEnabled;
-    int hidden;
-    int black_background;
-    pthread_t player_thread;
-    pthread_attr_t thread_attr;
-    pthread_cond_t playlist_complete_cond;
-    pthread_mutex_t playlist_mutex;
-    pthread_mutex_t playlist_cond_mutex;
-    pthread_mutex_t control_mutex;
-	*/
-    // options
-    char *vo;
-    char *vop;
-    int novop;
-    int noembed;
-    char *ao;
-    int loop;
-    int rtsp_use_tcp;
-    int keep_download;
-    int maintain_aspect;
-    int qt_speed;
-    char *download_dir;
-    int cachesize;
-    char *output_display;
-    int osdlevel;
-    int cache_percent;
-    int toolkitok;
-    int moz_toolkit;
-    int plug_toolkit;
-    int framedrop;
-    int autosync;
-    int mc;
-    
     // JavaScript State
     int paused;
     int js_state;
+    */
 };
 
 #endif				// __PLUGIN_H__

@@ -131,10 +131,28 @@ void nsScriptablePeer::SetInstance(nsPluginInstance * plugin)
 //
 // the following method will be callable from JavaScript
 //
+
+/* readonly attribute string Useragent; */
+NS_IMETHODIMP nsScriptablePeer::GetUseragent(char * *aUseragent)
+{
+	if (mPlugin)
+		mPlugin->getUseragent(aUseragent);
+
+	return NS_OK;
+}
+
+/* readonly attribute string Licence; */
+NS_IMETHODIMP nsScriptablePeer::GetLicence(char * *aLicence)
+{
+	if (mPlugin)
+		mPlugin->getLicence(aLicence);
+
+	return NS_OK;
+}
+
+/* readonly attribute string Version; */
 NS_IMETHODIMP nsScriptablePeer::GetVersion(char* *aVersion)
 {
-	printf("JS getVersion issued\n");
-
 	if (mPlugin)
 		mPlugin->getVersion(aVersion);
 
@@ -143,8 +161,6 @@ NS_IMETHODIMP nsScriptablePeer::GetVersion(char* *aVersion)
 
 NS_IMETHODIMP nsScriptablePeer::GetNetaddr(char* *addr)
 {
-	printf("JS netaddress issued\n");
-
 	if (mPlugin)
 		mPlugin->getNetaddr(addr);
 
@@ -153,13 +169,12 @@ NS_IMETHODIMP nsScriptablePeer::GetNetaddr(char* *addr)
 
 NS_IMETHODIMP nsScriptablePeer::Get_ip()
 {
-    printf("To retrieve current ip address\n");
     mPlugin->get_ip();
 
     return NS_OK;
 }
 
-/* void load_user (in string fullname, in long fnsz, in string router, in string regid, in long second); */
+/* void load_user () */
 NS_IMETHODIMP nsScriptablePeer::Load_user(const char *uid, PRInt32 uidsz)
 {
     mPlugin->load_user(uid, uidsz);
