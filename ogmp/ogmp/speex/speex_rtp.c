@@ -799,9 +799,9 @@ void* rtp_speex_info(xrtp_media_t* media, void* rtp_cap)
         return NULL;
     }
     
-    printf("rtp_speex_info: clockrate[%d]\n", spxinfo->audioinfo.info.sample_rate);
+    printf("\n\nrtp_speex_info: clockrate[%d]\n", spxinfo->audioinfo.info.sample_rate);
     printf("rtp_speex_info: coding_param[%d]\n", spxinfo->audioinfo.channels);
-    printf("rtp_speex_info: ptime[%d]\n", spxinfo->ptime);
+    printf("rtp_speex_info: %d frames/packet\n", spxinfo->nframe_per_packet);
     printf("rtp_speex_info: vbr[%d]\n", spxinfo->vbr);
     printf("rtp_speex_info: abr[%d]\n", spxinfo->abr);
     printf("rtp_speex_info: cbr[%d]\n", spxinfo->cbr);

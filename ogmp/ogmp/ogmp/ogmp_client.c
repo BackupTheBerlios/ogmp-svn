@@ -326,7 +326,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				if(client->lines[i] == NULL)
 				{
 					call->ring_num = SIPUA_MAX_RING;
-					
 
 					client->lines[i] = call;
 					sipua->uas->accept(sipua->uas, lineno);
@@ -346,11 +345,9 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 					break;
 				}
 			}
-
             /* Cannot free here, need for media specific parsing !!!
             sdp_message_free(sdp_message);
             */
-
 			break;
 		}
 		case(SIPUA_EVENT_PROCEEDING):

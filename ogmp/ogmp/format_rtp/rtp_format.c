@@ -387,6 +387,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 	}
 	
 	printf("rtp_open_stream: for %s:(%u|%u)\n", rtpcapset->cname, rtpcap->rtp_portno, rtpcap->rtcp_portno);
+	printf("rtp_open_stream: mime[%s] pt[%d]\n", rtpcap->profile_mime, rtpcap->profile_no);
 	
 	session_add_cname(strm->session, rtpcapset->cname, strlen(rtpcapset->cname), remote_netaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno, rtpcap, ctrl);
 	

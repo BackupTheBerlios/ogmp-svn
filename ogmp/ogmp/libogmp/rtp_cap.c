@@ -282,7 +282,6 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 
 	rtpcap_set_t* rtpcapset = xmalloc(sizeof(rtpcap_set_t));
 	if(!rtpcapset)
-
 	{
 		return NULL;
 	}
@@ -316,7 +315,6 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 	rtpcap_log(("rtp_capable_to_sdp: media_ip[%s] ttl[%d]\n", media_ip, ttl));
 
 	rtpcapset->netaddr = xstr_clone(media_ip);
-
 	{
 		char *p = rtpcapset->cname;
 		char *username;

@@ -97,7 +97,6 @@ int speex_info_to_sdp(media_info_t *info, rtpcap_descript_t *rtpcap, sdp_message
             pa++;
 	}
 
-
 	/* encoding mode:  
 		Speex encoding mode. Can be {1,2,3,4,5,6,any}
 		defaults to 3 in narrowband, 6 in wide and ultra-wide.
@@ -146,14 +145,10 @@ int speex_info_from_sdp(media_info_t *info, int rtpmap_no, sdp_message_t *sdp, i
     if(!sdp)
         return -1;
 
-    printf("speex_info_from_sdp: sdp\n");
-
 	while (!sdp_message_endof_media (sdp, pos_media))
 	{
 		int pos_attr = 0;
 		char* media_type = sdp_message_m_media_get (sdp, pos_media);
-
-        printf("speex_info_from_sdp: media\n");
 
 		if(0==strcmp(media_type, "audio"))
 		{
@@ -287,7 +282,6 @@ int speex_info_from_sdp(media_info_t *info, int rtpmap_no, sdp_message_t *sdp, i
 					if(*attr == '1')
 						spxinfo->penh = 1;
 				}
-
 				/* attribute "mode=..."
 				attr = strstr(token, "mode");
 				if(attr)
