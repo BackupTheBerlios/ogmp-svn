@@ -53,7 +53,8 @@ struct rtp_format_s
 	 * return used bandwidth
 	 */
 	int (*open_capables) (media_format_t *mf, rtpcap_set_t *rtpcapset, media_control_t *ctrl, char *mode, int bandwidth);
-	/**
+
+   /**
 	 * Open local media source for sending to remote end.
 	 *
 	 * Retrieve the rtp media of the format, rtp_sender use it for sendout.
@@ -61,7 +62,6 @@ struct rtp_format_s
 	 * The player of local member(self) is a sender. And sender need to give a media source.
 	 * All other player recieve remote media for each member.
 	 */
-
 	dev_rtp_t *rtp_in;
 	int millisec;
 	int bandwidth;

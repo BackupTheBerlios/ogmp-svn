@@ -25,12 +25,20 @@
 #include <xrtp/xrtp.h>
  
 #define UA_LOG
+#define UA_DEBUG
 
 #ifdef UA_LOG
  #include <stdio.h>
  #define ua_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define ua_log(fmtargs)
+#endif
+
+#ifdef UA_DEBUG
+ #include <stdio.h>
+ #define ua_debug(fmtargs)  do{printf fmtargs;}while(0)
+#else
+ #define ua_debug(fmtargs)
 #endif
 
 #define MAX_REC 8
@@ -253,9 +261,9 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 
 		media_bw = session_new_sdp(cata, nettype, addrtype, netaddr, &rtp_portno, &rtcp_portno, pt, codings[i].mime, codings[i].clockrate, codings[i].param, bw_budget, control, &sdp_info);
 
-		if(media_bw > 0 && bw_budget > set->bandwidth + media_bw)
+		if(media_bw > 0 && bw_budget > set->bandwidth_need + media_bw)
 		{
-			set->bandwidth += media_bw;
+			set->bandwidth_need += media_bw;
 		}
 		else
 			break;
@@ -309,7 +317,7 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 	}
 	memset(set, 0, sizeof(sipua_set_t));
 
-	set->bandwidth = bw_budget;
+	set->bandwidth_need = bw_budget;
 
 	set->user_prof = user_prof;
 
@@ -439,7 +447,7 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 		rtpcap = xlist_next(rtpcapset->rtpcaps, &u);
 	}
 
-	set->bandwidth = call_bw;
+	set->bandwidth_need = call_bw;
 
 	sdp_message_to_str(sdp_info.sdp_message, &set->reply_body);
 
@@ -462,7 +470,7 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 }
 
 int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_set_t* rtpcapset,
-						xlist_t* format_handlers, media_control_t* control, int pt_pool[])
+                        xlist_t* format_handlers, media_control_t* control, int pt_pool[])
 {
 	dev_rtp_t* rtpdev;
 
@@ -491,7 +499,7 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
 		{
 			rtp_format_t* rtpfmt = (rtp_format_t*)format;
 
-			bw = rtpfmt->open_capables(format, rtpcapset, control, mode, call->bandwidth);
+			bw = rtpfmt->open_capables(format, rtpcapset, control, mode, call->bandwidth_need);
 			if(bw > 0)
 			{
 				call->rtp_format = format;
@@ -513,14 +521,15 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
 
 		return 0;
 	}
+   
 	/*
 	rtp_media = session_media(rtp_session);
 	xlist_addto_first(call->mediaset, rtp_media);
 	*/
-	if(call->bandwidth - bw > 0)
-		control->release_bandwidth(control, call->bandwidth - bw);
+	if(call->bandwidth_need - bw > 0)
+		control->release_bandwidth(control, call->bandwidth_need - bw);
 
-	call->bandwidth = bw;
+	call->bandwidth_need = bw;
 
 	ua_log(("sipua_create_call: call[%s] created\n", rtpcapset->subject));
 
@@ -544,8 +553,8 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_set_t* call, int bw_budget, media_con
 
 	module_catalog_t *cata = control->modules(control);
     
-   media_format_t *format = source->format;
-   media_stream_t *strm;
+   media_format_t *src_fmt = source->format;
+   media_stream_t *src_strm;
 
 	sipua->uas->address(sipua->uas, &nettype, &addrtype, &netaddr);
 
@@ -589,78 +598,88 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_set_t* call, int bw_budget, media_con
 		return NULL;
 	}
 
-    strm = format->first;
-    while(strm)
+   src_strm = src_fmt->first;
+   while(src_strm)
 	{
 		int media_bw;
 
 		char mediatype[16];
 		int rtp_portno = 0;
 		int rtcp_portno = 0;
+      
+      media_stream_t *rtp_strm = NULL;
 
-      media_stream_t *strm = call->rtp_format->find_mime(call->rtp_format, strm->media_info->mime);
-      if(!strm)
-        {
-            int j;
+      if(call->rtp_format)
+         rtp_strm = call->rtp_format->find_mime(call->rtp_format, src_strm->media_info->mime);
+
+      if(!rtp_strm)
+      {
+         int j;
             
-            pt = sipua_book_pt(pt_pool);
-            if(pt<0)
+         pt = sipua_book_pt(pt_pool);
+         if(pt<0)
+         {
+            ua_log(("sipua_new_session: no payload type available\n"));
+            break;
+         }
+
+         j = 0;
+         do
+         {
+            mediatype[j] = src_strm->media_info->mime[j];
+            j++;
+
+         }while(src_strm->media_info->mime[j] != '/');
+
+         mediatype[j] = '\0';
+         
+         for(j=0; j<nmedia; j++)
+         {
+            if(strcmp(mediatype, mediatypes[j]) == 0)
             {
-                ua_log(("sipua_new_session: no payload type available\n"));
-                break;
+               rtp_portno = rtp_ports[j];
+               rtcp_portno = rtcp_ports[j];
+
+               break;
             }
+         }
 
-            j = 0;
-            do
-            {
-                mediatype[j] = strm->media_info->mime[j];
-                j++;
+         printf("sipua_call_sdp: rtp[%d] rtcp[%d]\n", rtp_portno, rtcp_portno);
+         
+         /* Cause to ceate a new session instance */
+         media_bw = session_new_sdp(cata, nettype, addrtype, netaddr, &rtp_portno, &rtcp_portno, pt, src_strm->media_info->mime, src_strm->media_info->sample_rate, src_strm->media_info->coding_parameter, (bw_budget - call->bandwidth_hold), control, &sdp_info);
 
-            }while(strm->media_info->mime[j] != '/');
+         printf("sipua_call_sdp: media_bw[%d]\n", media_bw);
+      }
+      else
+      {
+         /* The existed session */
+         rtp_stream_t* rtpstream = (rtp_stream_t*)rtp_strm;
 
-            mediatype[j] = '\0';
-
-            for(j=0; j<nmedia; j++)
-            {
-                if(strcmp(mediatype, mediatypes[j]) == 0)
-
-                {
-                    rtp_portno = rtp_ports[j];
-                    rtcp_portno = rtcp_ports[j];
-
-                    break;
-                }
-            }
-
-            /* Cause to ceate a new session instance */
-            media_bw = session_new_sdp(cata, nettype, addrtype, netaddr, &rtp_portno, &rtcp_portno, pt, strm->media_info->mime, strm->media_info->sample_rate, strm->media_info->coding_parameter, (bw_budget - call->bandwidth), control, &sdp_info);
-        }
-        else
-        {
-            /* The existed session */
-            rtp_stream_t* rtp_strm = (rtp_stream_t*)strm;
-            
-            media_bw = session_mediainfo_sdp(rtp_strm->session, nettype, addrtype, netaddr, &rtp_portno, &rtcp_portno, strm->media_info->mime, (bw_budget - call->bandwidth), control, &sdp_info, strm->media_info);
-        }
+         media_bw = session_mediainfo_sdp(rtpstream->session, nettype, addrtype, netaddr, &rtp_portno, &rtcp_portno, rtp_strm->media_info->mime, (bw_budget - call->bandwidth_need), control, &sdp_info, rtp_strm->media_info);
+      }
         
-		if(media_bw > 0 && bw_budget > call->bandwidth + media_bw)
+      printf("sipua_call_sdp: mime[%s]\n", src_strm->media_info->mime);
+      printf("sipua_call_sdp: pt[%d]\n", pt);
+
+		if(media_bw > 0 && bw_budget > call->bandwidth_need + media_bw)
 		{
-			call->bandwidth += media_bw;
+			call->bandwidth_need += media_bw;
 		}
 		else
-        {
+      {
 			break;
-        }
+      }
 
-        strm = strm->next;
+      src_strm = src_strm->next;
 	}
 
 	sdp_message_to_str (sdp_info.sdp_message, &sdp_body);
-    
+
 	/* if free here, posix dore dump ??? win32 ok !!!
     sdp_message_free(sdp_info.sdp_message);
     */
-    return sdp_body;
+   return sdp_body;
 }
 
 #if 0

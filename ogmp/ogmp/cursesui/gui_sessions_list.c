@@ -126,6 +126,8 @@ int window_sessions_list_print(gui_t* gui, int wid)
 	nincall = 1;
 
 	/* Show all lines */
+
+
 	ocui->sipua->lock_lines(ocui->sipua);
 
 	nbusy = ocui->sipua->busylines(ocui->sipua, busylines, MAX_SIPUA_LINES);
@@ -150,6 +152,8 @@ int window_sessions_list_print(gui_t* gui, int wid)
 	
 	for(line = view; line < nbusy; line++)
     {
+
+
 
 		call = ocui->sipua->line(ocui->sipua, busylines[line]);
 
@@ -228,7 +232,8 @@ void window_sessions_list_draw_commands(gui_t* gui)
 	{
 		"N",  "New" ,
 		"A",  "Answer",
-		"C",  "Bye" ,
+      "Z",  "Queue",
+		"C",  "Bye",
 		"D",  "Decline",
 		"R",  "Reject",
 		"B",  "Busy",
@@ -252,7 +257,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 
 	nbusy = ocui->sipua->busylines(ocui->sipua, busylines, MAX_SIPUA_LINES);
 
-    curseson(); cbreak(); noecho(); nonl(); keypad(stdscr, TRUE);
+   curseson(); cbreak(); noecho(); nonl(); keypad(stdscr, TRUE);
 
 	switch (c)
     {
@@ -262,11 +267,11 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 		{
 			int n = 0;
             
-            if(nbusy == 0)
-            {
-                beep();
-                break;
-            }
+         if(nbusy == 0)
+         {
+            beep();
+            break;
+         }
             
 			while(busylines[n] != calllist_line) n++;
 
@@ -340,14 +345,27 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 		}
 		case 'a':     
 		{
-            call = ocui->sipua->pick(ocui->sipua, calllist_line);
+         call = ocui->sipua->pick(ocui->sipua, calllist_line);
 			if (!call) 
 			{ 
 				beep(); 
 				break; 
 			}
 
-            ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_ANSWER, NULL);
+         ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_ANSWER, NULL);
+
+			break;
+		}
+		case 'z':
+		{
+         call = ocui->sipua->pick(ocui->sipua, calllist_line);
+			if (!call)
+			{
+				beep();
+				break;
+			}
+
+         ocui->sipua->queue(ocui->sipua, call);
 
 			break;
 		}
@@ -415,6 +433,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 		{
 			int n = 0;
 
+
 			call = ocui->sipua->pick(ocui->sipua, calllist_line);
 			if (!call) 
 			{ 
@@ -455,10 +474,10 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 					break; 
 				}
 
-                /* Issue: hold call signal to participant, may release bandwidth or something.
-                 * can not simple annswer that cause reestablish call.
-                ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_ANSWER);
-                */
+            /* Issue: hold call signal to participant, may release bandwidth or something.
+             * can not simple annswer that cause reestablish call.
+             * ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_ANSWER);
+             */
 			}
 
 			break;

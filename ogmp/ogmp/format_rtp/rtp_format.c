@@ -96,55 +96,55 @@ int rtp_add_stream(media_format_t * rtp, media_stream_t *strm, int strmno, unsig
 
   switch(type)
   {
-    case(MP_AUDIO): rtp->nastreams++;
+      case(MP_AUDIO): rtp->nastreams++;
       
-		/* default first audio stream as time reference */
-        if (rtp->nastreams == 1)
+      /* default first audio stream as time reference */
+      if (rtp->nastreams == 1)
 		{
 			rtp_log(("rtp_add_stream: stream #%d as default time stream\n", rtp->numstreams));
             rtp->time_ref = strmno;
-        }
+      }
                   
-        break;
+      break;
                
-    case(MP_VIDEO): rtp->nvstreams++; break;
+      case(MP_VIDEO): rtp->nvstreams++; break;
     
-    case(MP_TEXT): rtp->ntstreams++; break;
-  }
+      case(MP_TEXT): rtp->ntstreams++; break;
+   }
 
-  rtp->numstreams++;
+   rtp->numstreams++;
 
-  return MP_OK;
+   return MP_OK;
 }
 
 media_stream_t * rtp_find_stream(media_format_t * mf, int strmno)
 {
-  media_stream_t *cur = mf->first;
+   media_stream_t *cur = mf->first;
 
-  while (cur != NULL)
-  {
-    if ((((rtp_stream_t*)cur)->sno) == strmno)
-		break;
+   while (cur != NULL)
+   {
+      if ((((rtp_stream_t*)cur)->sno) == strmno)
+		   break;
 
-    cur = cur->next;
-  }
+      cur = cur->next;
+   }
 
-  return cur;
+   return cur;
 }
 
 media_player_t * rtp_stream_player(media_format_t * mf, int strmno)
 {
-  media_stream_t *cur = mf->first;
+   media_stream_t *cur = mf->first;
 
-  while (cur != NULL)
-  {
-    if ((((rtp_stream_t*)cur)->sno) == strmno)
-      return cur->player;
+   while (cur != NULL)
+   {
+      if ((((rtp_stream_t*)cur)->sno) == strmno)
+         return cur->player;
       
-    cur = cur->next;
-  }
+      cur = cur->next;
+   }
 
-  return NULL;
+   return NULL;
 }
 
 media_stream_t * rtp_find_mime(media_format_t * mf, char *mime)
@@ -154,7 +154,7 @@ media_stream_t * rtp_find_mime(media_format_t * mf, char *mime)
    while (cur != NULL)
    {
       if (!strcmp(cur->mime, mime))
-	  {
+	   {
          return cur;
       }
 
@@ -170,13 +170,14 @@ media_player_t * rtp_mime_player(media_format_t * mf, const char * mime)
 
    while (cur != NULL)
    {
-
       if (!strcmp(cur->mime, mime))
-	  {
+	   {
          return cur->player;
       }
     
       cur = cur->next;
+
+
    }                                                  
 
    return NULL;
@@ -210,7 +211,7 @@ media_stream_t * rtp_find_fourcc(media_format_t * mf, char *fourcc)
    while (cur != NULL)
    {
       if ( strncmp(cur->fourcc, fourcc, 4) )
-	  {
+	   {
          return cur;
       }
 
@@ -288,8 +289,7 @@ int rtp_stream_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
 	   return MP_OK;
    }
 
-   rtp_debug(("rtp_stream_on_member_update: source[%s] connected, pause\n\n\n", cn));
-   
+   rtp_debug(("rtp_stream_on_member_update: source[%s] connected\n\n\n", cn));   
    return MP_OK;
 }
 
@@ -298,7 +298,9 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 	unsigned char stype;
 	rtp_stream_t *strm;
 
+
 	rtp_setting_t *rset = NULL;
+
 
 	int rtp_portno, rtcp_portno;
 
@@ -504,6 +506,7 @@ int rtp_nstream (media_format_t * mf)
 const char* rtp_stream_mime (media_format_t * mf, int strmno)
 {
 
+
    media_stream_t * ms = rtp_find_stream(mf, strmno);
 
    if(!ms)  return "";
@@ -647,6 +650,7 @@ media_player_t* rtp_new_stream_player(media_format_t *mf, int strmno, media_cont
 		cur = cur->next;
 	}
 
+
 	return NULL;
 }
 
@@ -721,6 +725,7 @@ module_interface_t * media_new_format()
    mf->find_fourcc = rtp_find_fourcc;
 
    mf->set_control = rtp_set_control;
+
 
 
    mf->set_player = rtp_set_player;

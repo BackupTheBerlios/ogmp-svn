@@ -124,6 +124,9 @@ struct ogmp_client_s
 
 	xthr_cond_t* wait_unregistered;
 
+
+
+
 	/* below is sipua related */
 	user_profile_t* reg_profile;
 
@@ -153,19 +156,19 @@ struct ogmp_client_s
     
 	/* callbacks */
 	int (*on_register)(void *user_on_register, int result, char *reason);
-    void *user_on_register;
+   void *user_on_register;
 
 	int (*on_newcall)(void *user_on_newcall, int lineno, char *caller, char *subject, char *info);
-    void *user_on_newcall;
+   void *user_on_newcall;
 
-    int (*on_conversation_start)(void *user_on_conversation_start, int lineno);
-    void *user_on_conversation_start;
+   int (*on_conversation_start)(void *user_on_conversation_start, int lineno);
+   void *user_on_conversation_start;
 
-    int (*on_conversation_end)(void *user_on_conversation_end, int lineno);
-    void *user_on_conversation_end;
+   int (*on_conversation_end)(void *user_on_conversation_end, int lineno);
+   void *user_on_conversation_end;
 
 	int (*on_bye)(void *user_on_bye, int lineno, char *caller, char *reason);
-    void *user_on_bye;
+   void *user_on_bye;
 };
 
 struct ogmp_source_s
@@ -218,6 +221,12 @@ source_open(char* name, media_control_t* control, char* mode, void* mode_param);
 
 sipua_setting_t*
 source_setting(media_control_t *control);
+
+int
+source_associate(media_source_t* msrc, media_format_t* rtp_fmt, char *cname);
+
+int
+source_associate_guests(media_source_t* msrc, media_format_t* rtp_fmt);
 
 /****************************************************************************************/
 extern ogmp_ui_t* global_ui;

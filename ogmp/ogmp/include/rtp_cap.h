@@ -21,6 +21,7 @@
 #include "media_format.h"
 #include "phonebook.h"
 
+#include <xrtp/xrtp.h>
 #include <osip2/osip_negotiation.h>
 
 #define MAX_MIME_BYTES 64
@@ -165,6 +166,8 @@ struct media_transmit_s
 
    int (*add_source)(media_transmit_t *trans, char *cname, int cnlen, char *netaddr, uint16 rtp_port, uint16 rtcp_port);
    int (*remove_source)(media_transmit_t *trans, char *cname);
+
+   xrtp_session_t* (*session)(media_transmit_t* trans);
 };
 
 DECLSPEC

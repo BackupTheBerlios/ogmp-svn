@@ -114,6 +114,8 @@ struct spxrtp_handler_s
 
 
 
+
+
 struct spxrtp_media_s
 {
    struct xrtp_media_s rtp_media;
@@ -405,6 +407,8 @@ int spxrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp)
 {
    spxrtp_handler_t * profile = (spxrtp_handler_t *)handler;
 
+
+
    /* Mark always '0', Audio silent suppression not used */
    rtp_packet_set_mark(rtp, 0);
 
@@ -475,7 +479,7 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 	/* rtp_conn and rtcp_conn will be uncertain after this call */
 
 	sender = session_update_member_by_rtcp(rtcp->session, rtcp);
-    
+       
 	if(!sender)
 	{
 		rtcp_compound_done(rtcp);
@@ -921,19 +925,26 @@ int rtp_speex_new_sdp(xrtp_media_t *media, char* nettype, char* addrtype, char* 
 		*rtp_portno = spxset->rtp_setting.rtp_portno;
 
 	if(*rtp_portno <= 0)
-		return 0;
+   {
+      spxrtp_debug(("rtp_speex_new_sdp: illegal rtp_portno[%d]\n", *rtp_portno));
+      return 0;
+   }
 
 	if(spxset->rtp_setting.rtcp_portno > 0)
 		*rtcp_portno = spxset->rtp_setting.rtcp_portno;
 
 	if(*rtcp_portno <= 0)
+   {
+      spxrtp_debug(("rtp_speex_new_sdp: illegal rtcp_portno[%d]\n", *rtcp_portno));
 		return 0;
+   }
 
     if(!mediainfo)
     {
         spxinfo = xmalloc(sizeof(speex_info_t));
         if(!spxinfo)
         {
+            spxrtp_debug(("rtp_speex_new_sdp: no memory for spxinfo\n"));
             return 0;
         }
 		
@@ -949,8 +960,10 @@ int rtp_speex_new_sdp(xrtp_media_t *media, char* nettype, char* addrtype, char* 
 
 	if(spxinfo->audioinfo.info.bps > bw_budget)
 	{
-		xfree(spxinfo);
-		return 0;
+      spxrtp_debug(("rtp_speex_new_sdp: bps[%d] > bw_budget[%d]\n", spxinfo->audioinfo.info.bps, bw_budget));
+      xfree(spxinfo);
+
+      return 0;
 	}
 
 	bw = (int)((2 * (spxinfo->audioinfo.info.bps / OS_BYTE_BITS)) / 0.95);
@@ -960,10 +973,15 @@ int rtp_speex_new_sdp(xrtp_media_t *media, char* nettype, char* addrtype, char* 
 	ret = speex_info_to_sdp((media_info_t*)spxinfo, rtpcap, sdp->sdp_message, sdp->sdp_media_pos);
 
 	rtpcap->descript.done(&rtpcap->descript);
+   
 	xfree(spxinfo);
 
 	if(ret < MP_OK)
-	   return 0;
+   {
+      spxrtp_debug(("rtp_speex_new_sdp: info->sdp fail\n"));
+      
+      return 0;
+   }
 	   
 	sdp->sdp_media_pos++;
 
@@ -1033,6 +1051,7 @@ int rtp_speex_send_loop(void *gen)
 	int discard = 0;
 
 	int in_group = 0;
+
 
 	xclock_t *ses_clock = session_clock(profile->session);
 
@@ -1432,13 +1451,12 @@ int spxrtp_type(profile_class_t * clazz)
 }
 
 char * spxrtp_description(profile_class_t * clazz)
-
 {
    return spxrtp_desc;
 }
 
-int spxrtp_capacity(profile_class_t * clazz){
-
+int spxrtp_capacity(profile_class_t * clazz)
+{
    return XRTP_CAP_NONE;
 }
 

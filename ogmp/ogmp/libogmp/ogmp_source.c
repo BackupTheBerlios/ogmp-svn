@@ -51,7 +51,7 @@ int source_loop(void * gen)
 
    while (1)
    {
-	  {/*lock*/ xthr_lock(source->lock);}
+	   {/*lock*/ xthr_lock(source->lock);}
       
       if (source->finish)
       {
@@ -172,6 +172,7 @@ int source_add_destinate(transmit_source_t *tsrc, char *mime, char *cname, char 
 	int i;
 	ogmp_source_t *src = (ogmp_source_t*)tsrc;
 
+
 	for(i=0; i<src->nstream; i++)
 	{
 		if(src->players[i]->match_play_type(src->players[i], "netcast")
@@ -205,7 +206,7 @@ int source_remove_destinate(transmit_source_t *tsrc, char *mime, char *cname, ch
 	return -1;
 }
 
-media_source_t* source_open(char* name, media_control_t* control, char *mode, void* mode_param)
+media_source_t* source_open(char* name, media_control_t* control, char* mode, void* mode_param)
 {
 	media_source_t *msrc;
 	transmit_source_t *tsrc;
@@ -316,7 +317,6 @@ media_source_t* source_open(char* name, media_control_t* control, char *mode, vo
 
       /* In "netcast" mode */
       tsrc = (transmit_source_t*)source;
-    
       tsrc->add_destinate = source_add_destinate;
       tsrc->remove_destinate = source_remove_destinate;
 
@@ -335,4 +335,97 @@ media_source_t* source_open(char* name, media_control_t* control, char *mode, vo
    source->wait_request = xthr_new_cond(XTHREAD_NONEFLAGS);
 
    return msrc;
+}
+
+/**
+ * Find sessions in the format which match cname and mimetype in source
+ * Move_member_from_session_of(call->rtp_format) to_session_of(source->players);
+ */
+int
+source_associate(media_source_t* msrc, media_format_t* rtp_fmt, char* cname)
+{
+   int i;
+   media_player_t* player = NULL;
+   ogmp_source_t *osrc = (ogmp_source_t*)msrc;
+
+   if(!rtp_fmt->support_type(rtp_fmt, "mime", "application/sdp"))
+   {
+      src_debug(("source_associate: Not a rtp format\n"));
+      return XRTP_EUNSUP;
+   }
+   
+   for(i=0; i<osrc->nstream; i++)
+   {
+      player = osrc->players[i];
+      
+      media_stream_t *strm = rtp_fmt->first;
+      
+      while(strm)
+      {
+         rtp_stream_t* rtp_strm = (rtp_stream_t*)strm;
+         
+         if(player->match_play_type(player, "netcast") && player->receiver.match_type(&player->receiver, strm->mime, NULL))
+         {
+            media_transmit_t *transmit = (media_transmit_t*)player;
+            
+            if(cname)
+            {
+               session_move_member_by_cname(rtp_strm->session, transmit->session(transmit), cname);  
+            }
+            else
+            {
+               session_move_all_guests(rtp_strm->session, transmit->session(transmit));
+            }
+         }
+         
+         strm = strm->next;
+      }
+   }
+   
+   return 0;
+}
+
+/**
+ * Find sessions in the format which match cname and mimetype in source
+ * Move_member_from_session_of(call->rtp_format) to_session_of(source->players);
+ */
+int source_associate_guests(media_source_t* msrc, media_format_t* rtp_fmt)
+{
+   int i;
+   
+   media_player_t* player = NULL;
+   ogmp_source_t *osrc = (ogmp_source_t*)msrc;
+
+   if(!rtp_fmt->support_type(rtp_fmt, "mime", "application/sdp"))
+   {
+      src_debug(("source_associate: Not a rtp format, pause\n"));
+      getchar();
+           
+      return XRTP_EUNSUP;
+   }
+
+   for(i=0; i<osrc->nstream; i++)
+   {
+      player = osrc->players[i];
+
+      media_stream_t *strm = rtp_fmt->first;
+
+      while(strm)
+      {
+         rtp_stream_t* rtp_strm = (rtp_stream_t*)strm;
+
+         if(player->match_play_type(player, "netcast") && player->receiver.match_type(&player->receiver, strm->mime, NULL))
+         {
+            media_transmit_t *transmit = (media_transmit_t*)player;
+            
+            session_move_all_guests(rtp_strm->session, transmit->session(transmit));
+         }
+
+         strm = strm->next;
+      }
+   }
+
+   exit(1);
+
+   return 0;
 }

@@ -45,7 +45,6 @@ int done_stream_handler(void *gen)
    handler->done(handler);
 
 
-
    return MP_OK;
 }
 
@@ -98,15 +97,13 @@ int ogm_add_stream(media_format_t * ogm, media_stream_t *strm, int sno, unsigned
   switch(type)
   {
     case('a'): ogm->nastreams++;
-    
-               /* default first audio stream as time reference */
-               if (ogm->nastreams == 1)
-			   {
-                  ogm_log(("ogm_set_mime_player: audio stream #%d as default time stream\n", sno));
-                  ogm->time_ref = sno;
-               }
-                  
-               break;
+    /* default first audio stream as time reference */
+    if (ogm->nastreams == 1)
+    {
+       ogm_log(("ogm_set_mime_player: audio stream #%d as default time stream\n", sno));
+       ogm->time_ref = sno;
+    }
+    break;
                
     case('v'): ogm->nvstreams++; break;
     
@@ -327,6 +324,7 @@ media_stream_t * ogm_find_fourcc(media_format_t * mf, char *fourcc)
       }
 
       cur = cur->next;
+
    }
 
 
@@ -481,6 +479,7 @@ int ogm_set_handlers ( ogm_format_t *ogm, module_catalog_t * cata )
       return MP_FAIL;
    }
 
+
    return MP_OK;
 }
 
@@ -508,6 +507,7 @@ int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_strea
 {
    //stream_header sth;
 
+
    xrtp_list_user_t $u;
    ogm_media_t *handler;
    
@@ -530,6 +530,7 @@ int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_strea
 
    return MP_OK;
 }
+
 
 int ogm_open(media_format_t *mf, char *fname, media_control_t *ctrl)
 {
@@ -1011,6 +1012,7 @@ int ogm_demux_next (media_format_t *mf, int stream_end)
 
 		 if ( mf->time_ref == sno )
 		 {
+
 			 ogg_int64_t delta_granu = page_granul - ogm_strm->last_granulepos;
 			 ogg_int64_t us_interval = 1000000 * delta_granu / stream->sample_rate;
 
@@ -1167,7 +1169,6 @@ module_interface_t * media_new_format()
    mf->players = ogm_players;
 
    /* Seek the media by time */
-
    mf->seek_millisecond = ogm_seek_millisecond;
 
    /* demux next sync stream group */

@@ -67,6 +67,8 @@
 #define SIPUA_STATUS_UNREG_FAIL				3
 #define SIPUA_STATUS_REG_DOING				4
 #define SIPUA_STATUS_UNREG_DOING			5
+#define SIPUA_STATUS_QUEUE			      6
+#define SIPUA_STATUS_SERVE    			7
 
 #define SIPUA_STATUS_RINGING	180
 #define SIPUA_STATUS_ANSWER		200
@@ -129,20 +131,22 @@ struct sipua_set_s
 	user_profile_t* user_prof;
 
 	char* proto; /* 'sip' or 'sips' */
-    char* from;  /* name@domain, for outgoing call, from = NULL */
+   char* from;  /* name@domain, for outgoing call, from = NULL */
 
 	int status;  /* line status */
    /*
 	xlist_t *mediaset;
    */
 	media_format_t* rtp_format;
-	int bandwidth;
+   
+	int bandwidth_need;
+   int bandwidth_hold;
 
 	char* sdp_body;
 	rtpcap_set_t* rtpcapset;
 
 	char* reply_body;
-    char* renew_body;
+   char* renew_body;
 
 	int ring_num;
 };
@@ -156,7 +160,6 @@ struct sipua_event_s
 	char* from;
 
 	int type;
-
 
 	void* content;
 };
@@ -187,6 +190,7 @@ struct sipua_call_event_s
 	char *subject;
 	char *reason_phrase;
 	char *textinfo;
+
 	char *req_uri;
 	char *remote_uri;
 	char *local_uri;
@@ -220,14 +224,15 @@ struct sipua_uas_s
 	char proxy[MAX_IP_BYTES];
 
 	void* lisener;
+
 	int (*notify_event)(void* listener, sipua_event_t* e);
 
 	int (*match_type)(sipua_uas_t* uas, char *type);
 
-    int (*init)(sipua_uas_t* uas, int portno, char* nettype, char* addrtype, char* firewall, char* proxy);
+   int (*init)(sipua_uas_t* uas, int portno, char* nettype, char* addrtype, char* firewall, char* proxy);
 	int (*done)(sipua_uas_t* uas);
 
-    int (*start)(sipua_uas_t* uas);
+   int (*start)(sipua_uas_t* uas);
 	int (*shutdown)(sipua_uas_t* uas);
 
 	int (*address)(sipua_uas_t* uas, char **nettype, char **addrtype, char **netaddr);
@@ -298,10 +303,6 @@ struct sipua_s
  	sipua_set_t* (*line)(sipua_t* sipua, int line);
 
 	/* switch current call session */
-
-
-
-
  	sipua_set_t* (*pick)(sipua_t* sipua, int line);
  	int (*hold)(sipua_t* sipua);
 
@@ -327,6 +328,8 @@ struct sipua_s
 
 	int (*call)(sipua_t *ua, sipua_set_t* set, char *regname, char* sdp_body);
 	int (*answer)(sipua_t *ua, sipua_set_t* call, int reason, media_source_t* source);
+   
+	int (*queue)(sipua_t *ua, sipua_set_t* call);
 
 	int (*options_call)(sipua_t *ua, sipua_set_t* call);
 	int (*info_call)(sipua_t *ua, sipua_set_t* call, char *type, char *info);
@@ -340,6 +343,9 @@ struct sipua_s
     int (*set_conversation_start_callback)(sipua_t *sipua, int(*callback)(void *callback_user, int lineno), void* callback_user);
     int (*set_conversation_end_callback)(sipua_t *sipua, int(*callback)(void *callback_user, int lineno), void* callback_user);
     int (*set_bye_callback)(sipua_t *sipua, int (*callback)(void *callback_user, int lineno, char *caller, char *reason), void* callback_user);
+
+    int (*subscribe_bandwidth)(sipua_t *sipua, sipua_set_t *call);
+    int (*unsubscribe_bandwidth)(sipua_t *sipua, sipua_set_t *call);
 };
 
 sipua_t* sipua_new(sipua_uas_t *uas, void* event_lisener, int(*lisen)(void*,sipua_event_t*), int bandwidth, media_control_t* control);
@@ -365,27 +371,26 @@ sipua_unregist(sipua_t *sipua, user_profile_t *user);
 /* create call with rtp sessions when establish a call */
 sipua_set_t* 
 sipua_create_call(sipua_t *sipua, user_profile_t* user_prof, char* id, 
-							   char* subject, int sbyte, char* info, int ibyte,
+                  char* subject, int sbyte, char* info, int ibyte,
+                  char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
+                  int nmedia, media_control_t* control, 
+                  rtp_coding_t codings[], int ncoding, int pt_pool[]);
 
-							   char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
-							   int nmedia, media_control_t* control, 
-							   rtp_coding_t codings[], int ncoding, int pt_pool[]);
-	
 /* generate sdp message when call out, no rtp session created */
 DECLSPEC
 sipua_set_t* 
 sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id, 
-							   char* subject, int sbyte, char* info, int ibyte,
-							   char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
-							   int nmedia, media_control_t* control, int bw_budget,
-							   rtp_coding_t codings[], int ncoding, int pt_pool[]);
+					char* subject, int sbyte, char* info, int ibyte,
+					char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
+					int nmedia, media_control_t* control, int bw_budget,
+					rtp_coding_t codings[], int ncoding, int pt_pool[]);
 
 DECLSPEC
 sipua_set_t* 
 sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof, 
-								rtpcap_set_t* rtpcapset,
-								char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
-								int nmedia, media_control_t* control, int call_max_bw);
+                     rtpcap_set_t* rtpcapset,
+							char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
+							int nmedia, media_control_t* control, int call_max_bw);
 
 DECLSPEC
 int 
@@ -435,5 +440,6 @@ sipua_bye(sipua_t *ua, sipua_set_t* set);
 DECLSPEC
 int 
 sipua_recall(sipua_t *sipua, sipua_set_t* set);
+
 
 #endif

@@ -178,6 +178,8 @@ char* spxs_media_type(media_player_t * mp)
 
 
 
+
+
 {
    return global_const.media_type;
 }
@@ -228,6 +230,7 @@ capable_descript_t* spxs_capable(media_player_t* mp, void* cap_info)
    rtpcap_descript_t *rtpcap;
 
    int ptime_max = 0;
+
    int penh = 0;
 
    spxs_log(("spxs_capable: #%d %s:%d/%d '%s' %dHz\n", ss->profile_no, ss->netaddr, ss->rtp_port, ss->rtcp_port, global_const.mime_type, spxinfo->audioinfo.info.sample_rate));
@@ -271,7 +274,7 @@ int spxs_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
    getchar();
 
    if(vs->callback_on_ready)
-	   vs->callback_on_ready(vs->callback_on_ready_user, (media_player_t*)vs);
+      vs->callback_on_ready(vs->callback_on_ready_user, (media_player_t*)vs);
 
    return MP_OK;
 }
@@ -493,6 +496,7 @@ int spxs_receive_next (media_receiver_t *recvr, media_frame_t* spxf, int64 sampl
 int spxs_add_destinate(media_transmit_t *send, char *cname, char *nettype, char *addrtype, char *netaddr, int rtp_pno, int rtcp_pno)
 {
 	/* media info for sending stored in session.self */
+
 	return session_add_cname(((speex_sender_t*)send)->rtp_session, cname, strlen(cname)+1, netaddr, (uint16)rtp_pno, (uint16)rtcp_pno, /* (rtpcap_descript_t*) */NULL, NULL);
 }
 
@@ -546,6 +550,7 @@ module_interface_t * media_new_sender()
 
    return mp;
 }
+
 
 /**
  * Loadin Infomation Block

@@ -3,10 +3,12 @@
 PROGNAME = ogmp
 
 PREFIX = /home/hling/timedia-project
+X_PREFIX = /usr/X11R6/lib
 
 CC = gcc
 
-LIBS = -L$(PREFIX)/lib -lcurses -ltmdbase -logmp
+LIBS = -L$(PREFIX)/lib -lncurses -ltmdbase -logmp
+XLIBS = -L/usr/X11R6/lib -lXaw -lXmu -lXt -lX11 -lSM -lICE -lXext
 
 INCLUDES = -I$(PREFIX)/include -I.. -I../include
 
@@ -34,7 +36,7 @@ all:	 libs install
 	-$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $*.o
 
 libs: $(FILES:.c=.o)
-	gcc -shared $(INCLUDES) $(LIBS) $(OBJFILES) -o $(LIBFILES)
+	gcc -shared $(INCLUDES) $(XLIBS) $(LIBS) $(OBJFILES) -o $(LIBFILES)
 
 install: $(LIBFILES)
 	-@cp -f $(LIBFILES) $(INSTDIR)

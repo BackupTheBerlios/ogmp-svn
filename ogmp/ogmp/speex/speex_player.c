@@ -76,7 +76,7 @@ int spxp_set_callback (media_player_t * mp, int type, int(*call)(), void * user)
 
 int spxp_match_play_type (media_player_t * mp, char *play)
 {
-    /* FIXME: due to no strncasecmp on win32 mime is case sensitive */
+   /* FIXME: due to no strncasecmp on win32 mime is case sensitive */
 	if (strcmp(play, "playback") == 0)
 		return 1;
 
@@ -203,6 +203,7 @@ int spxp_close_stream (media_player_t * mp)
    xthr_wait(dec->thread, &loop_ret);
 
    xlist_done(dec->pending_queue, NULL);
+
    xthr_done_lock(dec->pending_lock);
    xthr_done_cond(dec->packet_pending);
    
@@ -230,6 +231,7 @@ char* spxp_media_type(media_player_t * mp)
 char* spxp_play_type(media_player_t * mp)
 {
    return global_const.play_type;
+
 }
 
 media_pipe_t * spxp_pipe(media_player_t * p)
@@ -263,6 +265,7 @@ int spxp_set_options (media_player_t * mp, char *opt, void *value)
     }
 
 	{
+
         spxp_log(("vorbis_set_options: the option is not supported\n"));
         return MP_EUNSUP;
     }
