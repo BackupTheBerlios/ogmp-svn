@@ -151,6 +151,15 @@ int cont_done_player(void * gen)
    return MP_OK;
 }
 
+int cont_done_creater(void * gen)
+{
+   media_maker_t *creater = (media_maker_t *)gen;
+
+   creater->done(creater);
+
+   return MP_OK;
+}
+
 int cont_add_device (media_control_t *cont, char *name, control_setting_call_t *call, void*user)
 {
    control_impl_t *impl = (control_impl_t*)cont;
@@ -271,7 +280,8 @@ media_device_t* cont_find_device(media_control_t *cont, char *name)
 
    xlist_done(devs, cont_done_device);
 
-   if(!dev) cont_log(("cont_find_device: can't find '%s' device\n", name));
+   if(!dev) 
+	   cont_log(("cont_find_device: can't find '%s' device\n", name));
 
    return dev;
 }
@@ -344,7 +354,7 @@ media_player_t * cont_find_player (media_control_t *cont, char *mode, char *mime
    player = xlist_first(players, &$lu);
    while (player)
    {
-      if(player->match_type(player, mime, fourcc))
+      if(player->receiver.match_type(&player->receiver, mime, fourcc))
 	  {
          cont_log(("cont_find_player: found player(mime:%s, fourcc:%s)\n", mime, fourcc));
 
@@ -367,6 +377,101 @@ media_player_t * cont_find_player (media_control_t *cont, char *mode, char *mime
    }
 
    return player; 
+}
+
+media_player_t * cont_new_player (media_control_t *cont, char *mode, char *mime, char *fourcc, void* data)
+{
+   media_player_t * player = NULL;
+   
+   xrtp_list_user_t $lu;   
+   xrtp_list_t * players = xrtp_list_new();
+
+   int num = 0;
+   
+   control_impl_t *impl = (control_impl_t *)cont;
+   
+   cont_log(("cont_find_player: need '%s' module \n", mode));
+
+   num = catalog_create_modules(impl->catalog, mode, players);
+   if (num <= 0)
+   {
+      cont_log(("cont_find_player: no '%s' module \n", mode));
+
+      xrtp_list_free(players, NULL);
+      return NULL;
+   }
+
+   player = xlist_first(players, &$lu);
+   while (player)
+   {
+      if(player->receiver.match_type(&player->receiver, mime, fourcc))
+	  {
+         cont_log(("cont_find_player: found player(mime:%s, fourcc:%s)\n", mime, fourcc));
+
+         xrtp_list_remove_item(players, player);
+         break;
+      }
+      
+      player = xrtp_list_next(players, &$lu);
+   }
+
+   xrtp_list_free(players, cont_done_player);
+
+   if(!player)
+	   return NULL;
+
+   if(player->init(player, cont, data) < MP_OK)
+   {
+	   player->done(player);
+	   return NULL;
+   }
+
+   return player; 
+}
+
+media_maker_t* cont_find_creater(media_control_t *cont, char *mime, media_info_t* minfo)
+{
+	media_maker_t* maker;
+	xrtp_list_user_t $lu; 
+	
+	xrtp_list_t * makers = xrtp_list_new();
+
+	int num = 0;
+	int found = 0;
+   
+	control_impl_t *impl = (control_impl_t *)cont;
+   
+	num = catalog_create_modules(impl->catalog, "create", makers);
+	if (num <= 0)
+	{
+		cont_log(("cont_find_player: no 'create' module\n"));
+
+		xrtp_list_free(makers, NULL);
+		return NULL;
+	}
+
+	maker = xlist_first(makers, &$lu);
+	while (maker)
+	{
+		if(maker->receiver.match_type(&maker->receiver, mime, ""))
+		{
+			cont_log(("cont_find_creater: found creater(mime:%s)\n", mime));
+
+			xrtp_list_remove_item(makers, maker);
+			found = 1;
+
+			break;
+		}
+      
+		maker = xrtp_list_next(makers, &$lu);
+	}
+
+	xrtp_list_free(makers, cont_done_creater);
+
+	if(!found)
+		return NULL;
+
+	return maker;
 }
 
 int cont_seek_millisec (media_control_t * cont, int msec)
@@ -529,7 +634,10 @@ module_interface_t* new_media_control ()
    cont->add_device = cont_add_device;
    cont->find_device = cont_find_device;
 
+   cont->find_creater = cont_find_creater;
+
    cont->find_player = cont_find_player;
+   cont->new_player = cont_new_player;
 
    cont->fetch_setting = cont_fetch_setting;
    

@@ -170,7 +170,7 @@ int vorbis_open_stream (media_player_t *mp, media_info_t *media_info) {
    ai.info.sample_bits = VORBIS_SAMPLE_BITS;
    ai.channels = vinfo->vi.channels;
    
-   ret = mp->device->set_media_info(mp->device, (media_info_t*)&ai);
+   ret = mp->device->set_output_media(mp->device, (media_info_t*)&ai);
    
    if (ret < MP_OK) {
 
@@ -247,14 +247,14 @@ int vorbis_receive_next (media_player_t *mp, void *vorbis_packet, int64 samplest
 
    /* decode and submit */
    auf = vorbis_decode (vp->vorbis_info, (ogg_packet*)vorbis_packet, output);
-   if(!auf){
-
+   if(!auf)
+   {
       vorbis_player_log(("vorbis_receive_next: No audio samples decoded\n"));
       return MP_FAIL;
    }
 
-   if (!vp->receiving_media) {
-
+   if (!vp->receiving_media) 
+   {
       vp->ts_usec_now = 0;
       vp->last_samplestamp = samplestamp;
    }
@@ -357,7 +357,7 @@ int vorbis_done_device ( void *gen ) {
    return MP_OK;
 }
 
-int vorbis_set_device (media_player_t * mp, media_control_t *cont, module_catalog_t *cata) {
+int vorbis_set_device (media_player_t * mp, media_control_t *cont, module_catalog_t *cata, void* extra) {
 
    control_setting_t *setting = NULL;
 

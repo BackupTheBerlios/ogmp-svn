@@ -73,15 +73,12 @@ int spxp_set_callback (media_player_t * mp, int type, int(*call)(), void * user)
    return MP_OK;
 }
 
-int spxp_match_type (media_player_t * mp, char *mime, char *fourcc)
+int spxp_match_play_type (media_player_t * mp, char *play)
 {
     /* FIXME: due to no strncasecmp on win32 mime is case sensitive */
-	if (mime && strncmp(mime, "audio/speex", 11) == 0)
-	{
-		spxp_log(("vorbis_match_type: mime = 'audio/speex'\n"));
+	if (strcmp(play, "playback") == 0)
 		return 1;
-	}
-   
+
 	return 0;
 }
 
@@ -122,7 +119,7 @@ int spxp_loop(void *gen)
 
 		xthr_unlock(dec->pending_lock);
 
-		output->put_frame (output, auf, auf->eots);
+		output->put_frame(output, auf, auf->eots);
 	}
 
 	auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
@@ -136,45 +133,58 @@ int spxp_loop(void *gen)
 
 int spxp_open_stream (media_player_t *mp, media_info_t *media_info)
 {
-   speex_decoder_t *dec = NULL;
+	speex_decoder_t *dec = NULL;
    
-   speex_info_t *spxinfo = (speex_info_t *)media_info;
+	speex_info_t *spxinfo = (speex_info_t *)media_info;
    
-   struct audio_info_s ai;
+	struct audio_info_s ai;
    
-   int ret;
+	int ret;
    
-   if (!mp->device)
-   {
-      spxp_log (("spxp_open_stream: No device to play vorbis audio\n"));
-      return MP_FAIL;
-   }
+	if (!mp->device)
+	{
+		spxp_log (("spxp_open_stream: No device to play vorbis audio\n"));
+		return MP_FAIL;
+	}
    
-   dec = (speex_decoder_t *)mp;
+	dec = (speex_decoder_t *)mp;
    
-   dec->speex_info = spxinfo;
+	dec->speex_info = spxinfo;
    
-   ai.info.sample_rate = spxinfo->audioinfo.info.sample_rate;
-   ai.info.sample_bits = SPEEX_SAMPLE_BITS;
-   ai.channels = spxinfo->audioinfo.channels;
+	ai.info.sample_rate = spxinfo->audioinfo.info.sample_rate;
+	ai.info.sample_bits = SPEEX_SAMPLE_BITS;
+	ai.channels = spxinfo->audioinfo.channels;
    
-   spxp_log (("spxp_open_stream: rate[%d]; channels[%d]\n", ai.info.sample_rate, ai.channels));
+	spxp_log (("spxp_open_stream: rate[%d]; channels[%d]\n", ai.info.sample_rate, ai.channels));
 
-   ret = mp->device->set_media_info(mp->device, (media_info_t*)&ai);
-   
-   if (ret < MP_OK)
-   {
-      spxp_log (("spxp_open_stream: speex stream fail to open\n"));
-      return ret;
-   }
+	ret = mp->device->set_output_media(mp->device, (media_info_t*)&ai);
+	if (ret < MP_OK)
+	{
+		spxp_log (("spxp_open_stream: speex stream fail to open\n"));
+		return ret;
+	}
 
-   /* thread start */
-   dec->pending_queue = xlist_new();
-   dec->pending_lock = xthr_new_lock();
-   dec->packet_pending = xthr_new_cond(XTHREAD_NONEFLAGS);
-   dec->thread = xthr_new(spxp_loop, dec, XTHREAD_NONEFLAGS);
+	spxinfo->dst = speex_decoder_init(spxinfo->spxmode);
+	if (!spxinfo->dst)
+	{
+		spxp_log(("speex_open_header: Decoder initialization failed.\n"));
+		return MP_FAIL;
+	}
+			
+	speex_decoder_ctl(spxinfo->dst, SPEEX_SET_SAMPLING_RATE, &(spxinfo->audioinfo.info.sample_rate));
+	speex_decoder_ctl(spxinfo->dst, SPEEX_GET_FRAME_SIZE, &(spxinfo->nsample_per_frame));
+	speex_decoder_ctl(spxinfo->dst, SPEEX_SET_ENH, &spxinfo->penh);
+
+	/* thread start */
+	dec->pending_queue = xlist_new();
+	dec->pending_lock = xthr_new_lock();
+	dec->packet_pending = xthr_new_cond(XTHREAD_NONEFLAGS);
+
+	dec->thread = xthr_new(spxp_loop, dec, XTHREAD_NONEFLAGS);
    
-   return ret;
+	spxp_log (("spxp_open_stream: speex stream opened\n"));
+
+	return ret;
 }
 
 int spxp_close_stream (media_player_t * mp)
@@ -207,74 +217,6 @@ int spxp_stop (media_player_t *mp)
    mp->device->stop(mp->device);
 
    ((speex_decoder_t*)mp)->receiving_media = 0;
-
-   return MP_OK;
-}
-
-int spxp_receive_next (media_player_t *mp, void *spx_packet, int64 samplestamp, int last_packet)
-{
-   media_pipe_t * output = NULL;
-   media_frame_t * auf = NULL;
-   
-   speex_decoder_t *dec = (speex_decoder_t *)mp;
-   int sample_rate = ((media_info_t*)dec->speex_info)->sample_rate;
-
-   if (!mp->device)
-   {
-      spxp_debug(("spxp_receive_next: No device to play vorbis audio\n"));
-      return MP_FAIL;
-   }
-
-   output = mp->device->pipe(mp->device);
-
-   /**
-    * packetno from 0,1 is head, then increase by 1 to last packet
-	* granulepos[-1] in same page, granulepos[page granulepos] at last page packet.
-	*
-   spxp_log(("spxp_receive_next: packetno[%llu],", ((ogg_packet*)spx_packet)->packetno));
-   spxp_log(("[%dB],", ((ogg_packet*)spx_packet)->bytes));
-   spxp_log(("granule[%lld],", ((ogg_packet*)spx_packet)->granulepos));
-   spxp_log(("samplestamp[%lld]\n", samplestamp));
-    */
-
-   /* decode and submit */
-   auf = spxc_decode(dec->speex_info, (ogg_packet*)spx_packet, output);
-   if(!auf)
-   {
-      spxp_log(("spxp_receive_next: No audio samples decoded\n"));
-      return MP_FAIL;
-   }
-
-   if (!dec->receiving_media)
-   {
-      dec->ts_usec_now = 0;
-      dec->last_samplestamp = samplestamp;
-   }
-
-   if (dec->last_samplestamp != samplestamp)
-   {
-      dec->ts_usec_now += (int)((samplestamp - dec->last_samplestamp) / (double)sample_rate * 1000000);
-      dec->last_samplestamp = samplestamp;
-   }
-   
-   auf->ts = dec->ts_usec_now;
-
-   if(last_packet)
-	   auf->eots = 1;
-   else
-	   auf->eots = 0;
-   
-   {
-	   xthr_lock(dec->pending_lock);
-
-	   xlist_addto_last(dec->pending_queue, auf);
-
-	   xthr_unlock(dec->pending_lock);
-   }
-   
-   xthr_cond_signal(dec->packet_pending);
-
-   dec->receiving_media = 1;
 
    return MP_OK;
 }
@@ -338,6 +280,7 @@ int spxp_done_device(void *gen)
 
 int spxp_set_device(media_player_t* mp, media_control_t* cont, module_catalog_t* cata, void* extra)
 {
+	/* extra is Not used for audio_out device */
    control_setting_t *setting = NULL;
 
    media_device_t *dev = NULL;
@@ -346,7 +289,8 @@ int spxp_set_device(media_player_t* mp, media_control_t* cont, module_catalog_t*
 
    dev = cont->find_device(cont, "audio_out");
    
-   if(!dev) return MP_FAIL;
+   if(!dev) 
+	   return MP_FAIL;
 
    setting = cont->fetch_setting(cont, "audio_out", dev);
    if(!setting)
@@ -359,6 +303,77 @@ int spxp_set_device(media_player_t* mp, media_control_t* cont, module_catalog_t*
    }
    
    mp->device = dev;
+
+   return MP_OK;
+}
+
+int spxp_match_type (media_receiver_t *recvr, char *mime, char *fourcc)
+{
+    /* FIXME: due to no strncasecmp on win32 mime is case sensitive */
+	if (mime && strncmp(mime, "audio/speex", 11) == 0)
+	{
+		spxp_log(("spxp_match_type: mime = 'audio/speex'\n"));
+		return 1;
+	}
+   
+	return 0;
+}
+
+int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 samplestamp, int last_packet)
+{
+   media_pipe_t * output = NULL;
+   media_frame_t * auf = NULL;
+   media_player_t *mp = (media_player_t*)recvr;
+   
+   speex_decoder_t *dec = (speex_decoder_t *)mp;
+   int sample_rate = ((media_info_t*)dec->speex_info)->sample_rate;
+
+   if (!mp->device)
+   {
+      spxp_debug(("spxp_receive_next: No device to play vorbis audio\n"));
+      return MP_FAIL;
+   }
+
+   output = mp->device->pipe(mp->device);
+
+   /* decode and submit */
+   auf = spxc_decode(dec->speex_info, spxf, output);
+   if(!auf)
+   {
+      spxp_log(("spxp_receive_next: No audio samples decoded\n"));
+      return MP_FAIL;
+   }
+
+   if (!dec->receiving_media)
+   {
+      dec->ts_usec_now = 0;
+      dec->last_samplestamp = samplestamp;
+   }
+
+   if (dec->last_samplestamp != samplestamp)
+   {
+      dec->ts_usec_now += (int)((samplestamp - dec->last_samplestamp) / (double)sample_rate * 1000000);
+      dec->last_samplestamp = samplestamp;
+   }
+   
+   auf->ts = dec->ts_usec_now;
+
+   if(last_packet)
+	   auf->eots = 1;
+   else
+	   auf->eots = 0;
+   
+   {
+	   xthr_lock(dec->pending_lock);
+
+	   xlist_addto_last(dec->pending_queue, auf);
+
+	   xthr_unlock(dec->pending_lock);
+   }
+   
+   xthr_cond_signal(dec->packet_pending);
+
+   dec->receiving_media = 1;
 
    return MP_OK;
 }
@@ -380,24 +395,24 @@ module_interface_t * media_new_player()
 
    mp->done = spxp_done;
 
-   mp->play_type = spxp_play_type;
    mp->media_type = spxp_media_type;
    mp->codec_type = spxp_media_type;
 
    mp->set_callback = spxp_set_callback;
    mp->pipe = spxp_pipe;
-   
-   mp->match_type = spxp_match_type;
+   mp->match_play_type = spxp_match_play_type;
    
    mp->open_stream = spxp_open_stream;
    mp->close_stream = spxp_close_stream;
 
-   mp->receive_media = spxp_receive_next;
    mp->set_options = spxp_set_options;
 
    mp->set_device = spxp_set_device;
    
    mp->stop = spxp_stop;
+   
+   mp->receiver.match_type = spxp_match_type;
+   mp->receiver.receive_media = spxp_receive_next;
 
    return mp;
 }

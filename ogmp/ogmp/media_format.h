@@ -46,16 +46,19 @@
 
 #define MAX_STREAMS 256    /* uint8 max value */
 
-#define BYTE_BITS    8    /* of cause */
+/*#define BYTE_BITS    8     of cause */
 
 #define MAX_MODEBYTES 32
 
+typedef struct media_source_s media_source_t;
 typedef struct media_format_s media_format_t;
 typedef struct media_stream_s media_stream_t;
+
+typedef struct media_receiver_s media_receiver_t;
+typedef struct media_maker_s media_maker_t;
 typedef struct media_player_s media_player_t;
 
-typedef struct media_io_s media_io_t;
-
+typedef struct media_info_s media_info_t;
 typedef struct media_control_s media_control_t;
 typedef struct control_setting_s control_setting_t;
 
@@ -72,6 +75,9 @@ struct media_control_s
    int (*done) (media_control_t * cont);
 
    media_player_t* (*find_player) (media_control_t *cont, char *mode, char *mime, char *fourcc, void* extra);
+   media_player_t* (*new_player) (media_control_t *cont, char *mode, char *mime, char *fourcc, void* extra);
+
+   media_maker_t* (*find_creater)(media_control_t *cont, char *name, media_info_t* minfo);
 
    int (*add_device)(media_control_t *cont, char *name, control_setting_call_t *call, void*user);
    media_device_t* (*find_device)(media_control_t *cont, char *name);
@@ -144,7 +150,7 @@ struct media_format_s
    int (*support_type) (media_format_t *mf, char *type, char *subtype);
 
    /* Open/Close a media source */
-   int (*open) (media_format_t *mf, char * fname, media_control_t *ctrl, config_t *conf, char *mode, void* extra);
+   int (*open) (media_format_t *mf, char * fname, media_control_t *ctrl);
    int (*close) (media_format_t * mf);
    
    /* Stream management */
@@ -167,6 +173,12 @@ struct media_format_s
    media_player_t* (*mime_player) (media_format_t * mf, const char *mime);
    media_player_t* (*fourcc_player) (media_format_t * mf, const char *fourcc);
 
+   /* link stream to player */
+   int (*new_all_player) (media_format_t *mf, media_control_t *control, char* mode, void* mode_param);
+   media_player_t* (*new_stream_player) (media_format_t *mf, int strmno, media_control_t *control, char* mode, void* mode_param);
+   media_player_t* (*new_mime_player) (media_format_t * mf, char *mime, media_control_t *control, char* mode, void* mode_param);
+   int (*set_mime_player) (media_format_t *mf, char *mime, media_player_t* player);
+
    /* return available capable number */
    int (*players)(media_format_t * mf, char *type, media_player_t *caps[], int nmax);
 
@@ -181,13 +193,15 @@ struct media_format_s
 #define SAMPLE_TYPE_BIGEND       1
 #define SAMPLE_TYPE_LITTLEEND    2
 
-typedef struct media_info_s media_info_t;
 struct media_info_s
 {
 	int sample_rate;
 	int sample_bits;
 	int sample_byteorder;
 	int bps;
+
+	char fourcc[4];
+	char* mime;
 };
 
 typedef struct audio_info_s audio_info_t;
@@ -201,21 +215,24 @@ struct audio_info_s
 
 struct media_stream_s
 {
-   char mime[MIME_MAXLEN];
-   char fourcc[4];
+	int (*play)(media_stream_t* stream);
+	int (*stop)(media_stream_t* stream);
+
+	char mime[MIME_MAXLEN];
+	char fourcc[4];
    
-   void           *handler;
+	void           *handler;
 
-   int            playable;
-   long           sample_rate;
-   int            eos;
+	int            playable;
+	long           sample_rate;
+	int            eos;
 
-   media_info_t   *media_info;
+	media_info_t   *media_info;
 
-   media_stream_t *next;
+	media_stream_t *next;
    
-   media_io_t *generater;
-   media_player_t *player;
+	media_maker_t *maker;
+	media_player_t *player;
 };
 
 typedef struct media_pipe_s media_pipe_t;
@@ -225,16 +242,20 @@ struct media_frame_s
    media_frame_t *next;
    media_pipe_t *owner; /* the pipe that created the frame */
    
-   int bytes;        /* frame raw size >= nraw */
-   int eos;          /* last frame of the stream */
+   int bytes;			/* frame raw size >= nraw */
+   int nraw;			/* samples */
+
+   int eos;				/* last frame of the stream */
+   int eots;			/* end of frames with same timestamp */
+
+   int ts;				/* timestamp of frame */
+
+   int64 sno;			/* frame serialno */
+   int64 samplestamp;	/* total stamps by now */
    
-   int eots;         /* end of frames with same timestamp */
-   int ts;           /* timestamp of frame */
+   int usec;			/* frame duration */
    
-   int usec;         /* frame duration */
-   
-   int nraw;         /* samples */
-   int nraw_done;    /* samples played */
+   int nraw_done;		/* samples played */
 
    char * raw;
 };
@@ -265,13 +286,16 @@ struct media_device_s
 {
    int running;
    
-   media_pipe_t* (*pipe) (media_device_t *);
+   media_pipe_t* (*pipe) (media_device_t *dev);
 
    int (*start) (media_device_t * dev, media_control_t *ctrl);
    
    int (*stop) (media_device_t * dev);
 
-   int (*set_media_info)(media_device_t *dev, media_info_t *info);
+   media_stream_t* (*new_media_stream) (media_device_t* dev, media_receiver_t *mr, media_info_t *media_info);
+
+   int (*set_input_media)(media_device_t *dev, media_receiver_t* recvr, media_info_t *in_info);
+   int (*set_output_media)(media_device_t *dev, media_info_t *out_info);
 
    int (*setting) (media_device_t * dev, control_setting_t *setting, module_catalog_t *catalog);
 
@@ -284,11 +308,29 @@ struct media_device_s
 
 media_device_t * new_media_device (void* setting);
 
+struct media_receiver_s
+{
+   int (*match_type) (media_receiver_t *recvr, char *mime, char *fourcc);
+
+   int (*receive_media) (media_receiver_t *recvr, void * media_packet, int64 samplestamp, int last_packet);
+};
+
+struct media_maker_s
+{
+   struct media_receiver_s receiver;
+	
+   int (*done) (media_maker_t *mm);
+   
+   media_stream_t* (*new_media_stream) (media_maker_t *mm, media_device_t* dev, media_player_t* player, media_info_t *media_info);
+};
+
 struct media_player_s
 {
+   struct media_receiver_s receiver;
+	
    media_device_t * device;
 
-   const char* (*play_type) (media_player_t * playa);
+   //const char* (*play_type) (media_player_t * playa);
    const char* (*media_type) (media_player_t * playa);
    const char* (*codec_type) (media_player_t * playa);
    
@@ -297,7 +339,9 @@ struct media_player_s
    
    int (*done) (media_player_t * playa);
    
-   int (*match_type) (media_player_t * playa, char *mime, char *fourcc);
+   int (*init) (media_player_t * mp, media_control_t *control, void* data);
+   
+   int (*match_play_type) (media_player_t * playa, char *playtype);
 
    int (*set_callback) (media_player_t * playa, int type, int(*call)(), void *user);
 
@@ -308,53 +352,26 @@ struct media_player_s
 
    int (*open_stream) (media_player_t *playa, media_info_t *media_info);
    int (*close_stream) (media_player_t *playa);
-
+   
    void* (*media)(media_player_t *playa);
 
-   int (*receive_media) (media_player_t *playa, void * media_packet, int64 samplestamp, int last_packet);
-   
    capable_descript_t* (*capable)(media_player_t *playa, void *data);
    int (*match_capable)(media_player_t *playa, capable_descript_t *cap);
 
    int (*stop) (media_player_t * playa);
+   
+   //int (*match_type) (media_player_t * playa, char *mime, char *fourcc);
+   //int (*receive_media) (media_player_t *playa, media_frame_t* frame, int64 samplestamp, int last_packet);
 };
 
-struct media_io_s
+/* media is drived by source */
+struct media_source_s
 {
-   media_device_t * device;
+	media_format_t* format;
 
-   const char* (*play_type) (media_io_t * mio);
-   const char* (*media_type) (media_io_t * mio);
-   const char* (*codec_type) (media_io_t * mio);
-   
-   #define CALLBACK_PLAYER_READY  1
-   #define CALLBACK_MEDIA_STOP  2
-   
-   int (*done) (media_io_t * mio);
-   
-   int (*match_type) (media_io_t * mio, char *mime, char *fourcc);
-
-   int (*set_callback) (media_io_t * mio, int type, int(*call)(), void *user);
-
-   int (*set_options) (media_io_t *mio, char *opt, void *value);
-   int (*set_device) (media_io_t *mio, media_control_t *control, module_catalog_t *cata, void* extra);
-
-   media_pipe_t* (*input) (media_io_t *mio);
-   media_pipe_t* (*output) (media_io_t *mio);
-
-   int (*open_stream) (media_io_t *mio, media_info_t *media_info);
-   int (*close_stream) (media_io_t *mio);
-
-   void* (*media)(media_io_t *mio);
-
-   int (*receive_media) (media_io_t *mio, void *media_packet, int64 samplestamp, int last_packet);
-   int (*generate_media) (media_io_t *mio, void *media_packet, int64 samplestamp, int last_packet);
-   
-   capable_descript_t* (*capable)(media_io_t *mio, void *data);
-   int (*match_capable)(media_io_t *mio, capable_descript_t *cap);
-
-   int (*stop) (media_io_t *mio);
+	int (*done)(media_source_t* msrc);
+	int (*start)(media_source_t* msrc);
+	int (*stop)(media_source_t* msrc);
 };
 
 #endif
-

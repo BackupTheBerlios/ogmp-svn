@@ -20,6 +20,7 @@
 
 #include <timedia/list.h>
 
+typedef struct user_s user_t;
 typedef struct user_profile_s user_profile_t;
 typedef struct sipua_phonebook_s sipua_phonebook_t;
 typedef struct sipua_contact_s sipua_contact_t;
@@ -70,7 +71,8 @@ struct user_profile_s
 	char* registrar;
 
 	char* cname;	/* username@netaddr */
-	char* netaddr;
+
+	user_t *user;
 
 	char* book_location;
 
@@ -83,13 +85,16 @@ struct user_profile_s
 	char *reg_server;
 };
 
-typedef struct user_s user_t;
 struct user_s
 {
 	char *uid;
 	char *loc;
 
 	char *userloc;
+
+	char* nettype;
+	char* addrtype;
+	char* netaddr;
 
 	xlist_t *profiles;
 	int modified;

@@ -36,6 +36,7 @@
 #include "gui_subscriptions_list.h"
 #include "gui_topline.h"
 #include "gui_message.h"
+#include "gui_audio_test.h"
 
 #include <timedia/os.h>
 #include <timedia/xmalloc.h>
@@ -710,6 +711,7 @@ gui_show(ogmp_ui_t* ogui)
 	window_new_user_done(ocui->gui_windows[GUI_NEWUSER]);
 	window_profiles_done(ocui->gui_windows[GUI_PROFILES]);
 	window_message_done(ocui->gui_windows[GUI_MESSAGE]);
+	window_audio_test_done(ocui->gui_windows[GUI_AUDIOTEST]);
 
 	xfree(ocui);
 	
@@ -742,6 +744,7 @@ ogmp_ui_t* ogmp_new_ui(sipua_t* sipua)
 	ocui->gui_windows[GUI_NEWUSER] = window_new_user_new(ocui);
 	ocui->gui_windows[GUI_PROFILES] = window_profiles_new(ocui);
 	ocui->gui_windows[GUI_MESSAGE] = window_message_new(ocui);
+	ocui->gui_windows[GUI_AUDIOTEST] = window_audio_test_new(ocui);
 	
 	ocui->nwin = 17;
 

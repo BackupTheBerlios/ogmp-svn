@@ -15,6 +15,7 @@
  *                                                                         *
  ***************************************************************************/
  
+#include <timedia/xmalloc.h>
 #include "speex_codec.h"
 /*
 */
@@ -45,7 +46,7 @@ static ogg_int32_t CLIP_TO_15(ogg_int32_t x)
 }
 #endif  /* _V_CLIP_MATH */
 
-media_frame_t* spxc_decode(speex_info_t *spxinfo, ogg_packet *op, media_pipe_t *output)
+media_frame_t* spxc_decode(speex_info_t *spxinfo, media_frame_t *spxf, media_pipe_t *output)
 {
 	int i;
 	int clipflag = 0;
@@ -69,7 +70,7 @@ media_frame_t* spxc_decode(speex_info_t *spxinfo, ogg_packet *op, media_pipe_t *
 	frame_bytes = nchannel * frame_size * sizeof(int16);
    
 	/*Copy Ogg packet to Speex bitstream*/
-	speex_bits_read_from(&spxinfo->bits, (char*)op->packet, op->bytes);
+	speex_bits_read_from(&spxinfo->bits, (char*)spxf->raw, spxf->bytes);
 
 	auf = (media_frame_t*)output->new_frame(output, nframes * frame_bytes, NULL);
 	if (!auf)
@@ -122,12 +123,8 @@ media_frame_t* spxc_decode(speex_info_t *spxinfo, ogg_packet *op, media_pipe_t *
 	return auf;
 }
 
-#if 0
-ogg_packet* spxc_encode(speex_info_t* spxinfo, media_frame_t* auf, media_pipe_t* input)
+int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcm_bytes, char** encoded)
 {
-	ogg_packet* ogg;
-
-	int i;
 	int clipflag = 0;
 
 	int nframes;
@@ -136,12 +133,9 @@ ogg_packet* spxc_encode(speex_info_t* spxinfo, media_frame_t* auf, media_pipe_t*
 	int nsample;
 	int frame_bytes;
    
-	int bytes;
+	int spx_bytes;
    
 	int lost=0;
-	char *pcm;
-
-	media_frame_t *auf = NULL;
 
 	nframes = spxinfo->nframe_per_packet;
 	frame_size = spxinfo->nsample_per_frame;
@@ -150,35 +144,36 @@ ogg_packet* spxc_encode(speex_info_t* spxinfo, media_frame_t* auf, media_pipe_t*
 	nsample = nframes * frame_size;
 	frame_bytes = nchannel * frame_size * sizeof(int16);
 
-	/*Create a new encoder state in narrowband mode
-	state = speex_encoder_init(&spxinfo->spxmode);*/
-
-	/*Set the quality to 8 (15 kbps)
-	tmp=8;
-	speex_encoder_ctl(spxinfo->dst, SPEEX_SET_QUALITY, &tmp);*/
-
-	/*Initialization of the structure that holds the bits
-	speex_bits_init(&spxinfo->bits);*/
-
 	/*Flush all the bits in the struct so we can encode a new frame*/
 	speex_bits_reset(&spxinfo->bits);
 
-	/*Encode the frame*/
-	speex_encode(spxinfo->dst, auf->raw, &spxinfo->bits);
-
 	if (nchannel==2)
-		speex_encode_stereo_int(auf->raw, frame_size, &spxinfo->bits);
+		speex_encode_stereo_int((short*)pcm, frame_size, &spxinfo->bits);
 		
-	bytes = speex_bits_nbytes(&spxinfo->bits);
+	if (spxinfo->agc || spxinfo->denoise)
+		speex_preprocess(spxinfo->preprocess, (short*)pcm, NULL);
 
-	/*Destroy the encoder state
-	speex_encoder_destroy(state);*/
+	/*Encode the frame*/
+	speex_encode_int(spxinfo->est, (short*)pcm, &spxinfo->bits);
 
-	/*Destroy the bit-packing struct
-	speex_bits_destroy(&bits);*/
+    if(enc->nframe_group == spxinfo->nframe_per_packet)
+	{
+		char* spx;
 
-	return ogg;
+		speex_bits_insert_terminator(&spxinfo->bits);
+		spx_bytes = speex_bits_nbytes(&spxinfo->bits);
+
+		spx = xmalloc(spx_bytes);
+
+		spx_bytes = speex_bits_write(&spxinfo->bits, spx, spx_bytes);
+		speex_bits_reset(&spxinfo->bits);
+
+		*encoded = spx;
+
+		return spx_bytes;
+	}
+
+	*encoded = NULL;
+
+	return 0;
 }
-#endif
-
-

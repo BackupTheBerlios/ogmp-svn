@@ -23,8 +23,14 @@
 #include <speex/speex.h>
 #include <speex/speex_header.h>
 #include <speex/speex_stereo.h>
+#include <speex/speex_preprocess.h>
 
 #define SPX_FRAME_MSEC 20
+
+/* Same as SpeexHeader Structure Reference */
+#define SPX_NB_MODE  0
+#define SPX_WB_MODE  1
+#define SPX_UWB_MODE  2
 
 typedef struct speex_info_s speex_info_t;
 typedef struct speex_setting_s speex_setting_t;
@@ -34,23 +40,38 @@ struct speex_info_s
 	struct audio_info_s audioinfo;
    
 	SpeexBits bits;
-
 	SpeexStereoState stereo;
+	SpeexPreprocessState *preprocess;
 
 	const SpeexMode *spxmode;
+	int mode;
 
 	int version;
 	int bitstream_version;
 	
-	int nframe_per_packet;
+	int nframe_per_packet;  /* number of speex frames group together */
 	int nsample_per_frame;
 
 	int ptime;		/* determine the frams number in a rtp packet */
+
 	int vbr;		/* variable bit rate */
+	int abr;
+	int cbr;
+
 	int cng;		/* comfortable noise generation */
 	int penh;		/* perceptual enhancement */
 
 	void *dst;		/* decode state */
+
+	/* encoding parameters */
+	void *est;		/* encode state */
+
+	float vbr_quality;	/* 1-10 */
+	int cbr_quality;	/* 1-10 */
+
+	int complexity;
+	int denoise;
+	int agc;
 
 	int bitrate_now;
 
@@ -165,15 +186,25 @@ struct speex_setting_s
 {
 	rtp_profile_setting_t rtp_setting;
 
-	int sample_rate; 
+	int sample_rate;
+	int channels;
 	int mode; 
 	int ptime_max;
+
 	int cng;
 	int penh;
-	int vbr; 
-	int abr; 
-	int cbr;
 
+	int vbr; 
+	float vbr_quality;
+
+	int abr;
+	
+	int cbr;
+	int cbr_quality;
+
+	int complexity;
+	int denoise;
+	int agc;
 };
 
 speex_setting_t* speex_setting(media_control_t *control);

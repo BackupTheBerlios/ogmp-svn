@@ -35,22 +35,36 @@ struct rtp_stream_s
    
    int						sno;
    char						*source_cname;
-   int						source_cnlen;
 
    rtpcap_descript_t		*rtp_cap;
    xrtp_session_t			*session;
+   int						bandwidth;
 
    rtp_format_t				*rtp_format;
 };
 
 struct rtp_format_s
 {
-   struct  media_format_s  format;
+	struct  media_format_s  format;
 
-   int (*open_capables) (media_format_t *mf, char *src_cname, rtpcap_set_t *rtpcapset, media_control_t *ctrl, config_t *conf, char *mode, capable_descript_t* opened_caps[]);
+	/**
+	 * Open rtp format according to rtcap set from SDP answered, and add participant of SDP
+	 * So is ready to receive remote media.
+	 * return used bandwidth
+	 */
+	int (*open_capables) (media_format_t *mf, rtpcap_set_t *rtpcapset, media_control_t *ctrl, char *mode, int bandwidth);
+	/**
+	 * Open local media source for sending to remote end.
+	 *
+	 * Retrieve the rtp media of the format, rtp_sender use it for sendout.
+	 * Actually, for each rtp member there will be a player associated to them in each rtp stream:
+	 * The player of local member(self) is a sender. And sender need to give a media source.
+	 * All other player recieve remote media for each member.
+	 */
 
-   dev_rtp_t *rtp_in;
-   int millisec;
+	dev_rtp_t *rtp_in;
+	int millisec;
+	int bandwidth;
 };
 
 /* New detected stream add to group */

@@ -36,44 +36,6 @@
 #define MAX_REC_CAP 8
 #define MAX_CN_BYTES 256 /* max value in rtcp */
 
-int sipua_done_action(sipua_action_t *action)
-{
-	xfree(action);
-
-	return UA_OK;
-}
-
-sipua_action_t *sipua_new_action(void *sip_user,
-                                 int(*onregister)(void*,char*,int,void*), 
-                                 int(*oncall)(void*,char*,void*,void*), 
-                                 int(*onconnect)(void*,char*,void*), 
-								 int(*onreset)(void*,char*,void*),
-								 int(*onbye)(void*,char*))
-{
-	sipua_action_t *act;
-   
-	act = xmalloc(sizeof(sipua_action_t));
-	if(!act)
-	{
-		ua_log(("action_new: No memory\n"));
-		return NULL;
-	}
-   
-	memset(act, 0, sizeof(sipua_action_t));
-
-	act->done = sipua_done_action;
-   
-	act->sip_user = sip_user;
-   
-	act->onregister = onregister;
-	act->oncall = oncall;
-	act->onconnect = onconnect;
-	act->onreset = onreset;
-	act->onbye = onbye;
-
-	return act;
-}
-
 int sipua_book_pt(int *pt)
 {
 	int i;
@@ -122,171 +84,31 @@ char* sipua_userloc(sipua_t* sipua, char* uid)
 	return loc;
 }
 
-sipua_set_t* sipua_create_call(sipua_t *sipua, user_profile_t* user_prof, char* id, 
-							   char* subject, int sbyte, char* info, int ibyte,
-							   char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
-							   int nmedia, media_control_t* control, 
-							   rtp_coding_t codings[], int ncoding, int pt_pool[])
+int sipua_locate_user(sipua_t* sipua, user_t* user)
 {
-	xrtp_session_t* rtp_session;
-	dev_rtp_t* rtpdev;
-	sipua_set_t* set;
+	int nb, ub;
 
-	char tmp[16];
+	char *p;
 
-	char *nettype, *addrtype, *netaddr;
+	sipua->uas->address(sipua->uas, &user->nettype, &user->addrtype, &user->netaddr);
 
-	int i;
-	int bw_budget;
+	ub = strlen(user->uid);
+	nb = strlen(user->netaddr);
 
-	module_catalog_t *cata = control->modules(control);
+	if(user->userloc)
+		xfree(user->userloc);
 
-	set = xmalloc(sizeof(sipua_set_t));
-	if(!set)
-	{
-		ua_log(("sipua_new_set: No memory\n"));
-		return NULL;
-	}
-	memset(set, 0, sizeof(sipua_set_t));
+	user->userloc = p = xmalloc(ub+nb+2);
 
-	set->user_prof = user_prof;
+	strcpy(p, user->uid);
+	p += ub;
 
-	set->subject = xstr_clone(subject);
-	set->sbyte = sbyte;
-	set->info = xstr_clone(info);
-	set->ibyte = ibyte;
+	*p = '@';
+	p++;
 
-	sipua->uas->address(sipua->uas, &nettype, &addrtype, &netaddr);
-	
-	/* generate id and version */
-	if(id == NULL)
-	{
-		sprintf(tmp, "%i", time(NULL));
-		set->setid.id = xstr_clone(tmp);
-	}
-	else
-	{
-		/* conference identification */
-		set->setid.id = xstr_clone(id);
-		set->setid.username = user_prof->username;
+	strcpy(p, user->netaddr);
 
-		set->setid.nettype = xstr_clone(nettype);
-		set->setid.addrtype = xstr_clone(addrtype);
-		set->setid.netaddr = xstr_clone(netaddr);
-	}
-
-	sprintf(tmp, "%i", time(NULL));
-	set->version = xstr_clone(tmp);
-
-	set->mediaset = xlist_new();
-
-	/* create default rtp session */
-	rtpdev = (dev_rtp_t*)control->find_device(control, "rtp");
-
-	sipua->uas->clear_coding(sipua->uas);
-
-	bw_budget = control->book_bandwidth(control, 0);
-
-	for(i=0; i<ncoding; i++)
-	{
-		xrtp_media_t* rtp_media;
-		int rtp_portno, rtcp_portno;
-		int bw_rtp;
-
-		int pt = codings[i].pt;
-		
-		char mediatype[16];
-		int default_rtp_portno = 0;
-		int default_rtcp_portno = 0;
-		int j;
-
-		if(pt < 0)
-			pt = sipua_book_pt(pt_pool);
-
-		if(pt<0)
-		{
-			ua_log(("sipua_new_session: no payload type available\n"));
-			break;
-		}
-
-		/* get default prots */
-		j=0;
-		do
-		{
-			mediatype[j] = codings[i].mime[j];
-			j++;
-
-		}while(codings[i].mime[j] != '/');
-
-		mediatype[j] = '\0';
-	
-		for(j=0; j<nmedia; j++)
-		{
-			if(strcmp(mediatype, mediatypes[j]) == 0)
-			{
-				default_rtp_portno = rtp_ports[j];
-				default_rtcp_portno = rtcp_ports[j];
-
-				break;
-			}
-		}
-
-		rtp_session = rtpdev->rtp_session(rtpdev, cata, control,
-								user_prof->cname, strlen(user_prof->cname)+1, netaddr, 
-								(uint16)default_rtp_portno, (uint16)default_rtcp_portno,
-								(uint8)pt, codings[i].mime, codings[i].clockrate, codings[i].param,
-								bw_budget);
-
-		if(!rtp_session)
-		{
-			sipua_release_pt(pt_pool, pt);
-			ua_log(("sipua_new_session: fail to create rtp session[%s]\n", codings[i].mime));
-			continue;
-		}
-
-		bw_rtp = session_bandwidth(rtp_session);
-
-		if(bw_rtp > bw_budget)
-		{
-			session_done(rtp_session);
-			break;
-		}
-
-		bw_budget = control->book_bandwidth(control, bw_rtp);
-
-		session_portno(rtp_session, &rtp_portno, &rtcp_portno);
-
-		rtp_media = session_media(rtp_session);
-		/*
-		rtp_media->set_coding(rtp_media, codings[i].clockrate, codings[i].param);
-		sipua->uas->add_coding(sipua->uas, pt, rtp_portno, rtcp_portno, codings[i].mime, codings[i].clockrate, codings[i].param);
-		*/
-		xlist_addto_first(set->mediaset, rtp_media);
-
-		set->bandwidth += bw_rtp;
-	}
-
-	if(set->bandwidth == 0)
-	{
-		if(set->setid.nettype) xfree(set->setid.nettype);
-		if(set->setid.addrtype) xfree(set->setid.addrtype);
-		if(set->setid.netaddr) xfree(set->setid.netaddr);
-
-		xfree(set->setid.id);
-		xfree(set->version);
-		xfree(set->subject);
-		xfree(set->info);
-
-		xlist_done(set->mediaset, NULL);
-
-		xfree(set);
-
-		return NULL;
-	}
-
-	ua_log(("sipua_create_call: call[%s] created\n", subject));
-
-	return set;
+	return UA_OK;
 }
 
 /* Create a empty call with initial sdp */
@@ -366,11 +188,11 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 	sdp_message_s_name_set (sdp_info->sdp_message, xstr_clone(set->subject));
 
 	sdp_message_c_connection_add (sdp_info->sdp_message, 
-									-1 /* media_pos */,
-									xstr_clone(nettype) /* IN */,
-									xstr_clone(addrtype) /* IP4 */,
+									-1, /* media_pos */
+									xstr_clone(nettype), /* IN */
+									xstr_clone(addrtype), /* IP4 */
 									xstr_clone(netaddr),
-									NULL /* multicast_ttl */, 
+									NULL, /* multicast_ttl */ 
 									NULL /* multicast_int */);
 
 	/* offer-answer draft says we must copy the "t=" line */
@@ -424,7 +246,7 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 			}
 		}
 
-		media_bw = session_new_sdp(cata, netaddr, &rtp_portno, &rtcp_portno, pt, codings[i].mime, codings[i].clockrate, codings[i].param, bw_budget, control, sdp_info);
+		media_bw = session_new_sdp(cata, nettype, addrtype, netaddr, &rtp_portno, &rtcp_portno, pt, codings[i].mime, codings[i].clockrate, codings[i].param, bw_budget, control, sdp_info);
 
 		if(media_bw > 0)
 			bw_budget -= media_bw;
@@ -435,8 +257,6 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 	sdp_message_to_str(sdp_info->sdp_message, &set->sdp_body);
 
 	xfree(sdp_info);
-
-	set->mediaset = xlist_new();
 
 	return set;
 }
@@ -568,7 +388,7 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 
 		if(medias[j] == 0)
 		{
-			media_bw = session_new_sdp(cata, netaddr, 
+			media_bw = session_new_sdp(cata, nettype, addrtype, netaddr, 
 							&rtpcap->local_rtp_portno, &rtpcap->local_rtcp_portno, 
 							rtpcap->profile_no, rtpcap->profile_mime, 
 							rtpcap->clockrate, rtpcap->coding_param, 
@@ -594,22 +414,24 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 	return set;
 }
 
-int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, rtpcap_set_t* rtpcapset,
-							   media_control_t* control, int pt_pool[])
+int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_set_t* rtpcapset,
+						xlist_t* format_handlers, media_control_t* control, int pt_pool[])
 {
-	xrtp_session_t* rtp_session;
 	dev_rtp_t* rtpdev;
 
-	rtpcap_descript_t* rtpcap;
 	xlist_user_t u;
 
 	char *nettype, *addrtype, *netaddr;
 
+	int bw = 0;
 	int bw_budget;
 	int bw_rtp=0;
 	module_catalog_t *cata;
 
 	user_profile_t* user_prof = call->user_prof;
+
+	/* define a player */
+	media_format_t *format;
 
 	bw_budget = control->book_bandwidth(control, call->bandwidth);
 	if(bw_budget < 0)
@@ -619,51 +441,51 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, rtpcap_set_t* rtpcap
 	
 	cata = control->modules(control);
 
-	call->mediaset = xlist_new();
-
 	/* create default rtp session */
 	rtpdev = (dev_rtp_t*)control->find_device(control, "rtp");
 
-	rtpcap = xlist_first(rtpcapset->rtpcaps, &u);
-	while(rtpcap)
+	/* create a media format, also get the capabilities of the file */
+	format = (media_format_t *)xlist_first(format_handlers, &u);
+	while (format)
 	{
-		if(rtpcap->enable)
+		/* open media source */
+		if(format->support_type(format, "mime", "application/sdp"))
 		{
-			xrtp_media_t* rtp_media;
+			rtp_format_t* rtpfmt = (rtp_format_t*)format;
 
-			rtp_session = rtpdev->rtp_session(rtpdev, cata, control,
-								user_prof->cname, strlen(user_prof->cname)+1, netaddr, 
-								(uint16)rtpcap->local_rtp_portno, (uint16)rtpcap->local_rtcp_portno,
-								rtpcap->profile_no, rtpcap->profile_mime, rtpcap->clockrate, rtpcap->coding_param,
-								call->bandwidth);
-
-			if(!rtp_session)
+			bw = rtpfmt->open_capables(format, rtpcapset, control, mode, call->bandwidth);
+			if(bw > 0)
 			{
-				sipua_release_pt(pt_pool, rtpcap->profile_no);
-				ua_log(("sipua_new_session: fail to create rtp session[%s]\n", rtpcap->profile_mime));
-	
-				rtpcap = xlist_next(rtpcapset->rtpcaps, &u);
-				continue;
+				call->rtp_format = format;
+
+				break;
 			}
-
-			bw_rtp += session_bandwidth(rtp_session);
-
-			rtp_media = session_media(rtp_session);
-
-			xlist_addto_first(call->mediaset, rtp_media);
 		}
-	
-		rtpcap = xlist_next(rtpcapset->rtpcaps, &u);
+      
+		format = (media_format_t*) xlist_next(format_handlers, &u);
 	}
 
-	if(call->bandwidth - bw_rtp > 0)
-		control->release_bandwidth(control, call->bandwidth - bw_rtp);
+	if(call->rtp_format == NULL)
+	{
+		ua_log(("sipua_establish_call: no format support\n"));
+
+		return 0;
+	}
+	/*
+	rtp_media = session_media(rtp_session);
+	xlist_addto_first(call->mediaset, rtp_media);
+	*/
+	if(call->bandwidth - bw > 0)
+		control->release_bandwidth(control, call->bandwidth - bw);
+
+	call->bandwidth = bw;
 
 	ua_log(("sipua_create_call: call[%s] created\n", rtpcapset->subject));
 
-	return UA_OK;
+	return bw;
 }
 
+#if 0
 int sipua_add(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media, int bandwidth)
 {
 	int bw = bandwidth - session_bandwidth(rtp_media->session);
@@ -679,7 +501,9 @@ int sipua_remove(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media)
 
 	return UA_OK;
 }
+#endif
 
+#if 0
 int sipua_session_sdp(sipua_t *sipua, sipua_set_t* set, char** sdp_body)
 {
 	rtpcap_sdp_t sdp;
@@ -736,7 +560,7 @@ int sipua_session_sdp(sipua_t *sipua, sipua_set_t* set, char** sdp_body)
 		sdp_message_free(sdp.sdp_message);
 		return 0;
 	}
-	
+
 	rtp_media = xlist_first(set->mediaset, &u);
 	while(rtp_media)
 	{
@@ -751,6 +575,7 @@ int sipua_session_sdp(sipua_t *sipua, sipua_set_t* set, char** sdp_body)
 
 	return UA_OK;
 }
+#endif
 
 int sipua_regist(sipua_t *sipua, user_profile_t *user, char *userloc)
 {

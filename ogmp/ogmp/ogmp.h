@@ -1,5 +1,5 @@
 /***************************************************************************
-                          ogmp_server.c  -  description
+                          ogmp_source.c  -  description
                              -------------------
     begin                : Wed May 19 2004
     copyright            : (C) 2004 by Heming
@@ -35,14 +35,11 @@
 #define SIP_SESSION_ID "20040922"
 #define SIP_SESSION_NAME "ogmp voip"
 
-#define SEND_REGNAME "rtp_server@localhost"
-#define SEND_FNAME "voip rtp server"
-
 #define RECV_REGNAME "rtp_client@localhost"
 #define RECV_FNAME "voip rtp client"
 
 #define SESSION_SUBJECT "ogmp voip test"
-#define SESSION_DESCRIPT "ogmp server and client connectivity"
+#define SESSION_DESCRIPT "ogmp source and client connectivity"
 
 #define MAX_NCAP 16
 
@@ -64,7 +61,7 @@
 
 typedef struct ogmp_command_s ogmp_command_t;
 typedef struct ogmp_client_s ogmp_client_t;
-typedef struct ogmp_server_s ogmp_server_t;
+typedef struct ogmp_source_s ogmp_source_t;
 
 typedef struct ogmp_ui_s ogmp_ui_t;
 struct ogmp_ui_s
@@ -83,50 +80,81 @@ struct ogmp_command_s
 	void* instruction;
 };
 
-struct ogmp_server_s
+struct ogmp_client_s
 {
+	sipua_t sipua;
+
+	int finish;
+	int valid;
+
+	media_control_t *control;
+
+	media_format_t *rtp_format;
+
+	xlist_t *format_handlers;
+	media_source_t *backgroud_source;
+
+	sipua_set_t* call;
+
+	config_t * conf;
+
+	char *sdp_body;
+
+	int registered;
+
+	int ncap;
+	capable_descript_t *caps[MAX_NCAP];
+
+	xthr_lock_t *course_lock;
+	xthr_cond_t *wait_course_finish;
+
+	ogmp_ui_t* ui;
+
+	xthread_t* main_thread;
+
+	xthr_cond_t* wait_unregistered;
+
+	/* below is sipua related */
+	user_profile_t* user_prof;
+	user_profile_t* reg_profile;
+
+	int expire_sec; /* registration expired seconds, time() */
+
+	uint16 default_rtp_portno;
+	uint16 default_rtcp_portno;
+
+	int pt[MAX_PAYLOAD_TYPE];
+
+	sipua_set_t* lines[MAX_SIPUA_LINES];
+	xthr_lock_t* lines_lock;
+
+	void* lisener;
+	int (*notify_event)(void* listener, sipua_event_t* e);
+
+	int nmedia;
+	char* mediatypes[MAX_SIPUA_MEDIA];
+	int default_rtp_ports[MAX_SIPUA_MEDIA];
+	int default_rtcp_ports[MAX_SIPUA_MEDIA];
+};
+
+struct ogmp_source_s
+{
+   struct media_source_s source;
+
    int finish;
-   int valid;
 
    media_control_t *control;
 
    xrtp_thread_t *demuxer;
-
    int demuxing;
 
    xthr_lock_t *lock;
    xthr_cond_t *wait_request;
 
-   media_format_t *format;
-   xlist_t *format_handlers;
+   //media_format_t *format;
 
-   char *fname;
-
-   user_profile_t* user_profile;
-
-   sipua_t *sipua;
-
-   sipua_set_t* call;
-
-   char *sdp_body;
-
-   int registered;
-
-   int nplayer;
+   int nstream;
    media_player_t* players[MAX_NCAP];
-
-   capable_descript_t* caps[MAX_NCAP];
-   capable_descript_t* selected_caps[MAX_NCAP];
-
-   ogmp_ui_t* ui;
-
-   xthread_t* main_thread;
-   /*
-   xthr_lock_t* command_lock;
-   xthr_cond_t* wait_command;
-   ogmp_command_t *command;
-   */
-   xthr_cond_t* wait_unregistered;
 };
 
 typedef struct ogmp_setting_s ogmp_setting_t;
@@ -142,18 +170,10 @@ struct ogmp_setting_s
 	rtp_coding_t codings[MAX_NPAYLOAD_PRESET];
 };
 
-ogmp_server_t* server_new(sipua_uas_t* uas, ogmp_ui_t* ui, user_profile_t* user, int bw);
-int server_config_rtp(void *conf, control_setting_t *setting);
-ogmp_setting_t* server_setting(media_control_t *control);
-
-int server_command(ogmp_server_t *server, ogmp_command_t* cmd);
-int server_setup(ogmp_server_t *server, char *mode, void* extra);
-int server_start (ogmp_server_t *ser);
-int server_stop (ogmp_server_t *ser);
-
 ogmp_client_t* client_new(user_profile_t* user, int portno, char* nettype, char* addrtype, char* firewall, char* proxy, int bandwidth);
 int client_config_rtp(void *conf, control_setting_t *setting);
 ogmp_setting_t* client_setting(media_control_t *control);
-
-int client_setup(ogmp_client_t *client, char *mode, rtpcap_set_t *rtpcapset);
 int client_call(ogmp_client_t *client, char *regname);
+
+media_source_t* source_open(char* name, media_control_t* control, char* mode, void* extra);
+ogmp_setting_t* source_setting(media_control_t *control);

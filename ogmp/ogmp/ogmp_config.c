@@ -71,7 +71,7 @@ ogmp_setting_t clie_setting =
 	1, {"audio/speex", 8000, 1, PAYLOADTYPE_DYNA}
 };
 
-ogmp_setting_t* server_setting(media_control_t *control)
+ogmp_setting_t* source_setting(media_control_t *control)
 {
 	return &serv_setting;
 }

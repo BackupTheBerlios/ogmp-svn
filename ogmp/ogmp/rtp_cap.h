@@ -24,6 +24,7 @@
 #include <osip2/osip_negotiation.h>
 
 #define MAX_MIME_BYTES 64
+#define MAX_CNAME_BYTES 256
 #define MAX_IP_BYTES  64
 #define MAX_NPAYLOAD_PRESET 8
 
@@ -82,7 +83,9 @@ struct rtpcap_descript_s
 	char *profile_mime;
 	uint8 profile_no;
 
-	char *ipaddr;
+	char *nettype;
+	char *addrtype;
+	char *netaddr;
 
 	uint16 rtp_portno;
 	uint16 rtcp_portno;
@@ -104,17 +107,18 @@ struct rtpcap_set_s
 	char *callid;
 	char *username;
 	char *version;
+
 	char *nettype;
 	char *addrtype;
-	char *netaddr;	/* sip */
+	char *netaddr;	/* participant's default media address */
+
+	char cname[MAX_CNAME_BYTES];
 
 	int sbytes;
 	char *subject;
 
 	int ibytes;
 	char *info;
-
-	char *ipaddr;   /* rtp */
 
 	xlist_t *rtpcaps;
 
@@ -130,19 +134,33 @@ struct rtpcap_sdp_s
 	int sdp_media_pos;
 };
 
+typedef struct transmit_source_s transmit_source_t;
 typedef struct media_transmit_s media_transmit_t;
+
+struct transmit_source_s
+{
+   struct media_source_s source;
+
+   int (*add_destinate)(transmit_source_t *tsrc, char *mime, char *cname, char *nettype, char *addrtype, char *netaddr, int rtp_port, int rtcp_port);
+   int (*remove_destinate)(transmit_source_t *tsrc, char *mime, char *cname, char *nettype, char *addrtype, char *netaddr, int rtp_port, int rtcp_port);
+};
+
 struct media_transmit_s
 {
    struct media_player_s player;
 
-   int (*add_destinate)(media_transmit_t *trans, char *cname, int cnlen, char *ipaddr, uint16 rtp_port, uint16 rtcp_port, rtpcap_descript_t *rtpcap);
-   int (*delete_destinate)(media_transmit_t *trans, char *cname);
+   int (*add_destinate)(media_transmit_t *trans, char *cname, char *nettype, char *addrtype, char *netaddr, int rtp_port, int rtcp_port);
+   int (*remove_destinate)(media_transmit_t *trans, char *cname, char *nettype, char *addrtype, char *netaddr, int rtp_port, int rtcp_port);
 
-   int (*add_source)(media_transmit_t *trans, char *cname, int cnlen, char *ipaddr, uint16 rtp_port, uint16 rtcp_port);
-   int (*delete_source)(media_transmit_t *trans, char *cname);
+   int (*add_source)(media_transmit_t *trans, char *cname, int cnlen, char *netaddr, uint16 rtp_port, uint16 rtcp_port);
+   int (*remove_source)(media_transmit_t *trans, char *cname);
 };
 
-rtpcap_descript_t* rtp_capable_descript(int payload_no, char *ip, uint media_port, uint control_port, char *mime, int clockrate, int coding_param, void *sdp_message);
+rtpcap_descript_t* rtp_capable_descript(int payload_no, 
+										char* nettype, char* addrtype, char *netaddr, 
+										uint media_port, uint control_port, char *mime, 
+										int clockrate, int coding_param, 
+										void *sdp_message);
 
 /**
  * Suppose in "a=rtpmap:96 G.729a/8000/1", rtpmap string would be "96 G.729a/8000/1"

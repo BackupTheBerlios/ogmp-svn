@@ -61,5 +61,47 @@ struct speex_decoder_s
    xthr_cond_t *packet_pending;
 };
 
-media_frame_t* spxc_decode(speex_info_t* spxinfo, ogg_packet* packet, media_pipe_t* output);
-media_frame_t* spxc_encode(speex_info_t* spxinfo, media_frame_t* packet, media_pipe_t* input);
+typedef struct speex_encoder_s speex_encoder_t;
+struct speex_encoder_s
+{
+   struct media_maker_s maker;
+
+   speex_info_t *speex_info;
+
+   char* encoding_frame;			/* 20ms frame size */
+   char* encoding_gap;
+
+   int encoding_frame_bytes;
+   int encoding_nsample_expect;
+   int encoding_nsample_buffered;
+
+   int lookahead;
+   int nframe_group;	/* current how many speex frames in a group */
+
+   int nsample_per_group;
+   int64 group_samplestamp;
+
+   media_device_t* input_device;
+   media_stream_t* media_stream;
+
+   /* Failure occurred */
+   int fail;
+
+   /* parallel with demux thread */
+   xthread_t *thread;
+
+   /* stop the thread */
+   int stop;
+
+   /* queue protected by lock*/
+   xlist_t *pending_queue;
+
+   /* mutex pretected */
+   xthr_lock_t *pending_lock;
+
+   /* thread running condiftion */
+   xthr_cond_t *packet_pending;
+};
+
+media_frame_t* spxc_decode(speex_info_t* spxinfo, media_frame_t *spxf, media_pipe_t* output);
+int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int bytes, char** spx);

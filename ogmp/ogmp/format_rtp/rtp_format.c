@@ -265,18 +265,18 @@ int rtp_support_type (media_format_t *mf, char *type, char *subtype)
 }
 
 /**
- * There is no operate on file, all data from from net
+ * There is no operate on file, return opened player number is Zero
  */
 int rtp_open (media_format_t *mf, char * fname, media_control_t *ctrl, config_t *conf, char *mode, void* extra)
 {
-	return MP_NOP;
+	return 0;
 }
 
 int rtp_stream_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
 {
    rtp_stream_t *rtpstrm = (rtp_stream_t*)gen;
 
-   if(strncmp(rtpstrm->source_cname, cn, rtpstrm->source_cnlen) != 0)
+   if(strcmp(rtpstrm->source_cname, cn) != 0)
    {
 	   rtp_log(("rtp_stream_on_member_update: Stream Receiver[%s] discovered\n", cn));
 	   return MP_OK;
@@ -287,7 +287,7 @@ int rtp_stream_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
    return MP_OK;
 }
 
-rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, int src_cnlen, rtpcap_descript_t *rtpcap, media_control_t *ctrl, char *mode, void* extra)
+rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript_t *rtpcap, media_control_t *ctrl, char *mode, int bw_budget, void* extra)
 {
 	unsigned char stype;
 	rtp_stream_t *strm;
@@ -296,12 +296,14 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 
 	int rtp_portno, rtcp_portno;
 
-	int total_bw, rtp_bw;
-
 	module_catalog_t *cata = ctrl->modules(ctrl);
 
 	rtpcap_set_t* rtpcapset = (rtpcap_set_t*)extra;
-	user_profile_t* user = rtpcapset->user_profile;
+	user_profile_t* user_prof = rtpcapset->user_profile;
+
+	char* remote_nettype;
+	char* remote_addrtype;
+	char* remote_netaddr;
 /*
 	if(!cap->match_type(cap, "rtp"))
 	{
@@ -347,21 +349,14 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 		return NULL;
 	}
 
-	total_bw = 0;
-	rtp_bw = 0;
-	/*
-	refer this code fragment:
-	rtp_session = rtpdev->rtp_session(rtpdev, cata, control,
-									user_prof->cname, strlen(user_prof->cname)+1,
-									netaddr, (uint16)default_rtp_portno, (uint16)default_rtcp_portno,
-									(uint8)pt, codings[i].mime, codings[i].clockrate, codings[i].param,
-									bw_budget);
-	*/
 	strm->session = rtp_format->rtp_in->rtp_session(rtp_format->rtp_in, cata, ctrl,
-									user->cname, strlen(user->cname)+1,
-									user->netaddr, rset->default_rtp_portno, rset->default_rtcp_portno,
-									rtpcap->profile_no, rtpcap->profile_mime, rtpcap->clockrate, rtpcap->coding_param,
-									total_bw);
+									user_prof->cname, strlen(user_prof->cname)+1,
+									user_prof->user->nettype, user_prof->user->addrtype, 
+									user_prof->user->netaddr, 
+									rset->default_rtp_portno, rset->default_rtcp_portno,
+									rtpcap->profile_no, rtpcap->profile_mime, 
+									rtpcap->clockrate, rtpcap->coding_param,
+									bw_budget);
 
 	if(!strm->session)
 	{
@@ -373,11 +368,13 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 	session_portno(strm->session, &rtp_portno, &rtcp_portno);
 	rtpcap->profile_no = session_payload_type(strm->session);
 
-	/* the stream rtp capable */
-	strm->rtp_cap = rtp_capable_descript(rtpcap->profile_no, user->netaddr, 
-										rtp_portno, rtcp_portno, 
-										rtpcap->profile_mime, rtpcap->clockrate, 
-										rtpcap->coding_param, NULL);
+	/* the stream rtp capable 
+	strm->rtp_cap = rtp_capable_descript(rtpcap->profile_no, 
+						user_prof->user->nettype, user_prof->user->addrtype, user_prof->user->netaddr, 
+						rtp_portno, rtcp_portno, 
+						rtpcap->profile_mime, rtpcap->clockrate, 
+						rtpcap->coding_param, NULL);
+	*/
 
 	strm->rtp_format = rtp_format;
 
@@ -386,13 +383,28 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 
 	rtp_add_stream((media_format_t*)rtp_format, (media_stream_t*)strm, sno, stype);
 
-	rtp_log(("rtp_open_stream: for [%s@%s:%u|%u]\n", src_cn, rtpcap->ipaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno));
+	rtp_log(("rtp_open_stream: for [%s:%u|%u]\n", rtpcapset->cname, rtpcap->rtp_portno, rtpcap->rtcp_portno));
 	
-	session_add_cname(strm->session, src_cn, src_cnlen, rtpcap->ipaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno, rtpcap, ctrl);
+	if(rtpcap->netaddr)
+	{
+		remote_nettype = rtpcap->nettype;
+		remote_addrtype = rtpcap->addrtype;
+		remote_netaddr = rtpcap->netaddr;
+	}
+	else
+	{
+		remote_nettype = rtpcapset->nettype;
+		remote_addrtype = rtpcapset->addrtype;
+		remote_netaddr = rtpcapset->netaddr;
+	}
+	
+	session_add_cname(strm->session, rtpcapset->cname, strlen(rtpcapset->cname), remote_netaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno, rtpcap, ctrl);
 
 	/* waiting to source to be available */
-	strm->source_cname = xstr_nclone(src_cn, src_cnlen);
-	strm->source_cnlen = src_cnlen;
+	strm->source_cname = xstr_clone(rtpcapset->cname);
+	strm->bandwidth = session_bandwidth(strm->session);
+
+	rtp_format->bandwidth += strm->bandwidth;
 
 	session_set_callback(strm->session, CALLBACK_SESSION_MEMBER_UPDATE, rtp_stream_on_member_update, strm);
 
@@ -405,9 +417,9 @@ capable_descript_t* rtp_stream_capable(rtp_stream_t *strm)
 }
 
 /**
- * return how many stream opened
+ * return used bandwidth
  */
-int rtp_open_capables(media_format_t *mf, char *src_cn, rtpcap_set_t *rtpcapset, media_control_t *ctrl, config_t *conf, char *mode, capable_descript_t* opened_caps[])
+int rtp_open_capables(media_format_t *mf, rtpcap_set_t *rtpcapset, media_control_t *ctrl, char *mode, int bandwidth)
 {
    int c=0, sno=0;
    rtp_stream_t *strm;
@@ -433,15 +445,17 @@ int rtp_open_capables(media_format_t *mf, char *src_cn, rtpcap_set_t *rtpcapset,
    rtpcap = xlist_first(rtpcapset->rtpcaps, &u);
    while(rtpcap)
    {
-	   strm = rtp_open_stream(rtp, sno++, src_cn, strlen(src_cn)+1, rtpcap, ctrl, mode, rtpcapset);
+	   if(rtpcap->enable)
+	   {
+			strm = rtp_open_stream(rtp, sno++, rtpcap, ctrl, mode, bandwidth, rtpcapset);
+			if(strm)
+				bandwidth -= strm->bandwidth;
+	   }
 	   
-	   if(strm)
-		   opened_caps[c++] = rtp_stream_capable(strm);
-   
 	   rtpcap = xlist_next(rtpcapset->rtpcaps, &u);
    }
 
-   return  c;
+   return rtp->bandwidth;
 }
 
 /* Return the milliseconds of the rtp media, set by sdp */

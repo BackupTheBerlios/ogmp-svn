@@ -97,7 +97,7 @@ struct vorbis_info_s {
    char *header_setup;
    int   header_setup_len;
 };
-
+/*
 int vorbis_capable_to_sdp(rtpcap_descript_t* rtpcap, sdp_message_t *sdp, media_info_t *info);
 int vorbis_capable_from_sdp(rtpcap_descript_t* rtpcap, sdp_message_t *sdp, media_info_t *info);
-
+*/

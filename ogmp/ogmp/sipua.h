@@ -23,7 +23,7 @@
 #include <xrtp/xrtp.h>
 
 #include "log.h"
-#include "media_format.h"
+#include "format_rtp/rtp_format.h"
 #include "devices/dev_rtp.h"
 #include "eXosipua/eXutils.h"
 
@@ -79,7 +79,6 @@
  */
 typedef struct sipua_s sipua_t;
 typedef struct sipua_uas_s sipua_uas_t;
-typedef struct sipua_action_s sipua_action_t;
 
 typedef struct sipua_setid_s sipua_setid_t;
 struct sipua_setid_s
@@ -113,8 +112,10 @@ struct sipua_set_s
 	user_profile_t* user_prof;
 
 	int status;  /* line status */
-
+/*
 	xlist_t *mediaset;
+*/
+	media_format_t* rtp_format;
 	int bandwidth;
 
 	char* sdp_body;
@@ -219,26 +220,6 @@ struct sipua_uas_s
 extern DECLSPEC
 sipua_uas_t* sipua_uas(int portno, char* nettype, char* addrtype, char* firewall, char* proxy);
 
-struct sipua_action_s
-{
-	int (*done)(sipua_action_t *rec);
-
-	void *sip_user;
-	//int (*oncall)(void *user, char *cname, int cnlen, capable_descript_t* oppo_caps[], int oppo_ncap, capable_descript_t* **my_caps);
-	int (*onregister)(void *user, char *from, int status, void* info);
-	int (*oncall)(void *user, char *from, void* info_in, void* info_out);
-	int (*onconnect)(void *user, char *from, void* info_in);
-	int (*onreset)(void *user, char *from, void* info_in);
-	int (*onbye)(void *user, char *from);
-};
-
-sipua_action_t *sipua_new_action(void *sip_user, 
-								int(*cb_onregister)(void*, char*, int, void*), 
-								int(*cb_oncall)(void*, char*, void*, void*), 
-								int(*cb_onconnect)(void*, char*, void*), 
-								int(*cb_onreset)(void*, char*, void*),
-								int(*cb_onbye)(void*,char*));
-
 struct sipua_s
 {
 	sipua_uas_t* uas;
@@ -246,6 +227,7 @@ struct sipua_s
 	int (*done)(sipua_t *ua);
 
 	char* (*userloc)(sipua_t* sipua, char* uid);
+	int (*locate_user)(sipua_t* sipua, user_t* user);
 
 	int (*set_profile)(sipua_t* sipua, user_profile_t* prof);
 	user_profile_t* (*profile)(sipua_t* sipua);
@@ -258,18 +240,13 @@ struct sipua_s
 	sipua_set_t* (*new_call)(sipua_t* sipua, char* subject, int sbytes, char *desc, int dbytes);
 	int (*done_call)(sipua_t *sipua, sipua_set_t* set);
  	
-	sipua_set_t* (*create_call)
-					(sipua_t *sipua, user_profile_t *user, char* id, 
-					char* subject, int sbyte, char* info, int ibyte, 
-					char* mediatypes[], int rtp_ports[], int rtcp_ports[], int nmedia,
-					media_control_t* control, 
-					rtp_coding_t codings[], int ncoding, int pt_pool[]);
 	/**
 	 * conversation media
 	 * return new bandwidth, <0 fail 
-	 */
+
 	int (*add)(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media, int bandwidth);
  	int (*remove)(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media);
+	 */
 
  	/* lines management */
  	int (*lock_lines)(sipua_t* sipua);
@@ -285,6 +262,16 @@ struct sipua_s
 	/* switch current call session */
  	sipua_set_t* (*pick)(sipua_t* sipua, int line);
  	int (*hold)(sipua_t* sipua, sipua_set_t* call);
+
+	/* play media when call in queue or on hold */
+	media_source_t* (*set_background_source)(sipua_t* sipua, char* name);
+
+	/* call media attachment */
+	media_source_t* (*open_source)(sipua_t* sipua, char* name, char* mode, void* param);
+	int (*close_source)(sipua_t* sipua, media_source_t* src);
+
+	int (*attach_source)(sipua_t* sipua, sipua_set_t* call, transmit_source_t* src);
+	int (*detach_source)(sipua_t* sipua, sipua_set_t* call, transmit_source_t* src);
 	
 	/* session description */
 	int (*session_sdp)(sipua_t *sipua, sipua_set_t* set, char** sdp);
@@ -303,6 +290,7 @@ sipua_t* sipua_new(sipua_uas_t *uas, void* event_lisener, int(*lisen)(void*,sipu
 	
 /* User location : user@host or user@address */
 char* sipua_userloc(sipua_t* sipua, char* uid);
+int sipua_locate_user(sipua_t* sipua, user_t* user);
 
 /* registration */
 int sipua_regist(sipua_t *sipua, user_profile_t *user, char *userloc);
@@ -327,8 +315,8 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 								char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
 								int nmedia, media_control_t* control);
 
-int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, rtpcap_set_t* rtpcapset,
-							   media_control_t* control, int pt_pool[]);
+int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char* mode, rtpcap_set_t* rtpcapset,
+							   xlist_t* format_handlers, media_control_t* control, int pt_pool[]);
 
 int sipua_done_sip_session(void* gen);
 
@@ -336,7 +324,7 @@ int sipua_done_sip_session(void* gen);
 conversation media
 return new bandwidth, <0 fail 
 */
-int sipua_add(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media, int bandwidth);
+//int sipua_add(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media, int bandwidth);
 int sipua_remove(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media);
 
 /* session description */

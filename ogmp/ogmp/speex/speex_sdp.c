@@ -96,12 +96,15 @@ int speex_info_to_sdp(media_info_t *info, rtpcap_descript_t *rtpcap, sdp_message
 	while(*pa)
 		pa++;
 
-	/* dont understand the meaning of encoding mode yet 
-	if(spxinfo->header->mode != 3 || ...)
+	/* encoding mode:  
+		Speex encoding mode. Can be {1,2,3,4,5,6,any}
+		defaults to 3 in narrowband, 6 in wide and ultra-wide.
+	if(spxinfo->audioinfo.info.sample_rate <= 8000 && spxinfo->mode != 3)
 	{
 		strcpy(pa, "mode=3");
 		semicolon = 1;
-	}*/
+	}
+	*/
 
 	if(spxinfo->penh != 0)
 	{

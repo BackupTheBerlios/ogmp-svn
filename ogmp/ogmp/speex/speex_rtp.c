@@ -304,7 +304,7 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 
    rtpts_toplay = session_member_mapto_local_time(sender, rtpts_payload, rtpts_arrival, JITTER_ADJUSTMENT_LEVEL);
 
-   if(!sender->media_playable)
+   if(!sender->media_playable && sender->media_playable != -1)
    {
 	   uint32 rtpts_mi;
 	   int signum;
@@ -330,8 +330,6 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 
 		   player = ctrl->find_player(ctrl, "playback", SPEEX_MIME, "", NULL);
 
-		   spxrtp_log(("audio/speex.rtp_in: !!!!!!!!!!!!!!! 1\n"));
-
 		   ret = player->open_stream(player, (media_info_t*)spxinfo);
 		   if( ret < MP_OK)
 		   {
@@ -344,8 +342,6 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 				return XRTP_CONSUMED;
 		   }         
 
-		   spxrtp_log(("audio/speex.rtp_in: !!!!!!!!!!!!!!! 2\n"));
-
 		   explayer = (media_player_t*)session_member_set_player(sender, player);
 		   if(explayer)
 			   explayer->done(explayer);
@@ -356,35 +352,37 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 		   session_member_deliver(sender, seqno, spxinfo->nheader);
 	   }
    }
+   else if(!sender->deliver_thread)
+   {
+		int signum;
+		uint32 rtpts_mi;
+		speex_info_t *spxinfo;
+	   
+		spxinfo = (speex_info_t*)session_member_mediainfo(sender, &rtpts_mi, &signum);
+	   
+		/* start media delivery */
+		session_member_deliver(sender, seqno, spxinfo->nheader);
+   }
 
    /* convert rtp timestamp to usec */
    session_member_sync_point(sender, &rtpts_sync, &ms_sync, &us_sync, &ns_sync);
    us_since_sync = (uint32)((rtpts_toplay - rtpts_sync)/1000000.0 * rtp_media->clockrate);
    
-   /* convert rtp packet to ogg packet */
+   /* convert rtp packet to media frame */
    {   
-	   char *payload;
-	   int payload_bytes;
-	   ogg_packet *oggpack;
+		int last = 1;
+		char *payload;
 
-	   payload_bytes = rtp_packet_payload(rtp, &payload);
+		/* single complete ogg packet */
+		media_frame_t *mf = xmalloc(sizeof(media_frame_t));
 
-	   {
-		   int last = 1;
+		mf->bytes = rtp_packet_dump_payload(rtp, &payload);
+		mf->raw = payload;
 
-		   /* single complete ogg packet */
-		   oggpack = xmalloc(sizeof(ogg_packet));
-
-		   payload_bytes = rtp_packet_dump_payload(rtp, &payload);
-
-		   oggpack->packet = &payload[1];
-		   oggpack->bytes = payload_bytes - 1;
-
-		   /* convert rtp timestamp to granulepos */
-		   oggpack->granulepos = session_member_samples(sender, rtpts_payload); 
-
-		   session_member_hold_media(sender, (void*)oggpack, oggpack->bytes, seqno, rtpts_toplay, us_sync, us_since_sync, last, payload);
-	   }
+		/* convert rtp timestamp to granulepos */
+		mf->samplestamp = session_member_samples(sender, rtpts_payload);
+			
+		session_member_hold_media(sender, (void*)mf, mf->bytes, seqno, rtpts_toplay, us_sync, us_since_sync, last, payload);
    }
 
    rtp_packet_done(rtp);
@@ -430,118 +428,195 @@ int spxrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp)
  */
 int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 {
-   uint32 src_sender = 0;
-   uint32 rtcpts = 0, packet_sent = 0,  octet_sent = 0;
+	uint32 src_sender = 0;
+	uint32 rtcpts = 0, packet_sent = 0,  octet_sent = 0;
 
-   uint8 frac_lost = 0;
-   uint32 total_lost = 0, full_seqno, jitter = 0;
-   uint32 lsr_stamp = 0, lsr_delay = 0;
+	uint8 frac_lost = 0;
+	uint32 total_lost = 0, full_seqno, jitter = 0;
+	uint32 lsr_stamp = 0, lsr_delay = 0;
 
-   member_state_t * sender = NULL;
+	member_state_t * sender = NULL;
 
-   rtime_t ms,us,ns;
+	rtime_t ms,us,ns;
 
-   xrtp_session_t * ses = rtcp->session;
-   xrtp_media_t* rtp_media = session_media(ses);
+	xrtp_session_t * ses = rtcp->session;
+	xrtp_media_t* rtp_media = session_media(ses);
    
-   spxrtp_handler_t *profile = (spxrtp_handler_t*)handler;
-   member_state_t *myself = session_owner(ses);
+	spxrtp_handler_t *profile = (spxrtp_handler_t*)handler;
+	member_state_t *myself = session_owner(ses);
 
-   /* Here is the implementation */
-   profile->rtcp_size = rtcp->bytes_received;
+	/* Here is the implementation */
+	profile->rtcp_size = rtcp->bytes_received;
 
-   if(!rtcp->valid_to_get)
-   {
-      rtcp_unpack(rtcp);
-      rtcp->valid_to_get = 1;
+	if(!rtcp->valid_to_get)
+	{
+		rtcp_unpack(rtcp);
+		rtcp->valid_to_get = 1;
 
-      /* rtcp_show(rtcp); */
-   }
+		/* rtcp_show(rtcp); */
+	}
 
-   session_count_rtcp(ses, rtcp);
+	session_count_rtcp(ses, rtcp);
 
-   src_sender = rtcp_sender(rtcp);
+	src_sender = rtcp_sender(rtcp);
 
-   rtcp_arrival_time(rtcp, &ms, &us, &ns);
-   spxrtp_log(("audio/speex.vrtp_rtcp_in: arrived %dB at %dms/%dus/%dns\n", rtcp->bytes_received, ms, us, ns));
+	rtcp_arrival_time(rtcp, &ms, &us, &ns);
+	spxrtp_log(("audio/speex.vrtp_rtcp_in: arrived %dB at %dms/%dus/%dns\n", rtcp->bytes_received, ms, us, ns));
 
-   /* rtp_conn and rtcp_conn will be uncertain after this call */
+	/* rtp_conn and rtcp_conn will be uncertain after this call */
 
-   sender = session_update_member_by_rtcp(rtcp->session, rtcp);
-   if(!sender)
-   {
-      rtcp_compound_done(rtcp);
+	sender = session_update_member_by_rtcp(rtcp->session, rtcp);
+	if(!sender)
+	{
+		rtcp_compound_done(rtcp);
 
-      spxrtp_log(("audio/speex.vrtp_rtcp_in: Ssrc[%d] refused\n", src_sender));
+		spxrtp_log(("audio/speex.vrtp_rtcp_in: Ssrc[%d] refused\n", src_sender));
 
-      return XRTP_CONSUMED;
-   }
+		return XRTP_CONSUMED;
+	}
 
-   if(!profile->receiving)
-   {
-	   session_start_reception(ses);
-	   profile->receiving = 1;
-   }
+	if(!profile->receiving)
+	{
+		session_start_reception(ses);
+		profile->receiving = 1;
+	}
 
-   if(!sender->valid)
-   {
-      spxrtp_log(("audio/speex.spxrtp_rtcp_in: Member[%d] is not valid yet\n", src_sender));
+	if(!sender->valid)
+	{
+		spxrtp_log(("audio/speex.spxrtp_rtcp_in: Member[%d] is not valid yet\n", src_sender));
 
-      rtcp_compound_done(rtcp);
+		rtcp_compound_done(rtcp);
 
-      return XRTP_CONSUMED;
-   }
-   else
-   {
-	  uint32 hi_ntp, lo_ntp;
+		return XRTP_CONSUMED;
+	}
+	else
+	{
+		uint32 hi_ntp, lo_ntp;
 
-      if(rtcp_sender_info(rtcp, &src_sender, &hi_ntp, &lo_ntp,
+		if(rtcp_sender_info(rtcp, &src_sender, &hi_ntp, &lo_ntp,
                           &rtcpts, &packet_sent, &octet_sent) >= XRTP_OK)
-	  {
-         /* Check the SR report */
+		{
+			/* Check the SR report */
 		  
-         /* record the sync reference point */
-		 rtcp_arrival_time(rtcp, &ms, &us, &ns);
+			/* record the sync reference point */
+			rtcp_arrival_time(rtcp, &ms, &us, &ns);
 
-		 /* convert rtcpts to local ts */
-		 session_member_synchronise(sender, rtcpts, hi_ntp, lo_ntp, rtp_media->clockrate);
+			/* convert rtcpts to local ts */
+			session_member_synchronise(sender, rtcpts, hi_ntp, lo_ntp, rtp_media->clockrate);
 
-         /* Check the report */
-         session_member_check_senderinfo(sender, hi_ntp, lo_ntp,
+			/* Check the report */
+			session_member_check_senderinfo(sender, hi_ntp, lo_ntp,
 										 rtcpts, packet_sent, octet_sent);
 
-         sender->lsr_msec = ms;
-         sender->lsr_usec = us;
+			sender->lsr_msec = ms;
+			sender->lsr_usec = us;
 
-		 spxrtp_log(("audio/speex.vrtp_rtcp_in:========================\n"));
-		 spxrtp_log(("audio/speex.vrtp_rtcp_in: SR report ssrc[%u][%s]\n", sender->ssrc, sender->cname));
-		 spxrtp_log(("audio/speex.vrtp_rtcp_in: ntp[%u,%u];ts[%u]\n", hi_ntp,lo_ntp,rtcpts));
-		 spxrtp_log(("audio/speex.vrtp_rtcp_in: sent[%dp;%dB]\n", packet_sent, octet_sent));
-      }
-	  else
-	  {
-         /* RR */
+			spxrtp_log(("audio/speex.vrtp_rtcp_in:========================\n"));
+			spxrtp_log(("audio/speex.vrtp_rtcp_in: SR report ssrc[%u][%s]\n", sender->ssrc, sender->cname));
+			spxrtp_log(("audio/speex.vrtp_rtcp_in: ntp[%u,%u];ts[%u]\n", hi_ntp,lo_ntp,rtcpts));
+			spxrtp_log(("audio/speex.vrtp_rtcp_in: sent[%dp;%dB]\n", packet_sent, octet_sent));
 
-		 spxrtp_log(("audio/speex.vrtp_rtcp_in:========================\n"));
-		 spxrtp_log(("audio/speex.vrtp_rtcp_in: RR report ssrc[%u][%s] \n", sender->ssrc, sender->cname));
-      }
-   }
+			/******************************
+			 * Create a player for the remote sender
+			 */
+			if(!sender->media_playable && sender->media_playable != -1)
+			{
+				/* useless in Speex codec */
+				uint32 rtpts_mi;
+				int signum;
 
-   /* find out minority report */
-   if(rtcp_report(rtcp, myself->ssrc, &frac_lost, &total_lost,
+				int ret;
+				media_player_t *player, *explayer = NULL;
+				media_control_t *ctrl;
+
+				speex_info_t *spxinfo = (speex_info_t*)session_member_mediainfo(sender, &rtpts_mi, &signum);
+	   
+				if(!spxinfo)
+				{
+					spxrtp_log(("audio/speex.spxrtp_rtcp_in: no valid media info\n"));
+					rtcp_compound_done(rtcp);
+					return XRTP_CONSUMED;
+				}
+
+				ctrl = (media_control_t*)session_media_control(profile->session);
+				player = ctrl->find_player(ctrl, "playback", SPEEX_MIME, "", NULL);
+
+				ret = player->open_stream(player, (media_info_t*)spxinfo);
+				if( ret < MP_OK)
+				{
+					sender->media_playable = -1;
+					player->done(player);
+			
+					spxrtp_log(("audio/speex.spxrtp_rtp_in: media is not playable\n"));
+					rtcp_compound_done(rtcp);
+			
+					return XRTP_CONSUMED;
+				}         
+
+				explayer = (media_player_t*)session_member_set_player(sender, player);
+				if(explayer)
+					explayer->done(explayer);
+
+				sender->media_playable = 1;
+			}
+		}
+		else
+		{
+			/* RR */
+			spxrtp_log(("audio/speex.spxrtp_rtcp_in:========================\n"));
+			spxrtp_log(("audio/speex.spxrtp_rtcp_in: RR report ssrc[%u][%s] \n", sender->ssrc, sender->cname));
+		}
+	}
+
+	/******************************
+	 * Create a local sender for the remote receiver
+	 */
+	if(ses->rtp_send_pipe && !myself->media_playable)
+	{
+		/* useless in Speex codec */
+		uint32 rtpts_mi;
+		int signum;
+
+		speex_info_t *spxinfo = (speex_info_t*)session_member_mediainfo(myself, &rtpts_mi, &signum);
+		if(spxinfo)
+		{
+			media_control_t *ctrl;
+
+			media_device_t *audio_in;
+			media_receiver_t *creater;
+			media_player_t *player;
+
+			ctrl = (media_control_t*)session_media_control(ses);
+
+			/* create a netcast player associate to the rtp session */
+			player = ctrl->new_player(ctrl, "netcast", SPEEX_MIME, "", ses);
+
+			audio_in = ctrl->find_device(ctrl, "audio_in");
+			creater = ctrl->find_creater(ctrl, SPEEX_MIME, (media_info_t*)&spxinfo);
+
+			creater->new_media_stream(creater, audio_in, player, (media_info_t*)&spxinfo);
+			
+			audio_in->start(audio_in, ctrl);
+
+			myself->media_playable = 1;
+		}
+	}
+
+	/* find out minority report */
+	if(rtcp_report(rtcp, myself->ssrc, &frac_lost, &total_lost,
                       &full_seqno, &jitter, &lsr_stamp, &lsr_delay) >= XRTP_OK)
-   {
-      session_member_check_report(myself, frac_lost, total_lost, full_seqno,
+	{
+		session_member_check_report(myself, frac_lost, total_lost, full_seqno,
                                 jitter, lsr_stamp, lsr_delay);
-   }
-   else
-   { /* Strange !!! */ }
+	}
+	else
+	{ /* Strange !!! */ }
 
-   rtcp_compound_done(rtcp);
+	rtcp_compound_done(rtcp);
 
-   spxrtp_log(("audio/speex.vrtp_rtcp_in:************ RTCP[%u]\n", src_sender));
+	spxrtp_log(("audio/speex.vrtp_rtcp_in:************ RTCP[%u]\n", src_sender));
 
-   return XRTP_CONSUMED;
+	return XRTP_CONSUMED;
 }
 
 /*
@@ -753,7 +828,8 @@ int rtp_speex_sdp(xrtp_media_t* media, void* sdp_info)
 		coding_param = 1;
 	}
 
-	rtpcap = rtp_capable_descript(pt, ipaddr, rtp_portno, rtcp_portno, speex_mime, clockrate, coding_param, sdp->sdp_message);
+	/*FIXME: nettype, addrtype */
+	rtpcap = rtp_capable_descript(pt, "IN", "IP4", ipaddr, rtp_portno, rtcp_portno, speex_mime, clockrate, coding_param, sdp->sdp_message);
 
 	if(spxinfo)
 		ret = speex_info_to_sdp((media_info_t*)spxinfo, rtpcap, sdp->sdp_message, sdp->sdp_media_pos);
@@ -774,7 +850,7 @@ int rtp_speex_sdp(xrtp_media_t* media, void* sdp_info)
 	return XRTP_OK;
 }
 
-int rtp_speex_new_sdp(xrtp_media_t *media, char* netaddr, int* rtp_portno, int* rtcp_portno, int pt, int clockrate, int coding_param, int bw_budget, void* control, void* sdp_info)
+int rtp_speex_new_sdp(xrtp_media_t *media, char* nettype, char* addrtype, char* netaddr, int* rtp_portno, int* rtcp_portno, int pt, int clockrate, int coding_param, int bw_budget, void* control, void* sdp_info)
 {
 	int ptime_max = 0;
 	int penh = 0;
@@ -820,7 +896,7 @@ int rtp_speex_new_sdp(xrtp_media_t *media, char* netaddr, int* rtp_portno, int* 
 
 	bw = (int)((2 * (spxinfo->audioinfo.info.bps / OS_BYTE_BITS)) / 0.95);
 
-	rtpcap = rtp_capable_descript(pt, netaddr, *rtp_portno, *rtcp_portno, speex_mime, clockrate, coding_param, sdp->sdp_message);
+	rtpcap = rtp_capable_descript(pt, nettype, addrtype, netaddr, *rtp_portno, *rtcp_portno, speex_mime, clockrate, coding_param, sdp->sdp_message);
 
 	ret = speex_info_to_sdp((media_info_t*)spxinfo, rtpcap, sdp->sdp_message, sdp->sdp_media_pos);
 
@@ -890,6 +966,7 @@ int rtp_speex_send_loop(void *gen)
 	//rtp_frame_t *remain_frame = NULL;
 	char *packet_data = NULL;
 	int packet_bytes = 0;
+
 	uint8 payload_nframe = 0;
 
 	int new_group = 0;
@@ -965,7 +1042,7 @@ int rtp_speex_send_loop(void *gen)
 		/* retrieve packet */
 		rtpf = (rtp_frame_t*)xlist_remove_first(profile->packets);
 		packet_data = rtpf->media_unit;
-		packet_bytes = rtpf->unit_bytes;
+		packet_bytes = rtpf->frame.bytes;
 
 		xthr_unlock(profile->packets_lock);
 
@@ -1113,7 +1190,6 @@ int rtp_speex_send_loop(void *gen)
 
 /*
  * the media enter point of the rtp session 
- * NOTE: '*data' is NOT what 'mlen' indicated.
  */
 int rtp_speex_post(xrtp_media_t* media, media_data_t* frame, int data_bytes, uint32 timestamp)
 {
@@ -1143,17 +1219,18 @@ int rtp_speex_post(xrtp_media_t* media, media_data_t* frame, int data_bytes, uin
 int rtp_speex_play(void *player, void *media, int64 packetno, int ts_last, int eos)
 {
 	media_player_t *mp = (media_player_t*)player;
-	ogg_packet *pack = (ogg_packet*)media;
 
-	pack->packetno = packetno;
+	media_frame_t* mf = (media_frame_t*)media;
+
+	mf->sno = packetno;
 
 	if(eos)
-		mp->receive_media(mp, pack, pack?pack->granulepos:-1, MP_EOS);
+		mp->receive_media(mp, mf, mf?mf->samplestamp:-1, MP_EOS);
 	else
-		mp->receive_media(mp, pack, pack->granulepos, ts_last);
+		mp->receive_media(mp, mf, mf->samplestamp, ts_last);
 
-	xfree(pack->packet);
-	xfree(pack);
+	xfree(mf->raw);
+	xfree(mf);
 
 	return XRTP_OK;
 }

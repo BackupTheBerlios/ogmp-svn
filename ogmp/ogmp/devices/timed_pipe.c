@@ -16,6 +16,7 @@
  ***************************************************************************/
 
 #include "timed_pipe.h"
+#include "../log.h"
 
 #include <timedia/xmalloc.h>
 #include <string.h>
@@ -25,14 +26,14 @@
 #define PIPE_DEBUG
 
 #ifdef PIPE_LOG
- #define pout_log(fmtargs)  do{printf fmtargs;}while(0)
+ #define pout_log(fmtargs)  do{log_printf fmtargs;}while(0)
 #else
  #define pout_log(fmtargs)  
 #endif
 
 
 #ifdef PIPE_DEBUG
- #define pout_debug(fmtargs)  do{printf fmtargs;}while(0)
+ #define pout_debug(fmtargs)  do{log_printf fmtargs;}while(0)
 #else
  #define pout_debug(fmtargs) 
 #endif
@@ -128,12 +129,10 @@ media_frame_t * pout_new_frame(media_pipe_t * mo, int bytes, char *data)
       pout_log(("pout_new_frame: initialize %d bytes data\n", bytes));
       memcpy(found->raw, data, bytes);
    }
-
    /*
    pout_debug ("pout_new_frame: new frame %d bytes / total %d bytes\n"
                         , bytes, out->bytes_allbuf);
    */
-   
    return found;
 }
 

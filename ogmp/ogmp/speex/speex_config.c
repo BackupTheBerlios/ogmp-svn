@@ -22,8 +22,25 @@ speex_setting_t spx_setting =
 	/* rtp_portno, rtcp_portno, media_bps */
 	{3080, 3081, 16*1024},
 
-	/* sample_rate, mode, ptime_max, cng, penh, vbr, abr, cbr */
-	8000, 2, 100, 0, 1, 0, 0, 0 
+	8000,	/*sample_rate*/
+	1,		/*channels*/
+
+	2,		/*mode*/
+
+	100,	/*ptime_max*/
+	0,		/*cng*/
+	1,		/*penh*/
+
+	0,		/*vbr*/
+	0.0,	/*vbr_quality*/
+	0,		/*abr*/
+
+	0,		/*cbr*/
+	4,		/*cbr_quality*/
+
+	3,		/*complexity*/
+	1,		/*denoise*/
+	1		/*agc*/
 };
 
 speex_setting_t* speex_setting(media_control_t *control)
@@ -37,8 +54,8 @@ int speex_info_setting(speex_info_t *spxinfo, speex_setting_t *spxset)
 	{
 		spxinfo->audioinfo.info.bps = spxset->rtp_setting.media_bps;
 	}
+
 #if 0
-	else
 	{
 		void *enc_state = NULL;
 		int clockrate = spxset->sample_rate;
@@ -75,10 +92,25 @@ int speex_info_setting(speex_info_t *spxinfo, speex_setting_t *spxset)
 		speex_encoder_destroy(enc_state);
 	}
 #endif
+
+	spxinfo->audioinfo.info.sample_rate = spxset->sample_rate;
+	spxinfo->audioinfo.channels = spxset->channels;
+
 	spxinfo->penh = spxset->penh;
 	spxinfo->cng = spxset->cng;
 	spxinfo->ptime = spxset->ptime_max;
+
 	spxinfo->vbr = spxset->vbr;
+	spxinfo->abr = spxset->abr;
+	spxinfo->cbr = spxset->cbr;
+
+	spxinfo->complexity = spxset->complexity;
+
+	spxinfo->vbr_quality = spxset->vbr_quality;
+	spxinfo->cbr_quality = spxset->cbr_quality;
+
+	spxinfo->denoise = spxset->denoise;
+	spxinfo->agc = spxset->agc;
 
 	return MP_OK;
 }

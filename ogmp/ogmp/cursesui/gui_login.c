@@ -250,7 +250,7 @@ int window_login_run_command(gui_t* gui, int c)
 				
 				if(ocui->user)
 				{
-					ocui->user->userloc = ocui->sipua->userloc(ocui->sipua, ocui->user->uid);
+					ocui->sipua->locate_user(ocui->sipua, ocui->user);
 					
 					gui_show_window(gui, GUI_PROFILES, GUI_LOGIN);
 				}

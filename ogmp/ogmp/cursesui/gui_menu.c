@@ -69,6 +69,8 @@ static const menu_t josua_menu[] =
 
 static const menu_t login_menu[] = 
 {
+	{ "t", " MEDIA TEST  -    Test Media Function",
+		GUI_AUDIOTEST },
 	{ "n", " NEW         -    Create a new user",
 		GUI_NEWUSER },
 	{ "l", " LOGIN       -    Login as the selected profile",
@@ -164,7 +166,7 @@ int window_menu_run_command(gui_t *gui, int c)
 	else
 	{
 		menu = login_menu;
-		max = 3;
+		max = 4;
 	}
 
 	switch (c)
@@ -254,9 +256,9 @@ int window_menu_run_command(gui_t *gui, int c)
 		case '0':
 		case '1':
 		case '2':
+		case '3':
 			cursor_menu = c-48;
 			break;
-		case '3':
 		case '4':
 		case '5':
 		case '6':

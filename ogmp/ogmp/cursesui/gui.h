@@ -112,8 +112,9 @@ struct gui
 #define GUI_NEWUSER		16
 #define GUI_PROFILES	17
 #define GUI_MESSAGE		18
+#define GUI_AUDIOTEST	19
 
-#define MAXGUI			20
+#define MAXGUI			30
 
 typedef struct coding_s
 {
@@ -140,8 +141,9 @@ struct ogmp_curses_s
 	sipua_uas_t* uas;
 	sipua_net_t* network;
 
+	media_source_t* source;
+
 	user_t *user;
-	//user_profile_t *user_profile;
 
 	sipua_phonebook_t *phonebook;
 	sipua_contact_t *contact;

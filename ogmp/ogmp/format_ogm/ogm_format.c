@@ -14,6 +14,7 @@
 */      
 
 #include "ogm_format.h"
+#include "../log.h"
 
 #include <timedia/xmalloc.h>
 #include <string.h>
@@ -26,13 +27,13 @@
 #define DEMUX_OGM_DEBUG
 
 #ifdef DEMUX_OGM_LOG
- #define ogm_log(fmtargs)  do{printf fmtargs;}while(0)
+ #define ogm_log(fmtargs)  do{log_printf fmtargs;}while(0)
 #else
  #define ogm_log(fmtargs)  
 #endif
 
 #ifdef DEMUX_OGM_DEBUG
- #define ogm_debug(fmtargs)  do{printf fmtargs;}while(0)
+ #define ogm_debug(fmtargs)  do{log_printf fmtargs;}while(0)
 #else
  #define ogm_debug(fmtargs)  
 #endif
@@ -162,6 +163,132 @@ media_stream_t * ogm_find_mime(media_format_t * mf, const char * mime)
    return NULL;
 }
 
+int ogm_new_all_player(media_format_t *mf, media_control_t* ctrl, char* mode, void* mode_param)
+{
+	int c=0;
+
+	media_stream_t *cur = mf->first;
+
+	while (cur != NULL)
+	{
+		ogm_stream_t* ogm_strm = (ogm_stream_t*)cur;
+
+		cur->player = ctrl->find_player(ctrl, mode, cur->media_info->mime, cur->media_info->fourcc, mode_param);
+			
+		if(!cur->player)
+			cur->playable = -1;
+		else if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
+			cur->playable = -1;
+		else
+		{
+			cur->playable = 1;
+			c++;
+
+			ogm_log(("ogm_new_mime_player: player ok\n"));
+		}
+
+		cur = cur->next;
+	}
+
+	return c;
+}
+
+media_player_t* ogm_new_stream_player(media_format_t *mf, int strmno, media_control_t* ctrl, char* mode, void* mode_param)
+{
+	media_stream_t *cur = mf->first;
+
+	while (cur != NULL)
+	{
+		ogm_stream_t* ogm_strm = (ogm_stream_t*)cur;
+		if (ogm_strm->serial == strmno)
+		{
+			cur->player = ctrl->find_player(ctrl, mode, cur->media_info->mime, cur->media_info->fourcc, mode_param);
+			
+			if(!cur->player)
+			{
+				ogm_debug(("ogm_new_mime_player: stream can't be played\n"));
+				cur->playable = -1;
+				return NULL;
+			}
+
+			if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
+			{
+				cur->playable = -1;
+				return NULL;
+			}         
+         
+			cur->playable = 1;
+
+			ogm_log(("ogm_new_mime_player: player ok\n"));
+
+			return cur->player;
+		}
+
+		cur = cur->next;
+	}
+
+	return NULL;
+}
+
+media_player_t * ogm_new_mime_player(media_format_t * mf, char * mime, media_control_t* ctrl, char* mode, void* mode_param)
+{
+	media_stream_t *cur = mf->first;
+
+	while (cur != NULL)
+	{
+		if (!strcmp(cur->mime, mime))
+		{
+			cur->player = ctrl->find_player(ctrl, mode, mime, NULL, mode_param);
+			
+			if(!cur->player)
+			{
+				ogm_debug(("ogm_new_mime_player: stream can't be played\n"));
+				cur->playable = -1;
+				return NULL;
+			}
+
+			if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
+			{
+				cur->playable = -1;
+				return NULL;
+			}         
+         
+			cur->playable = 1;
+
+			ogm_log(("ogm_new_mime_player: player ok\n"));
+		}
+
+		cur = cur->next;
+	}
+
+	return NULL;
+}
+
+int ogm_set_mime_player(media_format_t *mf, const char *mime, media_player_t* player)
+{
+	media_stream_t *cur = mf->first;
+
+	while (cur != NULL)
+	{
+		if (!strcmp(cur->mime, mime))
+		{
+			int ret = player->open_stream(player, cur->media_info);
+			if(ret < MP_OK)
+				return ret;
+
+			cur->player = player;
+
+			return MP_OK;
+		}
+    
+		cur = cur->next;
+	}
+
+   ogm_log(("ogm_set_mime_player: stream '%s' not exist\n", mime));
+   
+	return MP_FAIL;
+}
+
 media_player_t * ogm_mime_player(media_format_t * mf, const char * mime)
 {
    media_stream_t *cur = mf->first;
@@ -177,27 +304,6 @@ media_player_t * ogm_mime_player(media_format_t * mf, const char * mime)
    }
 
    return NULL;
-}
-
-int ogm_set_mime_player (media_format_t * mf, media_player_t * player, const char * mime)
-{
-   media_stream_t *cur = mf->first;
-
-   while (cur != NULL)
-   {
-      if (!strcmp(cur->mime, mime))
-	  {
-         cur->player = player;
-
-         return MP_OK;
-      }
-
-      cur = cur->next;
-   }
-
-   ogm_log(("ogm_set_mime_player: stream '%s' not exist\n", mime));
-   
-   return MP_FAIL;
 }
 
 media_stream_t * ogm_find_fourcc(media_format_t * mf, const char *fourcc)
@@ -387,7 +493,7 @@ int ogm_support_type (media_format_t *mf, char *type, char *subtype)
 	return 0;
 }
 
-int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_stream_state *sstate, ogg_packet *packet, void* extra)
+int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_stream_state *sstate, ogg_packet *packet)
 {
    //stream_header sth;
    xrtp_list_user_t $u;
@@ -403,7 +509,7 @@ int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_strea
    {
       if (handler->detect_media(packet) != 0)
 	  {
-         if(handler->open_media(handler, ogm, ctrl, sstate, sno, (stream_header *)&(ogm->packet.packet[0]), extra) >= MP_OK)
+         if(handler->open_media(handler, ogm, ctrl, sstate, sno, (stream_header *)&(ogm->packet.packet[0])) >= MP_OK)
 			break;
       }
       
@@ -413,12 +519,13 @@ int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_strea
    return MP_OK;
 }
 
-int ogm_open(media_format_t *mf, char *fname, media_control_t *ctrl, config_t *conf, char *mode, void* extra)
+int ogm_open(media_format_t *mf, char *fname, media_control_t *ctrl)
 {
    int sno = 0;
    int end = 0;   
    int head_parsed = 0;
    int n_pack = 0;
+   int n;
 
    ogm_format_t *ogm = (ogm_format_t *)mf;
 
@@ -429,13 +536,6 @@ int ogm_open(media_format_t *mf, char *fname, media_control_t *ctrl, config_t *c
       return MP_FAIL;
    }
 
-   if(strlen(mode) >= MAX_MODEBYTES)
-   {
-	   ogm_log(("ogm_open: mode unacceptable\n"));
-	   return MP_INVALID;
-   }
-   strcpy(mf->default_mode, mode);
-
    fseek(mf->fdin, 0, SEEK_END);
    mf->file_bytes = (off_t)ftell(mf->fdin);
    fseek(mf->fdin, 0, SEEK_SET);
@@ -445,6 +545,7 @@ int ogm_open(media_format_t *mf, char *fname, media_control_t *ctrl, config_t *c
    ogm_log(("\n=================================================\n"));
    ogm_log(("(ogm_open_file: stream heads begin)\n"));
    
+   n=0;
    while (!end)
    {
       if ( !ogm_read_page(ogm) )
@@ -504,14 +605,15 @@ int ogm_open(media_format_t *mf, char *fname, media_control_t *ctrl, config_t *c
                return MP_FAIL;
             }
 	  
-            ogm_open_stream(ogm, ctrl, sno, sstate, &ogm->packet, extra);
+            if(ogm_open_stream(ogm, ctrl, sno, sstate, &ogm->packet) >= MP_OK)
+				n++;
          }
 
          ogm_log(("ogm_open: %d packet(s) found in the page\n", n_pack));
       }
    }
 
-   return  MP_OK;
+   return n;
 }
 
 static int64 get_pts (ogm_stream_t *ogm_strm, int64 granulepos)
@@ -945,27 +1047,22 @@ const char* ogm_stream_fourcc (media_format_t * mf, int strmno)
    return ms->fourcc;
 }
 
-int ogm_players(media_format_t * mf, char *type, media_player_t* players[], int nmax)
+int ogm_players(media_format_t * mf, char *play_type, media_player_t* players[], int nmax)
 {
-  media_stream_t *cur = mf->first;
-  int n = 0;
+	int n = 0;
+	media_stream_t *cur = mf->first;
 
-  while (cur != NULL)
-  {
-	ogm_log (("ogm_players: %s player\n", cur->player->play_type(cur->player)));
-
-    if(strcmp(cur->player->play_type(cur->player), type) == 0)
+	while (cur != NULL)
 	{
-		/* playtype match */
-		players[n++] = cur->player;
+		if(cur->player->match_play_type(cur->player, play_type))
+			players[n++] = cur->player;
+
+		cur = cur->next;
 	}
 
-    cur = cur->next;
-  }
+	ogm_log (("ogm_players: %d '%s' players in ogm format\n", n, play_type));
 
-  ogm_log (("ogm_players: %d '%s' players in ogm format\n", n, type));
-
-  return n;
+	return n;
 }
 
 int ogm_set_control (media_format_t * mf, media_control_t * control)
@@ -981,14 +1078,14 @@ int ogm_set_player (media_format_t * mf, media_player_t * player)
    const char * type;
 
    type = player->media_type(player);
-   if ( (ret = ogm_set_mime_player (mf, player, type)) >= MP_OK )
+   if ( (ret = ogm_set_mime_player (mf, type, player)) >= MP_OK )
    {
       ogm_log (("ogm_set_player: '%s' stream playable\n", type));
       return ret;
    }
    
    type = player->codec_type(player);
-   if ( (ret = ogm_set_mime_player (mf, player, type)) >= MP_OK )
+   if ( (ret = ogm_set_mime_player (mf, type, player)) >= MP_OK )
    {
       ogm_log (("ogm_set_player: play '%s' stream\n", type));
       return ret;
@@ -1042,6 +1139,12 @@ module_interface_t * media_new_format()
    mf->stream_player = ogm_stream_player;
    mf->mime_player = ogm_mime_player;
    mf->fourcc_player = ogm_fourcc_player;
+
+   mf->new_all_player = ogm_new_all_player;
+
+   mf->new_stream_player = ogm_new_stream_player;
+   mf->new_mime_player = ogm_new_mime_player;
+   mf->set_mime_player = ogm_set_mime_player;
 
    mf->players = ogm_players;
 

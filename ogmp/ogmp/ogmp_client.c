@@ -29,62 +29,7 @@
  #define clie_log(fmtargs)
 #endif
 
-struct ogmp_client_s
-{
-	sipua_t sipua;
-
-	int finish;
-	int valid;
-
-	media_control_t *control;
-
-	media_format_t *rtp_format;
-	xlist_t *format_handlers;
-
-	sipua_set_t* call;
-
-	config_t * conf;
-
-	char *sdp_body;
-
-	int registered;
-
-	int ncap;
-	capable_descript_t *caps[MAX_NCAP];
-
-	xthr_lock_t *course_lock;
-	xthr_cond_t *wait_course_finish;
-
-	ogmp_ui_t* ui;
-
-	xthread_t* main_thread;
-
-	xthr_cond_t* wait_unregistered;
-
-	/* below is sipua related */
-	user_profile_t* user_prof;
-	user_profile_t* reg_profile;
-
-	int expire_sec; /* registration expired seconds, time() */
-
-	uint16 default_rtp_portno;
-	uint16 default_rtcp_portno;
-
-	sipua_action_t* action;
-
-	int pt[MAX_PAYLOAD_TYPE];
-
-	sipua_set_t* lines[MAX_SIPUA_LINES];
-	xthr_lock_t* lines_lock;
-
-	void* lisener;
-	int (*notify_event)(void* listener, sipua_event_t* e);
-
-	int nmedia;
-	char* mediatypes[MAX_SIPUA_MEDIA];
-	int default_rtp_ports[MAX_SIPUA_MEDIA];
-	int default_rtcp_ports[MAX_SIPUA_MEDIA];
-};
+/****************************************************************************************/
 
 int client_done_format_handler(void *gen)
 {
@@ -95,193 +40,12 @@ int client_done_format_handler(void *gen)
    return MP_OK;
 }
 
-/**
- * return capability number, if error, return ZERO
- */
-int client_setup(ogmp_client_t *client, char *mode, rtpcap_set_t *rtpcapset)
-{
-	/* define a player */
-	xlist_user_t u;
-	media_format_t *format;
-
-	char cname[256]; /* rtp cname restriction */
-
-	rtp_capable_cname(rtpcapset, cname, 256);
-
-	/* create a media format, also get the capabilities of the file */
-	format = (media_format_t *) xlist_first(client->format_handlers, &u);
-	while (format)
-	{
-		/* open media source */
-		if(format->support_type(format, "mime", "application/sdp"))
-		{
-			rtp_format_t* rtpfmt = (rtp_format_t*)format;
-
-			client->ncap = rtpfmt->open_capables(format, cname, rtpcapset, client->control, client->conf, mode, client->caps);
-			if(client->ncap > 0)
-			{
-				client->control->set_format (client->control, "rtp", format);
-				client->rtp_format = format;
-				client->valid = 1;
-
-				break;
-			}
-		}
-      
-		format = (media_format_t*) xlist_next(client->format_handlers, &u);
-	}
-
-	if(!client->rtp_format)
-	{
-		clie_log(("ogmp_client_setup: no format support\n"));
-		return 0;
-	}
-
-	return client->ncap;
-}
-
-/****************************************************************************************
- * SIP Callbacks
- */
-int client_action_onregistration(void *user, char *from, int result, void* info)
-{
-	ogmp_client_t *clie = (ogmp_client_t*)user;
-	
-	clie->registered = 0;
-
-	switch(result)
-	{
-		case(SIPUA_EVENT_REGISTRATION_SUCCEEDED):
-		{
-			clie->registered = 1;
-
-			clie_log(("\nclient_action_onregister: registered to [%s] !\n\n", from));
-			break;
-		}
-		case(SIPUA_EVENT_UNREGISTRATION_SUCCEEDED):
-		{
-			clie_log(("\nclient_action_onregister: unregistered to [%s] !\n\n", from));
-
-			xthr_cond_broadcast(clie->wait_unregistered);
-
-			break;
-		}
-		case(SIPUA_EVENT_REGISTRATION_FAILURE):
-		{
-			clie_log(("\nclient_action_onregister: fail to register to [%s]!\n\n", from));
-			break;
-		}
-		case(SIPUA_EVENT_UNREGISTRATION_FAILURE):
-		{
-			clie_log(("\nclient_action_onregister: fail to unregister to [%s]!\n\n", from));
-			break;
-		}
-	}
-
-	return MP_OK;
-}
-
-int client_action_oncall(void *user, char *from, void* info_in, void* info_out)
-{
-	char* sdp_body_in = (char*)info_in;
-	char** sdp_body_out = (char**)info_out;
-
-	ogmp_client_t *client = (ogmp_client_t*)user;
-
-	rtpcap_set_t* rtpcapset;
-
-	sdp_message_t *sdp_message_in;
-
-	clie_log(("\nclient_action_oncall: Never be called from cn[%s]\n", from));
-
-	sdp_message_init(&sdp_message_in);
-
-	clie_log (("client_action_oncall: received sdp\n"));
-	clie_log (("---------------------------------\n"));
-	clie_log (("%s", sdp_body_in));
-	clie_log (("---------------------------------\n"));
-
-	if(sdp_message_parse(sdp_message_in, sdp_body_in) != 0)
-	{
-		clie_log(("\nclient_action_oncall: fail to parse sdp\n"));
-		sdp_message_free(sdp_message_in);
-		return 0;
-	}
-
-	/* Retrieve capable from the sdp message */
-	rtpcapset = rtp_capable_from_sdp(sdp_message_in);
-
-	clie_log(("\nclient_action_oncall: with cn[%s] requires %d capables\n\n", from, xlist_size(rtpcapset->rtpcaps)));
-
-	client_setup(client, "playback", rtpcapset);
-
-	*sdp_body_out = client->sdp_body;
-
-	sdp_message_free(sdp_message_in);
-
-	return xlist_size(rtpcapset->rtpcaps);
-}
-
-int client_action_onconnect(void *user, char *from, void* info_in)
-{
-	char* sdp_body_in = (char*)info_in;
-
-	ogmp_client_t *client = (ogmp_client_t*)user;
-
-	rtpcap_set_t* rtpcapset;
-
-	sdp_message_t *sdp_message_in;
-
-	clie_log(("\nclient_action_onconnect: Never be called from cn[%s]\n", from));
-
-	sdp_message_init(&sdp_message_in);
-
-	clie_log (("client_action_oncall: received sdp\n"));
-	clie_log (("---------------------------------\n"));
-	clie_log (("%s", sdp_body_in));
-	clie_log (("---------------------------------\n"));
-
-	if(sdp_message_parse(sdp_message_in, sdp_body_in) != 0)
-	{
-		clie_log(("\nclient_action_onconnect: fail to parse sdp\n"));
-		sdp_message_free(sdp_message_in);
-		return 0;
-	}
-
-	/* Retrieve capable from the sdp message */
-	rtpcapset = rtp_capable_from_sdp(sdp_message_in);
-
-	clie_log(("\nclient_action_onconnect: with cn[%s] requires %d capables\n\n", from, xlist_size(rtpcapset->rtpcaps)));
-
-	client_setup(client, "playback", rtpcapset);
-
-	sdp_message_free(sdp_message_in);
-
-	return xlist_size(rtpcapset->rtpcaps);
-}
-
-/* change call status */
-int client_action_onreset(void *user, char *from_cn, void* info_in)
-{
-	clie_log(("client_action_onreset: reset from cn[%s]\n", from_cn));
-
-	return 0;
-}
-
-int client_action_onbye(void *user, char *from_cn)
-{
-	clie_log(("client_action_onbye: bye from cn[%s]\n", from_cn));
-
-	return UA_OK;
-}
-
-/****************************************************************************************/
-
 int client_done(ogmp_client_t *client)
 {
    client->rtp_format->close(client->rtp_format);
    
    xlist_done(client->format_handlers, client_done_format_handler);
+
    xthr_done_lock(client->course_lock);
    xthr_done_cond(client->wait_course_finish);
    conf_done(client->conf);
@@ -447,10 +211,10 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			rtpcapset = rtp_capable_from_sdp(sdp_message);
 
-			sipua_establish_call(sipua, call, rtpcapset, client->control, client->pt);
+			/* rtp sessions created */
+			sipua_establish_call(sipua, call, "playback", rtpcapset, client->format_handlers, client->control, client->pt);
 
-			client->action->onconnect(client->action->sip_user, e->from, e->content);
-
+			rtp_capable_done_set(rtpcapset);
 			sdp_message_free(sdp_message);
 
 			break;
@@ -460,22 +224,15 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			/* Callee establishs call after its answer is acked */
 			sipua_set_t *call = e->call_info;
 
-			sipua_establish_call(sipua, e->call_info, e->call_info->rtpcapset, client->control, client->pt);
+			/* rtp sessions created */
+			sipua_establish_call(sipua, e->call_info, "playback", e->call_info->rtpcapset, client->format_handlers, client->control, client->pt);
 
-			client->action->onconnect(client->action->sip_user, e->from, e->content);
+			rtp_capable_done_set(e->call_info->rtpcapset);
+			e->call_info->rtpcapset = NULL;
 
 			break;
 		}
 	}
-
-	return UA_OK;
-}
-
-int sipua_done_rtp_media(void* gen)
-{
-	xrtp_media_t* m = (xrtp_media_t*)gen;
-
-	session_done(m->session);
 
 	return UA_OK;
 }
@@ -493,7 +250,7 @@ int sipua_done_sip_session(void* gen)
 	xfree(set->subject);
 	xfree(set->info);
 
-	xlist_done(set->mediaset, sipua_done_rtp_media);
+	set->rtp_format->done(set->rtp_format);
 
 	xfree(set);
 	
@@ -536,14 +293,10 @@ int sipua_done(sipua_t *sipua)
 	if(ua->call)
 		sipua_done_sip_session(ua->call);
 
-	xfree(ua->action);
 	xthr_done_lock(ua->lines_lock);
 
 	xfree(ua);
 
-	/* stop regist thread */
-	ua->action->done(ua->action);
-   
 	return UA_OK;
 }
 
@@ -619,10 +372,8 @@ sipua_set_t* client_new_call(sipua_t* sipua, char* subject, int sbytes, char *de
 
 int client_set_profile(sipua_t* sipua, user_profile_t* prof)
 {
-	char *nettype, *addrtype;
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
-	sipua->uas->address(sipua->uas, &nettype, &addrtype, &prof->netaddr);
 	client->user_prof = prof;
 
 	return UA_OK;
@@ -642,16 +393,6 @@ int client_regist(sipua_t *sipua, user_profile_t *user, char * userloc)
 	if(client->reg_profile)
 	{
 		return UA_FAIL;
-	}
-
-	if(!client->action)
-	{
-		client->action = sipua_new_action(client, 
-								client_action_onregistration,
-								client_action_oncall,
-								client_action_onconnect,
-								client_action_onreset,
-								client_action_onbye);
 	}
 
 	ret = sipua_regist(sipua, user, userloc);
@@ -744,6 +485,70 @@ sipua_set_t* client_line(sipua_t* sipua, int line)
 	return client->lines[line];
 }
 
+media_source_t* client_open_source(sipua_t* sipua, char* name, char* mode, void* param)
+{
+	ogmp_client_t *client = (ogmp_client_t*)sipua;
+	
+	return source_open(name, client->control, mode, param);
+}
+
+int client_close_source(sipua_t* sipua, media_source_t* src)
+{
+	ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+	return src->done(src);
+}
+
+media_source_t* client_set_background_source(sipua_t* sipua, char* name)
+{
+	ogmp_client_t *client = (ogmp_client_t*)sipua;
+	
+	if(client->backgroud_source)
+	{
+		client->backgroud_source->stop(client->backgroud_source);
+		client->backgroud_source->done(client->backgroud_source);
+		client->backgroud_source = NULL;
+	}
+
+	if(name && name[0])
+	{
+		client->backgroud_source = source_open(name, client->control, "netcast");
+	} 
+
+	return client->backgroud_source;
+}
+
+/* call media attachment */
+int client_attach_source(sipua_t* sipua, sipua_set_t* call, transmit_source_t* tsrc)
+{
+	xlist_user_t lu;
+	char *cname = call->rtpcapset->cname;
+
+	rtpcap_descript_t *rtpcap = xlist_first(call->rtpcapset->rtpcaps, &lu);
+	while(rtpcap)
+	{
+		if(rtpcap->netaddr)
+			tsrc->add_destinate(tsrc, rtpcap->profile_mime, cname, 
+								rtpcap->nettype, rtpcap->addrtype, rtpcap->netaddr, 
+								rtpcap->rtp_portno, rtpcap->rtcp_portno);
+		else
+			tsrc->add_destinate(tsrc, rtpcap->profile_mime, cname, 
+								call->rtpcapset->nettype, 
+								call->rtpcapset->addrtype, 
+								call->rtpcapset->netaddr, 
+								rtpcap->rtp_portno, rtpcap->rtcp_portno);
+	
+		rtpcap = xlist_next(call->rtpcapset->rtpcaps, &lu);
+	}
+	
+	return MP_EIMPL;
+}
+
+int client_detach_source(sipua_t* sipua, sipua_set_t* call, transmit_source_t* tsrc)
+{
+	return MP_EIMPL;
+}
+	
 /* switch current call session */
 sipua_set_t* client_pick(sipua_t* sipua, int line)
 {
@@ -788,14 +593,21 @@ int client_answer(sipua_t *sipua, sipua_set_t* call, int reply)
 		case SIPUA_STATUS_ANSWER:
 		{
 			/* establish rtp sessions */
-			int ret;
+			int bw;
 
 			/* Now create rtp sessions of the call */
-			ret = sipua_establish_call(sipua, call, call->rtpcapset, 
-							client->control, client->pt);
+			bw = sipua_establish_call(sipua, call, "playback", call->rtpcapset, 
+							client->format_handlers, client->control, client->pt);
 
-			if(ret < UA_OK)
-				return ret;
+			if(client->backgroud_source)
+				client_attach_source(sipua, call, (transmit_source_t*)client->backgroud_source);
+
+			if(bw < 0)
+			{
+				sipua_answer(&client->sipua, call, SIPUA_STATUS_REJECT);
+
+				return UA_FAIL;
+			}
 
 			/* Anser the call */
 			sipua_answer(&client->sipua, call, reply);
@@ -817,8 +629,8 @@ int client_answer(sipua_t *sipua, sipua_set_t* call, int reply)
 sipua_t* client_new_sipua(sipua_uas_t* uas, int bandwidth)
 {
 	int nmod;
+	int nformat;
 
-	sipua_action_t *act=NULL;
 	ogmp_client_t *client=NULL;
 	module_catalog_t *mod_cata = NULL;
 
@@ -854,6 +666,11 @@ sipua_t* client_new_sipua(sipua_uas_t* uas, int bandwidth)
 	/* player controler */
 	client->control->config(client->control, client->conf, mod_cata);
 	client->control->add_device(client->control, "rtp", client_config_rtp, client->conf);
+	
+	client->format_handlers = xlist_new();
+
+	nformat = catalog_create_modules (mod_cata, "format", client->format_handlers);
+	clie_log (("client_new_sipua: %d format module found\n", nformat));
 
 	client->lines_lock = xthr_new_lock();
 
@@ -872,6 +689,7 @@ sipua_t* client_new_sipua(sipua_uas_t* uas, int bandwidth)
 	sipua->done = sipua_done;
 
 	sipua->userloc = sipua_userloc;
+	sipua->locate_user = sipua_locate_user;
 
 	sipua->set_profile = client_set_profile;
 	sipua->profile = client_profile;
@@ -880,7 +698,6 @@ sipua_t* client_new_sipua(sipua_uas_t* uas, int bandwidth)
 	sipua->unregist = client_unregist;
 
 	sipua->new_call = client_new_call;
-	sipua->create_call = sipua_create_call;
 	sipua->done_call = client_done_call;
 
  	/* lines management */
@@ -893,15 +710,22 @@ sipua_t* client_new_sipua(sipua_uas_t* uas, int bandwidth)
 	sipua->session = client_session;
  	sipua->line = client_line;
 
+	sipua->set_background_source = client_set_background_source;
+
+	sipua->open_source = client_open_source;
+	sipua->close_source = client_close_source;
+	sipua->attach_source = client_attach_source;
+	sipua->detach_source = client_detach_source;
+
 	/* switch current call session */
  	sipua->pick = client_pick;
  	sipua->hold = client_hold;
-	
+	/*
 	sipua->add = sipua_add;
 	sipua->remove = sipua_remove;
-
+	*/
 	sipua->call = sipua_call;
-	sipua->answer = sipua_answer;
+	sipua->answer = client_answer;
 
 	sipua->options_call = sipua_options_call;
 	sipua->info_call = sipua_info_call;

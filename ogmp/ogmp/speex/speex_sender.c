@@ -55,7 +55,7 @@ struct global_const_s
 typedef struct speex_sender_s speex_sender_t;
 struct speex_sender_s
 {
-   struct media_transmit_s sender;
+   struct media_transmit_s transmit;
 
    /*int (*callback_on_ready) (void *user, media_player_t *player);*/
    void *callback_on_ready_user;
@@ -79,7 +79,10 @@ struct speex_sender_s
 
    uint8 profile_no;
 
-   char *ipaddr;
+   char *nettype;
+   char *addrtype;
+   char *netaddr;
+
    uint16 rtp_port;
    uint16 rtcp_port;
 };
@@ -114,13 +117,13 @@ int spxs_set_callback (media_player_t *mp, int type, int (*call)(), void *user)
    return MP_OK;
 }
 
-int spxs_match_type (media_player_t * mp, char *mime, char *fourcc)
+int spxs_match_play_type (media_player_t * mp, char *play)
 {
-   /* FIXME: Due to no strncasecmp on win32 mime is case sensitive */
-   if (mime && strncmp(mime, "audio/speex", 12) == 0)
-      return 1;
+    /* FIXME: due to no strncasecmp on win32 mime is case sensitive */
+	if (strcmp(play, "netcast") == 0)
+		return 1;
 
-   return 0;
+	return 0;
 }
 
 int spxs_open_stream (media_player_t *mp, media_info_t *media_info)
@@ -161,6 +164,202 @@ int spxs_close_stream (media_player_t * mp)
    return MP_EIMPL;
 }
 
+const char* spxs_play_type(media_player_t * mp)
+{
+   return global_const.play_type;
+}
+
+const char* spxs_media_type(media_player_t * mp)
+{
+   return global_const.media_type;
+}
+
+const char* spxs_codec_type(media_player_t * mp)
+{
+   return "";
+}
+
+media_pipe_t * spxs_pipe(media_player_t * p)
+{
+   if (!p->device) return NULL;
+
+   return p->device->pipe (p->device);
+}
+
+int spxs_done(media_player_t *mp)
+{
+	speex_sender_t *ss = (speex_sender_t *)mp;
+
+	spxs_log(("spxs_done: FIXME - How to keep the pre-opened device\n"));
+
+	if(mp->device)
+		mp->device->done(mp->device);
+
+	xstr_done_string(ss->nettype);
+	xstr_done_string(ss->addrtype);
+	xstr_done_string(ss->netaddr);
+
+	xfree(mp);
+
+	return MP_OK;
+}
+
+int spxs_set_options (media_player_t * mp, char *opt, void *value)
+{
+   spxs_log(("spxs_set_options: NOP function\n"));
+
+   return MP_OK;
+}
+
+capable_descript_t* spxs_capable(media_player_t* mp, void* cap_info)
+{
+   rtpcap_sdp_t *sdp = (rtpcap_sdp_t*)cap_info;
+
+   speex_sender_t *ss = (speex_sender_t *)mp;
+   speex_info_t *spxinfo = ss->speex_info;
+   rtpcap_descript_t *rtpcap;
+
+   int ptime_max = 0;
+   int penh = 0;
+
+   spxs_log(("spxs_capable: #%d %s:%d/%d '%s' %dHz\n", ss->profile_no, ss->netaddr, ss->rtp_port, ss->rtcp_port, global_const.mime_type, spxinfo->audioinfo.info.sample_rate));
+   
+   ss->rtp_media->parameter(ss->rtp_media, "ptime_max", &ptime_max);
+   ss->rtp_media->parameter(ss->rtp_media, "penh", &penh);
+
+   spxinfo->ptime = ptime_max / (SPX_FRAME_MSEC * spxinfo->nframe_per_packet) * SPX_FRAME_MSEC;
+   spxinfo->penh = penh;
+
+   spxs_log(("spxs_capable: %d frames per packet, %dms per rtp packet, penh=%d\n", spxinfo->nframe_per_packet, spxinfo->ptime, spxinfo->penh));
+
+   rtpcap = rtp_capable_descript(ss->profile_no, ss->nettype, ss->addrtype, ss->netaddr, ss->rtp_port, ss->rtcp_port, global_const.mime_type, spxinfo->audioinfo.info.sample_rate, spxinfo->audioinfo.channels, sdp->sdp_message);
+
+   if(speex_info_to_sdp((media_info_t*)spxinfo, rtpcap, sdp->sdp_message, sdp->sdp_media_pos) >= MP_OK)
+	   sdp->sdp_media_pos++;
+
+   return (capable_descript_t*)rtpcap;
+}
+
+int spxs_match_capable(media_player_t * mp, capable_descript_t *cap)
+{
+   return cap->match_value(cap, "mime", global_const.mime_type, strlen(global_const.mime_type));
+}
+
+int spxs_done_device ( void *gen )
+{
+   media_device_t* dev = (media_device_t*)gen;
+
+   dev->done(dev);
+
+   return MP_OK;
+}
+
+int spxs_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
+{
+   speex_sender_t *vs = (speex_sender_t*)gen;
+
+   spxs_log(("spxs_on_member_update: dest[%s] connected\n", cn));
+   
+   if(vs->callback_on_ready)
+	   vs->callback_on_ready(vs->callback_on_ready_user, (media_player_t*)vs);
+
+   return MP_OK;
+}
+
+int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t *cata, void* extra)
+{
+	control_setting_t *setting = NULL;
+
+	/* extra is cast to rtpcapset for rtp device */
+	rtpcap_set_t *rtpcapset = (rtpcap_set_t*)extra;
+	user_profile_t *user = rtpcapset->user_profile;
+
+	rtpcap_descript_t *rtpcap;
+
+	media_device_t *dev = NULL;
+	dev_rtp_t * dev_rtp = NULL;
+	rtp_setting_t *rtpset = NULL;
+
+	speex_setting_t *spxset = NULL;
+
+	speex_sender_t *ss = (speex_sender_t*)mp;
+
+	int total_bw;
+
+	spxs_log(("spxs_set_device: need rtp device\n"));
+	rtpcap = rtp_get_capable(rtpcapset, global_const.mime_type);
+	if(!rtpcap)
+	{
+		spxs_debug(("spxs_set_device: No speex capable found\n"));
+		return MP_FAIL;
+	}
+
+	dev = cont->find_device(cont, "rtp");
+	if(!dev) 
+		return MP_FAIL;
+
+	dev_rtp = (dev_rtp_t*)dev;
+   
+	dev->start(dev, cont);
+
+	setting = cont->fetch_setting(cont, "rtp", dev);
+	if(!setting)
+	{
+		spxs_debug(("spxs_set_device: Can't set rtp device properly\n"));
+		return MP_FAIL;
+	}
+
+	rtpset = (rtp_setting_t*)setting;
+
+	spxset = speex_setting(cont);
+
+	total_bw = cont->book_bandwidth(cont, 0);
+   
+	ss->profile_no = rtpcap->profile_no;
+
+	ss->nettype = xstr_clone(user->user->nettype);
+	ss->addrtype = xstr_clone(user->user->addrtype);
+	ss->netaddr = xstr_clone(user->user->netaddr);
+
+	ss->rtp_port = rtpcap->local_rtp_portno;
+	ss->rtcp_port = rtpcap->local_rtcp_portno;
+
+	ss->cname = xstr_clone(user->cname);
+	ss->cnlen = strlen(user->cname)+1;
+
+	ss->rtp_session = dev_rtp->rtp_session(dev_rtp, cata, cont,
+								ss->cname, ss->cnlen,
+								user->user->nettype, user->user->addrtype, user->user->netaddr, 
+								(uint16)rtpcap->local_rtp_portno, (uint16)rtpcap->local_rtcp_portno,
+								rtpcap->profile_no, rtpcap->profile_mime,
+								rtpcap->clockrate, rtpcap->coding_param,
+								total_bw);
+
+	ss->rtp_media = session_media(ss->rtp_session);
+
+	ss->rtp_media->set_parameter(ss->rtp_media, "ptime_max", (void*)spxset->ptime_max);
+	ss->rtp_media->set_parameter(ss->rtp_media, "penh", (void*)spxset->penh);
+
+	session_set_callback(ss->rtp_session, CALLBACK_SESSION_MEMBER_UPDATE, spxs_on_member_update, ss);
+
+	mp->device = dev;
+
+	setting->done(setting);
+
+	spxs_log(("spxs_set_device: netcast device ok\n"));
+
+	return MP_OK;
+}
+
+int spxs_init (media_player_t * mp, media_control_t *control, void* data)
+{
+	speex_sender_t *ss = (speex_sender_t*)mp;
+
+	ss->rtp_session = (xrtp_session_t*)data;
+
+	return MP_OK;
+}
+
 int spxs_stop (media_player_t *mp)
 {
    spxs_debug(("spxs_stop: to stop speex sender\n"));
@@ -169,13 +368,26 @@ int spxs_stop (media_player_t *mp)
    return MP_OK;
 }
 
-int spxs_receive_next (media_player_t *mp, void *spx_packet, int64 samplestamp, int last_packet)
+/**************************************************************/
+
+int spxs_match_type (media_receiver_t *recvr, char *mime, char *fourcc)
+{
+   /* FIXME: Due to no strncasecmp on win32 mime is case sensitive */
+   if (mime && strncmp(mime, "audio/speex", 12) == 0)
+      return 1;
+
+   return 0;
+}
+
+int spxs_receive_next (media_receiver_t *recvr, media_frame_t* spxf, int64 samplestamp, int last_packet)
 {
    media_pipe_t *output = NULL;
    rtp_frame_t *rtpf = NULL;
+   media_player_t *mp = (media_player_t*)recvr;
    
    speex_sender_t *ss = (speex_sender_t *)mp;
-   ogg_packet *pack = (ogg_packet*)spx_packet;
+
+   media_frame_t* mf = (media_frame_t*)spxf;
 
    //rtime_t usec_delta = 0;
    int new_group = 0;
@@ -218,7 +430,7 @@ int spxs_receive_next (media_player_t *mp, void *spx_packet, int64 samplestamp, 
 	*
     * NOTE: DATA IS CLONED!
     */
-   rtpf = (rtp_frame_t *)output->new_frame(output, pack->bytes, pack->packet);
+   rtpf = (rtp_frame_t *)output->new_frame(output, mf->bytes, mf->raw);
 
    rtpf->frame.eos = (last_packet == MP_EOS);
    rtpf->frame.eots = last_packet;
@@ -238,7 +450,7 @@ int spxs_receive_next (media_player_t *mp, void *spx_packet, int64 samplestamp, 
 
    rtpf->grpno = ++ss->group_packets;
 
-   ss->rtp_media->post(ss->rtp_media, (media_data_t*)rtpf, pack->bytes, last_packet);
+   ss->rtp_media->post(ss->rtp_media, (media_data_t*)rtpf, rtpf->frame.bytes, last_packet);
 
    if(last_packet)
    {
@@ -249,190 +461,15 @@ int spxs_receive_next (media_player_t *mp, void *spx_packet, int64 samplestamp, 
    return MP_OK;
 }
 
-const char* spxs_play_type(media_player_t * mp)
-{
-   return global_const.play_type;
-}
-
-const char* spxs_media_type(media_player_t * mp)
-{
-   return global_const.media_type;
-}
-
-const char* spxs_codec_type(media_player_t * mp)
-{
-   return "";
-}
-
-media_pipe_t * spxs_pipe(media_player_t * p)
-{
-   if (!p->device) return NULL;
-
-   return p->device->pipe (p->device);
-}
-
-int spxs_done(media_player_t *mp)
-{
-	spxs_log(("spxs_done: FIXME - How to keep the pre-opened device\n"));
-
-	if(mp->device)
-		mp->device->done(mp->device);
-
-	xfree(mp);
-
-	return MP_OK;
-}
-
-int spxs_set_options (media_player_t * mp, char *opt, void *value)
-{
-   spxs_log(("spxs_set_options: NOP function\n"));
-
-   return MP_OK;
-}
-
-capable_descript_t* spxs_capable(media_player_t* mp, void* cap_info)
-{
-   rtpcap_sdp_t *sdp = (rtpcap_sdp_t*)cap_info;
-
-   speex_sender_t *ss = (speex_sender_t *)mp;
-   speex_info_t *spxinfo = ss->speex_info;
-   rtpcap_descript_t *rtpcap;
-
-   int ptime_max = 0;
-   int penh = 0;
-
-   spxs_log(("spxs_capable: #%d %s:%d/%d '%s' %dHz\n", ss->profile_no, ss->ipaddr, ss->rtp_port, ss->rtcp_port, global_const.mime_type, spxinfo->audioinfo.info.sample_rate));
-   
-   ss->rtp_media->parameter(ss->rtp_media, "ptime_max", &ptime_max);
-   ss->rtp_media->parameter(ss->rtp_media, "penh", &penh);
-
-   spxinfo->ptime = ptime_max / (SPX_FRAME_MSEC * spxinfo->nframe_per_packet) * SPX_FRAME_MSEC;
-   spxinfo->penh = penh;
-
-   spxs_log(("spxs_capable: %d frames per packet, %dms per rtp packet, penh=%d\n", spxinfo->nframe_per_packet, spxinfo->ptime, spxinfo->penh));
-
-   rtpcap = rtp_capable_descript(ss->profile_no, ss->ipaddr, ss->rtp_port, ss->rtcp_port, global_const.mime_type, spxinfo->audioinfo.info.sample_rate, spxinfo->audioinfo.channels, sdp->sdp_message);
-
-   if(speex_info_to_sdp((media_info_t*)spxinfo, rtpcap, sdp->sdp_message, sdp->sdp_media_pos) >= MP_OK)
-	   sdp->sdp_media_pos++;
-
-   return (capable_descript_t*)rtpcap;
-}
-
-int spxs_match_capable(media_player_t * mp, capable_descript_t *cap)
-{
-   return cap->match_value(cap, "mime", global_const.mime_type, strlen(global_const.mime_type));
-}
-
 /**************************************************************/
 
-int spxs_done_device ( void *gen )
+int spxs_add_destinate(media_transmit_t *send, char *cname, char *nettype, char *addrtype, char *netaddr, int rtp_pno, int rtcp_pno)
 {
-   media_device_t* dev = (media_device_t*)gen;
-
-   dev->done(dev);
-
-   return MP_OK;
+	/* media info for sending stored in session.self */
+	return session_add_cname(((speex_sender_t*)send)->rtp_session, cname, strlen(cname)+1, netaddr, (uint16)rtp_pno, (uint16)rtcp_pno, /* (rtpcap_descript_t*) */NULL, NULL);
 }
 
-int spxs_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
-{
-   speex_sender_t *vs = (speex_sender_t*)gen;
-
-   spxs_log(("spxs_on_member_update: dest[%s] connected\n", cn));
-   
-   if(vs->callback_on_ready)
-	   vs->callback_on_ready(vs->callback_on_ready_user, (media_player_t*)vs);
-
-   return MP_OK;
-}
-
-int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t *cata, void* extra)
-{
-   control_setting_t *setting = NULL;
-
-   rtpcap_set_t *rtpcapset = (rtpcap_set_t*)extra;
-   user_profile_t *user = rtpcapset->user_profile;
-
-   rtpcap_descript_t *rtpcap;
-
-   media_device_t *dev = NULL;
-   dev_rtp_t * dev_rtp = NULL;
-   rtp_setting_t *rtpset = NULL;
-
-   speex_setting_t *spxset = NULL;
-
-   speex_sender_t *ss = (speex_sender_t*)mp;
-
-   int total_bw;
-
-   spxs_log(("spxs_set_device: need rtp device\n"));
-   rtpcap = rtp_get_capable(rtpcapset, global_const.mime_type);
-   if(!rtpcap)
-   {
-	   spxs_debug(("spxs_set_device: No speex capable found\n"));
-	   return MP_FAIL;
-   }
-
-   dev = cont->find_device(cont, "rtp");
-   if(!dev) 
-	   return MP_FAIL;
-
-   dev_rtp = (dev_rtp_t*)dev;
-   
-   dev->start(dev, cont);
-
-   setting = cont->fetch_setting(cont, "rtp", dev);
-   if(!setting)
-   {
-	   spxs_debug(("spxs_set_device: Can't set rtp device properly\n"));
-	   return MP_FAIL;
-   }
-
-   rtpset = (rtp_setting_t*)setting;
-
-   spxset = speex_setting(cont);
-
-   total_bw = cont->book_bandwidth(cont, 0);
-   
-   ss->profile_no = rtpcap->profile_no;
-   ss->ipaddr = xstr_clone(user->netaddr);
-
-   ss->rtp_port = rtpcap->rtp_portno;
-   ss->rtcp_port = rtpcap->rtcp_portno;
-
-   ss->cname = xstr_clone(user->cname);
-   ss->cnlen = strlen(user->cname)+1;
-
-   ss->rtp_session = dev_rtp->rtp_session(dev_rtp, cata, cont,
-								ss->cname, ss->cnlen,
-								user->netaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno,
-								rtpcap->profile_no, rtpcap->profile_mime,
-								rtpcap->clockrate, rtpcap->coding_param,
-								total_bw);
-
-   ss->rtp_media = session_media(ss->rtp_session);
-
-   ss->rtp_media->set_parameter(ss->rtp_media, "ptime_max", (void*)spxset->ptime_max);
-   ss->rtp_media->set_parameter(ss->rtp_media, "penh", (void*)spxset->penh);
-
-   session_set_callback(ss->rtp_session, CALLBACK_SESSION_MEMBER_UPDATE, spxs_on_member_update, ss);
-
-   mp->device = dev;
-
-   setting->done(setting);
-
-   spxs_log(("spxs_set_device: netcast device ok\n"));
-
-   return MP_OK;
-}
-
-int spxs_add_destinate(media_transmit_t *send, char *cname, int cnlen, char *ipaddr, uint16 rtp_pno, uint16 rtcp_pno, rtpcap_descript_t *rtpcap)
-{
-	return session_add_cname(((speex_sender_t*)send)->rtp_session, cname, cnlen, ipaddr, rtp_pno, rtcp_pno, rtpcap, NULL);
-}
-
-int spxs_delete_destinate(media_transmit_t *send, char *cname)
+int spxs_remove_destinate(media_transmit_t *send, char *cname, char *nettype, char *addrtype, char *netaddr, int rtp_pno, int rtcp_pno)
 {
 	return session_delete_cname(((speex_sender_t*)send)->rtp_session, cname, strlen(cname)+1);
 }
@@ -440,7 +477,6 @@ int spxs_delete_destinate(media_transmit_t *send, char *cname)
 module_interface_t * media_new_sender()
 {
    media_player_t *mp = NULL;
-   media_transmit_t *mt = NULL;
 
    speex_sender_t *sender = xmalloc(sizeof(struct speex_sender_s));
    if(!sender)
@@ -455,19 +491,18 @@ module_interface_t * media_new_sender()
    mp = (media_player_t*)sender;
    mp->done = spxs_done;
    
-   mp->play_type = spxs_play_type;
    mp->media_type = spxs_media_type;
    mp->codec_type = spxs_codec_type;
 
    mp->set_callback = spxs_set_callback;
    mp->pipe = spxs_pipe;
 
-   mp->match_type = spxs_match_type;
+   mp->match_play_type = spxs_match_play_type;
    
+   mp->init = spxs_init;
+
    mp->open_stream = spxs_open_stream;
    mp->close_stream = spxs_close_stream;
-
-   mp->receive_media = spxs_receive_next;
    mp->set_options = spxs_set_options;
 
    mp->set_device = spxs_set_device;
@@ -477,10 +512,11 @@ module_interface_t * media_new_sender()
 
    mp->stop = spxs_stop;
 
-   mt = (media_transmit_t*)sender;
+   mp->receiver.match_type = spxs_match_type;
+   mp->receiver.receive_media = spxs_receive_next;
 
-   mt->add_destinate = spxs_add_destinate;
-   mt->delete_destinate = spxs_delete_destinate;
+   sender->transmit.add_destinate = spxs_add_destinate;
+   sender->transmit.remove_destinate = spxs_remove_destinate;
 
    return mp;
 }

@@ -85,6 +85,7 @@ media_frame_t* rtp_new_frame (media_pipe_t *pipe, int bytes, char *init_data)
    }
 
    rtpf->unit_bytes = bytes;
+   rtpf->frame.bytes = bytes;
 
    /* initialize data */
    if(init_data != NULL)
@@ -156,7 +157,12 @@ media_pipe_t * rtp_pipe_new()
    return mp;
 }
 
-media_pipe_t * rtp_pipe (media_device_t *dev)
+media_pipe_t * rtp_in_pipe (media_device_t *dev)
+{
+	return NULL;
+}
+
+media_pipe_t * rtp_out_pipe (media_device_t *dev)
 {
 	dev_rtp_t* dr = (dev_rtp_t*)dev;
 
@@ -185,7 +191,8 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
 							module_catalog_t *cata, media_control_t *ctrl,
 
 							char *cname, int cnlen,
-							char *ip, uint16 rtp_portno, uint16 rtcp_portno,
+							char *nettype, char *addrtype, char *netaddr,
+							uint16 rtp_portno, uint16 rtcp_portno,
 							
 							uint8 profile_no, char *profile_mime, int clockrate, int coding_param,
 							int bw_budget)
@@ -193,13 +200,13 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
    xrtp_session_t *ses = NULL;
    xrtp_media_t *rtp_media;
 
-   rtp_debug(("rtp_session: [%s] on [%s:%u|%u], mime[%s]\n", cname, ip, rtp_portno, rtcp_portno, profile_mime));
+   rtp_debug(("rtp_session: [%s] on [%s:%u|%u], mime[%s]\n", cname, netaddr, rtp_portno, rtcp_portno, profile_mime));
 
    /* If the session is exist */
-   ses = xrtp_find_session(rtp->session_set, cname, cnlen, ip, rtp_portno, rtcp_portno, profile_no, profile_mime);
+   ses = xrtp_find_session(rtp->session_set, cname, cnlen, netaddr, rtp_portno, rtcp_portno, profile_no, profile_mime);
    if(!ses)
    {
-		ses = session_new(rtp->session_set, cname, cnlen, ip, rtp_portno, rtcp_portno, cata, ctrl);
+		ses = session_new(rtp->session_set, cname, cnlen, netaddr, rtp_portno, rtcp_portno, cata, ctrl);
 
 		if(!ses) return NULL;
 
@@ -252,7 +259,13 @@ int rtp_stop (media_device_t * dev)
 	return MP_OK;
 }
 
-int rtp_set_media_info (media_device_t *dev, media_info_t *info)
+int rtp_set_input_media (media_device_t *dev, media_receiver_t* recvr, media_info_t *info)
+{
+   /* media info is retrieved from rtp format */
+   return MP_FAIL;
+}
+
+int rtp_set_output_media (media_device_t *dev, media_info_t *info)
 {
    /* media info is retrieved from rtp format */
    return MP_OK;
@@ -309,12 +322,13 @@ module_interface_t * rtp_new ()
 
    dev->done = rtp_done;
 
-   dev->pipe = rtp_pipe;
+   dev->pipe = rtp_in_pipe;
 
    dev->start = rtp_start;
    dev->stop = rtp_stop;
 
-   dev->set_media_info = rtp_set_media_info;
+   dev->set_input_media = rtp_set_input_media;
+   dev->set_output_media = rtp_set_output_media;
 
    dev->new_setting = rtp_new_setting;
    dev->setting = rtp_setting;

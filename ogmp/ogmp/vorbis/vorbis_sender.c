@@ -147,7 +147,7 @@ int vsend_open_stream (media_player_t *mp, media_info_t *media_info)
    ai.info.sample_bits = 16;
    ai.channels = vinfo->vi.channels;
    
-   vs->rtp_media->set_rate(vs->rtp_media, ai.info.sample_rate);
+   vs->rtp_media->set_coding(vs->rtp_media, ai.info.sample_rate, ai.channels);
 
    session_issue_mediainfo(vs->rtp_session, vinfo, vs->vorbis_info_signum++);
    

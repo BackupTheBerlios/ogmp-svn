@@ -20,7 +20,7 @@
  */
 
 #include <timedia/xmalloc.h>
-#include <string.h>
+#include <timedia/xstring.h>
 
 #include "../format_ogm/ogm_format.h"
 
@@ -87,16 +87,15 @@ int speex_open_header(ogg_packet *op, speex_info_t *spxinfo)
 
    spxinfo->version = header->speex_version_id;
    spxinfo->bitstream_version = header->mode_bitstream_version;
+   spxinfo->mode = header->mode;
 
-   /* only in svn recently */
+   /* only in svn recently*/ 
    spxinfo->spxmode = speex_lib_get_mode(header->mode);
-   /* in released version
-#ifdef DISABLE_GLOBAL_POINTERS
-   spxinfo->mode = speex_mode_new(header->mode);
-#else
-   spxinfo->mode = speex_mode_list[header->mode];
-#endif
-	*/
+
+   /* in released version, not work on speex v1.1.6
+	spxinfo->spxmode = speex_mode_list[header->mode];
+   */
+	
    if (spxinfo->spxmode->bitstream_version < header->mode_bitstream_version)
    {
       ogm_speex_log(("speex_open_header: Cannot decode newer version speex source\n"));
@@ -133,7 +132,7 @@ int speex_open_header(ogg_packet *op, speex_info_t *spxinfo)
 }
 
 /* Open a new 'Ogg/Speex' stream in the ogm file */
-int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ctrl, ogg_stream_state *sstate, int sno, stream_header *sth, void* extra)
+int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ctrl, ogg_stream_state *sstate, int sno, stream_header *sth)
 {
 	speex_info_t *spxinfo = NULL;
 
@@ -173,8 +172,9 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
 		}
 
 		memset(spxinfo, 0, sizeof(struct speex_info_s));
-      
+
 		stream->media_info = (media_info_t*)spxinfo;
+		stream->media_info->mime = xstr_clone("audio/speex");
 	}
 	else
 	{
@@ -186,14 +186,10 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
 
 	if(spxinfo->head_packets < 2 && stream->playable != -1)
 	{
-		int enh = 1;
-
 		spxinfo->head_packets++;
 	
 		if (spxinfo->head_packets == 1)
 		{
-			int ret;
-		
 			if(speex_open_header(&ogm->packet, spxinfo) < MP_OK)
 			{
 				stream->playable = -1;
@@ -221,37 +217,7 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
             ogm_speex_log(("ogm_open_speex: samples/frame[%d]; frames/packet[%d]\n", spxinfo->nsample_per_frame, spxinfo->nframe_per_packet));
             ogm_speex_log(("ogm_open_speex: headers[%d]\n", spxinfo->nheader));
 
-            /* time to open the stream with a player */            
-			stream->player = ctrl->find_player(ctrl, ogm->format.default_mode, stream->mime, stream->fourcc, extra);
-			
-			if(!stream->player)
-			{
-				ogm_speex_debug(("ogm_open_speex: stream can't be played\n"));
-				stream->playable = -1;
-			}
-
-			ret = stream->player->open_stream(stream->player, (media_info_t*)spxinfo);
-         
-			if( ret < MP_OK)
-			{
-				stream->playable = -1;
-				return ret;
-			}         
-         
-			stream->playable = 1;
-
-			spxinfo->dst = speex_decoder_init(spxinfo->spxmode);
-			if (!spxinfo->dst)
-			{
-				ogm_speex_log(("speex_open_header: Decoder initialization failed.\n"));
-				return MP_FAIL;
-			}
-			
-			speex_decoder_ctl(spxinfo->dst, SPEEX_SET_SAMPLING_RATE, &(spxinfo->audioinfo.info.sample_rate));
-			speex_decoder_ctl(spxinfo->dst, SPEEX_GET_FRAME_SIZE, &(spxinfo->nsample_per_frame));
-			speex_decoder_ctl(spxinfo->dst, SPEEX_SET_ENH, &enh);
-
-			ogm_speex_log(("ogm_open_speex: player ok\n"));
+			ogm_speex_log(("ogm_open_speex: speex info ok\n"));
 		} 
 		
 		if (spxinfo->head_packets < spxinfo->nheader)
@@ -269,45 +235,51 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
 /* Handle speex packet */
 int ogm_process_speex(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int hdrlen, int64 lenbytes, int64 samplestamp, int last_packet, int stream_end)
 {
-   /* Output the Ogg/Speex media */
-   media_format_t *mf = (media_format_t *)ogm;
+	/* Output the Ogg/Speex media */
+	media_frame_t frame;
+	media_format_t *mf = (media_format_t *)ogm;
    
-   media_stream_t *stream = (media_stream_t *)ogm_strm;
+	media_stream_t *stream = (media_stream_t *)ogm_strm;
 
-   speex_info_t *spxinfo = (speex_info_t *)stream->media_info;
+	speex_info_t *spxinfo = (speex_info_t *)stream->media_info;
    
-   if(stream->playable == -1)
-   {
-      ogm_speex_log(("ogm_process_speex: (a%d/%d) Speex voice stream isn't playable\n", ogm_strm->sno, mf->numstreams));
-      return MP_FAIL;
-   }
+	if(stream->playable == -1)
+	{
+		ogm_speex_log(("ogm_process_speex: (a%d/%d) Speex voice stream isn't playable\n", ogm_strm->sno, mf->numstreams));
+		return MP_FAIL;
+	}
 
-   if(stream->playable == 0 || spxinfo->head_packets < spxinfo->nheader)
-   {
-      spxinfo->head_packets++;
+	if(stream->playable == 0 || spxinfo->head_packets < spxinfo->nheader)
+	{
+		spxinfo->head_packets++;
 
-	  /* Comment Header and Extra */
-      ogm_speex_log(("ogm_process_speex: Skip rest Headers\n"));
+		/* Comment Header and Extra */
+		ogm_speex_log(("ogm_process_speex: Skip rest Headers\n"));
 
-      return MP_OK;
-   }
+		return MP_OK;
+	}
+
+	frame.bytes = pack->bytes;
+	frame.raw = pack->packet;
+	frame.samplestamp = samplestamp;
+	frame.sno = pack->packetno;
    
-   /* send speex packet */
-   if (last_packet && stream_end)
-   {   
-	   /* ogg_page_eos(page) */
-	   stream->player->receive_media(stream->player, pack, samplestamp, MP_EOS);
-   }
-   else
-   {
-      stream->player->receive_media(stream->player, pack, samplestamp, last_packet);
-   }
+	/* send speex packet */
+	if (last_packet && stream_end)
+	{   
+		/* ogg_page_eos(page) */
+		stream->player->receiver.receive_media(&stream->player->receiver, &frame, samplestamp, MP_EOS);
+	}
+	else
+	{
+		stream->player->receiver.receive_media(&stream->player->receiver, &frame, samplestamp, last_packet);
+	}
    
-   return MP_OK;
+	return MP_OK;
 }
 
-int ogm_done_speex (ogm_media_t * ogmm) {
-
+int ogm_done_speex (ogm_media_t * ogmm)
+{
    xfree(ogmm);
 
    return MP_OK;

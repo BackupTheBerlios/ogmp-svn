@@ -805,6 +805,8 @@ user_t* sipua_load_user_file(FILE* f, char* uid, char* tok, int tsz)
 			if(!u)
 				return 0;
 			memset(u, 0, sizeof(user_profile_t));
+
+			u->user = user;
 			
 			while(*pc != '[')
 				pc++;
@@ -960,6 +962,8 @@ int user_add_profile(user_t* user, char* fullname, int fbytes, char* book_loc, c
 	if(!prof) return -1;
 
 	memset(prof, 0, sizeof(user_profile_t));
+
+	prof->user = user;
 
 	prof->username = user->uid;
 

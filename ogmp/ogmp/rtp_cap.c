@@ -44,7 +44,11 @@ int rtp_descript_done(capable_descript_t *cap)
 	rtpcap_descript_t *rtpcap = (rtpcap_descript_t*)cap;
 
 	xstr_done_string(rtpcap->profile_mime);
-	xstr_done_string(rtpcap->ipaddr);
+
+	xstr_done_string(rtpcap->nettype);
+	xstr_done_string(rtpcap->addrtype);
+	xstr_done_string(rtpcap->netaddr);
+
 	xfree(rtpcap);
 
 	return MP_OK;
@@ -74,7 +78,11 @@ int rtp_descript_match(capable_descript_t *me, capable_descript_t *oth)
 	return oth->match_value(oth, "mime", rtpme->profile_mime, strlen(rtpme->profile_mime));
 }
 
-rtpcap_descript_t* rtp_capable_descript(int payload_no, char *ip, uint media_port, uint control_port, char *mime, int clockrate, int coding_param, void *sdp_message)
+rtpcap_descript_t* rtp_capable_descript(int payload_no, 
+										char* nettype, char* addrtype, char *netaddr, 
+										uint media_port, uint control_port, char *mime, 
+										int clockrate, int coding_param, 
+										void *sdp_message)
 {
 	rtpcap_descript_t *rtpcap;
 
@@ -94,7 +102,9 @@ rtpcap_descript_t* rtp_capable_descript(int payload_no, char *ip, uint media_por
 	rtpcap->profile_mime = xstr_clone(mime);
 	rtpcap->profile_no = payload_no;
 
-	rtpcap->ipaddr = xstr_clone(ip);
+	rtpcap->nettype = xstr_clone(nettype);
+	rtpcap->addrtype = xstr_clone(addrtype);
+	rtpcap->netaddr = xstr_clone(netaddr);
 
 	rtpcap->rtp_portno = media_port;
 	rtpcap->rtcp_portno = control_port;
@@ -249,11 +259,7 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 
 	char *media_type; /* "audio"; "video"; etc */
 
-	uint media_port = 0;
-	uint control_port = 0;
-
 	int payload_no = 0;
-	int nport = 0;
 
 	char *protocol; /* "RTP/AVP" */
 
@@ -271,7 +277,7 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 
 	int pos_media = 0;
 
-	char *nettype, *addrtype, *addr;
+	char *addr;
 	int ttl;
 
 	rtpcap_set_t* rtpcapset = xmalloc(sizeof(rtpcap_set_t));
@@ -290,22 +296,48 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 
 	rtpcapset->sdp_message = sdp;
 
-	nettype = sdp_message_c_nettype_get (sdp, -1, 0);
-	addrtype = sdp_message_c_addrtype_get (sdp, -1, 0);
+	rtpcapset->nettype = xstr_clone(sdp_message_c_nettype_get (sdp, -1, 0));
+	rtpcapset->addrtype = xstr_clone(sdp_message_c_addrtype_get (sdp, -1, 0));
+
 	addr = sdp_message_c_addr_get (sdp, -1, 0);
 
-	if(0==strcmp(nettype, "IN") && 0==strcmp(addrtype, "IP4"))
+	if(0==strcmp(rtpcapset->nettype, "IN") && 0==strcmp(rtpcapset->addrtype, "IP4"))
 		sdp_parse_ipv4(addr, media_ip, MAX_IP_BYTES, &ttl);
-	/*
-	if(0==strcmp(nettype, "IN") && 0==strcmp(connect->c_addrtype, "IP6"))
+
+#ifdef IPV6
+	if(0==strcmp(rtpcapset->nettype, "IN") && 0==strcmp(rtpcapset->addrtype, "IP6"))
 		jua_parse_ipv6(addr, media_ip, ...);
-	*/
+#endif
+
 	rtpcap_log(("rtp_capable_to_sdp: media_ip[%s] ttl[%d]\n", media_ip, ttl));
 
-	rtpcapset->ipaddr = xstr_clone(media_ip);
+	rtpcapset->netaddr = xstr_clone(media_ip);
+
+	{
+		char *p = rtpcapset->cname;
+		char *username;
+
+		username = sdp_message_o_username_get(sdp);
+		if(username)
+		{
+			rtpcapset->username = xstr_clone(username);
+			rtpcapset->callid = xstr_clone(sdp_message_o_sess_id_get(sdp));
+			rtpcapset->version = xstr_clone(sdp_message_o_sess_version_get(sdp));
+
+			strcpy(rtpcapset->cname, rtpcapset->username);
+
+			while(*p) p++;
+			*p = '@'; p++;
+			strcpy(p, rtpcapset->netaddr);
+		}
+	}
 
 	while (!sdp_message_endof_media (sdp, pos_media))
 	{
+		uint media_port = 0;
+		uint control_port = 0;
+		int nport = 0;
+
 		char *attr = NULL;
 
 		int pos_attr = 0;
@@ -322,6 +354,7 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 
 		media_type = sdp_message_m_media_get (sdp, pos_media);
 		media_port = (uint)strtol(sdp_message_m_port_get (sdp, pos_media), NULL, 10);
+
 		nport = atoi(sdp_message_m_number_of_port_get (sdp, pos_media));
 		protocol = sdp_message_m_proto_get (sdp, pos_media);
 
@@ -333,13 +366,13 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 		m_addrtype = sdp_message_c_addrtype_get (sdp, pos_media, 0);
 		m_addr = sdp_message_c_addr_get (sdp, pos_media, 0);
 
-		if(m_addr && 0==strcmp(nettype, "IN") && 0==strcmp(addrtype, "IP4"))
+		if(m_addr && 0==strcmp(m_nettype, "IN") && 0==strcmp(m_addrtype, "IP4"))
 			sdp_parse_ipv4(m_addr, m_media_ip, MAX_IP_BYTES, &m_ttl);
 
-		/*
-		if(0==strcmp(nettype, "IN") && 0==strcmp(connect->c_addrtype, "IP6"))
+#ifdef IPV6
+		if(m_addr && 0==strcmp(m_nettype, "IN") && 0==strcmp(m_addrtype, "IP6"))
 			jua_parse_ipv6(addr, media_ip, ...);
-		*/
+#endif
 
 		rtpcap_log(("rtp_capable_to_sdp: media_ip[%s] ttl[%d]\n", media_ip, ttl));
 
@@ -377,16 +410,17 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 
 		snprintf(mime, MAX_MIME_BYTES, "%s/%s", media_type, coding_type);
 
-		if(control_port == 0 && nport == 2)
+		if(control_port == 0 && (nport == 2 || nport == 0))
 			control_port = media_port + 1;
 
 		/* open issue, rtcp and rtp flow may use different ip */
 		if(m_addr)
-			rtpcap = rtp_capable_descript(rtpmapno, m_media_ip, 
+			rtpcap = rtp_capable_descript(rtpmapno, m_nettype, m_addrtype, m_media_ip, 
 										media_port, control_port, 
 										mime, clockrate, coding_param, sdp);
 		else
-			rtpcap = rtp_capable_descript(rtpmapno, media_ip, 
+			rtpcap = rtp_capable_descript(rtpmapno, rtpcapset->nettype, 
+										rtpcapset->addrtype, rtpcapset->netaddr, 
 										media_port, control_port, 
 										mime, clockrate, coding_param, sdp);
 
@@ -445,8 +479,12 @@ int rtpcap_done(void* gen)
 
 int rtp_capable_done_set(rtpcap_set_t* rtpcapset)
 {
-	xfree(rtpcapset->ipaddr);
-	xlist_done(rtpcapset->rtpcaps, rtpcap_done);
+	xfree(rtpcapset->nettype);
+	xfree(rtpcapset->addrtype);
+	xfree(rtpcapset->netaddr);
+
+	if(rtpcapset->rtpcaps)
+		xlist_done(rtpcapset->rtpcaps, rtpcap_done);
 
 	xfree(rtpcapset);
 
