@@ -16,13 +16,13 @@ FILES = editor.c gui_address_book_browse.c gui_address_book_newentry.c gui_audio
 			gui.c gui_icon.c gui_insubscriptions_list.c gui_login.c gui_loglines.c gui_menu.c \
 			gui_message.c gui_new_call.c gui_new_identity.c gui_new_user.c gui_online.c gui_profiles.c \
 			gui_sessions_list.c gui_setup.c gui_subscriptions_list.c \
-			gui_topline.c
+			gui_topline.c gui_preference.c
 
 OBJFILES = editor.o gui_address_book_browse.o gui_address_book_newentry.o gui_audio_test.o \
 			gui.c gui_icon.o gui_insubscriptions_list.o gui_login.o gui_loglines.o gui_menu.o \
 			gui_message.o gui_new_call.o gui_new_identity.o gui_new_user.o gui_online.o gui_profiles.o \
 			gui_sessions_list.o gui_setup.o gui_subscriptions_list.o \
-			gui_topline.o
+			gui_topline.o  gui_preference.o
 
 LIBFILES = cursesui.so
 

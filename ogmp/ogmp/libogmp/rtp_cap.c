@@ -282,6 +282,7 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 	int ttl;
 
 	rtpcap_set_t* rtpcapset = xmalloc(sizeof(rtpcap_set_t));
+
 	if(!rtpcapset)
 	{
 		return NULL;
@@ -550,6 +551,7 @@ int rtp_capable_cname(rtpcap_set_t* set, char *cn, int bytes)
 int rtpcap_done(void* gen)
 {
 	capable_descript_t *cap = (capable_descript_t*)gen;
+
 	cap->done(cap);
 
 	return OS_OK;
