@@ -287,8 +287,6 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 
 	int total_bw;
 
-	spxs_debug(("spxs_set_device: rtpcapset@%x\n", rtpcapset));
-
 	user = rtpcapset->user_profile;
 
 	rtpcap = rtp_get_capable(rtpcapset, global_const.mime_type);
@@ -299,14 +297,18 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 	}
 
 	dev = cont->find_device(cont, "rtp");
-	if(!dev) 
+	if(!dev)
+	{
+		spxs_debug(("spxs_set_device: No rtp device found\n"));
 		return MP_FAIL;
+	}
 
 	dev_rtp = (dev_rtp_t*)dev;
    
 	dev->start(dev, cont);
 
 	setting = cont->fetch_setting(cont, "rtp", dev);
+
 	if(!setting)
 	{
 		spxs_debug(("spxs_set_device: Can't set rtp device properly\n"));

@@ -209,7 +209,10 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
    {
 		ses = session_new(rtp->session_set, cname, cnlen, netaddr, rtp_portno, rtcp_portno, cata, ctrl, SESSION_DUPLEX);
 
-		if(!ses) return NULL;
+		if(!ses)
+		{
+			return NULL;
+		}
 
 		rtp_media = session_new_media(ses, profile_no, profile_mime, clockrate, coding_param);
 		
@@ -217,11 +220,13 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
 		{
 			session_set_scheduler(ses, xrtp_scheduler(rtp->session_set));
    
-			printf("rtp_session: session[%s:%s] created\n", cname, profile_mime);
+			rtpdev_log(("rtp_session: session[%s:%s] created\n", cname, profile_mime));
 		}
 		else
 		{
-			printf("rtp_session: session[%s:%s][%d] exceed the bandwidth[%d]\n", cname, profile_mime, session_bandwidth(ses), bw_budget);
+			rtpdev_debug(("rtp_session: session[%s:%s][%d] exceed the bandwidth[%d]\n", cname, profile_mime, session_bandwidth(ses), bw_budget));
+
+			exit(1);
 		}
    }
 
@@ -249,7 +254,7 @@ int rtp_start (media_device_t * dev, media_control_t *ctrl)
    if(!rdev->session_set) 
 	   return MP_FAIL;
    
-   rtpdev_debug(("rtp.rtp_start: started...\n"));
+   rtpdev_log(("rtp.rtp_start: started...\n"));
    
    return MP_OK;
 }

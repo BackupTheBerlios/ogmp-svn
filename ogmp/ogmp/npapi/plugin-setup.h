@@ -139,6 +139,7 @@ NPError GetValue(NPPVariable variable, void *value);
 void New(nsPluginInstance * instance, nsPluginCreateData * parameters);
 void LoadConfigFile(nsPluginInstance * instance);
 
+#if 0
 // plugin-support.cpp
 void lowercase(char string[]);
 int fexists(char *file);
@@ -157,7 +158,6 @@ int DPMSIsEnabled(nsPluginInstance * instance);
 void DPMSReenable(nsPluginInstance * instance);
 #endif
 
-#if 0
 //plugin-list.cpp
 void initialize(Node * l);
 Node *newNode();

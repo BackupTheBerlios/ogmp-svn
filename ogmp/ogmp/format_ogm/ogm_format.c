@@ -33,7 +33,7 @@
 #endif
 
 #ifdef DEMUX_OGM_DEBUG
- #define ogm_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
+ #define ogm_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define ogm_debug(fmtargs)  
 #endif
@@ -180,13 +180,13 @@ int ogm_new_all_player(media_format_t *mf, media_control_t* ctrl, char* mode, vo
 		{
 			cur->playable = -1;
 
-			ogm_log(("ogm_new_mime_player: No %s player\n", cur->media_info->mime));
+			ogm_debug(("ogm_new_mime_player: No %s player\n", cur->media_info->mime));
 		}
 		else if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
 		{
 			cur->playable = -1;
 
-			ogm_log(("ogm_new_mime_player: open %s stream fail!\n", cur->media_info->mime));
+			ogm_debug(("ogm_new_mime_player: open %s stream fail!\n", cur->media_info->mime));
 		}
 		else
 		{
@@ -1063,7 +1063,7 @@ int ogm_players(media_format_t * mf, char *play_type, media_player_t* players[],
 	int n = 0;
 	media_stream_t *cur = mf->first;
 
-	while (cur != NULL)
+	while (cur != NULL && n < nmax)
 	{
 		if(cur->player->match_play_type(cur->player, play_type))
 			players[n++] = cur->player;

@@ -1026,8 +1026,6 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
 
 	uas->set_listener(uas, client, client_sipua_event);
 
-
-
 	sipua->uas = uas;
 
 	sipua->done = sipua_done;

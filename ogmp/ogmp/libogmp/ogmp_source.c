@@ -306,7 +306,7 @@ media_source_t* source_open(char* name, media_control_t* control, char *mode, vo
         tsrc->remove_destinate = source_remove_destinate;
 
         /* collect the players of the file */
-        nplayer = format->players(format, "rtp", source->players, MAX_NCAP);
+        nplayer = format->players(format, "netcast", source->players, MAX_NCAP);
         src_log(("source_setup: '%s' opened by %d players\n", name, nplayer));
 
         for(i=0; i<nplayer; i++)

@@ -32,7 +32,7 @@
 #endif
 
 #ifdef RTPCAP_DEBUG
- #define rtpcap_debug(fmtargs)  do{ui_printf_log fmtargs;}while(0)
+ #define rtpcap_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define rtpcap_debug(fmtargs)
 #endif
@@ -466,6 +466,8 @@ rtpcap_set_t* rtp_capable_from_format(media_format_t *format,
 		return NULL;
 	}
 
+	rtpcapset->user_profile = user_prof;
+
 	rtpcapset->nettype = xstr_clone(user_prof->user->nettype);
 	rtpcapset->addrtype = xstr_clone(user_prof->user->addrtype);
 	rtpcapset->netaddr = xstr_clone(user_prof->user->netaddr);
@@ -484,7 +486,7 @@ rtpcap_set_t* rtp_capable_from_format(media_format_t *format,
 
 	strm = format->first;
 
-	while (!strm)
+	while (strm)
 	{
 		rtpcap_descript_t *rtpcap;
 
@@ -498,6 +500,7 @@ rtpcap_set_t* rtp_capable_from_format(media_format_t *format,
 		memset(rtpcap, 0, sizeof(rtpcap_descript_t));
 
 		rtpcap->media_info = strm->media_info;
+		rtpcap->profile_mime = xstr_clone(strm->mime);
 
 		xlist_addto_first(rtpcapset->rtpcaps, rtpcap);
 
@@ -517,7 +520,6 @@ int rtpcap_match_mime(void* tar, void* pat)
 
 rtpcap_descript_t* rtp_get_capable(rtpcap_set_t* set, char* mime)
 {
-
 	xlist_user_t u;
 	return xlist_find(set->rtpcaps, mime, rtpcap_match_mime, &u);
 }
