@@ -215,14 +215,23 @@ int jua_process_event(eXosipua_t *jua)
 			reg_e.event.call_info = NULL;
 
 			reg_e.event.type = SIPUA_EVENT_REGISTRATION_SUCCEEDED;
-			reg_e.status_code = je->status_code;
-			reg_e.server_info = je->reason_phrase;
-			reg_e.server = je->req_uri;
+			reg_e.status_code = je->status_code;	/* eg: 200*/
+			reg_e.server_info = je->reason_phrase;  /* eg: OK */
+			reg_e.server = je->req_uri;				/* eg: sip:registrar.domain */
+			/*
+			je->remote_uri // eg: regname@domain 
+			*/
 
+			/*Open issue:
+			How to retrieve exactly returned expiration seconds
+			*/
+
+			/*
 			snprintf(buf, 99, "<- (%i) [%i %s] %s for REGISTER %s",
 					je->rid, je->status_code, je->reason_phrase,
 					je->remote_uri, je->req_uri);
 			printf("jua_process_event: reg ok! [%s]\n", buf);
+			*/
 
 			jua->registration_status = je->status_code;
 			
