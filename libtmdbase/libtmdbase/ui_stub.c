@@ -15,27 +15,51 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef OS_UI_H
-#define OS_UI_H
+#include "ui.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
 
-#include "os.h"
+ui_t *global_ui = NULL;
 
-typedef struct ui_s ui_t;
-struct ui_s
+int ui_print_log(char *fmt, ...)
 {
-	int (*done)(ui_t *ui);
-	int (*match_type)(ui_t *ui, char* type);
+	int ret;
+    int loglen;
+    char* logbuf;
     
-	int (*show)(ui_t *ui);
-    int (*beep)(ui_t *ui);
-    
-    int (*logbuf)(ui_t *ui, char** buf);
-    int (*print_log)(ui_t *ui, char* buf);
-};
+    va_list ap;
 
-extern DECLSPEC int ui_print_log(char *fmt, ...);
+	va_start (ap, fmt);
 
-extern DECLSPEC ui_t* global_get_ui();
-extern DECLSPEC int global_set_ui(ui_t* ui);
+    if(global_ui == NULL)
+    {
+        ret = vprintf(fmt, ap);
+        
+        va_end(ap);
 
-#endif
+        return ret;
+    }
+
+    loglen = global_ui->logbuf(global_ui, &logbuf);
+
+    vsnprintf(logbuf, loglen, fmt, ap);
+
+	va_end(ap);
+
+    ret = global_ui->print_log(global_ui, logbuf);
+
+	return ret;
+}
+
+ui_t* global_get_ui()
+{
+	return global_ui;
+}
+
+int global_set_ui(ui_t* ui)
+{
+	global_ui = ui;
+
+	return OS_OK;
+}

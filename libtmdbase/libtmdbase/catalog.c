@@ -20,7 +20,6 @@
  * $Id: catalog.c,v 0.1 11/12/2002 15:47:39 heming$
  *
  */
- 
 #include "xstring.h"
 #include "catalog.h"
 #include "loader.h"
@@ -59,8 +58,8 @@
  #define catalog_debug(fmtargs)
 #endif
 
-module_catalog_t* catalog_new( char * type ){
-   
+module_catalog_t* catalog_new( char * type )
+{
    module_catalog_t *catalog;
 
    catalog = (module_catalog_t *)xmalloc(sizeof(module_catalog_t));
@@ -306,4 +305,3 @@ int catalog_create_modules(module_catalog_t *cata, char *label, xrtp_list_t *lis
 
    return nmod;
 }
-

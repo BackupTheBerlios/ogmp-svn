@@ -20,11 +20,10 @@
  #include "xmalloc.h"
 
  #ifdef XSTRING_LOG
-   const int xstring_log = 1;
+	#define xstr_log(fmtargs)  do{printf fmtargs;}while(0)
  #else
-   const int xstring_log = 0;
+	#define xstr_log(fmtargs)
  #endif
- #define xstr_log(fmtargs)  do{if(xstring_log) printf fmtargs;}while(0)
 
  char * xstr_clone(char *str)
  {
