@@ -991,6 +991,61 @@ int user_add_profile(user_t* user, char* fullname, int fbytes, char* book_loc, c
 	return xlist_size(user->profiles);
 }
 
+int user_set_profile(user_t* user, user_profile_t* prof, char* fullname, int fbytes, char* book_loc, char* home, char* regname, int sec)
+{
+	if(prof->fbyte < fbytes)
+	{
+		xstr_done_string(prof->fullname);
+		prof->fullname = xstr_nclone(fullname, fbytes);
+	}
+	else
+	{
+		strncpy(prof->fullname, fullname, fbytes);
+		prof->fullname[fbytes] = '\0';
+	}
+	
+	prof->fbyte = fbytes;
+
+	if(strlen(prof->registrar) < strlen(home))
+	{
+		xstr_done_string(prof->registrar);
+		prof->registrar = xstr_clone(home);
+	}
+	else
+	{
+		strcpy(prof->registrar, home);
+	}
+
+	if(strlen(prof->regname) < strlen(regname))
+	{
+		xstr_done_string(prof->regname);
+		prof->regname = xstr_clone(regname);
+	}
+	else
+	{
+		strcpy(prof->regname, regname);
+	}
+
+	prof->seconds = sec;
+
+	if(book_loc)
+	{
+		if(strlen(prof->regname) < strlen(regname))
+		{
+			xstr_done_string(prof->book_location);
+			prof->book_location = xstr_clone(book_loc);
+		}
+		else
+		{
+			strcpy(prof->book_location, book_loc);
+		}
+	}
+		
+	user->modified = 1;
+
+	return UA_OK;
+}
+
 int user_remove_profile(user_t* user, user_profile_t* prof)
 {
 	if(xlist_remove_item(user->profiles, prof) < OS_OK)

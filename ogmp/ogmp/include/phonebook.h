@@ -154,6 +154,10 @@ user_add_profile(user_t* user, char* fullname, int fbytes, char* book_loc, char*
 
 DECLSPEC
 int 
+user_set_profile(user_t* user, user_profile_t* profile, char* fullname, int fbytes, char* book_loc, char* home, char* regname, int sec);
+
+DECLSPEC
+int 
 user_remove_profile(user_t* user, user_profile_t* prof);
 
 #endif

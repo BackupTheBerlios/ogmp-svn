@@ -218,12 +218,12 @@ int jua_process_event(eXosipua_t *jua)
 			reg_e.status_code = je->status_code;
 			reg_e.server_info = je->reason_phrase;
 			reg_e.server = je->req_uri;
-			/*
+
 			snprintf(buf, 99, "<- (%i) [%i %s] %s for REGISTER %s",
 					je->rid, je->status_code, je->reason_phrase,
 					je->remote_uri, je->req_uri);
 			printf("jua_process_event: reg ok! [%s]\n", buf);
-			*/
+
 			jua->registration_status = je->status_code;
 			
 			snprintf(jua->registration_server, 100, "%s", je->req_uri);

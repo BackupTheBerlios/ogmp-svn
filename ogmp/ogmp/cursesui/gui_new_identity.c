@@ -32,8 +32,6 @@
 #define NEWID_REGNAME	3
 #define NEWID_REGSEC	4
 
-
-
 char newid_fullname[128];
 char newid_bookloc[128];
 char newid_registary[128];
@@ -52,6 +50,8 @@ int window_new_identity_print(gui_t* gui, int wid)
 
 	int pos;
 	char c, *ch;
+
+	ogmp_curses_t* ocui = gui->topui;
 	
 	curseson(); cbreak(); noecho(); nonl(); keypad(stdscr,TRUE);
 
@@ -125,6 +125,27 @@ int window_new_identity_print(gui_t* gui, int wid)
 
 	snprintf(buf, 250, "%29.29s", "Register period in seconds :");
 	mvaddstr(gui->y0+5, gui->x0, buf);
+
+	if(ocui->edit_profile)
+	{
+		char seconds[10];
+
+		snprintf(seconds, 10, "%d", ocui->edit_profile->seconds);
+		
+		editline_set_line(newid_edit[NEWID_FULLNAME], ocui->edit_profile->fullname, ocui->edit_profile->fbyte);
+		editline_set_line(newid_edit[NEWID_BOOKLOC], ocui->edit_profile->book_location, strlen(ocui->edit_profile->book_location));
+		editline_set_line(newid_edit[NEWID_REGISTARY], ocui->edit_profile->registrar, strlen(ocui->edit_profile->registrar));
+		editline_set_line(newid_edit[NEWID_REGNAME], ocui->edit_profile->regname, strlen(ocui->edit_profile->regname));
+		editline_set_line(newid_edit[NEWID_REGSEC], seconds, strlen(seconds));
+	}
+	else
+	{
+		editline_clear(newid_edit[NEWID_FULLNAME]);
+		editline_clear(newid_edit[NEWID_BOOKLOC]);
+		editline_clear(newid_edit[NEWID_REGISTARY]);
+		editline_clear(newid_edit[NEWID_REGNAME]);
+		editline_clear(newid_edit[NEWID_REGSEC]);
+	}
 
 	attrset(COLOR_PAIR(0));
 	mvaddstr(gui->y0+1, gui->x0+30, newid_inputs[NEWID_FULLNAME]);
@@ -217,9 +238,12 @@ int window_new_identity_run_command(gui_t* gui, int c)
 			
 			if(newid_fullname[0] && newid_registary[0] && newid_regname[0])
 			{
-				user_add_profile(ocui->user, newid_fullname, strlen(newid_fullname),
-											newid_bookloc, newid_registary, 
-											newid_regname, sec);
+				if(!ocui->edit_profile)
+					user_add_profile(ocui->user, newid_fullname, strlen(newid_fullname),
+									newid_bookloc, newid_registary, newid_regname, sec);
+				else
+					user_set_profile(ocui->user, ocui->edit_profile, newid_fullname, strlen(newid_fullname),
+									newid_bookloc, newid_registary, newid_regname, sec);
 				
 				gui_hide_window(gui);
 			}

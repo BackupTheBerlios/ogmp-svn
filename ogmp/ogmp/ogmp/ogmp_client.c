@@ -121,6 +121,8 @@ int client_done(ogmp_client_t *client)
    return MP_OK;
 }
 
+int client_regist(sipua_t *sipua, user_profile_t *user, char * userloc);
+
 /* FIXME: resource greedy, need better solution */
 int client_register_loop(void *gen)
 {
@@ -138,7 +140,7 @@ int client_register_loop(void *gen)
 		user_prof->seconds_left -= intv;
 
 		if(user_prof->seconds_left <= 0)
-			sipua_regist(&client->sipua, user_prof, user_prof->cname);
+			client_regist(&client->sipua, user_prof, user_prof->cname);
 
 		time_msec_sleep(clock, intv*1000, &ms_remain);
 	}
@@ -196,6 +198,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			/* registering transaction completed */
             client->reg_profile = NULL;
 
+			/* Should be exact expire seconds returned by registrary*/
 			user_prof->seconds_left = user_prof->seconds;
 			user_prof->sipua = client;
 			user_prof->enable = 1;
