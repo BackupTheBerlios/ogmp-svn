@@ -104,7 +104,8 @@ int xlist_reset(xlist_t *list, int(*free_item)(void *)){
    return OS_OK;
 }
 
-xrtp_list_user_t * xlist_new_user(xlist_t * list){
+xrtp_list_user_t * xlist_new_user(xlist_t * list)
+{
    xrtp_list_user_t * user;
 
    /* Current arg list is not used
@@ -124,9 +125,9 @@ int xlist_done_user(xlist_user_t * user){
 	return OS_OK;
 }
 
-void * xlist_first(xlist_t * list, xlist_user_t * u){
-  
-   xrtp_list_node_t * n = NULL;
+void * xlist_first(xlist_t * list, xlist_user_t * u)
+{
+   xlist_node_t *n = NULL;
 
    if(list->num == 0) return NULL;
   
@@ -135,13 +136,14 @@ void * xlist_first(xlist_t * list, xlist_user_t * u){
    u->curr = n;
    u->prev = NULL;
 
-   if(n) u->next = n->next;
+   if(n) 
+	   u->next = n->next;
 
    return n->data;
 }
 
-void * xlist_next(xlist_t * list, xlist_user_t * u){
-  
+void * xlist_next(xlist_t * list, xlist_user_t * u)
+{
    xrtp_list_node_t * curr = u->curr;
 
    if(!curr || !curr->next) return NULL;
@@ -155,8 +157,8 @@ void * xlist_next(xlist_t * list, xlist_user_t * u){
    return curr->data;
 }
 
-void * xlist_current(xlist_t * list, xlist_user_t * u){
-
+void * xlist_current(xlist_t * list, xlist_user_t * u)
+{
    if(u->curr)
       return u->curr->data;
    else

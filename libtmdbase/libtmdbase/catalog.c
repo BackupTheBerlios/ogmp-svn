@@ -38,7 +38,7 @@
 
 #define CATALOG_LOG
 #define CATALOG_DEBUG
- 
+
 #ifdef CATALOG_LOG 
  #define catalog_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -112,8 +112,8 @@ int catalog_free(module_catalog_t *cata){
    return OS_OK;
 }
 
-int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* path){
-
+int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* path)
+{
    xrtp_list_user_t *list_u;
    int num_plugin;
 
@@ -126,31 +126,30 @@ int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* pat
    struct stat entinfo;
    void* lib;
 
-   if(!catalog || !path){
+   if(!catalog || !path)
+   {
       return OS_EPARAM;
    }
 
-   catalog_log(("catalog_scan_modules: open dir:%s\n", path));
+   catalog_log(("catalog_scan_modules: scan dir:%s\n", path));
 
    dir = opendir(path); /* POSIX call */
-   if(!dir){
-
-      catalog_log(("< catalog_scan_modules: Fail to open dir:%s >\n", path));
+   if(!dir)
+   {
+      catalog_log(("catalog_scan_modules: Fail to open dir:%s\n", path));
       return OS_EPARAM;
    }      
           
    list_u = xrtp_list_newuser(catalog->infos);
 
-   while((entry = readdir(dir)) != NULL){
-
+   while((entry = readdir(dir)) != NULL)
+   {
       char * entname = (char *)malloc(strlen(path) + strlen(entry->d_name) + 2);
       sprintf(entname, "%s/%s", path, entry->d_name);
 
-      catalog_log(("catalog_scan_modules: Openning %s \n", entname));
-
-      if(stat(entname, &entinfo) == -1){
-
-         catalog_log(("< catalog_scan_modules: Fail to get (%s) info >\n", entname));
+      if(stat(entname, &entinfo) == -1)
+	  {
+         catalog_log(("catalog_scan_modules: Fail to get (%s) info\n", entname));
          free(entname);
          continue;
       }
@@ -162,15 +161,16 @@ int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* pat
          case S_IFREG: {
 
             lib = modu_dlopen(entname, XRTP_DLFLAGS);
-            if(lib != NULL){
-
+            if(lib != NULL)
+			{
+				/*
                catalog_log(("catalog_scan_modules: Check module (%s)\n", entname));
-
+			   */
                loadin = (module_loadin_t *)modu_dlsym(lib, catalog->module_type);
-               if(loadin){
-              
-                  if(ver > loadin->max_api || ver < loadin->min_api){
-                
+               if(loadin)
+			   {
+                  if(ver > loadin->max_api || ver < loadin->min_api)
+				  {
                      catalog_log(("< catalog_scan_modules: Module (%s) version not match >\n", entname));
                      modu_dlclose(lib);
                      continue;
@@ -180,16 +180,15 @@ int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* pat
                   minfo->filename = xstr_clone(entname);
                   minfo->lib = lib;
                   minfo->loadin = loadin;
-                  //minfo->iface = NULL;
-
+				  /*
                   catalog_log(("catalog_scan_modules: Found module (%s)\n", loadin->label));
-
+				  */
                   xrtp_list_add_first(catalog->infos, minfo);
                }
-            
-            }else{
-            
-               catalog_log(("< catalog_scan_modules: Loading error (%s) >\n", modu_dlerror()));
+            }
+			else
+			{
+               catalog_log(("catalog_scan_modules: Loading [%s] error[%s]\n", entname, modu_dlerror()));
             }
          }
       }

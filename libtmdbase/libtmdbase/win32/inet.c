@@ -7,10 +7,10 @@
 #include "../inet.h"
 #include "../socket.h"
 #include <stdio.h>
-
+/*
 #define WINSOCK_LOG
 #define WINSOCK_DEBUG
-
+*/
 #ifdef WINSOCK_LOG
  #define wsock_log(fmtargs) do{printf fmtargs;}while(0)
 #else 
