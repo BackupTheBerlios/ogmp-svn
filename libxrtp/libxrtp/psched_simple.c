@@ -24,8 +24,8 @@
 
 #include <timedia/xmalloc.h>
 /*
-#define PSCHED_SIMPLE_LOG
 */
+#define PSCHED_SIMPLE_LOG
 #ifdef PSCHED_SIMPLE_LOG
  #define simple_sched_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
