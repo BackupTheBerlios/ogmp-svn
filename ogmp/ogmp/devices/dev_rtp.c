@@ -15,6 +15,7 @@
  *                                                                         *
  ***************************************************************************/
  
+#include <timedia/xmalloc.h>
 #include <timedia/xstring.h>
 
 #include "dev_rtp.h"
@@ -37,14 +38,14 @@
 
 int rtp_done_setting(control_setting_t *gen){
 
-   free(gen);
+   xfree(gen);
 
    return MP_OK;
 }
 
 control_setting_t* rtp_new_setting(media_device_t *dev){
 
-   rtp_setting_t * set = malloc(sizeof(struct rtp_setting_s));
+   rtp_setting_t * set = xmalloc(sizeof(struct rtp_setting_s));
    if(!set){
 
       rtp_debug(("rtp_new_setting: No memory"));
@@ -65,7 +66,7 @@ control_setting_t* rtp_new_setting(media_device_t *dev){
 media_frame_t* rtp_new_frame (media_pipe_t *pipe, int bytes, char *init_data)
 {
    /* better recycle to garrantee */
-   rtp_frame_t * rtpf = (rtp_frame_t*)malloc(sizeof(struct rtp_frame_s));
+   rtp_frame_t * rtpf = (rtp_frame_t*)xmalloc(sizeof(struct rtp_frame_s));
    if(!rtpf)
    {
       rtp_debug(("rtp_new_frame: No memory for frame\n"));
@@ -75,10 +76,10 @@ media_frame_t* rtp_new_frame (media_pipe_t *pipe, int bytes, char *init_data)
 
    rtpf->frame.owner = pipe;
 
-   rtpf->media_unit = (char*)malloc(bytes);
+   rtpf->media_unit = (char*)xmalloc(bytes);
    if(rtpf->media_unit == NULL)
    {
-	   free(rtpf);
+	   xfree(rtpf);
 	   rtp_debug(("rtp_new_frame: No memory for data"));
 	   
 	   return NULL;
@@ -101,9 +102,9 @@ int rtp_recycle_frame (media_pipe_t *pipe, media_frame_t *f)
    rtp_frame_t * rtpf = (rtp_frame_t*)f;
 
    if(rtpf->media_unit) 
-	   free(rtpf->media_unit);
+	   xfree(rtpf->media_unit);
 
-   free(rtpf);
+   xfree(rtpf);
 
    return MP_OK;
 }
@@ -131,14 +132,14 @@ int rtp_pick_content (media_pipe_t *pipe, media_info_t *media_info, char* raw, i
 
 int rtp_pipe_done (media_pipe_t *pipe)
 {
-   free(pipe);
+   xfree(pipe);
  
    return MP_OK;
 }
 
 media_pipe_t * rtp_pipe_new()
 {
-   media_pipe_t *mp = (media_pipe_t*)malloc(sizeof(struct media_pipe_s));
+   media_pipe_t *mp = (media_pipe_t*)xmalloc(sizeof(struct media_pipe_s));
    if(!mp)
    {
       rtp_debug(("rtp_pipe_new: No memory to allocate\n"));
@@ -287,7 +288,7 @@ int rtp_done (media_device_t *dev)
    if(rtp->frame_maker)
 	   rtp->frame_maker->done(rtp->frame_maker);
 
-   free(rtp);
+   xfree(rtp);
 
    return MP_OK;
 }
@@ -296,7 +297,7 @@ module_interface_t * rtp_new ()
 {
    media_device_t * dev;
 
-   dev_rtp_t *dr = (dev_rtp_t*)malloc(sizeof(struct dev_rtp_s));
+   dev_rtp_t *dr = (dev_rtp_t*)xmalloc(sizeof(struct dev_rtp_s));
    if (!dr)
    {
       rtp_debug(("vrtp_new: No free memory\n"));

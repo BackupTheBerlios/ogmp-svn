@@ -19,6 +19,7 @@
 #include "rtp_cap.h"
 
 #include <timedia/xstring.h>
+#include <timedia/xmalloc.h>
 
 #define SERV_LOG
 
@@ -262,6 +263,8 @@ int server_action_oncall(void *user, char *from_cn, int from_cnlen, capable_desc
 			for(j=0; j<server->nplayer; j++)
 			{
 				if(server->caps[j]->match(server->caps[j], from_caps[i]))
+
+
 					server->selected_caps[c++] = server->caps[j];
 			}
 		}
@@ -293,6 +296,8 @@ int server_action_onconnect(void *user, char *from_cn, int from_cnlen, capable_d
 
 			for(j=0; j<from_ncap; j++)
 			{
+				serv_log(("\nserver_action_onconnect: check capability\n"));
+            
 				if(mt->player.match_capable((media_player_t*)mt, from_caps[j]))
 				{
 					rtpcap_descript_t *rtpcap;
@@ -302,6 +307,10 @@ int server_action_onconnect(void *user, char *from_cn, int from_cnlen, capable_d
 					rtpcap = (rtpcap_descript_t *)from_caps[j];
 					mt->add_destinate(mt, from_cn, from_cnlen, rtpcap->ipaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno);
 				}
+            else
+            {
+					serv_log(("\nserver_action_onconnect: capability not match!\n"));
+            }
 			}
 		}
 
@@ -356,7 +365,7 @@ int server_done(ogmp_server_t *server)
    xthr_done_cond(server->wait_request);
    xthr_done_lock(server->lock);
 
-   free(server);
+   xfree(server);
 
    return MP_OK;
 }
@@ -365,7 +374,7 @@ ogmp_server_t* server_new(sipua_t *sipua, char *fname)
 {
 	sipua_action_t *act;
 
-	ogmp_server_t *server = malloc(sizeof(ogmp_server_t));
+	ogmp_server_t *server = xmalloc(sizeof(ogmp_server_t));
 	memset(server, 0, sizeof(ogmp_server_t));
 
 	server->fname = FNAME;

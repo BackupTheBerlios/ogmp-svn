@@ -17,6 +17,7 @@
  
 #include "vorbis_decoder.h"
 
+#include <timedia/xmalloc.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -313,15 +314,13 @@ int vorbis_done(media_player_t *mp) {
 
    mp->device->done (mp->device);
 
-   free((vorbis_decoder_t *)mp);
+   xfree((vorbis_decoder_t *)mp);
 
    return MP_OK;
 }
 
 int vorbis_set_options (media_player_t * mp, char *opt, void *value)
 {
-    vorbis_decoder_t *vp = (vorbis_decoder_t *)mp;
-    
     if(!value)
 	{
         vorbis_player_debug(("vorbis_set_options: param 'value' is NULL point\n"));
@@ -388,7 +387,7 @@ module_interface_t * media_new_player()
 {
    media_player_t *mp = NULL;
 
-   vorbis_decoder_t *playa = malloc(sizeof(struct vorbis_decoder_s));
+   vorbis_decoder_t *playa = xmalloc(sizeof(struct vorbis_decoder_s));
    if(!playa){
 
       vorbis_player_debug(("vorbis_new_player: No memory to allocate\n"));

@@ -17,11 +17,13 @@
 
 #include "timed_pipe.h"
 
+#include <timedia/xmalloc.h>
 #include <string.h>
 /*
 #define PIPE_LOG
-#define PIPE_DEBUG
 */
+#define PIPE_DEBUG
+
 #ifdef PIPE_LOG
  #define pout_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -51,13 +53,14 @@ media_frame_t * pout_new_frame(media_pipe_t * mo, int bytes, char *data){
    timed_pipe_t * out = (timed_pipe_t *)mo;
    media_frame_t * f = out->freed_frame_head;
 
-   char *raw = malloc (bytes);
+   char *raw = NULL;
    
-   while(f){
-
-      if (f->bytes >= bytes) {
-
+   while(f)
+   {
+      if (f->bytes >= bytes)
+      {
          found = f;
+         
          if(prev)
             prev->next = f->next;
          else
@@ -71,8 +74,8 @@ media_frame_t * pout_new_frame(media_pipe_t * mo, int bytes, char *data){
       f = f->next;
    }
 
-   if (found){
-
+   if (found)
+   {
       /* init the frame but keep databuf info */
       int rawbytes = found->bytes;
       char* raw = found->raw;
@@ -82,28 +85,30 @@ media_frame_t * pout_new_frame(media_pipe_t * mo, int bytes, char *data){
       found->bytes = rawbytes;
       found->raw = raw;
 
-	  /* initialize data */
-	  if(data != NULL){
+      /* initialize data */
+      if(data != NULL)
+      {
+         pout_log(("pout_new_frame: initialize %d bytes data\n", bytes));
+         memcpy(found->raw, data, bytes);
+      }
 
-		pout_log(("pout_new_frame: initialize %d bytes data\n", bytes));
-		memcpy(found->raw, data, bytes);
-	  }
-
+      pout_debug(("pout_new_frame: reuse %dB/%dB, %d free frames\n", found->bytes, out->bytes_allbuf, out->n_freed_frame));
+      
       return found;
    }
 
-   found = malloc (sizeof(struct media_frame_s));
-   if (!found) {
-
+   found = xmalloc (sizeof(struct media_frame_s));
+   if (!found)
+   {
       pout_debug (("pout_new_frame: no memory for more frame\n"));
       return NULL;
    }
    
-   //char *raw = malloc (bytes);
-   if (!raw) {
-
+   raw = xmalloc (bytes);
+   if (!raw)
+   {
       pout_debug (("pout_new_frame: no memory for media raw data\n"));
-      free(found);
+      xfree(found);
       return NULL;
    }
    
@@ -114,10 +119,10 @@ media_frame_t * pout_new_frame(media_pipe_t * mo, int bytes, char *data){
    out->bytes_allbuf += bytes;
 
    /* initialize data */
-   if(data != NULL){
-
-		pout_log(("pout_new_frame: initialize %d bytes data\n", bytes));
-		memcpy(found->raw, data, bytes);
+   if(data != NULL)
+   {
+      pout_log(("pout_new_frame: initialize %d bytes data\n", bytes));
+      memcpy(found->raw, data, bytes);
    }
 
    /*
@@ -410,6 +415,7 @@ sample_buffer_t * pout_switch_buffer(timed_pipe_t *pipe) {
       recyc->frame_head = f->next;
 
 
+
       pout_recycle_frame((media_pipe_t*)pipe, f);
 
       f = recyc->frame_head;
@@ -452,7 +458,7 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
    audio_info_t *ai = (audio_info_t *)mi;
 
    if (!pipe->fillgap)
-      pipe->fillgap = malloc (ai->channels_bytes);
+      pipe->fillgap = xmalloc (ai->channels_bytes);
 
    bufr = &(pipe->buffer[pipe->bufn_read]);
 
@@ -691,10 +697,10 @@ int pout_done_buffer(timed_pipe_t * pipe, sample_buffer_t * buf){
 
       next = f->next;
 
-      free(f->raw);
+      xfree(f->raw);
       pipe->bytes_freed += f->bytes;
 
-      free(f);
+      xfree(f);
       f = next;
    }
 
@@ -724,18 +730,18 @@ int pout_done (media_pipe_t * mo) {
 
       next = f->next;
 
-      free(f->raw);
+      xfree(f->raw);
       pipe->bytes_freed += f->bytes;
 
-      free(f);
+      xfree(f);
       f = next;
    }
 
-   if(pipe->fillgap) free(pipe->fillgap);
+   if(pipe->fillgap) xfree(pipe->fillgap);
    
    pout_log(("vorbis_done_player: player done, %d bytes buffers freed\n", pipe->bytes_freed));
 
-   free(pipe);
+   xfree(pipe);
 
    return MP_OK;
 }
@@ -763,8 +769,9 @@ media_pipe_t * timed_pipe_new(int sample_rate, int usec_pulse) {
 
    media_pipe_t * mout = NULL;
 
-   timed_pipe_t *pout = malloc( sizeof(struct timed_pipe_s) );
+   timed_pipe_t *pout = xmalloc( sizeof(struct timed_pipe_s) );
    if(!pout) {
+
 
       pout_debug (("timed_outpipe_new: no memory\n"));
       return NULL;

@@ -185,7 +185,7 @@ int ogm_open_vorbis(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *c
 				stream->playable = -1;
 			}
       
-			ogm_vorbis_log(("ogm_open_vorbis: player ok\n", sno));
+			ogm_vorbis_log(("ogm_open_vorbis: player ok\n"));
 		 }
 
          if (vinfo->head_packets == 2)

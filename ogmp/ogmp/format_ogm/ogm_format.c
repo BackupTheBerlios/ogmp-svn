@@ -15,6 +15,7 @@
 
 #include "ogm_format.h"
 
+#include <timedia/xmalloc.h>
 #include <string.h>
 
 #define CATALOG_VERSION  0x0001
@@ -56,8 +57,8 @@ int ogm_done_format(media_format_t * mf)
       if(cur->player)
          cur->player->done(cur->player);
          
-      free(((ogm_stream_t*)cur)->instate);
-      free(cur);
+      xfree(((ogm_stream_t*)cur)->instate);
+      xfree(cur);
       
       cur = next;
    }
@@ -65,7 +66,7 @@ int ogm_done_format(media_format_t * mf)
    if(mf->stream_handlers)
       xrtp_list_free(mf->stream_handlers, done_stream_handler);
 
-   free(mf);
+   xfree(mf);
 
    return MP_OK;
 }
@@ -263,7 +264,7 @@ int demux_ogm_flush_page(ogm_stream_t *stream, ogg_packet *op)
 
    while (ogg_stream_flush(&stream->outstate, &page))
    {
-      page_data = malloc(page.header_len + page.body_len);
+      page_data = xmalloc(page.header_len + page.body_len);
 
       if(!page_data)
 	  {
@@ -277,7 +278,7 @@ int demux_ogm_flush_page(ogm_stream_t *stream, ogg_packet *op)
       ogm_log(("ogm_flush_page: x/a%d: %ld + %ld written, sending rtp simulated\n", stream->sno,
               page.header_len, page.body_len));
 
-      free(page_data);
+      xfree(page_data);
    }
 
    return MP_OK;
@@ -291,7 +292,7 @@ int demux_ogm_write_page(ogm_stream_t *stream, ogg_packet *op)
 
    while (ogg_stream_pageout(&stream->outstate, &page))
    {
-      page_data = malloc(page.header_len + page.body_len);
+      page_data = xmalloc(page.header_len + page.body_len);
 
       if(!page_data)
 	  {
@@ -305,7 +306,7 @@ int demux_ogm_write_page(ogm_stream_t *stream, ogg_packet *op)
       ogm_log(("ogm_write_page: x/a%d: %ld + %ld written, send to rtp channel\n", stream->sno,
               page.header_len, page.body_len));
 
-      free(page_data);
+      xfree(page_data);
    }
 
    return MP_OK;
@@ -450,7 +451,7 @@ int ogm_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *
       }
       else
       {
-         ogg_stream_state *sstate = malloc(sizeof(ogg_stream_state));
+         ogg_stream_state *sstate = xmalloc(sizeof(ogg_stream_state));
          if(!sstate)
          {
             ogm_log(("ogm_open_file: No memery for stream allocation\n"));
@@ -462,7 +463,7 @@ int ogm_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *
          if (ogg_stream_init(sstate, sno) != 0)
          {
             ogm_log(("ogm_open_file: ogg_stream_init failed\n"));
-            free(sstate);
+            xfree(sstate);
             return MP_FAIL;
          }
 
@@ -658,6 +659,7 @@ int ogm_seek_millisecond (media_format_t *mf, int millis) {
 
       this->header_granulepos[i]=-1;
    }*/
+
 
    /*some strange streams have no syncpoint flag set at the beginning
    if (start_pos == 0) this->keyframe_needed = 0;
@@ -991,7 +993,7 @@ module_interface_t * media_new_format()
 {
    media_format_t * mf = NULL;
 
-   ogm_format_t * ogm = malloc(sizeof(struct ogm_format_s));
+   ogm_format_t * ogm = xmalloc(sizeof(struct ogm_format_s));
    if(!ogm)
    {
       ogm_log(("ogm_new_rtp_group: No memery to allocate\n"));

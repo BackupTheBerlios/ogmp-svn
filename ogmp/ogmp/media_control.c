@@ -19,6 +19,7 @@
 #include "media_format.h"
 
 #include <timedia/timer.h>
+#include <timedia/xmalloc.h>
 #include <timedia/xstring.h>
 #include <timedia/list.h>
 
@@ -108,7 +109,7 @@ int cont_set_format (media_control_t * cont, char *name, media_format_t * format
 
    int len = strlen(name)+1;
    
-   impl->name = malloc (len);
+   impl->name = xmalloc (len);
    if (!impl->name)
    {
       cont_debug(("cont_set_format: no enough memory\n"));
@@ -182,7 +183,7 @@ int cont_add_device (media_control_t *cont, char *name, control_setting_call_t *
 	   return MP_FAIL;
    }
 
-   item = malloc(sizeof(struct control_setting_item_s));
+   item = xmalloc(sizeof(struct control_setting_item_s));
    if(!item)
    {
       cont_log(("cont_add_device: No memory for setting\n"));
@@ -417,6 +418,7 @@ int cont_config (media_control_t *cont, config_t *conf, module_catalog_t *cata)
 {
    control_impl_t *impl = (control_impl_t *)cont;
 
+
    impl->catalog = cata;
    
    return MP_OK;
@@ -431,7 +433,7 @@ module_interface_t* new_media_control ()
 {
    media_control_t * cont;
 
-   control_impl_t *impl = malloc (sizeof(struct control_impl_s));
+   control_impl_t *impl = xmalloc (sizeof(struct control_impl_s));
    if(!impl)
    {
       cont_debug (("media_new_control: No memory to allocate\n"));
@@ -446,7 +448,7 @@ module_interface_t* new_media_control ()
    if(!impl->devices){
 
       cont_debug (("media_new_control: No memory for devices\n"));
-      free(impl);
+      xfree(impl);
       
       return NULL;
    }
@@ -457,7 +459,7 @@ module_interface_t* new_media_control ()
       cont_debug (("media_new_control: No memory for setting list\n"));
 	  
 	  xlist_done(impl->devices, cont_done_device);
-      free(impl);
+      xfree(impl);
       
       return NULL;
    }

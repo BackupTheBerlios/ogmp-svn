@@ -19,12 +19,13 @@
  */
 
 #include <timedia/xstring.h>
+#include <timedia/xmalloc.h>
 
 #include "rtp_cap.h"
 
-#define CAP_LOG
+#define RTPCAP_LOG
 
-#ifdef CAP_LOG
+#ifdef RTPCAP_LOG
  #define cap_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define cap_log(fmtargs)
@@ -39,20 +40,23 @@ int rtp_descript_done(capable_descript_t *cap)
 
 	xstr_done_string(rtpcap->profile_mime);
 	xstr_done_string(rtpcap->ipaddr);
-	free(rtpcap);
-
+	xfree(rtpcap);
 
 	return MP_OK;
 }
 
-int rtp_descript_match_value(capable_descript_t *cap, char *type, char *value)
+int rtp_descript_match_value(capable_descript_t *cap, char *type, char *value, int vbytes)
 {
-	rtpcap_descript_t *rtpcap = (rtpcap_descript_t*)cap;
+   rtpcap_descript_t *rtpcap = (rtpcap_descript_t*)cap;
 
-	if(0 != strncmp("mime", type, 4))
-		return 0;
+   cap_log(("rtp_descript_match_value: %s:%s cap mime '%s'\n", type, value, rtpcap->profile_mime));
 
-	return (0 == strcmp(rtpcap->profile_mime, value));
+   if(0 != strncmp("mime", type, 4))
+      return 0;
+
+   cap_log(("rtp_descript_match_value: cap mime '%s'\n", rtpcap->profile_mime));
+
+	return (0 == strncmp(rtpcap->profile_mime, value, vbytes));
 }
 
 int rtp_descript_match(capable_descript_t *me, capable_descript_t *oth)
@@ -60,16 +64,18 @@ int rtp_descript_match(capable_descript_t *me, capable_descript_t *oth)
 	rtpcap_descript_t *rtpoth;
 	rtpcap_descript_t *rtpme = (rtpcap_descript_t*)me;
 
+   cap_log(("rtp_descript_match: %s\n", rtpme->profile_mime));
+
 	rtpoth = (rtpcap_descript_t*)oth;
 
-	return oth->match_value(oth, "mime", rtpme->profile_mime);
+	return oth->match_value(oth, "mime", rtpme->profile_mime, strlen(rtpme->profile_mime));
 }
 
 rtpcap_descript_t* rtp_capable_descript(int payload_no, char *ip, uint media_port, uint control_port, char *mime, int clockrate, int coding_param)
 {
 	rtpcap_descript_t *rtpcap;
 
-	rtpcap = malloc(sizeof(rtpcap_descript_t));
+	rtpcap = xmalloc(sizeof(rtpcap_descript_t));
 	if(!rtpcap)
 	{
 		return NULL;

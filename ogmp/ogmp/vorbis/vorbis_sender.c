@@ -17,6 +17,7 @@
  
 #include <xrtp/xrtp.h>
 
+#include <timedia/xmalloc.h>
 #include <timedia/xstring.h>
 #include <timedia/list.h>
 #include <stdlib.h>
@@ -32,19 +33,16 @@
 #define VSENDER_DEBUG
 
 #ifdef VSENDER_LOG
-   const int vsender_log = 1;
+ #define vsend_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int vsender_log = 0;
+ #define vsend_log(fmtargs)
 #endif
-
-#define vsend_log(fmtargs)  do{if(vsender_log) printf fmtargs;}while(0)
 
 #ifdef VSENDER_DEBUG
-   const int vsender_debug = 1;
+ #define vsend_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int vsender_debug = 0;
+ #define vsend_debug(fmtargs)
 #endif
-#define vsend_debug(fmtargs)  do{if(vsender_debug) printf fmtargs;}while(0)
 
 struct global_const_s
 {
@@ -130,6 +128,7 @@ int vsend_open_stream (media_player_t *mp, media_info_t *media_info)
 {
    vorbis_sender_t *vs = NULL;
    
+
    vorbis_info_t *vinfo = (vorbis_info_t *)media_info;
 
    struct audio_info_s ai;
@@ -193,6 +192,7 @@ int vsend_receive_next (media_player_t *mp, void *vorbis_packet, int64 samplesta
   
    int     mode;
    int     blocksize, shortsize;
+
    int     samples_half1, samples_half2;
 
    if (!mp->device)
@@ -287,6 +287,7 @@ int vsend_receive_next (media_player_t *mp, void *vorbis_packet, int64 samplesta
          if(vinfo->vb.nW==-1)
          {
             /*
+
             vsend_log(("audio/vorbis.rtp_vorbis_post: wrong window flay\n"));
             */
             rtpf->frame.owner->recycle_frame(rtpf->frame.owner, (media_frame_t*)rtpf);
@@ -381,7 +382,7 @@ int vsend_done(media_player_t *mp) {
 
    mp->device->done (mp->device);
 
-   free((vorbis_sender_t *)mp);
+   xfree((vorbis_sender_t *)mp);
 
    return MP_OK;
 }
@@ -395,17 +396,17 @@ int vsend_set_options (media_player_t * mp, char *opt, void *value)
 
 capable_descript_t* vsend_capable(media_player_t * mp)
 {
-	vorbis_sender_t *vs = (vorbis_sender_t *)mp;
+   vorbis_sender_t *vs = (vorbis_sender_t *)mp;
 
-	vsend_log(("vsend_capable: #%d %s:%d/%d '%s' %dHz\n", vs->profile_no, vs->ipaddr, vs->rtp_port, vs->rtcp_port, global_const.mime_type, 8000));
+   vsend_log(("vsend_capable: #%d %s:%d/%d '%s' %dHz\n", vs->profile_no, vs->ipaddr, vs->rtp_port, vs->rtcp_port, global_const.mime_type, 8000));
 
-	/* vs->vorbis_info->vi.channels is not available yet */
+   /* vs->vorbis_info->vi.channels is not available yet */
 	return (capable_descript_t*)rtp_capable_descript(vs->profile_no, vs->ipaddr, vs->rtp_port, vs->rtcp_port, global_const.mime_type, 8000, 0/*vs->vorbis_info->vi.channels*/);
 }
 
 int vsend_match_capable(media_player_t * mp, capable_descript_t *cap)
 {
-	return cap->match_value(cap, "mime", global_const.mime_type);
+   return cap->match_value(cap, "mime", global_const.mime_type, strlen(global_const.mime_type));
 }
 
 /**************************************************************/
@@ -413,6 +414,7 @@ int vsend_match_capable(media_player_t * mp, capable_descript_t *cap)
 int vsend_done_device ( void *gen ) {
 
    media_device_t* dev = (media_device_t*)gen;
+
 
    dev->done(dev);
 
@@ -434,6 +436,7 @@ int vsend_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
 int vsend_set_device (media_player_t *mp, media_control_t *cont, module_catalog_t *cata)
 {
    control_setting_t *setting = NULL;
+
 
    media_device_t *dev = NULL;
    dev_rtp_t * dev_rtp = NULL;
@@ -530,7 +533,7 @@ module_interface_t * media_new_sender()
    media_player_t *mp = NULL;
    media_transmit_t *mt = NULL;
 
-   vorbis_sender_t *sender = malloc(sizeof(struct vorbis_sender_s));
+   vorbis_sender_t *sender = xmalloc(sizeof(struct vorbis_sender_s));
    if(!sender)
    {
       vsend_debug(("vorbis.new_sender: No memory to allocate\n"));

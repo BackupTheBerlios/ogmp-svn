@@ -42,6 +42,7 @@ int main(int argc, char** argv){
    
    /* Initialise */
    sipua = sipua_new(5060, NULL, NULL);
+   
    server = server_new(sipua, playmode);
    
    if(!strcmp(playmode, "playback"))

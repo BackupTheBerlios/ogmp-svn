@@ -18,6 +18,7 @@
 #include "../devices/dev_rtp.h"
 #include "vorbis_info.h"
 
+#include <timedia/xmalloc.h>
 #include <timedia/xthread.h>
 #include <ogg/ogg.h>
  
@@ -418,7 +419,7 @@ int vrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 	   {
 		   int last = 1;
 		   /* single complete ogg packet */
-		   oggpack = malloc(sizeof(ogg_packet));
+		   oggpack = xmalloc(sizeof(ogg_packet));
 
 		   payload_bytes = rtp_packet_dump_payload(rtp, &payload);
 
@@ -437,7 +438,7 @@ int vrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 		   int last = 0;
 		   int i;
 
-		   oggpack = malloc(sizeof(ogg_packet));
+		   oggpack = xmalloc(sizeof(ogg_packet));
 
 		   payload_bytes = rtp_packet_dump_payload(rtp, &payload);
 
@@ -683,7 +684,7 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 		vinfo = (vorbis_info_t*)session_member_mediainfo(sender, &rtpts_vi, &signum_vi);
 		if(!vinfo)
 		{
-			vinfo = malloc(sizeof(vorbis_info_t));
+			vinfo = xmalloc(sizeof(vorbis_info_t));
 			if(!vinfo)
 			{
 				vrtp_log(("audio/vorbis.vrtp_rtcp_in: no memory for vorbis info\n"));
@@ -708,17 +709,17 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 
 				if(exvi && exvi->header_identification_len)
 				{
-					free(exvi->header_identification);
+					xfree(exvi->header_identification);
 					exvi->header_identification_len = 0;
 				}
 				if(exvi && exvi->header_comment_len)
 				{
-					free(exvi->header_comment);
+					xfree(exvi->header_comment);
 					exvi->header_comment_len = 0;
 				}
 				if(exvi && exvi->header_setup_len)
 				{		   
-					free(exvi->header_setup);
+					xfree(exvi->header_setup);
 					exvi->header_setup_len = 0;
 				}
 
@@ -745,7 +746,7 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 				{
 					/*header 1*/
 					vinfo->header_identification_len = h1_bytes;
-					vinfo->header_identification = malloc(h1_bytes);
+					vinfo->header_identification = xmalloc(h1_bytes);
 					memcpy(vinfo->header_identification, pack, h1_bytes);
 
 					vinfo->head_packets++;
@@ -759,7 +760,7 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 				{
 					/*header 2*/
 					vinfo->header_comment_len = h2_bytes;
-					vinfo->header_comment = malloc(h2_bytes);
+					vinfo->header_comment = xmalloc(h2_bytes);
 					memcpy(vinfo->header_comment, pack, h2_bytes);
 
 					vinfo->head_packets++;
@@ -773,7 +774,7 @@ int vrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 				{
 					/* header 3 */
 					vinfo->header_setup_len = h3_bytes;
-					vinfo->header_setup = malloc(h3_bytes);
+					vinfo->header_setup = xmalloc(h3_bytes);
 					memcpy(vinfo->header_setup, pack, h3_bytes);
 
 					vinfo->head_packets++;
@@ -830,7 +831,7 @@ int vrtp_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 			int nheader=0;
 			uint8 *app;
 
-			app_mi = malloc(applen);
+			app_mi = xmalloc(applen);
 
 			app_mi[0] = rtpts_h & 0xF000;
 			app_mi[1] = rtpts_h & 0x0F00;
@@ -846,7 +847,7 @@ int vrtp_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 
 			app = &app_mi[16];
 
-			vrtp_log(("audio/vorbis.vrtp_rtcp_out: vinfo@%d\n", vinfo));
+			vrtp_log(("audio/vorbis.vrtp_rtcp_out: vinfo@%d\n", (int)vinfo));
 			if(vinfo->header_identification_len)
 			{
 				app_mi[8] |= 0x80;
@@ -876,7 +877,7 @@ int vrtp_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 			
 			rtcp_new_app(rtcp, session_ssrc(ses), 0, appname, applen, app_mi);
 
-			vrtp_log(("audio/vorbis.vrtp_rtcp_out: %d vorbis header in app[VORB][@%d:%d]\n", nheader, app_mi, applen));
+			vrtp_log(("audio/vorbis.vrtp_rtcp_out: %d vorbis header in app[VORB][@%d:%d]\n", nheader, (int)app_mi, applen));
 	   }
    }
 
@@ -892,7 +893,7 @@ int vrtp_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
    /* free app data */
    if(app_mi)
    {
-	   free(app_mi);
+	   xfree(app_mi);
 	   vrtp_log(("audio/vorbis.vrtp_rtcp_out: app[VORB] freed\n"));
    }
 
@@ -942,7 +943,7 @@ int rtp_vorbis_done(xrtp_media_t * media)
    vrtp_handler_t * h = ((vrtp_media_t *)media)->vorbis_profile;
    h->vorbis_media = NULL;
 
-   free(media);
+   xfree(media);
    return XRTP_OK;
 }
 
@@ -1387,6 +1388,7 @@ int rtp_vorbis_send_loop(void *gen)
 			{
 				usec_payload = 0;
 				usec_payload_deadline = usec_stream_payload;
+
 			}
 			else
 			{
@@ -1480,8 +1482,8 @@ int rtp_vorbis_play(void *player, void *media, int64 packetno, int ts_last, int 
 	else
 		mp->receive_media(mp, pack, pack->granulepos, ts_last);
 
-	free(pack->packet);
-	free(pack);
+	xfree(pack->packet);
+	xfree(pack);
 
 	return XRTP_OK;
 }
@@ -1502,7 +1504,7 @@ xrtp_media_t * rtp_vorbis(profile_handler_t *handler)
 
    if(h->vorbis_media) return (xrtp_media_t*)h->vorbis_media;
 
-   h->vorbis_media = (vrtp_media_t *)malloc(sizeof(struct vrtp_media_s));
+   h->vorbis_media = (vrtp_media_t *)xmalloc(sizeof(struct vrtp_media_s));
    if(h->vorbis_media)
    {
       memset(h->vorbis_media, 0, sizeof(struct vrtp_media_s));
@@ -1512,8 +1514,9 @@ xrtp_media_t * rtp_vorbis(profile_handler_t *handler)
 	  {
 		vrtp_debug(("audio/vorbis.rtp_vorbis: no input buffer created\n"));
 
-		free(h->vorbis_media);
+		xfree(h->vorbis_media);
 		h->vorbis_media = NULL;
+
 		return NULL;
 	  }
 	   
@@ -1521,7 +1524,7 @@ xrtp_media_t * rtp_vorbis(profile_handler_t *handler)
 	  if(!h->thread)
 	  {
 		  xlist_done(h->packets, NULL);
-		  free(h->vorbis_media);
+		  xfree(h->vorbis_media);
 		  h->vorbis_media = NULL;
 		  return NULL;
 	  }
@@ -1554,6 +1557,7 @@ xrtp_media_t * rtp_vorbis(profile_handler_t *handler)
       vrtp_log(("audio/vorbis.rtp_vorbis: media handler created\n"));
    }
 
+
    return media;
 }
 
@@ -1585,7 +1589,7 @@ int vrtp_handler_number(profile_class_t *clazz){
 
 int vrtp_done(profile_class_t * clazz){
 
-   free(clazz);
+   xfree(clazz);
    return XRTP_OK;
 }
 
@@ -1594,7 +1598,7 @@ profile_handler_t * vrtp_new_handler(profile_class_t * clazz, xrtp_session_t * s
    vrtp_handler_t * vh;
    profile_handler_t * h;
 
-   vh = (vrtp_handler_t *)malloc(sizeof(vrtp_handler_t));
+   vh = (vrtp_handler_t *)xmalloc(sizeof(vrtp_handler_t));
    memset(vh, 0, sizeof(vrtp_handler_t));
 
    vh->session = ses;
@@ -1634,7 +1638,7 @@ profile_handler_t * vrtp_new_handler(profile_class_t * clazz, xrtp_session_t * s
 
 int vrtp_done_handler(profile_handler_t * h){
 
-   free(h);
+   xfree(h);
 
    num_handler--;
 
@@ -1647,7 +1651,7 @@ int vrtp_done_handler(profile_handler_t * h){
 module_interface_t * module_init(){
 
 
-   vrtp = (profile_class_t *)malloc(sizeof(profile_class_t));
+   vrtp = (profile_class_t *)xmalloc(sizeof(profile_class_t));
 
    vrtp->match_id = vrtp_match_id;
    vrtp->type = vrtp_type;

@@ -17,6 +17,7 @@
 
 #include "rtp_format.h"
 
+#include <timedia/xmalloc.h>
 #include <timedia/xstring.h>
 
 #define CATALOG_VERSION  0x0001
@@ -44,7 +45,7 @@ int rtp_done_stream(rtp_stream_t *strm)
 	xstr_done_string(strm->source_cname);
 	session_done(strm->session);
 
-	free(strm);
+	xfree(strm);
 
 	return MP_OK;
 }
@@ -62,12 +63,12 @@ int rtp_done_format(media_format_t * mf)
          cur->player->done(cur->player);
          
       rtp_done_stream((rtp_stream_t*)cur);
-      free(cur);
+      xfree(cur);
       
       cur = next;
    }
 
-   free(mf);
+   xfree(mf);
 
    return MP_OK;
 }
@@ -266,7 +267,6 @@ int rtp_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *
 int rtp_stream_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
 {
    rtp_stream_t *rtpstrm = (rtp_stream_t*)gen;
-   rtp_format_t *rtpfmt = rtpstrm->rtp_format;
 
    if(strncmp(rtpstrm->source_cname, cn, rtpstrm->source_cnlen) != 0)
    {
@@ -301,7 +301,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 		return NULL;
 	}
 */
-	strm = malloc(sizeof(rtp_stream_t));
+	strm = xmalloc(sizeof(rtp_stream_t));
 	if(!strm)
 	{
 		rtp_log(("rtp_open_stream: No memory for rtp stream\n"));
@@ -329,7 +329,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 	else
 	{
 		rtp_log(("rtp_open_stream: Unknown media type\n"));
-		free(strm);
+		xfree(strm);
 		return NULL;
 	}
 
@@ -337,7 +337,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 	if(!rset)
 	{
 		rtp_log(("rtp_open_stream: No rtp setting\n"));
-		free(strm);
+		xfree(strm);
 		return NULL;
 	}
 
@@ -346,6 +346,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 
 	for(i=0; i<rset->nprofile; i++)
 	{
+
 		if(strcmp(rset->profiles[i].profile_mime, rtpcap->profile_mime) == 0)
 		{
 			if(rset->profiles[i].rtp_portno)
@@ -371,7 +372,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 
 	if(!strm->session)
 	{
-		free(strm);
+		xfree(strm);
 		return NULL;
 	}
 
@@ -550,7 +551,7 @@ module_interface_t * media_new_format()
 {
    media_format_t * mf = NULL;
 
-   rtp_format_t * rtp = malloc(sizeof(struct rtp_format_s));
+   rtp_format_t * rtp = xmalloc(sizeof(struct rtp_format_s));
    if(!rtp)
    {
       rtp_log(("rtp_new_rtp_group: No memery to allocate\n"));

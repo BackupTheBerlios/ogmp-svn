@@ -18,6 +18,7 @@
 #include "format_rtp/rtp_format.h"
 
 #include <timedia/xstring.h>
+#include <timedia/xmalloc.h>
 
 #define CLIE_LOG
 
@@ -180,7 +181,7 @@ int client_done(ogmp_client_t *client)
    xthr_done_lock(client->course_lock);
    xthr_done_cond(client->wait_course_finish);
    
-   free(client);
+   xfree(client);
 
    return MP_OK;
 }
@@ -190,7 +191,7 @@ ogmp_client_t* client_new(sipua_t *sipua)
 	sipua_action_t *act=NULL;
 	ogmp_client_t *client=NULL;
 
-	client = malloc(sizeof(ogmp_client_t));
+	client = xmalloc(sizeof(ogmp_client_t));
 	memset(client, 0, sizeof(ogmp_client_t));
 
 	client->course_lock = xthr_new_lock();

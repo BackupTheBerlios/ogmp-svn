@@ -55,7 +55,7 @@ int ogm_detect_video (ogg_packet *packet) {
 }
 
 /* Open a new video stream in the ogm file */
-int ogm_open_video(ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *sstate, int sno, stream_header *sth){
+int ogm_open_video(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ctrl, ogg_stream_state *sstate, int sno, stream_header *sth){
 
    unsigned long codec;
    char ccodec[5];

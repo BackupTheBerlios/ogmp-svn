@@ -18,7 +18,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <sipua.h>
+#include "../sipua.h"
 
 #include <eXosip/eXosip.h>
 

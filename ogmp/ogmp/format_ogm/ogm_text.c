@@ -55,7 +55,7 @@ int ogm_detect_text (ogg_packet *packet) {
 }
 
 /* Open a new text stream in the ogm file */
-int ogm_open_text(ogm_format_t *ogm, ogm_media_t * handler, ogg_stream_state *sstate, int sno, stream_header *sth){
+int ogm_open_text(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ctrl, ogg_stream_state *sstate, int sno, stream_header *sth){
 
    ogm_stream_t *ogm_strm = (ogm_stream_t *)malloc(sizeof(ogm_stream_t));
    media_stream_t *stream = (media_stream_t *)ogm_strm;

@@ -59,6 +59,7 @@ typedef struct control_setting_s control_setting_t;
 
 struct control_setting_s
 {
+
    int (*done)(control_setting_t* setting);
 };
 
@@ -94,7 +95,7 @@ struct capable_descript_s
 {
 	int (*done)(capable_descript_t *cap);
 	int (*match)(capable_descript_t *cap1, capable_descript_t *cap2);
-	int (*match_value)(capable_descript_t *cap, char *type, char *value);
+	int (*match_value)(capable_descript_t *cap, char *type, char *value, int vbytes);
 };
 
 struct media_format_s

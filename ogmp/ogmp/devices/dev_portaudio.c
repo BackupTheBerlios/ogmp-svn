@@ -19,6 +19,8 @@
 #include "timed_pipe.h"
 
 #include <portaudio.h>
+
+#include <timedia/xmalloc.h>
 #include <string.h>
 
 #define PA_SAMPLE_TYPE  paInt16
@@ -119,14 +121,14 @@ static int pa_callback( void *inbuf, void *outbuf,
 
 int pa_done_setting(control_setting_t *gen){
 
-   free(gen);
+   xfree(gen);
 
    return MP_OK;
 }
 
 control_setting_t* pa_new_setting(media_device_t *dev){
 
-   pa_setting_t * set = malloc(sizeof(struct pa_setting_s));
+   pa_setting_t * set = xmalloc(sizeof(struct pa_setting_s));
    if(!set){
 
       pa_debug(("rtp_new_setting: No memory"));
@@ -338,7 +340,7 @@ int pa_done (media_device_t * dev) {
 
    if(pa_dev->clock) time_end(pa_dev->clock);
 
-   free(pa_dev);
+   xfree(pa_dev);
    
    return MP_OK;
 }
@@ -385,7 +387,7 @@ module_interface_t* media_new_device () {
    xrtp_hrtime_t hz_start = 0;
    xrtp_hrtime_t hz_passed = 0;
 
-   portaudio_device_t * pa = malloc (sizeof(struct portaudio_device_s));
+   portaudio_device_t * pa = xmalloc (sizeof(struct portaudio_device_s));
    if (!pa) {
 
       pa_debug(("media_new_device: No enough memory\n"));
