@@ -27,9 +27,9 @@
  
 #include "stdio.h"
 /*
-*/
 #define PIPELINE_LOG
 #define PIPELINE_DEBUG
+*/
 
 #ifdef PIPELINE_LOG
  #define pipe_log(fmtargs)  do{printf fmtargs;}while(0)

@@ -29,8 +29,8 @@
 #define BUDGET_PERIOD_MSEC	1000  /* reset budget when large than one second */
 /*
 #define SESSION_LOG
-*/
 #define SESSION_DEBUG
+*/
 
 #ifdef SESSION_LOG
  #define session_log(fmtargs)  do{printf fmtargs;}while(0)
@@ -818,6 +818,7 @@ member_state_t * session_new_member(xrtp_session_t * ses, uint32 src, void *user
     memset(mem, 0, sizeof(struct member_state_s));
 
     mem->lock = xthr_new_lock();
+
     if(!mem->lock)
 	{
        xfree(mem);
@@ -1033,6 +1034,7 @@ int member_deliver_media_loop(void *gen)
 }
  
 int session_cmp_media_usec(void *tar, void *pat)
+
 {
 	media_hold_t * med_t = (media_hold_t*)tar;
     media_hold_t * med_p = (media_hold_t*)pat;
@@ -1130,6 +1132,7 @@ int64 session_member_samples(member_state_t *mem, uint32 rtpts_payload)
 		mem->samples = 1;
 	}
 	else
+
 	{
 
 
@@ -1148,6 +1151,7 @@ int session_member_set_connects(member_state_t * mem, session_connect_t *rtp_con
     if(mem->session->$callbacks.member_connects)
 	{
       session_log(("session_member_set_connects: Callback to application for rtp and rtcp port allocation\n"));
+
       mem->session->$callbacks.member_connects(mem->session->$callbacks.member_connects_user, mem->ssrc, &rtp_conn, &rtcp_conn);
     }
 	else
@@ -1180,6 +1184,7 @@ int session_member_connects(member_state_t * mem, session_connect_t **rtp_conn, 
 {
     *rtp_conn = mem->rtp_connect;
     *rtcp_conn = mem->rtcp_connect;
+
 
 
 
@@ -1525,6 +1530,7 @@ int session_issue_mediainfo(xrtp_session_t *ses, void *minfo, int signum)
 		ses->self->minfo_signum = signum;
 	}
 
+
 		
 
 	xthr_lock(ses->renew_level_lock);
@@ -1593,6 +1599,7 @@ uint32 session_signature(xrtp_session_t* ses)
 
 int session_solve_collision(member_state_t * mem, uint32 ssrc)
 {
+
      xrtp_session_t * ses = mem->session;
 
      
@@ -1692,6 +1699,7 @@ int session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, u
 	mem->cname_len = cnlen;
 
 
+
 	/* used to verify the incoming */
 	mem->rtp_port = teleport_new(ipaddr, rtp_portno);
 	mem->rtcp_port = teleport_new(ipaddr, rtcp_portno);
@@ -1789,6 +1797,7 @@ int session_reset_member(xrtp_session_t* ses, member_state_t *mem)
    mem->rtcp_port = mem_rtcp_port;
    mem->rtp_connect = mem_rtp_connect;
    mem->rtcp_connect = mem_rtcp_connect;
+
 
 
    mem->user_info = user_info;
@@ -2021,6 +2030,7 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 	{
       /* Free as member has connects already, Can't be validated yet */
       if(!mem->valid && cname_len == 0)
+
 		{
 			if(rtp_conn) 
 				connect_done(rtp_conn);
@@ -2177,6 +2187,7 @@ int session_member_check_senderinfo(member_state_t * sender,
     return XRTP_OK;
 }
 
+
 int session_member_check_report(member_state_t *mem, uint8 frac_lost, uint32 intv_lost,
 								uint32 full_seqno, uint32 jitter,
 								uint32 lsr_stamp, uint32 lsr_delay
@@ -2288,6 +2299,7 @@ xrtp_hrtime_t session_rtp_delay(xrtp_session_t *ses)
 {
     return ses->usec_period * RTP_DELAY_FACTOR;
 }
+
 
 rtime_t session_rtcp_interval(xrtp_session_t *ses)
 {
@@ -2455,6 +2467,7 @@ xrtp_media_t * session_new_media(xrtp_session_t * ses, uint8 profile_no, char *p
 			{
 				rtp_portno = ses->default_rtp_portno;
 				rtcp_portno = ses->default_rtcp_portno;
+
 			}
 			*/
 			ses->rtp_port = port_new(ses->ip, (uint16)rtp_portno, RTP_PORT);
@@ -2898,6 +2911,7 @@ int session_member_bandwidth(xrtp_session_t * ses)
 
 int32 session_receiver_rtp_bw_left(xrtp_session_t * ses)
 
+
 {
     if(port_is_multicast(ses->rtp_port) || ses->n_member-1 == 0)
         return ses->bandwidth_rtp_budget;
@@ -3096,6 +3110,7 @@ int session_rtp_send_now(xrtp_session_t *ses)
 
     int bw_per_recvr = 0;   //bandwidth per member to receive media per period
     int packet_bytes = 0;
+
 
     rtime_t us_now = time_usec_now(ses->clock);
 
@@ -3637,6 +3652,7 @@ int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 time
 }
  
  int session_rtcp_to_send(xrtp_session_t *ses)
+
  {
     member_state_t * self = ses->self;
 
