@@ -339,8 +339,19 @@ int nsPluginInstance::callback_on_register(void *user_on_register, int result, c
     
     nsPluginInstance *plugin = static_cast<nsPluginInstance*>(user_on_register);
     
-    sprintf(javascript, "javascript:regist_return('reg_ok', '%s');", reason);
-	NPN_GetURL(plugin->mInstance, javascript, "_top");
+    if(result == SIPUA_EVENT_REGISTRATION_SUCCEEDED)
+        sprintf(javascript, "javascript:regist_return('reg_ok', '%s');", reason);
+        
+    if(result == SIPUA_EVENT_UNREGISTRATION_SUCCEEDED)
+        sprintf(javascript, "javascript:regist_return('unreg_ok', '%s');", reason);
+        
+    if(result == SIPUA_EVENT_REGISTRATION_FAILURE)
+        sprintf(javascript, "javascript:regist_return('reg_fail', '%s');", reason);
+        
+    if(result == SIPUA_EVENT_UNREGISTRATION_FAILURE)
+        sprintf(javascript, "javascript:regist_return('unreg_fail', '%s');", reason);
+
+    NPN_GetURL(plugin->mInstance, javascript, "_top");
     
     return NPERR_NO_ERROR;
 }
