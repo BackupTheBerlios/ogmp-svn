@@ -17,7 +17,6 @@
 
 #ifndef XMALLOC_H
 
-#include "os.h"
 #include <stdlib.h>
 
 #define MONITE_MEM
@@ -28,6 +27,8 @@
 #define xfree  free
 
 #else
+
+#include "os.h"
 
 extern DECLSPEC
 void*

@@ -17,7 +17,10 @@
 
 #include "xmalloc.h"
 
-#ifdef MONITE_MEM
+#if defined(MEMWATCH)
+
+#elif defined(MONITE_MEM)
+
 /*
 #define XMALLOC_LOG
 */
