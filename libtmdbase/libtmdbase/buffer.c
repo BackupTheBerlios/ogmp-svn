@@ -135,7 +135,7 @@
     buf->len_data = 0;
     buf->data = newdata;
 
-    buffer_log(("buffer_newsize: %d bytes buffer remounted\n", buf->len, (int)buf));
+    buffer_log(("buffer_newsize: %d bytes buffer remounted\n", buf->len));
 
     return OS_OK;
  }
