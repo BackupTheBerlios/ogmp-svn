@@ -22,19 +22,15 @@ HEADFILES = $(SRCDIR)/xrtp.h $(SRCDIR)/session.h $(SRCDIR)/psched.h \
 				$(SRCDIR)/pipeline.h $(SRCDIR)/handler.h $(SRCDIR)/packet.h \
 				$(SRCDIR)/packet_const.h $(SRCDIR)/connect.h $(SRCDIR)/media.h \
 				$(SRCDIR)/const.h
-
 SRCFILES = $(SRCDIR)/udp.c $(SRCDIR)/media.c $(SRCDIR)/packet.c $(SRCDIR)/pipeline.c \
 				$(SRCDIR)/portman.c $(SRCDIR)/psched_simple.c $(SRCDIR)/session.c \
 				$(SRCDIR)/xrtp.c
-
 OBJFILES = $(SRCDIR)/udp.o $(SRCDIR)/media.o $(SRCDIR)/packet.o $(SRCDIR)/pipeline.o \
 				$(SRCDIR)/portman.o $(SRCDIR)/psched_simple.o $(SRCDIR)/session.o \
 				$(SRCDIR)/xrtp.o
-
 LIBFILE = $(SRCDIR)/libxrtp.so
 
 PLUGINDIR = libxrtp/plugins
-
 PLUGINSRC = $(PLUGINDIR)/plug_text.c
 PLUGINOBJ = $(PLUGINDIR)/plug_text.o
 PLUGINLIB = $(PLUGINDIR)/plug_text.so
@@ -44,8 +40,13 @@ TBINNAME = subtrans
 
 TLIBS = -L$(PREFIX)/lib -lxrtp
 TINSTDIR = $(PREFIX)/bin
-TSRC = $(TESTDIR)/t_session.c $(TESTDIR)/spu_text.c
-TOBJ = $(TESTDIR)/t_session.o $(TESTDIR)/spu_text.o
+
+THEADFILE = $(TESTDIR)/sipua.h  $(TESTDIR)/t_session.h
+TSRC = $(TESTDIR)/spu_sender.c $(TESTDIR)/spu_recvr.c $(TESTDIR)/spu_text.c \
+			 $(TESTDIR)/sipua.c  $(TESTDIR)/t_session.c
+TOBJ = $(TESTDIR)/spu_sender.o $(TESTDIR)/spu_recvr.o $(TESTDIR)/spu_text.o \
+			 $(TESTDIR)/sipua.o  $(TESTDIR)/t_session.o
+
 TBIN = $(TESTDIR)/$(TBINNAME)
 
 TCFLAGS = -Wall
@@ -91,9 +92,7 @@ clean-plugin:
 
 test: compile-test install-test
 
-compile-test: $(SRCFILES)
-	-$(CC) $(TCFLAGS) $(INCLUDES) -c $(TESTDIR)/t_session.c -o $(TESTDIR)/t_session.o
-	-$(CC) $(TCFLAGS) $(INCLUDES) -c $(TESTDIR)/spu_text.c -o $(TESTDIR)/spu_text.o
+compile-test: $(TSRC:.c=.o)
 	-$(CC) $(TOBJ) $(TLIBS) -o $(TBIN)
 
 install-test: $(TBIN)
