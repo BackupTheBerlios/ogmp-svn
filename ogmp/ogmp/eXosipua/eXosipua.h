@@ -19,14 +19,11 @@
  */
 
 #include "../sipua.h"
+#include "../rtp_cap.h"
 
 #include <eXosip/eXosip.h>
 
 typedef struct eXosipua_s eXosipua_t;
-
-/*
-#include "jcalls.h"
-*/
 
 struct jcall 
 {
@@ -39,36 +36,24 @@ struct jcall
   char textinfo[256];
 
   char req_uri[256];
-  char local_uri[256];
+  //char local_uri[256];
   char remote_uri[256];
 
   char subject[256];
 
+  /*
   char remote_sdp_audio_ip[50];
   int  remote_sdp_audio_port;
-
   int  payload;
   char payload_name[50];
+  */
   
-#if defined(WIN32) && defined(ORTP_SUPPORT)
+#if defined(XRTP_SUPPORT)
 
-  RtpSession *rtp_session;
-  int enable_audio; /* 0 started, -1 stopped */
-  struct osip_thread *audio_thread;
+  /* rtp capable */
+  rtpcap_set_t *callin_info;
 
-#elif defined(ORTP_SUPPORT)
-
-  RtpSession *rtp_session;
-  int enable_audio; /* 0 started, -1 stopped */
-  struct osip_thread *audio_thread;
-  struct osip_thread *out_audio_thread;
-
-#elif defined(XRTP_SUPPORT)
-
-#define MAX_CAPABLES 32 /* maximum 256 due to some media format limitation, set to 32 currently */
-
-  capable_descript_t *capables[MAX_CAPABLES];
-  int ncap;
+  sipua_set_t *call_info;
 
 #endif
 
@@ -113,7 +98,8 @@ int jcall_remove(eXosipua_t *jua, jcall_t *ca);
 /*
 #include "jsubscriptions.h"
 */
-struct jsubscription {
+struct jsubscription 
+{
   int sid;
   int did;
 
@@ -131,7 +117,6 @@ struct jsubscription {
 
 #define NOT_USED      0
   int state;
-
 };
 
 typedef struct jsubscription jsubscription_t;
@@ -156,7 +141,8 @@ int jsubscription_remove(eXosipua_t *jua, jsubscription_t *ca);
 /*
 #include "jinsubscriptions.h"
 */
-struct jinsubscription {
+struct jinsubscription 
+{
   int nid;
   int did;
 
@@ -174,7 +160,6 @@ struct jinsubscription {
 
 #define NOT_USED      0
   int state;
-
 };
 
 typedef struct jinsubscription jinsubscription_t;
@@ -214,23 +199,17 @@ int jinsubscription_remove(eXosipua_t *jua, jinsubscription_t *ca);
 
 struct eXosipua_s
 {
-	struct sipua_s sipua;
+	struct sipua_uas_s sipuas;
 
 	int online_status;
 	int registration_status;
-
-	char localip[30];
 
 	char registration_server[100];
 	char registration_reason_phrase[100];
 
 	char owner[MAXBYTES_ID];
-	int  owner_bytes;
 	
 	char current_id[MAXBYTES_ID];
-	int  current_idbytes;
-
-	sipua_action_t *action;
 
 	jcall_t jcalls[MAX_NUMBER_OF_CALLS];
 
@@ -243,26 +222,3 @@ struct eXosipua_s
 
 	xclock_t *clock;
 };
-
-/**
- * Processing the events, return the number of event happened.
- */
-int sipua_process_event(sipua_t *ua);
-
-/**
- * Suppose in "a=rtpmap:96 G.729a/8000/1", rtpmap string would be "96 G.729a/8000/1"
- * parse it into rtpmapno=96; coding_type="G.729a"; clockrate=8000; coding_param=1
- */
-int sdp_parse_rtpmap(char *rtpmap, int *rtpmapno, char *coding_type, int *clockrate, int *coding_param);
-
-/**
- * Parse IPv4 string "a.b.c.d/n" into "a.b.c.d" and n (maskbits)
- */
-int jua_parse_ipv4(char *addr, char *ip, int ipbytes, int *maskbits);
-/**
- * Parse sdp rtcp attr (a=rtcp:)
- * port: "53020"
- * ipv4: "53020 IN IP4 126.16.64.4"
- * ipv6: "53020 IN IP6 2001:2345:6789:ABCD:EF01:2345:6789:ABCD"
- */
-int jua_parse_rtcp(char *rtcp, char *control_ip, int buflen, uint *control_port);

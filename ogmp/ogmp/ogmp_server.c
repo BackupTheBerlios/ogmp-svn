@@ -138,206 +138,227 @@ int server_cb_on_player_ready(void *gen, media_player_t *player)
 /**
  * return capability number, if error, return ZERO
  */
-int server_setup(ogmp_server_t *server, char *mode)
+int server_setup(ogmp_server_t *server, char *mode, void* extra)
 {
-   /* define a player */
-   //media_player_t *playa = NULL;
-   media_format_t *format = NULL;
+	/* define a player */
+	media_format_t *format = NULL;
    
-   config_t * conf;
+	config_t * conf;
 
-   xlist_user_t $lu;
+	xlist_user_t $lu;
 
-   int format_ok = 0;
+	int format_ok = 0;
 
-   int num, i;
+	int num, i;
    
-   module_catalog_t * mod_cata = NULL;
+	module_catalog_t * mod_cata = NULL;
 
-   serv_log (("svr_setup: play '%s', with modules in dir:%s\n", server->fname, MODDIR));
-   
-   /* Initialise */
-   conf = conf_new ( "ogmprc" );
-   
-   mod_cata = catalog_new( "mediaformat" );
-   num = catalog_scan_modules ( mod_cata, VERSION, MODDIR );
-   
-   server->format_handlers = xlist_new();
+	ogmp_setting_t *setting;
 
-   num = catalog_create_modules (mod_cata, "format", server->format_handlers);
-   serv_log (("svr_setup: %d format module found\n", num));
-
-   /* set audio server */
-   server->valid = 0;
+	serv_log (("svr_setup: play '%s', with modules in dir:%s\n", server->fname, MODDIR));
    
-   server->lock = xthr_new_lock();
-   server->wait_request = xthr_new_cond(XTHREAD_NONEFLAGS);
-
-   /* player controler */
-   server->control = (media_control_t*)new_media_control();
+	/* Initialise */
+	conf = conf_new ( "ogmprc" );
    
-   server->control->config(server->control, conf, mod_cata);
-
-   /* For some player handles multi-stream, device can be pre-opened. */
-   if(strcmp(mode, "netcast") == 0)
-      server->control->add_device(server->control, "rtp", server_config_rtp, conf);
+	mod_cata = catalog_new( "mediaformat" );
+	num = catalog_scan_modules ( mod_cata, VERSION, MODDIR );
    
-   /* create a media format, also get the capabilities of the file */
-   format = (media_format_t *) xlist_first (server->format_handlers, &$lu);
-   while (format)
-   {
-      /* open media source */
-      if (format->open(format, server->fname, server->control, conf, mode) >= MP_OK)
-	  {
-         format_ok = 1;
-         
-         break;
-      }
+	server->format_handlers = xlist_new();
+
+	num = catalog_create_modules (mod_cata, "format", server->format_handlers);
+	serv_log (("svr_setup: %d format module found\n", num));
+
+	/* set audio server */
+	server->valid = 0;
+   
+	server->lock = xthr_new_lock();
+	server->wait_request = xthr_new_cond(XTHREAD_NONEFLAGS);
+
+	/* player controler */
+	server->control = (media_control_t*)new_media_control();
+   
+	server->control->config(server->control, conf, mod_cata);
+
+	/* For some player handles multi-stream, device can be pre-opened. */
+	if(strcmp(mode, "netcast") == 0)
+		server->control->add_device(server->control, "rtp", server_config_rtp, conf);
+   
+	/* create a media format, also get the capabilities of the file */
+	format = (media_format_t *) xlist_first (server->format_handlers, &$lu);
+	while (format)
+	{
+		/* open media source */
+		if (format->open(format, server->fname, server->control, conf, mode, extra) >= MP_OK)
+		{
+			format_ok = 1;
+			break;
+		}
       
-      format = (media_format_t *)xlist_next(server->format_handlers, &$lu);
-   }
+		format = (media_format_t *)xlist_next(server->format_handlers, &$lu);
+	}
 
-   /* open media source */
-   if (!format_ok)
-   {
-      serv_log (("ogmplyer: no format can open '%s'\n", server->fname));
+	if (!format_ok)
+	{
+		serv_log(("server_setup: no format can open '%s'\n", server->fname));
 
-      xthr_done_cond(server->wait_request);
-      xthr_done_lock(server->lock);
+		xthr_done_cond(server->wait_request);
+		xthr_done_lock(server->lock);
 
-      return 0;
-   }
+		return 0;
+	}
 
-   server->control->set_format (server->control, "av", format);
+	server->control->set_format (server->control, "av", format);
 
+	/* collect the caps of the players of the file */
+	server->nplayer = format->players(format, "rtp", server->players, MAX_NCAP);
+	serv_log (("server_setup: '%s' opened by %d players\n", server->fname, server->nplayer));
 
-   /* collect the caps of the players of the file */
-   server->nplayer = format->players(format, "rtp", server->players, MAX_NCAP);
-   serv_log (("ogmplyer: '%s' opened by %d players\n", server->fname, server->nplayer));
+	setting = server_setting(server->control);
 
-   for(i=0; i<server->nplayer; i++)
-   {
-	   server->caps[i] = server->players[i]->capable(server->players[i]);
-	   server->players[i]->set_callback(server->players[i], CALLBACK_PLAYER_READY, server_cb_on_player_ready, server);
-   }
+	for(i=0; i<server->nplayer; i++)
+	{
+		xrtp_media_t *rtp_media;
+		
+		rtp_media = (xrtp_media_t*)server->players[i]->media(server->players[i]);
 
-   server->format = format;
-   server->valid = 1;
+		server->sipua->add(server->sipua, server->call, rtp_media);
 
-   /* start thread */
-   server->demuxer = xthr_new(server_loop, server, XTHREAD_NONEFLAGS);
+		server->players[i]->set_callback(server->players[i], CALLBACK_PLAYER_READY, server_cb_on_player_ready, server);
+	}
+
+	server->format = format;
+	server->valid = 1;
+
+	/* start thread */
+	if(server->nplayer > 0)
+		server->demuxer = xthr_new(server_loop, server, XTHREAD_NONEFLAGS);
    
-   return server->nplayer;
+	return server->nplayer;
 }
 
 /****************************************************************************************
  * SIP Callbacks
  */
 
-int server_action_oncall(void *user, char *from_cn, int from_cnlen, capable_descript_t* from_caps[], int from_ncap, capable_descript_t* **selected_caps)
+int server_action_onregister(void *user, char *from, int result, void* info)
 {
-	int i,j,c = 0;
+	ogmp_server_t *serv = (ogmp_server_t*)user;
+	
+	serv->registered = 0;
 
-	ogmp_server_t *server = (ogmp_server_t*)user;
-
-	serv_log(("\nserver_action_oncall: from cn[%s]\n\n", from_cn));
-
-	/* parameter setting stage should be here, eg: rtsp conversation */
-
-	/* rtp session establish */
-	server_setup(server, "netcast");
-
-	if(from_ncap == 0)
+	switch(result)
 	{
-		/* return all capables to answer query, negociate on client side */
-		*selected_caps = server->caps;
-
-		c =  server->nplayer;
-	}
-	else
-	{
-		/* intersect of both capables */
-		for(i=0; i<from_ncap; i++)
+		case(SIPUA_EVENT_REGISTRATION_SUCCEEDED):
 		{
-			/* negociate on server side */
-			for(j=0; j<server->nplayer; j++)
-			{
-				if(server->caps[j]->match(server->caps[j], from_caps[i]))
+			serv->registered = 1;
 
-
-					server->selected_caps[c++] = server->caps[j];
-			}
+			serv_log(("\nserver_action_onregister: registered to [%s] !\n\n", from));
+			break;
 		}
+		case(SIPUA_EVENT_UNREGISTRATION_SUCCEEDED):
+		{
+			serv_log(("\nserver_action_onregister: unregistered to [%s] !\n\n", from));
 
-		*selected_caps = server->selected_caps;
+			xthr_cond_broadcast(serv->wait_unregistered);
+
+			break;
+		}
+		case(SIPUA_EVENT_REGISTRATION_FAILURE):
+		{
+			serv_log(("\nserver_action_onregister: fail to register to [%s]!\n\n", from));
+			break;
+		}
+		case(SIPUA_EVENT_UNREGISTRATION_FAILURE):
+		{
+			serv_log(("\nserver_action_onregister: fail to unregister to [%s]!\n\n", from));
+			break;
+		}
 	}
 
-	serv_log(("\nserver_action_oncall: cn[%s] support %d capables\n\n", SEND_CNAME, c));
-
-	return c;
+	return MP_OK;
 }
 
-int server_action_onconnect(void *user, char *from_cn, int from_cnlen, capable_descript_t* from_caps[], int from_ncap, capable_descript_t* **estab_caps)
+int server_action_oncall(void *user, char *from, void* info_in, void* info_out)
+{
+	char* sdp_body_in = (char*)info_in;
+	char** sdp_out = (char**)info_out;
+
+	ogmp_server_t *server = (ogmp_server_t*)user;
+
+	rtpcap_set_t* rtpcapset;
+
+	serv_log(("\nserver_action_oncall: call from [%s]\n\n", from));
+
+	if(sdp_body_in)
+	{
+		sdp_message_t *sdp_message_in;
+		
+		serv_log (("server_action_onconnect: received sdp\n"));
+		serv_log (("---------------------------------\n"));
+		serv_log (("%s", sdp_body_in));
+		serv_log (("---------------------------------\n"));
+
+		sdp_message_init(&sdp_message_in);
+
+		if (sdp_message_parse(sdp_message_in, sdp_body_in) != 0)
+		{
+			serv_log(("\nserver_action_onconnect: fail to parse sdp\n"));
+			sdp_message_free(sdp_message_in);
+			return 0;
+		}
+	
+		/* Retrieve capable from the sdp message */
+		rtpcapset = rtp_capable_from_sdp(sdp_message_in);
+
+		rtpcapset->user_profile = server->user_profile;
+
+		serv_log(("\nserver_action_onconnect: %d capabilities found\n\n", xlist_size(rtpcapset->rtpcaps)));
+
+		sdp_message_free(sdp_message_in);
+	}
+
+	/* parameter setting stage should be here, eg: rtsp conversation ... */
+
+ 	/* generate new empty conference */
+	server->call = server->sipua->new_conference(server->sipua, rtpcapset->callid, 
+								rtpcapset->subject, rtpcapset->sbytes, 
+								rtpcapset->info, rtpcapset->ibytes, 
+								NULL, 0);
+
+	/* rtp session establish */
+	server_setup(server, "netcast", rtpcapset);
+	
+	*sdp_out = server->sdp_body;
+
+	serv_log(("\nserver_action_oncall: cn[%s] support %d capables\n\n", SEND_REGNAME, server->nplayer));
+
+	return server->nplayer;
+}
+
+int server_action_onconnect(void *user, char *from, void* info_in)
 {
 	ogmp_server_t *server = (ogmp_server_t*)user;
 
-	serv_log(("\nserver_action_onconnect: with cn[%s] requires %d capables\n\n", from_cn, from_ncap));
+	serv_log(("\nserver_action_onconnect: [%s] connected\n", from));
 
-	if(from_ncap>0)
-	{
-		int i,j;
-		media_transmit_t *mt;
-
-		/* link by capabilities */
-      
-		for(i=0; i<server->nplayer; i++)
-		{
-			mt = (media_transmit_t*)server->players[i];
-
-			for(j=0; j<from_ncap; j++)
-			{
-				serv_log(("\nserver_action_onconnect: check capability\n"));
-            
-				if(mt->player.match_capable((media_player_t*)mt, from_caps[j]))
-				{
-					rtpcap_descript_t *rtpcap;
-
-					serv_log(("\nserver_action_onconnect: capability match!\n"));
-
-					rtpcap = (rtpcap_descript_t *)from_caps[j];
-					mt->add_destinate(mt, from_cn, from_cnlen, rtpcap->ipaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno);
-				}
-            else
-            {
-					serv_log(("\nserver_action_onconnect: capability not match!\n"));
-            }
-			}
-		}
-
-		*estab_caps = from_caps;
-
-		return from_ncap;
-	}
+	server_start(server);
 
 	return 0;
 }
 
 /* change call status */
-int server_action_onreset(void *user, char *from_cn, int from_cnlen, capable_descript_t* caps[], int ncap, capable_descript_t* **estab_caps)
+int server_action_onreset(void *user, char *from, void* info_in)
 {
 	ogmp_server_t *server = (ogmp_server_t*)user;
 
-	serv_log(("server_action_onreset: recall from cn[%s]\n", from_cn));
+	serv_log(("server_action_onreset: recall from cn[%s]\n", from));
 
-	if(ncap == 0)
-	{
-		server_stop(server);
-	}
+	server_stop(server);
 
-	return ncap;
+	return 0;
 }
 
-int server_action_onbye(void *user, char *cname, int cnlen)
+int server_action_onbye(void *user, char *from)
 {
 	int i, ndest;
 	media_transmit_t *mt;
@@ -346,7 +367,7 @@ int server_action_onbye(void *user, char *cname, int cnlen)
 	for(i=0; i<server->nplayer; i++)
 	{
 		mt = (media_transmit_t*)(server->players[i]);
-		ndest = mt->delete_destinate(mt, cname, cnlen);
+		ndest = mt->delete_destinate(mt, from);
 	}
 
 	if(ndest == 0)
@@ -358,37 +379,157 @@ int server_action_onbye(void *user, char *cname, int cnlen)
 
 int server_done(ogmp_server_t *server)
 {
-   server->format->close(server->format);
+	server->format->close(server->format);
    
-   xlist_done(server->format_handlers, server_done_format_handler);
+	xlist_done(server->format_handlers, server_done_format_handler);
    
-   xthr_done_cond(server->wait_request);
-   xthr_done_lock(server->lock);
+	xthr_done_cond(server->wait_request);
+	xthr_done_lock(server->lock);
 
-   xfree(server);
+	xthr_done_lock(server->command_lock);
+	xthr_done_cond(server->wait_command);
+	xthr_done_cond(server->wait_unregistered);
 
-   return MP_OK;
+	if(server->sdp_body)
+		free(server->sdp_body);
+
+	xfree(server);
+
+	return MP_OK;
 }
 
-ogmp_server_t* server_new(sipua_t *sipua, char *fname)
+int server_command(ogmp_server_t* serv, ogmp_command_t* cmd)
 {
-	sipua_action_t *act;
+	xthr_lock(serv->command_lock);
 
-	ogmp_server_t *server = xmalloc(sizeof(ogmp_server_t));
-	memset(server, 0, sizeof(ogmp_server_t));
+	serv->command = cmd;
+		
+	xthr_unlock(serv->command_lock);
 
-	server->fname = FNAME;
+	xthr_cond_signal(serv->wait_command);
 
-	server->sipua = sipua;
+	return MP_OK;
+}
 
-	act = sipua_new_action (server, server_action_oncall, 
+int server_execute_command( ogmp_server_t* serv, ogmp_command_t* cmd)
+{
+	switch(cmd->type)
+	{
+		case(COMMAND_TYPE_REGISTER):
+		{
+			sipua_action_t *act;
+			
+			if(serv->registered)
+			{
+				serv_log(("server_execute_command: already registered\n"));
+				break;
+			}
+
+			act = sipua_new_action (serv,
+									server_action_onregister, 
+									server_action_oncall, 
 									server_action_onconnect, 
 									server_action_onreset,
 									server_action_onbye);
 
-	sipua->regist(sipua, NULL, SEND_CNAME, strlen(SEND_CNAME)+1, 14400, act);
+			serv->sipua->regist(serv->sipua, act);
+			
+			break;
+		}
+		case(COMMAND_TYPE_UNREGISTER):
+		{
+			if(!serv->registered)
+			{
+				serv_log(("server_execute_command: already unregistered\n"));
+				break;
+			}
 
-	serv_log(("server_new: server sipua online\n"));
+			serv->sipua->unregist(serv->sipua);
+			
+			break;
+		}
+	}
+
+	return MP_OK;
+}
+
+int server_main_thread(void* gen)
+{
+	ogmp_server_t *serv = (ogmp_server_t*)gen;
+
+	while(1)
+	{
+		ogmp_command_t* command;
+
+		xthr_lock(serv->command_lock);
+
+		if(serv->command == NULL)
+			xthr_cond_wait(serv->wait_command, serv->command_lock);
+
+		command = serv->command;
+
+		if(command->type == COMMAND_TYPE_EXIT)
+		{
+			command->type = COMMAND_TYPE_UNREGISTER;
+
+			server_execute_command(serv, command);
+			xthr_cond_wait(serv->wait_unregistered, serv->command_lock);
+
+			xthr_unlock(serv->command_lock);
+			break;
+		}
+
+		server_execute_command(serv, command);
+
+		serv->command = NULL;
+
+		xthr_unlock(serv->command_lock);
+	}
+
+	return MP_OK;
+}
+
+ogmp_server_t* server_new(sipua_uas_t* uas, user_profile_t* user, int bw)
+{
+	ogmp_server_t *server;
+		
+	server = xmalloc(sizeof(ogmp_server_t));
+
+	memset(server, 0, sizeof(ogmp_server_t));
+
+	server->fname = FNAME;
+
+	server->user_profile = user;
+
+	server->control = new_media_control();
+	if(!server->control)
+	{
+		xfree(server);
+		return NULL;
+	}
+
+	server->sipua = sipua_new(uas, user, bw, server->control);
+	if(!server->sipua)
+	{
+		server->control->done(server->control);
+		xfree(server);
+		return NULL;
+	}
+
+	server->command_lock = xthr_new_lock();
+	server->wait_command = xthr_new_cond(XTHREAD_NONEFLAGS);
+	server->wait_unregistered = xthr_new_cond(XTHREAD_NONEFLAGS);
+
+	server->main_thread = xthr_new(server_main_thread, server, XTHREAD_NONEFLAGS);
+	if(!server->sipua)
+	{
+		server->control->done(server->control);
+		server->sipua->done(server->sipua);
+		xfree(server);
+		return NULL;
+	}
+
+	serv_log(("server_new: server ready\n\n"));
 	return server;
 }
 

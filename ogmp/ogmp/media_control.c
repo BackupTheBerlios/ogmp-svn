@@ -289,7 +289,7 @@ control_setting_t* cont_fetch_setting(media_control_t *cont, char *name, media_d
    if(!dev->new_setting)
    {
       cont_log(("cont_fetch_setting: No need to set device\n"));
-      
+
       return NULL;
    }
    
@@ -311,7 +311,7 @@ control_setting_t* cont_fetch_setting(media_control_t *cont, char *name, media_d
    return NULL;
 }
 
-media_player_t * cont_find_player (media_control_t *cont, char *mode, char *mime, char *fourcc)
+media_player_t * cont_find_player (media_control_t *cont, char *mode, char *mime, char *fourcc, void* extra)
 {
    media_player_t * player = NULL;
    
@@ -349,9 +349,14 @@ media_player_t * cont_find_player (media_control_t *cont, char *mode, char *mime
 
    xrtp_list_free(players, cont_done_player);
 
-   if(!player) return NULL;
+   if(!player)
+	   return NULL;
 
-   player->set_device(player, cont, impl->catalog);
+   if(player->set_device(player, cont, impl->catalog, extra) < MP_OK)
+   {
+	   player->done(player);
+	   return NULL;
+   }
 
    return player; 
 }

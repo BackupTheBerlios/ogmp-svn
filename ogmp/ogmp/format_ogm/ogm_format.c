@@ -367,7 +367,7 @@ int ogm_set_handlers ( ogm_format_t *ogm, module_catalog_t * cata )
    return MP_OK;
 }
 
-int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_stream_state *sstate, ogg_packet *packet)
+int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_stream_state *sstate, ogg_packet *packet, void* extra)
 {
    //stream_header sth;
    xrtp_list_user_t $u;
@@ -383,7 +383,7 @@ int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_strea
    {
       if (handler->detect_media(packet) != 0)
 	  {
-         if(handler->open_media(handler, ogm, ctrl, sstate, sno, (stream_header *)&(ogm->packet.packet[0])) >= MP_OK)
+         if(handler->open_media(handler, ogm, ctrl, sstate, sno, (stream_header *)&(ogm->packet.packet[0]), extra) >= MP_OK)
 			break;
       }
       
@@ -393,7 +393,7 @@ int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_strea
    return MP_OK;
 }
 
-int ogm_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *conf, char *mode)
+int ogm_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *conf, char *mode, void* extra)
 {
    int sno = 0;
    int end = 0;   
@@ -484,7 +484,7 @@ int ogm_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *
                return MP_FAIL;
             }
 	  
-            ogm_open_stream(ogm, ctrl, sno, sstate, &ogm->packet);
+            ogm_open_stream(ogm, ctrl, sno, sstate, &ogm->packet, extra);
          }
 
          ogm_log(("ogm_open: %d packet(s) found in the page\n", n_pack));

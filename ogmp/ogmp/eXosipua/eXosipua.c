@@ -22,6 +22,7 @@
 #include "../rtp_cap.h"
 
 #include <timedia/xstring.h>
+#include <timedia/xmalloc.h>
 
 #define JUA_LOG
 
@@ -32,80 +33,6 @@
 #endif
 
 #define JUA_INTERVAL_MSEC 1000
-
-/**
- * Suppose in "a=rtpmap:96 G.729a/8000/1", rtpmap string would be "96 G.729a/8000/1"
- * parse it into rtpmapno=96; coding_type="G.729a"; clockrate=8000; coding_param=1
- */
-int sdp_parse_rtpmap(char *rtpmap, int *rtpmapno, char *coding_type, int *clockrate, int *coding_param)
-{
-	char *end;
-	char *token = rtpmap;
-
-	*rtpmapno = (int)strtol(token, NULL, 10);
-
-	while(*token != ' ' || *token != '\t')
-		token++;
-	while(*token == ' ' || *token == '\t')
-		token++;
-
-	end = strchr(token, '/');
-
-	strncpy(coding_type, token, end-token);
-	coding_type[end-token] = '\0';
-
-	token = ++end;
-
-	*clockrate = (int)strtol(token, NULL, 10);
-
-	end = strchr(token, '/');
-	token = ++end;
-
-	*coding_param = (int)strtol(token, NULL, 10);
-	
-	return UA_OK;
-}
-
-/**
- * Parse IPv4 string "a.b.c.d/n" into "a.b.c.d" and n (maskbits)
- */
-int jua_parse_ipv4(char *addr, char *ip, int ipbytes, int *maskbits)
-{
-	char *end = strchr(addr, '/');
-
-	if(end != NULL)
-	{
-		*maskbits = atoi(++end);
-	}
-
-	strncpy(ip, addr, end - addr);
-	ip[end-addr] = '\0';
-
-	return UA_OK;
-}
-
-/**
- * Parse sdp rtcp attr (a=rtcp:)
- * port: "53020"
- * ipv4: "53020 IN IP4 126.16.64.4"
- * ipv6: "53020 IN IP6 2001:2345:6789:ABCD:EF01:2345:6789:ABCD"
- */
-int jua_parse_rtcp(char *rtcp, char *ip, int buflen, uint *port)
-{
-	char *token;
-	*port = strtol(rtcp, NULL, 10);
-
-	token = strstr(rtcp, "IP");
-
-	while(*token != ' ' || *token != '\t')
-		token++;
-	while(*token == ' ' || *token == '\t')
-		token++;
-
-	strcpy(ip, token);
-
-	return UA_OK;
-}
 
 static int jua_check_url(char *url)
 {
@@ -127,12 +54,11 @@ static int jua_check_url(char *url)
  * Processing the events, return the number of event happened.
  */
 int jua_process_event(eXosipua_t *jua)
-{	
+{
 	int counter =0;
 
 	/* use events to print some info */
 	eXosip_event_t *je;
-
 	for (;;)
     {
 		char buf[100];
@@ -142,21 +68,14 @@ int jua_process_event(eXosipua_t *jua)
 			break;
       
 		counter++;
+
 		if (je->type==EXOSIP_CALL_NEW)
 		{
 			snprintf(buf, 99, "<- (%i %i) INVITE from: %s",
 					je->cid, je->did, je->remote_uri);
 	  
-			jua_log((buf));
-#if 0
-			if (je->remote_sdp_audio_ip[0]!='\0')
-			{
-				snprintf(buf, 99, "<- Remote sdp info: %s:%i",
-						je->remote_sdp_audio_ip, je->remote_sdp_audio_port);
-	      
-				jua_log((buf));
-			}
-#endif
+			/*josua_printf(buf);*/
+
 			jcall_new(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_ANSWERED)
@@ -165,35 +84,18 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
-#if 0
-			if (je->remote_sdp_audio_ip[0]!='\0')
-			{
-				snprintf(buf, 99, "<- Remote sdp info: %s:%i",
-						je->remote_sdp_audio_ip, je->remote_sdp_audio_port);
-	      
-				jua_log((buf));
-			}
-#endif
+			/*josua_printf(buf);*/
+
 			jcall_answered(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_PROCEEDING)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
-	  
-			jua_log((buf));
-#if 0
-			if (je->remote_sdp_audio_ip[0]!='\0')
-			{
-				snprintf(buf, 99, "<- Remote sdp info: %s:%i",
-						je->remote_sdp_audio_ip,
-						je->remote_sdp_audio_port);
-	      
-				jua_log((buf));
-			}
-#endif
+			josua_printf(buf);
+			*/
 			jcall_proceeding(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_RINGING)
@@ -202,16 +104,8 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
-#if 0
-			if (je->remote_sdp_audio_ip[0]!='\0')
-			{
-				snprintf(buf, 99, "<- Remote sdp info: %s:%i",
-						je->remote_sdp_audio_ip, je->remote_sdp_audio_port);
-	      
-				jua_log((buf));
-			}
-#endif
+			/*josua_printf(buf);*/
+
 			jcall_ringing(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_REDIRECTED)
@@ -220,7 +114,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 
 			jcall_redirected(jua, je);
 		}
@@ -230,7 +124,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 
 			jcall_requestfailure(jua, je);
 		}
@@ -240,7 +134,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 
 			jcall_serverfailure(jua, je);
 		}
@@ -250,7 +144,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 
 			jcall_globalfailure(jua, je);
 		}
@@ -259,7 +153,7 @@ int jua_process_event(eXosipua_t *jua)
 			snprintf(buf, 99, "<- (%i %i) BYE from: %s",
 					je->cid, je->did, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 	
 			jcall_closed(jua, je);
 		}
@@ -268,7 +162,7 @@ int jua_process_event(eXosipua_t *jua)
 			snprintf(buf, 99, "<- (%i %i) INVITE (On Hold) from: %s",
 					je->cid, je->did, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 
 			jcall_onhold(jua, je);
 		}
@@ -277,17 +171,21 @@ int jua_process_event(eXosipua_t *jua)
 			snprintf(buf, 99, "<- (%i %i) INVITE (Off Hold) from: %s",
 					je->cid, je->did, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 
 			jcall_offhold(jua, je);
 		}
 		else if (je->type==EXOSIP_REGISTRATION_SUCCESS)
 		{
+			sipua_event_t sip_e;
+			sip_e.call_info = (sipua_set_t*)je->external_reference;
+			sip_e.type = SIPUA_EVENT_REGISTRATION_SUCCEEDED;
+
 			snprintf(buf, 99, "<- (%i) [%i %s] %s for REGISTER %s",
 					je->rid, je->status_code, je->reason_phrase,
 					je->remote_uri, je->req_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 
 			jua->registration_status = je->status_code;
 			
@@ -297,14 +195,24 @@ int jua_process_event(eXosipua_t *jua)
 				snprintf(jua->registration_reason_phrase, 100, "%s", je->reason_phrase);
 			else 
 				jua->registration_reason_phrase[0] = '\0';
+	
+			sip_e.from = jua->registration_server;
+			sip_e.content = NULL;
+
+			/* event back to sipuac */
+			jua->sipuas.notify_event(jua->sipuas.lisener, &sip_e);
 		}
 		else if (je->type==EXOSIP_REGISTRATION_FAILURE)
 		{
+			sipua_event_t sip_e;
+			sip_e.call_info = (sipua_set_t*)je->external_reference;
+			sip_e.type = SIPUA_EVENT_REGISTRATION_FAILURE;
+
 			snprintf(buf, 99, "<- (%i) [%i %s] %s for REGISTER %s",
 					je->rid, je->status_code, je->reason_phrase,
 					je->remote_uri, je->req_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 
 			jua->registration_status = je->status_code;
 	  
@@ -315,6 +223,11 @@ int jua_process_event(eXosipua_t *jua)
 			else 
 				jua->registration_reason_phrase[0] = '\0';
 	  
+			sip_e.from = jua->registration_server;
+			sip_e.content = NULL;
+
+			/* event back to sipuac */
+			jua->sipuas.notify_event(jua->sipuas.lisener, &sip_e);
 		}
 		else if (je->type==EXOSIP_OPTIONS_NEW)
 		{
@@ -323,9 +236,10 @@ int jua_process_event(eXosipua_t *jua)
 			snprintf(buf, 99, "<- (%i %i) OPTIONS from: %s",
 					je->cid, je->did, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 
 			/* answer the OPTIONS method */
+
 			/* 1: search for an existing call */
 			for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
 			{
@@ -351,15 +265,6 @@ int jua_process_event(eXosipua_t *jua)
 			}
 	  
 			eXosip_unlock();
-#if 0
-			if (je->remote_sdp_audio_ip[0]!='\0')
-			{
-				snprintf(buf, 99, "<- Remote sdp info: %s:%i",
-						je->remote_sdp_audio_ip, je->remote_sdp_audio_port);
-	      
-				jua_log((buf));
-			}
-#endif
 		}
 		else if (je->type==EXOSIP_OPTIONS_ANSWERED)
 		{
@@ -367,16 +272,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
-#if 0
-			if (je->remote_sdp_audio_ip[0]!='\0')
-			{
-				snprintf(buf, 99, "<- Remote sdp info: %s:%i",
-						je->remote_sdp_audio_ip, je->remote_sdp_audio_port);
-	      
-				jua_log((buf));
-			}
-#endif
+			/*josua_printf(buf);*/
 		}
 		else if (je->type==EXOSIP_OPTIONS_PROCEEDING)
 		{
@@ -384,16 +280,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
-#if 0
-			if (je->remote_sdp_audio_ip[0]!='\0')
-			{
-				snprintf(buf, 99, "<- Remote sdp info: %s:%i",
-						je->remote_sdp_audio_ip, je->remote_sdp_audio_port);
-	      
-				jua_log((buf));
-			}
-#endif
+			/*josua_printf(buf);*/
 		}
 		else if (je->type==EXOSIP_OPTIONS_REDIRECTED)
 		{
@@ -401,7 +288,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 		}
 		else if (je->type==EXOSIP_OPTIONS_REQUESTFAILURE)
 		{
@@ -409,7 +296,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 		}
 		else if (je->type==EXOSIP_OPTIONS_SERVERFAILURE)
 		{
@@ -417,7 +304,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 		}
 		else if (je->type==EXOSIP_OPTIONS_GLOBALFAILURE)
 		{
@@ -425,14 +312,14 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 			
-			jua_log((buf));
+			/*josua_printf(buf);*/
 		}
 		else if (je->type==EXOSIP_INFO_NEW)
 		{
 			snprintf(buf, 99, "<- (%i %i) INFO from: %s",
 					je->cid, je->did, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 		}
 		else if (je->type==EXOSIP_INFO_ANSWERED)
 		{
@@ -440,7 +327,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 		}
 		else if (je->type==EXOSIP_INFO_PROCEEDING)
 		{
@@ -448,7 +335,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 		}
 		else if (je->type==EXOSIP_INFO_REDIRECTED)
 		{
@@ -456,7 +343,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 		}
 		else if (je->type==EXOSIP_INFO_REQUESTFAILURE)
 		{
@@ -464,7 +351,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 		}
 		else if (je->type==EXOSIP_INFO_SERVERFAILURE)
 		{
@@ -472,7 +359,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 		}
 		else if (je->type==EXOSIP_INFO_GLOBALFAILURE)
 		{
@@ -480,7 +367,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 		}
 		else if (je->type==EXOSIP_SUBSCRIPTION_ANSWERED)
 		{
@@ -488,14 +375,12 @@ int jua_process_event(eXosipua_t *jua)
 					je->sid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
-
+			/*josua_printf(buf);*/
 			snprintf(buf, 99, "<- (%i %i) online=%i [status: %i reason:%i]",
 					je->sid, je->did, je->online_status,
 					je->ss_status, je->ss_reason);
 	  
-			jua_log((buf));
-
+			/*josua_printf(buf);*/
 			jsubscription_answered(jua, je);
 		}
 		else if (je->type==EXOSIP_SUBSCRIPTION_PROCEEDING)
@@ -504,8 +389,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->sid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
-
+			/*josua_printf(buf);*/
 			jsubscription_proceeding(jua, je);
 		}
 		else if (je->type==EXOSIP_SUBSCRIPTION_REDIRECTED)
@@ -514,8 +398,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->sid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
-
+			/*josua_printf(buf);*/
 			jsubscription_redirected(jua, je);
 		}
 		else if (je->type==EXOSIP_SUBSCRIPTION_REQUESTFAILURE)
@@ -524,8 +407,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->sid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
-
+			/*josua_printf(buf);*/
 			jsubscription_requestfailure(jua, je);
 		}
 		else if (je->type==EXOSIP_SUBSCRIPTION_SERVERFAILURE)
@@ -534,8 +416,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->sid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
-
+			/*josua_printf(buf);*/
 			jsubscription_serverfailure(jua, je);
 		}
 		else if (je->type==EXOSIP_SUBSCRIPTION_GLOBALFAILURE)
@@ -544,8 +425,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->sid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-			jua_log((buf));
-
+			/*josua_printf(buf);*/
 			jsubscription_globalfailure(jua, je);
 		}
 		else if (je->type==EXOSIP_SUBSCRIPTION_NOTIFY)
@@ -553,13 +433,13 @@ int jua_process_event(eXosipua_t *jua)
 			snprintf(buf, 99, "<- (%i %i) NOTIFY from: %s",
 					je->sid, je->did, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 
 			snprintf(buf, 99, "<- (%i %i) online=%i [status: %i reason:%i]",
 					je->sid, je->did, je->online_status,
 					je->ss_status, je->ss_reason);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 
 			jsubscription_notify(jua, je);
 		}
@@ -568,26 +448,25 @@ int jua_process_event(eXosipua_t *jua)
 			snprintf(buf, 99, "<- (%i %i) SUBSCRIBE from: %s",
 					je->nid, je->did, je->remote_uri);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 
 			/* search for the user to see if he has been
 				previously accepted or not! */
 
 			eXosip_notify(je->did, EXOSIP_SUBCRSTATE_PENDING, EXOSIP_NOTIFY_AWAY);
-
 			jinsubscription_new(jua, je);
 		}
 		else if (je->textinfo[0]!='\0')
 		{
 			snprintf(buf, 99, "(%i %i %i %i) %s", je->cid, je->sid, je->nid, je->did, je->textinfo);
 	  
-			jua_log((buf));
+			/*josua_printf(buf);*/
 		}
 	
 		eXosip_event_free(je);
 	}
   
-	return counter;
+	return(counter);
 }
 
 int jua_loop(void *gen)
@@ -611,9 +490,9 @@ int jua_loop(void *gen)
 	return UA_OK;
 }
 
-int sipua_start(sipua_t *sipua)
+int uas_start(sipua_uas_t *sipuas)
 {
-	eXosipua_t *jua = (eXosipua_t*)sipua;
+	eXosipua_t *jua = (eXosipua_t*)sipuas;
 
 	jua->thread = xthr_new(jua_loop, jua, XTHREAD_NONEFLAGS);
 
@@ -623,11 +502,11 @@ int sipua_start(sipua_t *sipua)
 	return UA_OK;
 }
 
-int sipua_stop(sipua_t *sipua)
+int uas_shutdown(sipua_uas_t *sipuas)
 {
 	int th_ret;
 
-	eXosipua_t *jua = (eXosipua_t*)sipua;
+	eXosipua_t *jua = (eXosipua_t*)sipuas;
 
 	jua->run = 0;
 
@@ -641,9 +520,9 @@ int sipua_stop(sipua_t *sipua)
 	return UA_OK;
 }
 
-int sipua_done(sipua_t *sipua)
+int uas_done(sipua_uas_t *sipuas)
 {
-	eXosipua_t *jua = (eXosipua_t*)sipua;
+	eXosipua_t *jua = (eXosipua_t*)sipuas;
 
 	time_end(jua->clock);
 
@@ -652,25 +531,95 @@ int sipua_done(sipua_t *sipua)
 	return UA_OK;
 }
 
-int sipua_regist(sipua_t *sipua, char *registrar, char *id, int idbytes, int seconds, sipua_action_t *action)
+int uas_address(sipua_uas_t* sipuas, char* *nettype, char* *addrtype, char* *netaddr)
+{
+	sipua_uas_t* uas = (sipua_uas_t*)sipuas;
+
+	*nettype = uas->nettype;
+	*addrtype = uas->addrtype;
+	*netaddr = uas->netaddr;
+
+	return UA_OK;
+}
+
+int uas_set_lisener(sipua_uas_t* sipuas, void* lisener, int(*notify_event)(void*, sipua_event_t*))
+{
+	sipua_uas_t* uas = (sipua_uas_t*)sipuas;
+
+	uas->lisener = lisener;
+
+	uas->notify_event = notify_event;
+	
+	return UA_OK;
+}
+
+int uas_add_coding(sipua_uas_t* sipuas, int pt, int rtp_portno, int rtcp_portno, char* mime, int clockrate, int param)
+{
+	eXosipua_t* jua = (eXosipua_t*)sipuas;
+
+	char pt_a[4];
+	char rtp_a[8], rtcp_a[8];
+	char rtpmap_a[32];
+	char nport_a[2];
+
+	char coding[16], *p, *q;
+
+	snprintf(pt_a, 4, "%i", pt);
+	snprintf(rtp_a, 8, "%i", rtp_portno);
+	snprintf(rtcp_a, 8, "%i", rtcp_portno);
+
+	p = strchr(mime, '/');
+	p++;
+
+	q = p;
+	while(*q && *q != '/')
+		q++;
+
+	strncpy(coding, p, q-p);
+	coding[q-p] = '\0';
+
+	snprintf(rtpmap_a, 32, "%i %s/%i/%i", pt, coding, clockrate, param);
+
+	if(rtp_portno - rtcp_portno == 1)
+		snprintf(nport_a, 2, "%i", 2);
+	else
+		snprintf(nport_a, 2, "%i",1);
+	
+	eXosip_sdp_negotiation_add_codec(osip_strdup(pt_a),
+				   osip_strdup(nport_a),
+				   osip_strdup("RTP/AVP"),
+				   osip_strdup(jua->sipuas.nettype), osip_strdup(jua->sipuas.addrtype), osip_strdup(jua->sipuas.netaddr),
+				   NULL, NULL,
+				   osip_strdup(rtpmap_a));
+
+	return UA_OK;
+}
+
+int uas_clear_coding(sipua_uas_t* sipuas)
+{
+	eXosip_sdp_negotiation_remove_audio_payloads();
+
+	return UA_OK;
+}
+
+int uas_regist(sipua_uas_t *sipuas, char *registrar, char *id, int seconds)
 {
 	int ret;
 	int regno = -1;
 
-	eXosipua_t *jua = (eXosipua_t*)sipua;
+	eXosipua_t *jua = (eXosipua_t*)sipuas;
 
-	if(!action)
-		return UA_IGNORE;
-	
+	jua_log(("uas_regist: %s on %s within %ds\n", id, registrar, seconds));
+
 	eXosip_lock();
 
-	if (jua->current_id[0] != '\0' && strncmp(jua->current_id, id, jua->current_idbytes) == 0)
+	if (jua->current_id[0] != '\0' && strcmp(jua->current_id, id) == 0)
     {
 		eXosip_unlock();
 		return UA_OK;
     }
 
-	if(jua->owner != NULL && jua->owner[0] != '\0')
+	if(jua->owner || jua->owner[0] != '\0')
 		regno = eXosip_register_init(id, registrar, jua->owner);
 	else
 		regno = eXosip_register_init(id, registrar, NULL);
@@ -683,26 +632,31 @@ int sipua_regist(sipua_t *sipua, char *registrar, char *id, int idbytes, int sec
 
 	ret = eXosip_register(regno, seconds);
 
+	jua_log(("uas_regist: ret=%d\n", ret));
+
 	if(ret == 0)
-	{
-		strncpy(jua->current_id, id, idbytes);
-		jua->action = action;
-	}
+		strcpy(jua->current_id, id);
+
+	jua_log(("uas_regist: 6\n"));
 
 	eXosip_unlock();
+
+	jua_log(("uas_regist: 7\n"));
 
 	if(ret != 0)
 		return UA_FAIL;
 	
+	jua_log(("uas_regist: 8\n"));
+
 	return UA_OK;
 }
 
-int sipua_unregist(sipua_t *sipua, char *registrar, char *id, int idbytes)
+int uas_unregist(sipua_uas_t *sipuas, char *registrar, char *id)
 {
 	int ret;
 	int regno = -1;
 
-	eXosipua_t *jua = (eXosipua_t*)sipua;
+	eXosipua_t *jua = (eXosipua_t*)sipuas;
 	
 	eXosip_lock();
 
@@ -727,9 +681,7 @@ int sipua_unregist(sipua_t *sipua, char *registrar, char *id, int idbytes)
 
 	if(ret == 0)
 	{
-		strncpy(jua->current_id, 0, jua->current_idbytes);
-		jua->action->done(jua->action);
-		jua->action = NULL;
+		strcpy(jua->current_id, "");
 	}
 
 	eXosip_unlock();
@@ -740,73 +692,66 @@ int sipua_unregist(sipua_t *sipua, char *registrar, char *id, int idbytes)
 	return UA_OK;
 }
 
-int sipua_connect(sipua_t *ua,
-				char *from, int from_bytes,
-				char *to, int to_bytes, 
-				char *subject, int subject_bytes,
-				char *route, int route_bytes)
+int uas_call(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_body, int sdp_bytes)
 {
+	eXosipua_t *jua = (eXosipua_t*)sipuas;
 	osip_message_t *invite;
-	int ret;
+	char sdp_size[8];
+	char* proxy;
 
+	int ret;
+	/*
 	OSIP_TRACE (osip_trace(__FILE__, __LINE__, OSIP_INFO2, NULL, "To: |%s|\n", to));
-	
-	if (0!=jua_check_url(from))
+	*/
+	if(jua->current_id[0] == '\0')
+	{
+		jua_log(("uas_call: sipua is not register yet!\n"));
 		return UA_FAIL;
+	}
+
+	if (0!=jua_check_url(jua->current_id))
+	{
+		jua_log(("uas_call: illigal sip id!\n"));
+		return UA_FAIL;
+	}
 
 	if (0!=jua_check_url(to))
+	{
+		jua_log(("uas_call: illigal sip destination\n"));
+		return UA_FAIL;
+	}
+
+	if(jua->sipuas.proxy[0]=='\0')
+		proxy = NULL;
+	else
+		proxy = jua->sipuas.proxy;
+
+	if (eXosip_build_initial_invite(&invite, to, jua->current_id, proxy, call_info->subject) != 0)
 		return UA_FAIL;
 
-#if 0
-	if (0!=check_sipurl(route))
-		return UA_FAIL;
-#endif
+	jua_log(("uas_call: 4\n"));
 
-	if (eXosip_build_initial_invite(&invite, to, from, route, subject) != 0)
-    {
-		return UA_FAIL;
-    }
+	/* sdp content of the call */
+	sprintf(sdp_size,"%i", sdp_bytes);
+
+	osip_message_set_content_type(invite, "application/sdp");
+	osip_message_set_content_length(invite, sdp_size);
+	osip_message_set_body(invite, sdp_body);
 
 	eXosip_lock();
 
-	ret = eXosip_initiate_call(invite, NULL, NULL, NULL);
+	ret = eXosip_initiate_call(invite, call_info, NULL/*negotiation_reference*/, NULL/*local_audio_port*/);
 
 	eXosip_unlock();  
 
 	return ret;
 }
 
-jcall_t *jua_find_call(eXosipua_t *jua,
-					 char *local, int local_bytes, 
-					 char *remote, int remote_bytes,
-					 char *subject, int subject_bytes)
-{
-	int i;
-
-	for (i=0; i<MAX_NUMBER_OF_CALLS; i++)
-	{
-		jcall_t *call = &jua->jcalls[i];
-
-		if (call->state != NOT_USED)
-		{
-			if(strcmp(call->local_uri, local)
-				&& strcmp(call->remote_uri, remote)
-				&& strncmp(call->subject, subject, subject_bytes))
-				return call;
-		}
-	}
-  
-	return NULL;
-}
-
-int sipua_disconnect(sipua_t *sipua,
-					 char *from, int from_bytes, 
-					 char *to, int to_bytes,
-					 char *subject, int subject_bytes)
+int sipuas_hangup(sipua_t *sipua, int i)
 {
 	eXosipua_t *jua = (eXosipua_t*)sipua;
 	
-	jcall_t *call = jua_find_call(jua, from, from_bytes, to, to_bytes, subject, subject_bytes);
+	jcall_t *call = &jua->jcalls[i];
 
 	if(call && eXosip_terminate_call(call->cid, call->did) == 0)
 		jcall_remove(jua, call);
@@ -814,45 +759,86 @@ int sipua_disconnect(sipua_t *sipua,
 	return UA_OK;
 }
 
-sipua_t *sipua_new(uint16 sip_port, char *firewall, void *config)
+sipua_uas_t* sipua_uas(int sip_port, char* nettype, char* addrtype, char* firewall, char* proxy)
 {
-	sipua_t *sipua;
+	eXosipua_t *jua;
 
-	eXosipua_t *jua = malloc(sizeof(struct eXosipua_s));
+	sipua_uas_t *uas;
+
+	int ip_family;
+
+	if(strcmp(nettype, "IN") != 0)
+	{
+		jua_log(("sipua_uas: Current, Only IP networking supported\n"));
+		return NULL;
+	}
+
+	if(strcmp(addrtype, "IP4") != 0)
+	{
+		jua_log(("sipua_uas: Current, Only IPv4 networking supported\n"));
+		return NULL;
+	}
+		
+	ip_family = AF_INET;
+
+	if (eXosip_init(stdin, stdout, sip_port) != 0)
+    {
+		jua_log(("sipua_uas: could not initialize eXosip\n"));
+		return NULL;
+    }
+  
+	jua = xmalloc(sizeof(eXosipua_t));
 	if(!jua)
 	{
 		jua_log(("sipua_new: No memory\n"));
 		return NULL;
 	}
 
-	memset(jua, 0, sizeof(struct eXosipua_s));
+	memset(jua, 0, sizeof(eXosipua_t));
 
-	if (eXosip_init(stdin, stdout, sip_port) != 0)
+	uas = (sipua_uas_t*)jua;
+
+	uas->start = uas_start;
+	uas->shutdown = uas_shutdown;
+
+	uas->address = uas_address;
+
+	uas->add_coding = uas_add_coding;
+	uas->clear_coding = uas_clear_coding;
+
+	uas->set_listener = uas_set_lisener;
+
+	uas->regist = uas_regist;
+	uas->unregist = uas_unregist;
+
+	uas->call = uas_call;
+
+	/* detect local address */
+	eXosip_guess_ip_for_via(ip_family, uas->netaddr, 63);
+	if (uas->netaddr[0]=='\0')
     {
-		jua_log(("sipua_new: could not initialize eXosip\n"));
-		return NULL;
+		jua_log(("sipua_uas: No ethernet interface found!\n"));
+		jua_log(("sipua_uas: using ip[127.0.0.1] (debug mode)!\n"));
+
+		strncpy(uas->netaddr, "127.0.0.1", MAX_IP_BYTES);
     }
-  
-	eXosip_set_mode(EVENT_MODE);
+	else
+	{
+		jua_log(("sipua_uas: local address[%s]\n", uas->netaddr));
+	}
 
-	if(firewall != NULL && firewall[0] != '\0')
-		eXosip_set_firewallip(firewall);
+	strcpy(uas->nettype, nettype);
+	strcpy(uas->addrtype, addrtype);
 
-	jua->clock = time_start();
+	if(firewall)
+		strcpy(uas->firewall, firewall);
 
-	sipua = (sipua_t *)jua;
+	if(proxy)
+		strcpy(uas->proxy, proxy);
 
-	jcall_init(jua);
-	sipua->regist = sipua_regist;
-	sipua->unregist = sipua_unregist;
+	uas->portno = sip_port;
+	
+	jua_log(("sipua_uas: uas ready\n"));
 
-	sipua->connect = sipua_connect;
-	sipua->disconnect = sipua_disconnect;
-
-	sipua->done = sipua_done;
-
-	sipua_start(sipua);
-
-	return sipua;
+	return uas;
 }
-

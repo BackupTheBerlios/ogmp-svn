@@ -51,7 +51,7 @@ static ogg_int32_t CLIP_TO_15(ogg_int32_t x)
 #define VORBIS_SIMULATING
 */
 
-media_frame_t * vorbis_decode (vorbis_info_t *vinfo, ogg_packet * packet, media_pipe_t * output)
+media_frame_t * vorbis_decode (vorbis_info_t *vinfo, ogg_packet *packet, media_pipe_t * output)
 {
    int channels = 0;
    media_frame_t *auf = NULL;
@@ -95,7 +95,6 @@ media_frame_t * vorbis_decode (vorbis_info_t *vinfo, ogg_packet * packet, media_
       if ( samples <= 0 )
 	  {
          vorbis_player_debug(("vorbis_decode: no audio samples retrieved!\n"));
-
          return NULL;
       }
    }
@@ -103,9 +102,7 @@ media_frame_t * vorbis_decode (vorbis_info_t *vinfo, ogg_packet * packet, media_
    if(!output)
    {
       vorbis_synthesis_read(&vinfo->vd, samples);
-
       vorbis_player_debug(("vorbis_decode: no output, discard\n"));
-
       return NULL;
    }
    
@@ -137,31 +134,30 @@ media_frame_t * vorbis_decode (vorbis_info_t *vinfo, ogg_packet * packet, media_
     * convert floats to 16 bit signed ints (host order) and interleave
     */
    auf = (media_frame_t*)output->new_frame(output, channels * samples * sizeof(int16), NULL);
-   if (!auf) {
-
+   if (!auf)
+   {
       vorbis_player_debug(("vorbis_decode: no available frame retrieved\n"));
-
       return NULL;
    }
 
-   for( i=0; i<channels; i++ ) {
-
+   for( i=0; i<channels; i++ )
+   {
       ogg_int16_t *ptr = ((ogg_int16_t *)auf->raw) + i;
       float  *mono = pcm[i];
 
-      for( j=0; j<samples; j++ ) {
-
+      for( j=0; j<samples; j++ )
+	  {
          int val = (int)(mono[j] * 32767.f);
 
          /* might as well guard against clipping */
-         if (val > 32767) {
-
+         if (val > 32767)
+		 {
             val = 32767;
             clipflag = 1;
          }
 
-         if (val < -32768) {
-
+         if (val < -32768)
+		 {
             val = -32768;
             clipflag = 1;
          }

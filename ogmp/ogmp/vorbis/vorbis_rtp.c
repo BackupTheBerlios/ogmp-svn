@@ -172,7 +172,8 @@ int vrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 {
    vrtp_handler_t *vh = (vrtp_handler_t *)h;
    
-   uint16 seqno, src;
+   uint16 seqno;
+   uint32 src;
 
    uint32 rtpts_payload;
    uint32 rtpts_arrival;
@@ -952,6 +953,27 @@ int rtp_vorbis_set_parameter(xrtp_media_t * media, char *key, void *val)
 	return XRTP_OK;
 }
 
+void* rtp_vorbis_info(xrtp_media_t* media, void* rtp_capable)
+{
+	rtpcap_descript_t* rtpcap = (rtpcap_descript_t*)rtp_capable;
+	sdp_message_t *sdp = rtpcap->sdp;
+	vorbis_info_t* vinfo;
+
+	vinfo = malloc(sizeof(vorbis_info_t));
+	if(!vinfo)
+	{
+		vrtp_debug(("rtp_vorbis_info: No memory\n"));
+		return NULL;
+	}
+
+	memset(vinfo, 0, sizeof(vorbis_info_t));
+
+	/* yet to implement, refer to module speex_rtp */
+	//vorbis_capable_from_sdp(rtpcap, sdp, (media_info_t*)vinfo);
+
+	return vinfo;
+}
+
 void* rtp_vorbis_parameter(xrtp_media_t * media, char *key)
 {
 	return NULL;
@@ -1543,6 +1565,7 @@ xrtp_media_t * rtp_vorbis(profile_handler_t *handler)
       
       media->set_parameter = rtp_vorbis_set_parameter;
       media->parameter = rtp_vorbis_parameter;
+      media->info = rtp_vorbis_info;
 
 	  media->set_callback = rtp_media_set_callback;
 
@@ -1648,9 +1671,8 @@ int vrtp_done_handler(profile_handler_t * h){
 /**
  * Methods for module initializing
  */
-module_interface_t * module_init(){
-
-
+module_interface_t * module_init()
+{
    vrtp = (profile_class_t *)xmalloc(sizeof(profile_class_t));
 
    vrtp->match_id = vrtp_match_id;

@@ -15,7 +15,9 @@
  *                                                                         *
  ***************************************************************************/
  
-/* some code took from Tremor vorbisfile.c */
+/* some code took from www.speex.org project,
+ * Copyright (C) 2002-2003 Jean-Marc Valin 
+ */
 
 #include <timedia/xmalloc.h>
 #include <string.h>
@@ -60,6 +62,8 @@ int speex_open_header(ogg_packet *op, speex_info_t *spxinfo)
 {
    SpeexHeader *header;
 
+   SpeexStereoState stereo = SPEEX_STEREO_STATE_INIT;
+
    audio_info_t *ainfo = (audio_info_t*)spxinfo;
 
    header = speex_packet_to_header((char*)op->packet, op->bytes);
@@ -77,25 +81,30 @@ int speex_open_header(ogg_packet *op, speex_info_t *spxinfo)
       
    if (header->speex_version_id > 1)
    {
-      ogm_speex_log(("speex_open_header: Cannot decode version.%d speex source\n", spxinfo->header->speex_version_id));
+      ogm_speex_log(("speex_open_header: Cannot decode version.%d speex source\n", header->speex_version_id));
       return MP_FAIL;
    }
-			
-   spxinfo->mode = speex_lib_get_mode(header->mode);
-/*
+
+   spxinfo->version = header->speex_version_id;
+   spxinfo->bitstream_version = header->mode_bitstream_version;
+
+   /* only in svn recently */
+   spxinfo->spxmode = speex_lib_get_mode(header->mode);
+
+/* in released version
 #ifdef DISABLE_GLOBAL_POINTERS
    spxinfo->mode = speex_mode_new(header->mode);
 #else
    spxinfo->mode = speex_mode_list[header->mode];
 #endif
 */
-   if (spxinfo->mode->bitstream_version < header->mode_bitstream_version)
+   if (spxinfo->spxmode->bitstream_version < header->mode_bitstream_version)
    {
       ogm_speex_log(("speex_open_header: Cannot decode newer version speex source\n"));
       return MP_FAIL;
    }
 
-   if (spxinfo->mode->bitstream_version > header->mode_bitstream_version) 
+   if (spxinfo->spxmode->bitstream_version > header->mode_bitstream_version) 
    {
       ogm_speex_log(("speex_open_header: Cannot decode older version speex source\n"));
       return MP_FAIL;
@@ -106,19 +115,25 @@ int speex_open_header(ogg_packet *op, speex_info_t *spxinfo)
    if(!header->frames_per_packet)
 	   header->frames_per_packet = 1;
 
+   spxinfo->nframe_per_packet = header->frames_per_packet;
+   spxinfo->nsample_per_frame = header->frame_size;
+   spxinfo->bitrate_now = header->bitrate;
+   spxinfo->vbr = header->vbr;
+
    ainfo->channels = header->nb_channels;
+
+   if(header->nb_channels == 2)
+	   memcpy(&spxinfo->stereo, &stereo, sizeof(stereo));
 
    spxinfo->nheader = 2 + header->extra_headers;
 
-   spxinfo->header = header;
-   /*
    free(header);
-   */
+
    return MP_OK;
 }
 
 /* Open a new 'Ogg/Speex' stream in the ogm file */
-int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ctrl, ogg_stream_state *sstate, int sno, stream_header *sth)
+int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ctrl, ogg_stream_state *sstate, int sno, stream_header *sth, void* extra)
 {
 	speex_info_t *spxinfo = NULL;
 
@@ -171,6 +186,8 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
 
 	if(spxinfo->head_packets < 2 && stream->playable != -1)
 	{
+		int enh = 1;
+
 		spxinfo->head_packets++;
 	
 		if (spxinfo->head_packets == 1)
@@ -185,7 +202,7 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
 				
 			mf->add_stream(mf, stream, sno, 'a');
 
-			stream->sample_rate = spxinfo->header->rate;
+			stream->sample_rate = spxinfo->audioinfo.info.sample_rate;
 			stream->handler = handler;
             
 			ogm_strm->serial = sno;
@@ -195,16 +212,17 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
 			ogm_strm->stype = 'a';
 			ogm_strm->instate = sstate;
 
-            ogm_speex_log(("ogm_open_speex: version: %d\n", spxinfo->header->speex_version_id));
-            ogm_speex_log(("ogm_open_speex: bitstream version: %d\n", spxinfo->header->mode_bitstream_version));
-            ogm_speex_log(("ogm_open_speex: channels: %d\n", spxinfo->audioinfo.channels));
-            ogm_speex_log(("ogm_open_speex: rate: %ld\n", spxinfo->audioinfo.info.sample_rate));
-            ogm_speex_log(("ogm_open_speex: bitrate: %ld\n", spxinfo->header->bitrate));
-            ogm_speex_log(("ogm_open_speex: frame_size: %dB\n", spxinfo->header->frame_size));
-            ogm_speex_log(("ogm_open_speex: %d headers\n", spxinfo->nheader));
+            ogm_speex_log(("ogm_open_speex: version[%d]\n", spxinfo->version));
+            ogm_speex_log(("ogm_open_speex: bitstream version[%d]\n", spxinfo->bitstream_version));
+
+            ogm_speex_log(("ogm_open_speex: channels[%d]\n", spxinfo->audioinfo.channels));
+            ogm_speex_log(("ogm_open_speex: rate[%ld]\n", spxinfo->audioinfo.info.sample_rate));
+            ogm_speex_log(("ogm_open_speex: bitrate[%ld]\n", spxinfo->bitrate_now));
+            ogm_speex_log(("ogm_open_speex: samples/frame[%d]; frames/packet[%d]\n", spxinfo->nsample_per_frame, spxinfo->nframe_per_packet));
+            ogm_speex_log(("ogm_open_speex: headers[%d]\n", spxinfo->nheader));
 
             /* time to open the stream with a player */            
-			stream->player = ctrl->find_player(ctrl, ogm->format.default_mode, stream->mime, stream->fourcc);
+			stream->player = ctrl->find_player(ctrl, ogm->format.default_mode, stream->mime, stream->fourcc, extra);
 			
 			if(!stream->player)
 			{
@@ -222,16 +240,16 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
          
 			stream->playable = 1;
 
-			spxinfo->st = speex_decoder_init(spxinfo->mode);
-			if (!spxinfo->st)
+			spxinfo->dst = speex_decoder_init(spxinfo->spxmode);
+			if (!spxinfo->dst)
 			{
 				ogm_speex_log(("speex_open_header: Decoder initialization failed.\n"));
 				return MP_FAIL;
 			}
-			speex_decoder_ctl(spxinfo->st, SPEEX_SET_SAMPLING_RATE, &(spxinfo->audioinfo.info.sample_rate));
-
-			/* speex_decoder_ctl(st, SPEEX_SET_ENH, &enh_enabled); */
-			speex_decoder_ctl(spxinfo->st, SPEEX_GET_FRAME_SIZE, &(spxinfo->header->frame_size));
+			
+			speex_decoder_ctl(spxinfo->dst, SPEEX_SET_SAMPLING_RATE, &(spxinfo->audioinfo.info.sample_rate));
+			speex_decoder_ctl(spxinfo->dst, SPEEX_GET_FRAME_SIZE, &(spxinfo->nsample_per_frame));
+			speex_decoder_ctl(spxinfo->dst, SPEEX_SET_ENH, &enh);
 
 			ogm_speex_log(("ogm_open_speex: player ok\n"));
 		} 

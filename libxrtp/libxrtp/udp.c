@@ -343,6 +343,11 @@ int port_match(xrtp_port_t *port, char *ip, uint16 pno)
 	 return 1;
 }
 
+int port_portno(xrtp_port_t* port)
+{
+	return port->portno;
+}
+
   int port_poll(xrtp_port_t * port, rtime_t timeout_usec)
   {
      fd_set io_set;
@@ -366,8 +371,8 @@ int port_match(xrtp_port_t *port, char *ip, uint16 pno)
      return n;
   } 
 
-  int port_incoming(xrtp_port_t * port){
-
+  int port_incoming(xrtp_port_t * port)
+  {
      char data[UDP_MAX_LEN];
      struct sockaddr_in remote_addr;
 
@@ -386,7 +391,6 @@ int port_match(xrtp_port_t *port, char *ip, uint16 pno)
 
      /* From Address 0:0 is unacceptable */
      if(remote_addr.sin_addr.s_addr == 0 && remote_addr.sin_port == 0)
-
 	 {     
         udp_log(("port_incoming: discard data from [%s:%d] which is unacceptable !\n", inet_ntoa(remote_addr.sin_addr), ntohs(remote_addr.sin_port)));
         return XRTP_EREFUSE;

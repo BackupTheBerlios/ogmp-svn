@@ -28,10 +28,12 @@
 #define DEFAULT_SAMPLE_FACTOR  16
 
 #define DELAY_WHILE 1000
+
 /*
 #define PORTAUDIO_LOG
-#define PORTAUDIO_DEBUG
 */
+#define PORTAUDIO_DEBUG
+
 #ifdef PORTAUDIO_LOG
  #define pa_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -192,8 +194,8 @@ int pa_sample_type (int sample_bits) {
    return paInt16;
 }
 
-int pa_set_media_info(media_device_t *dev, media_info_t *info){
-
+int pa_set_media_info(media_device_t *dev, media_info_t *info)
+{
    portaudio_device_t *pa = (portaudio_device_t *)dev;
    
    int nsp = 0;
@@ -203,27 +205,30 @@ int pa_set_media_info(media_device_t *dev, media_info_t *info){
    PaError err = 0;
    int pa_min_nbuf = 0;
 
-   if(!pa->online && pa_online (dev) < MP_OK) {
+   audio_info_t* ai = (audio_info_t*)info;
 
-      pa_debug (("pa_start: Can't activate PortAudio device\n"));
+   if(!pa->online && pa_online (dev) < MP_OK)
+   {
+      pa_debug (("pa_set_media_info: Can't activate PortAudio device\n"));
 
       return MP_FAIL;
    }
    
-   pa->ai = *((audio_info_t*)info);
-   
+   pa->ai = *ai;
+
    nsp = pa->ai.info.sample_rate / pa->sample_factor;
    
    nsample_pulse = 1;
-   while (nsample_pulse * 2 <= nsp) nsample_pulse *= 2;
+   while (nsample_pulse * 2 <= nsp) 
+	   nsample_pulse *= 2;
    
    if(pa->ai.info.sample_rate > nsample_pulse)
       pa->usec_pulse = (int)(1000000 / (pa->ai.info.sample_rate / (double)nsample_pulse));
    else
       pa->usec_pulse = (int)((double)nsample_pulse / pa->ai.info.sample_rate * 1000000);
       
-   pa_log(("pa_start: %d channels, %d rate, %d sample per pulse (%dus)\n"
-         , pa->ai.channels, pa->ai.info.sample_rate, nsample_pulse, pa->usec_pulse));
+   pa_debug(("pa_set_media_info: %d channels, %d rate, %d sample per pulse (%dus)\n", 
+			pa->ai.channels, pa->ai.info.sample_rate, nsample_pulse, pa->usec_pulse));
    
    pa->ai.channels_bytes = pa->ai.channels * pa->ai.info.sample_bits / BYTE_BITS;
 
@@ -243,23 +248,22 @@ int pa_set_media_info(media_device_t *dev, media_info_t *info){
                      , pa
                   );
 
-   if ( err != paNoError ) {
-
-      pa_debug(("pa_start: %s\n", Pa_GetErrorText(err) ));
+   if ( err != paNoError )
+   {
+      pa_debug(("pa_set_media_info: %s\n", Pa_GetErrorText(err) ));
       Pa_Terminate();
-      pa_debug(("pa_start: here\n"));
 
       return MP_FAIL;
    }
 
    pa_min_nbuf = Pa_GetMinNumBuffers (nsample_pulse, pa->ai.info.sample_rate);
-   pa_log(("\n[pa_start: stream opened, PortAudio use %d internal buffers]\n\n", pa_min_nbuf));
+   pa_log(("\n[pa_set_media_info: stream opened, PortAudio use %d internal buffers]\n\n", pa_min_nbuf));
 
    /* Start PortAudio */
    err = Pa_StartStream ( pa->pa_stream );
 
-   if( err != paNoError ) {
-
+   if( err != paNoError )
+   {
       Pa_Terminate();
       pa_debug(("pa_start: An error occured while using the portaudio stream\n"));
 
@@ -267,26 +271,26 @@ int pa_set_media_info(media_device_t *dev, media_info_t *info){
       return MP_FAIL;
    }
 
-   pa_debug(("pa_start: PortAudio started\n"));
+   pa_debug(("pa_set_media_info: PortAudio started\n"));
 
    return MP_OK;
 }
 
-int pa_start (media_device_t * dev, media_control_t *ctrl){
-
+int pa_start (media_device_t * dev, media_control_t *ctrl)
+{
 	pa_log(("pa_start: pa_set_media_info() to start portaudio\n"));
 	return MP_OK;
 }
 
-int pa_stop (media_device_t * dev) {
-
+int pa_stop (media_device_t * dev)
+{
    portaudio_device_t *pa_dev = NULL;
    PaError err = 0;
 
    pa_debug(("pa_stop: to stop PortAudio\n"));
 
-   if (!dev->running) {
-
+   if (!dev->running)
+   {
       pa_debug(("pa_stop: PortAudio is idled\n"));
 
       return MP_OK;
@@ -295,8 +299,8 @@ int pa_stop (media_device_t * dev) {
    pa_dev = (portaudio_device_t *)dev;
 
    err = Pa_StopStream ( pa_dev->pa_stream );
-   if( err != paNoError ) {
-
+   if( err != paNoError )
+   {
       Pa_Terminate();
       pa_debug(("pa_stop: An error occured while stop the portaudio\n"));
 

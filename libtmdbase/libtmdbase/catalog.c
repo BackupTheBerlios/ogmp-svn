@@ -143,7 +143,7 @@ int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* pat
    if(!dir)
    {
       catalog_log(("catalog_scan_modules: Fail to open dir:%s\n", path));
-      return OS_EPARAM;
+      return OS_FAIL;
    }      
           
    while((entry = readdir(dir)) != NULL)
@@ -196,23 +196,23 @@ int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* pat
          }
       }
 
-      catalog_log(("catalog_scan_modules: next\n"));
-
       xfree(entname);
    }
    
    num_plugin = xrtp_list_size(catalog->infos);
-   
+
+   closedir(dir);
+
    return num_plugin;
 }
 
-int _catalog_match(void * target, void * pattern){
-   
-   module_info_t * minfo = (module_info_t *)target;
+int catalog_match(void * target, void * pattern)
+{
+	module_info_t * minfo = (module_info_t *)target;
 
-   catalog_log(("_catalog_match: Try matching pattern [%s] to target(%s)\n", (char*)pattern, minfo->loadin->label));
+	catalog_log(("_catalog_match: Try matching pattern [%s] to target(%s)\n", (char*)pattern, minfo->loadin->label));
 
-   return strcmp(minfo->loadin->label, (char*)pattern);
+	return strcmp(minfo->loadin->label, (char*)pattern);
 }
 
 /*
@@ -220,65 +220,59 @@ int _catalog_match(void * target, void * pattern){
  *
  * Fail, return null.
  */
-module_interface_t * catalog_new_module (module_catalog_t *cata, char *label){
-   
-   module_info_t * minfo;
-   module_interface_t * mod;
-   void * lib;
+module_interface_t * catalog_new_module (module_catalog_t *cata, char *label)
+{
+	module_info_t * minfo;
+	module_interface_t * mod;
+	void * lib;
 
-   if(xrtp_list_size(cata->infos) == 0)
-      return NULL;
+	if(xrtp_list_size(cata->infos) == 0)
+		return NULL;
 
-   catalog_log(("catalog_new_module: Try to find module(%s) in catalog\n", label));
+	catalog_log(("catalog_new_module: Try to find module(%s) in catalog\n", label));
 
-   minfo = (module_info_t *)xrtp_list_find(cata->infos, label, _catalog_match, &(cata->$lu));
-
-   if(!minfo){
-
-      catalog_log(("< catalog_new_module: NO module %s found in catalog >\n", label));
-
-   }else{
+	minfo = (module_info_t *)xrtp_list_find(cata->infos, label, catalog_match, &(cata->$lu));
+	if(!minfo)
+	{
+		catalog_log(("catalog_new_module: NO module %s found in catalog\n", label));
+	}
+	else
+	{
+		catalog_log(("catalog_new_module: Found module %s\n", label));
      
-     catalog_log(("catalog_new_module: Found module %s\n", label));
-     
-     if(!minfo->lib || !minfo->loadin){
+		if(!minfo->lib || !minfo->loadin)
+		{
+			lib = modu_dlopen(minfo->filename, XRTP_DLFLAGS);
+			if(!lib)
+			{
+				catalog_log(("< catalog_new_module: Catalog:Can't load module file (%s) >\n", minfo->filename));
+				return NULL;
+			}
+			minfo->lib = lib;
+			minfo->loadin = modu_dlsym(lib, cata->module_type);
+		}
+      
+		mod = minfo->loadin->init();
+		if(!mod)
+		{
+			catalog_log(("< catalog_new_module: Catalog:Can't init module(%s) >\n", label));
+			modu_dlclose(minfo->lib);
+			minfo->lib = NULL;
+			minfo->loadin = NULL;
+			return NULL;
+		}
+      
+		return mod;
+	}
 
-       
-        lib = modu_dlopen(minfo->filename, XRTP_DLFLAGS);
-        if(!lib){
-          
-           catalog_log(("< catalog_new_module: Catalog:Can't load module file (%s) >\n", minfo->filename));
-           return NULL;
-                      
-         }
-         minfo->lib = lib;
-         minfo->loadin = modu_dlsym(lib, cata->module_type);
-      }
-      
-      mod = minfo->loadin->init();
-      if(!mod){
-        
-         catalog_log(("< catalog_new_module: Catalog:Can't init module(%s) >\n", label));
-         modu_dlclose(minfo->lib);
-         minfo->lib = NULL;
-         minfo->loadin = NULL;
-         return NULL;
-      }
-      
-      //minfo->iface = mod;
-      
-      return mod;
-     
-   }
-
-   return NULL;
+	return NULL;
 }
 
 /*
  * Create all modules from source, return numbers of module created
  */
-int catalog_create_modules(module_catalog_t *cata, char *label, xrtp_list_t *list) {
-
+int catalog_create_modules(module_catalog_t *cata, char *label, xrtp_list_t *list)
+{
    int nmod = 0;
 
    module_info_t * minfo;
@@ -287,12 +281,12 @@ int catalog_create_modules(module_catalog_t *cata, char *label, xrtp_list_t *lis
 
    minfo = (module_info_t *)xrtp_list_first(cata->infos, u);
 
-   while (minfo) {
-	   
+   while (minfo)
+   {
 	  module_interface_t * iface;
 
-      if (!strcmp(label, minfo->loadin->label)) {
-
+      if (!strcmp(label, minfo->loadin->label))
+	  {
          iface = minfo->loadin->init();
 
          if (iface)

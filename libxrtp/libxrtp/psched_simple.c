@@ -23,10 +23,9 @@
 #include "internal.h"
 
 #include <timedia/xmalloc.h>
-
 /*
-#define PSCHED_SIMPLE_LOG
 */
+#define PSCHED_SIMPLE_LOG
 #ifdef PSCHED_SIMPLE_LOG
  #define simple_sched_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -40,8 +39,8 @@ typedef struct ssch_unit_s ssch_unit_t;
 typedef struct ssch_rtp_request_s ssch_rtp_request_t;
 typedef struct ssch_rtcp_request_s ssch_rtcp_request_t;
  
-struct ssch_unit_s{
-
+struct ssch_unit_s
+{
     xrtp_session_t * session;
     rtime_t period;
 
@@ -68,27 +67,27 @@ struct ssch_unit_s{
     xthr_lock_t * lock;
 };
 
- struct ssch_rtp_request_s{
-
+struct ssch_rtp_request_s
+{
     ssch_rtp_request_t * prev;    /* prev request */
     ssch_rtp_request_t * next;    /* next request */
 
     rtime_t usec_go;   /* timestamp */
     
     ssch_unit_t * ssch_unit;
- };
+};
 
- struct ssch_rtcp_request_s{
-
+struct ssch_rtcp_request_s
+{
     xrtp_lrtime_t next_lrts;
 
     ssch_unit_t * ssch_unit;
 
     int expired;
- };
+};
 
- struct simple_sched_s {
-
+struct simple_sched_s
+{
     struct session_sched_s $iface;
 
     xrtp_clock_t * clock;
@@ -121,10 +120,10 @@ struct ssch_unit_s{
 
     int n_all_rtp_request;
     int n_rtcp_request;
- };
+};
 
- int simple_sched_done(session_sched_t * sched){
-
+int simple_sched_done(session_sched_t * sched)
+{
     int ret;
 
     simple_sched_t * ssch = (simple_sched_t *)sched;
@@ -154,17 +153,17 @@ struct ssch_unit_s{
     xfree(ssch);
 
     return XRTP_OK;
- }
+}
 
- int simple_sched_add(session_sched_t * sched, xrtp_session_t * ses)
- {
-    ssch_unit_t * unit = NULL;
+int simple_sched_add(session_sched_t * sched, xrtp_session_t * ses)
+{
+    ssch_unit_t *unit = NULL;
 
     xrtp_port_t *rtp_port, *rtcp_port;
     
-    simple_sched_t * ssch = (simple_sched_t *)sched;
+    simple_sched_t *ssch = (simple_sched_t *)sched;
     
-    int i, free_slot = 0, found_slot = 0;
+    int i, free_slot=0, found_slot=0;
 
     xthr_lock(ssch->lock);
 
@@ -242,7 +241,7 @@ struct ssch_unit_s{
     xthr_cond_signal(ssch->wait_rtcp_request);
     */
     return XRTP_OK;
- }
+}
 
  int simple_sched_remove(session_sched_t * sched, xrtp_session_t * ses){
 
@@ -349,16 +348,6 @@ int simple_sched_rtcp_out(session_sched_t * sched, xrtp_session_t * ses)
     return XRTP_OK;
 }
 
-/* 
-int simple_hrts_earlier(t1, t2)
-{
-    xrtp_hrtime_t d = t2 - t1;
-    if(d > 0) return 1;
-
-    return 0;
-}
-*/
- 
 int simple_sched_rtp_out(session_sched_t * sched, xrtp_session_t * ses, rtime_t in_usec, int sync)
 {
     simple_sched_t * ssch = (simple_sched_t *)sched;
@@ -533,6 +522,7 @@ int simple_schedule_rtcp(void * gen)
    ssch_unit_t * unit;
 
    int i_locked_ssch = 0;
+   int ins;
 
    simple_sched_log(("simple_schedule_rtcp: rtcp scheduler started\n"));
 
@@ -564,10 +554,9 @@ int simple_schedule_rtcp(void * gen)
             i_locked_ssch = 0;
          }
 
-         simple_sched_log(("simple_schedule_rtcp: waiting for rtcp request\n"));
+         simple_sched_log(("simple_schedule_rtcp: ssch[%x] waiting for rtcp request\n", (int)ssch));
          xthr_cond_wait(ssch->wait_rtcp_request, ssch->rtcp_lock);
-
-         simple_sched_log(("simple_schedule_rtcp: schedule rtcp\n"));
+         simple_sched_log(("simple_schedule_rtcp: ssch[%x] schedules rtcp\n", (int)ssch));
       }
 
       if(i_locked_ssch)
@@ -581,7 +570,7 @@ int simple_schedule_rtcp(void * gen)
          break;
 
       now = time_msec_now(ssch->clock);
-	  simple_sched_log(("simple_schedule_rtcp: ssch[@%d] %dms now\n", ssch, now));
+	  simple_sched_log(("simple_schedule_rtcp: ssch[%x] %dms now\n", ssch, now));
 
       /* Scan if some deadline is reached */
 
@@ -593,7 +582,8 @@ int simple_schedule_rtcp(void * gen)
        */
       for(i=0; i<MAX_SCHED_SESSION; i++)
 	  {
-         if(nses_scaned == ssch->n_session) break;
+         if(nses_scaned == ssch->n_session)
+			 break;
 
          unit = ssch->rtcp_queue[i].ssch_unit;
          if(unit)
@@ -605,8 +595,8 @@ int simple_schedule_rtcp(void * gen)
                n_arrived++;
             }
 
-            if(!session_need_rtcp(unit->session)){
-
+            if(!session_need_rtcp(unit->session))
+			{
                int rtcp_wakeup = 0;
 
                /* Stop sending rtcp */
@@ -615,16 +605,18 @@ int simple_schedule_rtcp(void * gen)
                   unit->rtcp_doing = 0;
                   ssch->rtcp_queue[i].expired = 0;
                   ssch->n_rtcp_request--;
-                  if(ssch->n_rtcp_request == 0){
-
-                     simple_sched_log(("simple_schedule_rtcp: waiting for rtcp request again\n"));
+                  if(ssch->n_rtcp_request == 0)
+				  {
+                     simple_sched_log(("simple_schedule_rtcp: ssch[%x] waiting for rtcp request again\n", (int)ssch));
                      xthr_cond_wait(ssch->wait_rtcp_request, ssch->rtcp_lock);
-                     simple_sched_log(("simple_schedule_rtcp: schedule rtcp again\n"));
-                     rtcp_wakeup = 1;
+                     simple_sched_log(("simple_schedule_rtcp: ssch[%x] schedule rtcp again\n", (int)ssch));
+                     
+					 rtcp_wakeup = 1;
                   }
                }
 
-               if(!rtcp_wakeup) continue;
+               if(!rtcp_wakeup)
+				   continue;
             }
 
             if(!unit->rtcp_doing)
@@ -636,9 +628,7 @@ int simple_schedule_rtcp(void * gen)
                   ssch->rtcp_queue[i].next_lrts = now + dt_min;
                }
 			   else
-			   {
                   ssch->rtcp_queue[i].next_lrts = now + session_rtcp_interval(unit->session);
-               }
 
                unit->rtcp_doing = 1;
                ssch->n_rtcp_request++;
@@ -649,7 +639,8 @@ int simple_schedule_rtcp(void * gen)
 
             dt = ssch->rtcp_queue[i].next_lrts - now;
 
-            if (dt_min == 0 && dt > 0) dt_min = dt;
+            if (dt_min == 0 && dt > 0) 
+				dt_min = dt;
 
             if (dt > 0 && dt < dt_min)
 			{
@@ -733,11 +724,11 @@ int simple_schedule_rtcp(void * gen)
       }
 
       /* To detect all ports see if any incoming */
-      portman_poll(ssch->rtcp_portman);
+      ins = portman_poll(ssch->rtcp_portman);
 
       xthr_unlock(ssch->rtcp_lock);
 
-	  simple_sched_log(("simple_schedule_rtcp: ssch[@%d] sleep %dms\n", ssch, dt_min));
+	  simple_sched_log(("simple_schedule_rtcp: %d incoming, ssch[%x] sleep %dms\n", ins, ssch, dt_min));
       time_msec_sleep(ssch->clock, dt_min, NULL);
    }
 

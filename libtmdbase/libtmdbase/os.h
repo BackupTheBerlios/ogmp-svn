@@ -60,6 +60,8 @@
 #ifdef WIN32
  #define vsnprintf _vsnprintf
  #define snprintf _snprintf
+ #define itoa _itoa
+ #define ltoa _ltoa
 
  #ifdef __STDC__
   #ifndef strdup

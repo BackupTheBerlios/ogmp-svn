@@ -22,7 +22,6 @@
  */
 
 #ifndef XRTP_SESSION_H
-
 #define XRTP_SESSION_H
  
 #define MEMBER_MAXACTIVE 2
@@ -40,6 +39,7 @@ typedef struct xrtp_session_s xrtp_session_t;
 #include "pipeline.h"
 #include "psched.h"
 #include "const.h"
+#include "xrtp.h"
 
 #define RTCP_SENDER_TIMEOUT_MULTIPLIER  2
 #define RTCP_MEMBER_TIMEOUT_MULTIPLIER  5
@@ -61,6 +61,8 @@ typedef struct xrtp_session_s xrtp_session_t;
 
 #define RTP_DELAY_FACTOR  3  /* FIXME: 3 times period, need more consider */
 #define RTP_MAX_PACKET_DELAY 5
+
+#define MAX_IPADDR_BYTES 64
  
 typedef enum
 {
@@ -425,7 +427,11 @@ struct xrtp_session_s
 
     uint pn_member;    /* pmember */
     
-    xrtp_port_t *rtp_port;
+    char ip[MAX_IPADDR_BYTES];
+	int default_rtp_portno;
+	int default_rtcp_portno;
+
+	xrtp_port_t *rtp_port;
     xrtp_port_t *rtcp_port;
 
     xthr_lock_t *rtp_incoming_lock;
@@ -462,6 +468,8 @@ struct xrtp_session_s
     xrtp_thread_t * thr_rtp_recv;
     xthr_lock_t * rtp_recv_lock;
     int thread_run;
+
+	xrtp_set_t* set;
 };
 
 /* Interface of the Session class */
@@ -471,7 +479,7 @@ struct xrtp_session_s
  */
 extern DECLSPEC
 xrtp_session_t * 
-session_new(char * cname, int clen, char *ip, uint16 rtp_portno, uint16 rtcp_portno, module_catalog_t * cata, void *media_control);
+session_new(xrtp_set_t* set, char * cname, int clen, char *ip, uint16 rtp_portno, uint16 rtcp_portno, module_catalog_t * cata, void *media_control);
 
 /**
  * Release the Session
@@ -515,6 +523,41 @@ int session_stop_reception(xrtp_session_t * session);
  * Get session rtp and rtcp ports
  */
 int session_ports(xrtp_session_t * session, xrtp_port_t **r_rtp_port, xrtp_port_t **r_rtcp_port);
+
+/**
+ * Get session number of rtp and rtcp ports
+ */
+extern DECLSPEC
+int 
+session_portno(xrtp_session_t * session, int *rtp_portno, int *rtcp_portno);
+
+/**
+ * Get session net address
+ */
+extern DECLSPEC
+char* 
+session_address(xrtp_session_t * session);
+
+/**
+ * Set session number of rtp and rtcp ports
+ */
+extern DECLSPEC
+int 
+session_set_portno(xrtp_session_t * session, int rtp_portno, int rtcp_portno);
+
+/**
+ * Get the actual payload type when it is dynamic.
+ */
+extern DECLSPEC
+int 
+session_payload_type(xrtp_session_t *session);
+
+/**
+ * Get the owner's media info of the session
+ */
+extern DECLSPEC
+void* 
+session_mediainfo(xrtp_session_t *session);
 
 /**
  * Set mode of the Session, which could be
@@ -578,6 +621,13 @@ extern DECLSPEC
 int 
 session_set_bandwidth(xrtp_session_t * session, int32 total_bw, int32 rtp_bw);
 
+/**
+ * Set bandwidth for this session, REMEMBER: multiuser need share the bandwidth!!!
+ */
+extern DECLSPEC
+int 
+session_bandwidth(xrtp_session_t * session);
+
 uint32 session_rtp_bandwidth(xrtp_session_t * session);
  
 /* Depend on the number of member; Multicast or Unicast; Media period 
@@ -629,7 +679,7 @@ session_member_check_report(member_state_t * member, uint8 frac_lost, uint32 tot
  */
 extern DECLSPEC
 int 
-session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, uint16 rtp_portno, uint16 rtcp_portno, void *userinfo);
+session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, uint16 rtp_portno, uint16 rtcp_portno, void* rtp_capable, void* userinfo);
 
 /**
  * Remove a cname member to session by external protocol, such as SIP

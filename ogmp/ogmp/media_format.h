@@ -54,12 +54,13 @@ typedef struct media_format_s media_format_t;
 typedef struct media_stream_s media_stream_t;
 typedef struct media_player_s media_player_t;
 
+typedef struct media_io_s media_io_t;
+
 typedef struct media_control_s media_control_t;
 typedef struct control_setting_s control_setting_t;
 
 struct control_setting_s
 {
-
    int (*done)(control_setting_t* setting);
 };
 
@@ -70,7 +71,7 @@ struct media_control_s
 {
    int (*done) (media_control_t * cont);
 
-   media_player_t* (*find_player) (media_control_t *cont, char *mode, char *mime, char *fourcc);
+   media_player_t* (*find_player) (media_control_t *cont, char *mode, char *mime, char *fourcc, void* extra);
 
    int (*add_device)(media_control_t *cont, char *name, control_setting_call_t *call, void*user);
    media_device_t* (*find_device)(media_control_t *cont, char *name);
@@ -132,10 +133,10 @@ struct media_format_s
    int (*done) (media_format_t * mf);
 
    /* Open/Close a media source */
-   int (*open) (media_format_t *mf, char * fname, media_control_t *ctrl, config_t *conf, char *mode);
+   int (*open) (media_format_t *mf, char * fname, media_control_t *ctrl, config_t *conf, char *mode, void* extra);
    int (*close) (media_format_t * mf);
    
-   int (*open_capables) (media_format_t *mf, char *src_cname, int src_cnlen, capable_descript_t* caps[], int ncap, media_control_t *ctrl, config_t *conf, char *mode, capable_descript_t* opened_caps[]);
+   int (*open_capables) (media_format_t *mf, char *src_cname, xlist_t *rtpcaps, media_control_t *ctrl, config_t *conf, char *mode, capable_descript_t* opened_caps[]);
 
    /* Stream management */
    int (*add_stream) (media_format_t * mf, media_stream_t *strm, int strmno, unsigned char type);
@@ -203,6 +204,7 @@ struct media_stream_s
 
    media_stream_t *next;
    
+   media_io_t *generater;
    media_player_t *player;
 };
 
@@ -246,6 +248,7 @@ struct media_pipe_s
     */
    int (*pick_content) (media_pipe_t *pipe, media_info_t *media_info, char* raw, int nraw_once);
 };
+
 media_pipe_t * media_new_pipe (void);
 
 struct media_device_s
@@ -289,19 +292,58 @@ struct media_player_s
    int (*set_callback) (media_player_t * playa, int type, int(*call)(), void *user);
 
    int (*set_options) (media_player_t * playa, char *opt, void *value);
-   int (*set_device) (media_player_t * mp, media_control_t *control, module_catalog_t *cata);
+   int (*set_device) (media_player_t * mp, media_control_t *control, module_catalog_t *cata, void* extra);
 
    media_pipe_t* (*pipe) (media_player_t * playa);
 
    int (*open_stream) (media_player_t *playa, media_info_t *media_info);
    int (*close_stream) (media_player_t *playa);
 
+   void* (*media)(media_player_t *playa);
+
    int (*receive_media) (media_player_t *playa, void * media_packet, int64 samplestamp, int last_packet);
    
-   capable_descript_t* (*capable)(media_player_t *playa);
+   capable_descript_t* (*capable)(media_player_t *playa, void *data);
    int (*match_capable)(media_player_t *playa, capable_descript_t *cap);
 
    int (*stop) (media_player_t * playa);
+};
+
+struct media_io_s
+{
+   media_device_t * device;
+
+   const char* (*play_type) (media_io_t * mio);
+   const char* (*media_type) (media_io_t * mio);
+   const char* (*codec_type) (media_io_t * mio);
+   
+   #define CALLBACK_PLAYER_READY  1
+   #define CALLBACK_MEDIA_STOP  2
+   
+   int (*done) (media_io_t * mio);
+   
+   int (*match_type) (media_io_t * mio, char *mime, char *fourcc);
+
+   int (*set_callback) (media_io_t * mio, int type, int(*call)(), void *user);
+
+   int (*set_options) (media_io_t *mio, char *opt, void *value);
+   int (*set_device) (media_io_t *mio, media_control_t *control, module_catalog_t *cata, void* extra);
+
+   media_pipe_t* (*input) (media_io_t *mio);
+   media_pipe_t* (*output) (media_io_t *mio);
+
+   int (*open_stream) (media_io_t *mio, media_info_t *media_info);
+   int (*close_stream) (media_io_t *mio);
+
+   void* (*media)(media_io_t *mio);
+
+   int (*receive_media) (media_io_t *mio, void *media_packet, int64 samplestamp, int last_packet);
+   int (*generate_media) (media_io_t *mio, void *media_packet, int64 samplestamp, int last_packet);
+   
+   capable_descript_t* (*capable)(media_io_t *mio, void *data);
+   int (*match_capable)(media_io_t *mio, capable_descript_t *cap);
+
+   int (*stop) (media_io_t *mio);
 };
 
 #endif

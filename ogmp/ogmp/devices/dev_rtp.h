@@ -15,10 +15,14 @@
  *                                                                         *
  ***************************************************************************/
 
+#ifndef DEV_RTP_H
+#define DEV_RTP_H
+
 #include <timedia/timer.h>
 #include <xrtp/xrtp.h>
 
-#include "../ogmp.h"
+#include "../media_format.h"
+#include "../rtp_cap.h"
 
 #define MP_RTP_NONEFLAG 0x0
 #define MP_RTP_LAST		0x1
@@ -33,6 +37,8 @@ typedef struct dev_rtp_s dev_rtp_t;
 struct dev_rtp_s
 {
    struct media_device_s dev;
+
+   xrtp_set_t *session_set;
 
    /* the profile module searched in catalog */
    xrtp_session_t* (*rtp_session)
@@ -81,3 +87,5 @@ struct rtp_frame_s
    long  unit_bytes;
    char *media_unit;
 };
+
+#endif

@@ -332,8 +332,8 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t *rtp, xrtp_rtp_payload_t *pay)
     return &(pac->$head);
  }
 
- uint32 rtp_packet_ssrc(xrtp_rtp_packet_t * rtp){
-
+ uint32 rtp_packet_ssrc(xrtp_rtp_packet_t * rtp)
+ {
     return rtp->$head.SSRC;
  }
  
@@ -2147,8 +2147,8 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
  /**
   * Pack RTP Packet to byte stream for send, invoken by Profile Handler
   */
- xrtp_buffer_t* rtp_pack(xrtp_rtp_packet_t * rtp){
-
+ xrtp_buffer_t* rtp_pack(xrtp_rtp_packet_t * rtp)
+ {
     profile_handler_t * hand;
     xrtp_buffer_t * buf;
 

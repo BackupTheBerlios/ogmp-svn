@@ -259,7 +259,7 @@ int rtp_set_fourcc_player (media_format_t * mf, media_player_t * player, const c
 /**
  * There is no operate on file, all data from from net
  */
-int rtp_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *conf, char *mode)
+int rtp_open(media_format_t *mf, char * fname, media_control_t *ctrl, config_t *conf, char *mode, void* extra)
 {
 	return MP_NOP;
 }
@@ -279,21 +279,21 @@ int rtp_stream_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
    return MP_OK;
 }
 
-rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, int src_cnlen, capable_descript_t *cap, media_control_t *ctrl, char *mode)
+rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, int src_cnlen, rtpcap_descript_t *rtpcap, media_control_t *ctrl, char *mode, void* extra)
 {
 	unsigned char stype;
 	rtp_stream_t *strm;
 
-	rtpcap_descript_t *rtpcap;
-
 	rtp_setting_t *rset = NULL;
 
-	uint8 profile_no;
-	uint16 rtp_portno, rtcp_portno;
+	int rtp_portno, rtcp_portno;
 
-	int i, total_bw, rtp_bw;
+	int total_bw, rtp_bw;
 
 	module_catalog_t *cata = ctrl->modules(ctrl);
+
+	rtpcap_set_t* rtpcapset = (rtpcap_set_t*)extra;
+	user_profile_t* user = rtpcapset->user_profile;
 /*
 	if(!cap->match_type(cap, "rtp"))
 	{
@@ -308,8 +308,6 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 		return NULL;
 	}
 	memset(strm, 0, sizeof(rtp_stream_t));
-
-	rtpcap = (rtpcap_descript_t*)cap;
 
 	if(strncmp(rtpcap->profile_mime, "audio", 5) == 0)
 	{
@@ -341,34 +339,14 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 		return NULL;
 	}
 
-	rtp_portno = rset->default_rtp_portno;
-	rtcp_portno = rset->default_rtcp_portno;
+	total_bw = 0;
+	rtp_bw = 0;
 
-	for(i=0; i<rset->nprofile; i++)
-	{
-
-		if(strcmp(rset->profiles[i].profile_mime, rtpcap->profile_mime) == 0)
-		{
-			if(rset->profiles[i].rtp_portno)
-				rtp_portno = rset->profiles[i].rtp_portno;
-
-			if(rset->profiles[i].rtcp_portno)
-				rtcp_portno = rset->profiles[i].rtcp_portno;
-
-			profile_no = rset->profiles[i].profile_no;
-			total_bw = rset->profiles[i].total_bw;
-			rtp_bw = rset->profiles[i].rtp_bw;
-
-			break;
-		}
-	}
-
-	strm->session = rtp_format->rtp_in->rtp_session(
-										rtp_format->rtp_in, cata, ctrl,
-										rset->cname, rset->cnlen,
-										rset->ipaddr, rtp_portno, rtcp_portno,
-										profile_no, rtpcap->profile_mime,
-										total_bw, rtp_bw);
+	strm->session = rtp_format->rtp_in->rtp_session(rtp_format->rtp_in, cata, ctrl,
+													user->cname, strlen(user->cname)+1,
+													user->ipaddr, rset->default_rtp_portno, rset->default_rtcp_portno,
+													rtpcap->profile_no, rtpcap->profile_mime,
+													total_bw, rtp_bw);
 
 	if(!strm->session)
 	{
@@ -376,18 +354,18 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 		return NULL;
 	}
 
-	strm->rtp_cap = rtp_capable_descript(profile_no, rset->ipaddr, 
+	/* get real portno and payload type */
+	session_portno(strm->session, &rtp_portno, &rtcp_portno);
+	rtpcap->profile_no = session_payload_type(strm->session);
+
+	/* the stream rtp capable */
+	strm->rtp_cap = rtp_capable_descript(rtpcap->profile_no, rset->ipaddr, 
 										rtp_portno, rtcp_portno, 
 										rtpcap->profile_mime, rtpcap->clockrate, 
-										rtpcap->coding_param);
-/*
-	strm->rtp_cap->ipaddr = xstr_clone(rset->ipaddr);
-	strm->rtp_cap->profile_mime = xstr_clone(rtpcap->profile_mime);
-	strm->rtp_cap->profile_no = profile_no;
-	strm->rtp_cap->rtp_portno = rtp_portno;
-	strm->rtp_cap->rtcp_portno = rtcp_portno;
-*/
+										rtpcap->coding_param, NULL);
+
 	strm->rtp_format = rtp_format;
+
 	rtp_log(("rtp_open_stream: FIXME - stream mime string overflow possible!!\n"));
 	strcpy(strm->stream.mime, rtpcap->profile_mime);
 
@@ -395,11 +373,12 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, char *src_cn, i
 
 	rtp_log(("rtp_open_stream: for [%s@%s:%u|%u]\n", src_cn, rtpcap->ipaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno));
 	
-	session_add_cname(strm->session, src_cn, src_cnlen, rtpcap->ipaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno, NULL);
+	session_add_cname(strm->session, src_cn, src_cnlen, rtpcap->ipaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno, rtpcap, ctrl);
 
 	/* waiting to source to be available */
 	strm->source_cname = xstr_nclone(src_cn, src_cnlen);
 	strm->source_cnlen = src_cnlen;
+
 	session_set_callback(strm->session, CALLBACK_SESSION_MEMBER_UPDATE, rtp_stream_on_member_update, strm);
 
 	return strm;
@@ -413,14 +392,17 @@ capable_descript_t* rtp_stream_capable(rtp_stream_t *strm)
 /**
  * return how many stream opened
  */
-int rtp_open_capables(media_format_t *mf, char *src_cn, int src_cnlen, capable_descript_t *caps[], int ncap, media_control_t *ctrl, config_t *conf, char *mode, capable_descript_t *supported_caps[])
+int rtp_open_capables(media_format_t *mf, char *src_cn, xlist_t *rtpcaps, media_control_t *ctrl, config_t *conf, char *mode)
 {
-   int i, c=0, sno=0;
+   int c=0, sno=0;
    rtp_stream_t *strm;
+
+   rtpcap_descript_t *rtpcap;
+   xlist_user_t u;
 
    rtp_format_t *rtp = (rtp_format_t *)mf;
 
-   rtp_log(("rtp_open_capables: open %d capables\n", ncap));
+   rtp_log(("rtp_open_capables: open %d capables\n", xlist_size(rtpcaps)));
 
    if(strlen(mode) >= MAX_MODEBYTES)
    {
@@ -433,11 +415,15 @@ int rtp_open_capables(media_format_t *mf, char *src_cn, int src_cnlen, capable_d
 
    rtp->rtp_in = (dev_rtp_t*)ctrl->find_device(ctrl, "rtp");
 
-   for(i=0; i<ncap; i++)
+   rtpcap = xlist_first(rtpcaps, &u);
+   while(rtpcap)
    {
-	   strm = rtp_open_stream(rtp, sno++, src_cn, src_cnlen, caps[i], ctrl, mode);
+	   strm = rtp_open_stream(rtp, sno++, src_cn, strlen(src_cn)+1, rtpcap, ctrl, mode);
+	   
 	   if(strm)
 		   supported_caps[c++] = rtp_stream_capable(strm);
+   
+	   rtpcap = xlist_next(rtpcaps, &u);
    }
 
    return  c;

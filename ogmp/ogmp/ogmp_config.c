@@ -17,12 +17,13 @@
 
 #include "ogmp.h"
 
-rtp_profile_setting_t rtp_profile_setting[] = 
+rtp_profile_set_t profile_list = 
 {
 	/*
 	{profile_mime, profile_no, rtp_portno, rtcp_portno, total_bandwidth, rtp_bandwidth}
+	{"audio/vorbis", 97, 0, 0, 256*1024, 128*1024}
 	*/
-	{"audio/vorbis", 96, 0, 0, 256*1024, 128*1024}
+	1, {"audio/speex", 8000}
 };
 
 /* ui to config rtp module */
@@ -30,15 +31,10 @@ int server_config_rtp(void *conf, control_setting_t *setting)
 {
    rtp_setting_t *rset = (rtp_setting_t*)setting;
 
-   rset->cname = SEND_CNAME;
-   rset->cnlen = strlen(SEND_CNAME)+1;
+   rset->default_rtp_portno = 3004;
+   rset->default_rtcp_portno = 3005;
 
-   rset->ipaddr = "127.0.0.1";
-   rset->default_rtp_portno = 3000;
-   rset->default_rtcp_portno = 3001;
-
-   rset->nprofile = 1;
-   rset->profiles = rtp_profile_setting;
+   rset->default_profiles = profile_list;
 
    return MP_OK;
 }
@@ -47,15 +43,40 @@ int client_config_rtp(void *conf, control_setting_t *setting)
 {
    rtp_setting_t *rset = (rtp_setting_t*)setting;
 
-   rset->cname = RECV_CNAME;
-   rset->cnlen = strlen(RECV_CNAME)+1;
+   rset->default_rtp_portno = 4004;
+   rset->default_rtcp_portno = 4005;
 
-   rset->ipaddr = "127.0.0.1";
-   rset->default_rtp_portno = 4000;
-   rset->default_rtcp_portno = 4001;
-
-   rset->nprofile = 1;
-   rset->profiles = rtp_profile_setting;
+   rset->default_profiles = profile_list;
 
    return MP_OK;
+}
+
+ogmp_setting_t serv_setting = 
+{
+	"IN",		/* nettype */
+	"IP4",		/* addrtype */
+	3004,		/* default rtp portno */
+	3005,		/* default rtcp portno */
+	1, 
+	{"audio/speex", 8000, 1}
+};
+
+ogmp_setting_t clie_setting = 
+{
+	"IN",		/* nettype */
+	"IP4",		/* addrtype */
+	4004,		/* default rtp portno */
+	4005,		/* default rtcp portno */
+	1, 
+	{"audio/speex", 8000, 1}
+};
+
+ogmp_setting_t* server_setting(media_control_t *control)
+{
+	return &serv_setting;
+}
+
+ogmp_setting_t* client_setting(media_control_t *control)
+{
+	return &clie_setting;
 }

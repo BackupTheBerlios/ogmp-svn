@@ -26,6 +26,7 @@ struct xrtp_media_s
    xrtp_session_t *session;
 
    uint clockrate;
+   uint coding_parameter;
    uint sampling_instance;
      
    //char* (*mime)(xrtp_media_t * media);
@@ -34,12 +35,15 @@ struct xrtp_media_s
    int (*done)(xrtp_media_t *media);
 
    int (*set_parameter)(xrtp_media_t *media, char *key, void *param);
-   void* (*parameter)(xrtp_media_t *media, char *key);
+   int (*parameter)(xrtp_media_t *media, char *key, void *param);
+
+   void* (*info)(xrtp_media_t *media, void *rtpcap);
+   int (*sdp)(xrtp_media_t *media, void *sdp_info);
 
    int (*set_callback)(xrtp_media_t *media, int type, int(*cb)(), void *user);
      
-   int (*set_rate)(xrtp_media_t *media, int rate);
-   int (*rate)(xrtp_media_t *media);
+   int (*set_coding)(xrtp_media_t *media, int clockrate, int param);
+   int (*coding)(xrtp_media_t *media, int *clockrate, int *param);
      
    uint32 (*sign)(xrtp_media_t * media);
 

@@ -62,3 +62,4 @@ struct speex_decoder_s
 };
 
 media_frame_t* spxc_decode(speex_info_t* spxinfo, ogg_packet* packet, media_pipe_t* output);
+media_frame_t* spxc_encode(speex_info_t* spxinfo, media_frame_t* packet, media_pipe_t* input);

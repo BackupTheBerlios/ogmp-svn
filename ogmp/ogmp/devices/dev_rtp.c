@@ -43,13 +43,12 @@ int rtp_done_setting(control_setting_t *gen){
    return MP_OK;
 }
 
-control_setting_t* rtp_new_setting(media_device_t *dev){
-
+control_setting_t* rtp_new_setting(media_device_t *dev)
+{
    rtp_setting_t * set = xmalloc(sizeof(struct rtp_setting_s));
-   if(!set){
-
+   if(!set)
+   {
       rtp_debug(("rtp_new_setting: No memory"));
-
       return NULL;
    }
 
@@ -181,7 +180,6 @@ int rtp_set_callbacks (xrtp_session_t *ses, rtp_callback_t *cbs, int ncbs)
 
 /**
  * A new rtp session will be created here.
- , rtp_setting_t *rtpset
  */
 xrtp_session_t* rtp_session(dev_rtp_t *rtp,
 							module_catalog_t *cata, media_control_t *ctrl,
@@ -195,33 +193,37 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
    xrtp_session_t *ses = NULL;
    xrtp_media_t *rtp_media;
 
-   rtp_debug(("rtp_session: [%s@%s:%u|%u], mime[%s]\n", cname, ip, rtp_portno, rtcp_portno, profile_mime));
+   rtp_debug(("rtp_session: [%s] on [%s:%u|%u], mime[%s]\n", cname, ip, rtp_portno, rtcp_portno, profile_mime));
 
    /* If the session is exist */
-   ses = xrtp_find_session(cname, cnlen, ip, rtp_portno, rtcp_portno, profile_no, profile_mime);
+   ses = xrtp_find_session(rtp->session_set, cname, cnlen, ip, rtp_portno, rtcp_portno, profile_no, profile_mime);
    if(!ses)
    {
-		ses = session_new(cname, cnlen, ip, rtp_portno, rtcp_portno, cata, ctrl);
+		ses = session_new(rtp->session_set, cname, cnlen, ip, rtp_portno, rtcp_portno, cata, ctrl);
+
 		if(!ses)
 			return NULL;
 
 		session_set_bandwidth(ses, total_bw, rtp_bw);
 
-		/* set xrtp handler */
+		/* set xrtp handler
 		if (session_add_handler(ses, profile_mime) == NULL)
 		{
 			rtp_debug(("vrtp_new: Fail to set vorbis profile !\n"));
+
 			session_done(ses);
 
 			return NULL;
-		}
+		} 
+		*/
 
-		session_new_media(ses, profile_mime, profile_no);
-		rtp_media = session_media(ses);
-
-		session_set_scheduler(ses, xrtp_scheduler());
+		rtp_media = session_new_media(ses, profile_mime, profile_no);
+   
+		session_set_scheduler(ses, xrtp_scheduler(rtp->session_set));
    }
 
+   rtp_debug(("rtp_session: session[%s:%s] created\n", cname, profile_mime));
+   
    return ses;
 }
 
@@ -238,10 +240,13 @@ int rtp_setting (media_device_t *dev, control_setting_t *setting, module_catalog
  */
 int rtp_start (media_device_t * dev, media_control_t *ctrl)
 {
+   dev_rtp_t *rdev = (dev_rtp_t*)dev;
+   
    /* Realised the xrtp lib */
-   int ret = xrtp_init(ctrl->modules(ctrl));
+   rdev->session_set = xrtp_init(ctrl->modules(ctrl));
      
-   if(ret < XRTP_OK) return ret;
+   if(!rdev->session_set) 
+	   return MP_FAIL;
    
    rtp_debug(("rtp.rtp_start: started...\n"));
    
@@ -253,8 +258,6 @@ int rtp_start (media_device_t * dev, media_control_t *ctrl)
  */
 int rtp_stop (media_device_t * dev)
 {
-	xrtp_done();
-	
 	return MP_OK;
 }
 
@@ -282,12 +285,15 @@ int rtp_done (media_device_t *dev)
       rtp_debug(("rtp.rtp_done: NULL dev\n"));
       return MP_OK;
    }
-
+   /*
    rtp_stop(dev);
-
+   */
    if(rtp->frame_maker)
 	   rtp->frame_maker->done(rtp->frame_maker);
 
+   if(rtp->session_set)
+	   xrtp_done(rtp->session_set);
+	
    xfree(rtp);
 
    return MP_OK;

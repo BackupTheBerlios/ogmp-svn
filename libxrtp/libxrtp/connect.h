@@ -15,6 +15,8 @@
  *                                                                         *
  ***************************************************************************/
 
+#define	DEFAULT_PORTNO	0
+
 typedef struct xrtp_port_s xrtp_port_t;
 /*
   typedef struct port_param_s port_param_t;
@@ -71,7 +73,9 @@ int port_io(xrtp_port_t * port);
 
 int port_match_io(xrtp_port_t * port, int io);
   
-int port_match(xrtp_port_t * port, char *ip, uint16 pno);
+int port_match(xrtp_port_t* port, char *ip, uint16 pno);
+
+int port_portno(xrtp_port_t* port);
 
 int port_is_multicast(xrtp_port_t * port);
 

@@ -378,9 +378,10 @@ media_pipe_t * vsend_pipe(media_player_t * p)
    return p->device->pipe (p->device);
 }
 
-int vsend_done(media_player_t *mp) {
-
-   mp->device->done (mp->device);
+int vsend_done(media_player_t *mp)
+{
+   if(mp->device)
+	   mp->device->done (mp->device);
 
    xfree((vorbis_sender_t *)mp);
 
@@ -394,7 +395,7 @@ int vsend_set_options (media_player_t * mp, char *opt, void *value)
    return MP_OK;
 }
 
-capable_descript_t* vsend_capable(media_player_t * mp)
+capable_descript_t* vsend_capable(media_player_t * mp, void* cap_data)
 {
    vorbis_sender_t *vs = (vorbis_sender_t *)mp;
 
@@ -411,12 +412,12 @@ int vsend_match_capable(media_player_t * mp, capable_descript_t *cap)
 
 /**************************************************************/
 
-int vsend_done_device ( void *gen ) {
-
+int vsend_done_device ( void *gen )
+{
    media_device_t* dev = (media_device_t*)gen;
 
-
-   dev->done(dev);
+   if(dev)
+	   dev->done(dev);
 
    return MP_OK;
 }
@@ -518,9 +519,9 @@ int vsend_set_device (media_player_t *mp, media_control_t *cont, module_catalog_
    return MP_OK;
 }
 
-int vsend_add_destinate(media_transmit_t *send, char *cname, int cnlen, char *ipaddr, uint16 rtp_pno, uint16 rtcp_pno)
+int vsend_add_destinate(media_transmit_t *send, char *cname, int cnlen, char *ipaddr, uint16 rtp_pno, uint16 rtcp_pno, rtpcap_descript_t *rtpcap)
 {
-	return session_add_cname(((vorbis_sender_t*)send)->rtp_session, cname, cnlen, ipaddr, rtp_pno, rtcp_pno, NULL);
+	return session_add_cname(((vorbis_sender_t*)send)->rtp_session, cname, cnlen, ipaddr, rtp_pno, rtcp_pno, rtpcap, NULL);
 }
 
 int vsend_delete_destinate(media_transmit_t *send, char *cname, int cnlen)

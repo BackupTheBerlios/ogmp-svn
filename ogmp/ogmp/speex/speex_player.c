@@ -78,8 +78,8 @@ int spxp_match_type (media_player_t * mp, char *mime, char *fourcc)
     /* FIXME: due to no strncasecmp on win32 mime is case sensitive */
 	if (mime && strncmp(mime, "audio/speex", 11) == 0)
 	{
-      spxp_log(("vorbis_match_type: mime = 'audio/speex'\n"));
-      return 1;
+		spxp_log(("vorbis_match_type: mime = 'audio/speex'\n"));
+		return 1;
 	}
    
 	return 0;
@@ -146,7 +146,7 @@ int spxp_open_stream (media_player_t *mp, media_info_t *media_info)
    
    if (!mp->device)
    {
-      spxp_log (("vorbis_open_stream: No device to play vorbis audio\n"));
+      spxp_log (("spxp_open_stream: No device to play vorbis audio\n"));
       return MP_FAIL;
    }
    
@@ -158,11 +158,13 @@ int spxp_open_stream (media_player_t *mp, media_info_t *media_info)
    ai.info.sample_bits = SPEEX_SAMPLE_BITS;
    ai.channels = spxinfo->audioinfo.channels;
    
+   spxp_log (("spxp_open_stream: rate[%d]; channels[%d]\n", ai.info.sample_rate, ai.channels));
+
    ret = mp->device->set_media_info(mp->device, (media_info_t*)&ai);
    
    if (ret < MP_OK)
    {
-      spxp_log (("vorbis_open_stream: vorbis stream fail to open\n"));
+      spxp_log (("spxp_open_stream: speex stream fail to open\n"));
       return ret;
    }
 
@@ -225,6 +227,16 @@ int spxp_receive_next (media_player_t *mp, void *spx_packet, int64 samplestamp, 
 
    output = mp->device->pipe(mp->device);
 
+   /**
+    * packetno from 0,1 is head, then increase by 1 to last packet
+	* granulepos[-1] in same page, granulepos[page granulepos] at last page packet.
+	*
+   spxp_log(("spxp_receive_next: packetno[%llu],", ((ogg_packet*)spx_packet)->packetno));
+   spxp_log(("[%dB],", ((ogg_packet*)spx_packet)->bytes));
+   spxp_log(("granule[%lld],", ((ogg_packet*)spx_packet)->granulepos));
+   spxp_log(("samplestamp[%lld]\n", samplestamp));
+    */
+
    /* decode and submit */
    auf = spxc_decode(dec->speex_info, (ogg_packet*)spx_packet, output);
    if(!auf)
@@ -252,9 +264,13 @@ int spxp_receive_next (media_player_t *mp, void *spx_packet, int64 samplestamp, 
    else
 	   auf->eots = 0;
    
-   xthr_lock(dec->pending_lock);
-   xlist_addto_last(dec->pending_queue, auf);
-   xthr_unlock(dec->pending_lock);
+   {
+	   xthr_lock(dec->pending_lock);
+
+	   xlist_addto_last(dec->pending_queue, auf);
+
+	   xthr_unlock(dec->pending_lock);
+   }
    
    xthr_cond_signal(dec->packet_pending);
 
@@ -275,7 +291,8 @@ const char* spxp_play_type(media_player_t * mp)
 
 media_pipe_t * spxp_pipe(media_player_t * p)
 {
-   if (!p->device) return NULL;
+   if (!p->device)
+	   return NULL;
 
    return p->device->pipe(p->device);
 }
@@ -388,8 +405,8 @@ module_interface_t * media_new_player()
 /**
  * Loadin Infomation Block
  */
-extern DECLSPEC module_loadin_t mediaformat = {
-
+extern DECLSPEC module_loadin_t mediaformat =
+{
    "playback",   /* Label */
 
    000001,         /* Plugin version */
