@@ -1,0 +1,68 @@
+# Make PortAudio for Linux
+# Updated 2001/08/25 Bill Eldridge bill@rfa.org
+# Updated 2001/10/16, philburk@softsynth.com, s/unix_oss/unix_oss/
+# Updated 2002/04/30 Bill Eldridge bill@rfa.org
+#     Made the libinstall and tests compile a bit cleaner
+
+# A pretty bare makefile, that figures out all the test files
+# and compiles them against the library in the pa_unix_oss directory.
+
+# Do "make all" and then when happy, "make libinstall"
+# (if not happy, "make clean")
+
+# The ldconfig stuff in libinstall is the wrong way to do it - 
+# someone tell me the right way, please
+
+# The dir which the librtime install to
+
+TOPDIR = /home/hling/timedia-project
+
+LIBINST = $(TOPDIR)/lib
+INCINST = $(TOPDIR)/include/timedia
+
+CC = gcc
+
+CFLAGS = -fPIC
+
+LIBFILES:= libtmdbase/libtmdbase.so
+INCFILES:= libtmdbase/list.h libtmdbase/buffer.h libtmdbase/md5.h libtmdbase/os.h \
+	   libtmdbase/spinqueue.h libtmdbase/xmap.h libtmdbase/xstring.h	\
+	   libtmdbase/loader.h libtmdbase/catalog.h libtmdbase/config.h
+
+all: sharedlib test
+
+.c.o:
+	-gcc $(CFLAGS) -c $< -o $*.o
+
+.o:
+	-gcc $*.o -o $*
+
+sharedlib:	libtmdbase/*.c
+	$(CC) $(CFLAGS) -c libtmdbase/list.c -o libtmdbase/list.o
+	$(CC) $(CFLAGS) -c libtmdbase/buffer.c -o libtmdbase/buffer.o
+	$(CC) $(CFLAGS) -c libtmdbase/md5.c -o libtmdbase/md5.o
+	$(CC) $(CFLAGS) -c libtmdbase/spinqueue.c -o libtmdbase/spinqueue.o
+	$(CC) $(CFLAGS) -c libtmdbase/xmap.c -o libtmdbase/xmap.o
+	$(CC) $(CFLAGS) -c libtmdbase/xstring.c -o libtmdbase/xstring.o
+	$(CC) $(CFLAGS) -c libtmdbase/loader.c -o libtmdbase/loader.o
+	$(CC) $(CFLAGS) -c libtmdbase/catalog.c -o libtmdbase/catalog.o
+	$(CC) $(CFLAGS) -c libtmdbase/config.c -o libtmdbase/config.o
+	$(CC) -shared libtmdbase/list.o libtmdbase/buffer.o libtmdbase/md5.o  \
+		libtmdbase/spinqueue.o libtmdbase/xmap.o libtmdbase/xstring.o \
+		libtmdbase/loader.o libtmdbase/catalog.o libtmdbase/config.o  \
+		-ldl -o  libtmdbase/libtmdbase.so
+
+install:	libtmdbase/libtmdbase.so
+	@cp -f $(INCFILES) $(INCINST)
+	@cp -f $(LIBFILES) $(LIBINST)
+
+test:
+	$(CC) -I. -c libtmdbase/t_list.c -o libtmdbase/t_list.o
+	$(CC) libtmdbase/t_list.o -L./libtmdbase -ltmdbase -o libtmdbase/t_list
+
+clean:
+	-@rm -f libtmdbase/*.o
+	-@rm -f libtmdbase/*.so
+	-@rm -f libtmdbase/t_list
+
+
