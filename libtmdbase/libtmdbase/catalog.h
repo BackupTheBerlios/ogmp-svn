@@ -56,7 +56,7 @@ typedef struct{
 
    module_loadin_t  * loadin;
    
-   module_interface_t	* interface;
+   module_interface_t	* iface;
   
 } module_info_t;
 

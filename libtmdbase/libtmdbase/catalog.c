@@ -181,7 +181,7 @@ int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* pat
                   minfo->filename = xstr_clone(entname);
                   minfo->lib = lib;
                   minfo->loadin = loadin;
-                  minfo->interface = NULL;
+                  minfo->iface = NULL;
 
                   catalog_log(("catalog_scan_modules: Found module (%s)\n", loadin->label));
 
@@ -263,7 +263,7 @@ module_interface_t * catalog_new_module (module_catalog_t *cata, char *label){
          return NULL;
       }
       
-      minfo->interface = mod;
+      minfo->iface = mod;
       
       return mod;
      
@@ -289,12 +289,12 @@ int catalog_create_modules(module_catalog_t *cata, char *label, xrtp_list_t *lis
 
       if (!strcmp(label, minfo->loadin->label)) {
 
-         if (minfo->interface == NULL)
-            minfo->interface = minfo->loadin->init();
+         if (minfo->iface == NULL)
+            minfo->iface = minfo->loadin->init();
 
-         if (minfo->interface) {
+         if (minfo->iface) {
            
-            xrtp_list_add_first(list, minfo->interface);
+            xrtp_list_add_first(list, minfo->iface);
          }
       }
 
