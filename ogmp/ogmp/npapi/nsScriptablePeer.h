@@ -48,6 +48,10 @@
 #include "nsIScriptableOgmpPlugin.h"
 #include "nsIClassInfo.h"
 
+#define OGMP_CONTRACTID "@mydomain.com/XPCOMSample/MyComponent;1"
+#define OGMP_CLASSNAME "A Simple XPCOM Sample"
+#define OGMP_CID  { 0x597a60b0, 0x5272, 0x4284, { 0x90, 0xf6, 0xe9, 0x6c, 0x24, 0x2d, 0x74, 0x6 }
+
 class nsPluginInstance;
 
 // We must implement nsIClassInfo because it signals the
@@ -104,6 +108,7 @@ class nsControlsScriptablePeer:public nsIScriptableWMPPlugin,
   public:
     // native methods callable from JavaScript
     NS_DECL_NSISCRIPTABLEWMPPLUGIN
+
 	 void SetInstance(nsPluginInstance * plugin);
 	 
   protected:
@@ -128,6 +133,7 @@ class nsScriptablePeer:public nsIScriptableOgmpPlugin,
   public:
     // native methods callable from JavaScript
     NS_DECL_NSISCRIPTABLEOGMPPLUGIN
+
 	 void SetInstance(nsPluginInstance * plugin);
     void InitControls(nsControlsScriptablePeer *aControls);
 

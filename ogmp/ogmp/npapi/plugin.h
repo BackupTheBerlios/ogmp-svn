@@ -66,13 +66,15 @@
 #include <signal.h>
 #include <string.h>
 
-extern "C" {
+extern "C"
+{
 #include "ogmp.h"
 }
 
 class nsPluginInstance:public nsPluginInstanceBase
 {
   public:
+  
     nsPluginInstance(NPP aInstance);
     virtual ~ nsPluginInstance();
 
@@ -90,6 +92,7 @@ class nsPluginInstance:public nsPluginInstanceBase
     void getVersion(char* *aVersion);
     
   private:
+  
     user_t *user;
     sipua_t *sipua;
     sipua_uas_t *uas;
@@ -121,11 +124,11 @@ class nsPluginInstance:public nsPluginInstanceBase
     void answer(PRInt32 lineno);
     void bye(PRInt32 lineno);
     
-	static int callback_on_register (void *user_on_register, int result, char *reason);
+    static int callback_on_register (void *user_on_register, int result, char *reason);
     static int callback_on_newcall (void *user_on_newcall, int lineno, char *caller, char *subject, char *info);
     static int callback_on_conversation_start (void *user_on_conversation_start, int lineno);
     static int callback_on_conversation_end (void *user_on_conversation_end, int lineno);
-	static int callback_on_bye (void *user_on_bye, int lineno, char *caller, char *reason);
+    static int callback_on_bye (void *user_on_bye, int lineno, char *caller, char *reason);
 
     // we need to provide implementation of this method as it will be
     // used by Mozilla to retrive the scriptable peer
@@ -136,20 +139,12 @@ class nsPluginInstance:public nsPluginInstanceBase
     nsControlsScriptablePeer *getControlsScriptablePeer();
     
   public:
-    NPP mInstance;
+  
     NPBool mInitialized;
+    
+    NPP mInstance;
     nsScriptablePeer *mScriptablePeer;
     nsControlsScriptablePeer *mControlsScriptablePeer;
-    
-    /*
-    char mString[128];
-    
-    // put member data here
-
-    // JavaScript State
-    int paused;
-    int js_state;
-    */
 };
 
-#endif				// __PLUGIN_H__
+#endif  // __PLUGIN_H__

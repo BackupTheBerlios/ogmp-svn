@@ -100,28 +100,39 @@
   </pre>
   <hr/>
 
-  <!-- embed the plugin into this page //-->
-  <embed name="sipua" type="application/x-vnd-realmtel-sipua" width=1 height=1 hidden="true" />
+  <!-- embed the plugin into this page
+  <embed name="sipua" type="application/x-realmtel-sipua" width=1 height=1 hidden="true" />
+  //-->
 
   <center>
 
     <script language="javascript">
       <!--
-      if (!document.sipua)
+
+      var sipua;
+	  
+	  mimetype = navigator.mimeTypes['application/x-realmtel-sipua'];
+	  if(mimetype)
+	  {
+	     sipua = mimetype.enabledPlugin;
+	  }
+
+      if (!sipua)
       {
          document.write('<p>No VOIP Client Found</p>');
       }
       else
       {
-	 //Get Plugin Attribute(UserAgent)
-         document.write('<p>UserAgent: ', document.sipua.useragent, '</p>');
+	     //Get Plugin Attribute(UserAgent)
+         document.write('<p>UserAgent: ', sipua.useragent, '</p>');
 
-	 //Get Plugin Attribute(Licence)
-	 document.write('<p>Licence: ', document.sipua.licence, '</p>');
+	     //Get Plugin Attribute(Licence)
+	     document.write('<p>Licence: ', sipua.licence, '</p>');
 
-	 //Get Plugin Attribute(Version)
-	 document.write('<p>Version: ', document.sipua.version, '</p>');
+	     //Get Plugin Attribute(Version)
+	     document.write('<p>Version: ', sipua.version, '</p>');
       }
+
       //-->
     </script>
 

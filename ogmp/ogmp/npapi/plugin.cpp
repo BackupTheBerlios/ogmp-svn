@@ -164,9 +164,10 @@ nsPluginInstance::~nsPluginInstance()
 
 NPBool nsPluginInstance::init(NPWindow * aWindow)
 {
+    /*
     if (aWindow == NULL)
         return FALSE;
-
+    */
     mInitialized = TRUE;
     
     return TRUE;
@@ -249,6 +250,8 @@ void nsPluginInstance::getUseragent(char * *aUseragent)
 	// the memory service provided by Mozilla
 	nsIMemory * nsMemoryService = NULL;
 
+    clie_log (("nsPluginInstance::getUseragent: Hi\n"));
+
 	if (gServiceManager)
     {
 		// get service using its contract id and use it to allocate the memory
@@ -263,6 +266,8 @@ void nsPluginInstance::getUseragent(char * *aUseragent)
 
 	// release service
 	NS_IF_RELEASE(nsMemoryService);
+
+    clie_log (("nsPluginInstance::getUseragent: %s\n", *aUseragent));
 }
 
 void nsPluginInstance::getLicence(char * *aLicence)
@@ -330,7 +335,7 @@ void nsPluginInstance::get_ip()
 
     sprintf(javascript, "javascript:get_ip_return('%s');", netaddr);
     
-	NPN_GetURL(mInstance, javascript, NULL);
+	NPN_GetURL(mInstance, javascript, "mainframe");
 }
 
 int nsPluginInstance::callback_on_register(void *user_on_register, int result, char *reason)
@@ -351,7 +356,7 @@ int nsPluginInstance::callback_on_register(void *user_on_register, int result, c
     if(result == SIPUA_STATUS_UNREG_FAIL)
         sprintf(javascript, "javascript:regist_return('unreg_fail', '%s');", reason);
 
-    NPN_GetURL(plugin->mInstance, javascript, "_top");
+    NPN_GetURL(plugin->mInstance, javascript, "mainframe");
     
     return NPERR_NO_ERROR;
 }
@@ -377,7 +382,7 @@ int nsPluginInstance::callback_on_conversation_start(void *user_on_newcall, int 
 
     sprintf(javascript, "javascript:regist_return(%d);", lineno);
 
-	NPN_GetURL(plugin->mInstance, javascript, NULL);
+	NPN_GetURL(plugin->mInstance, javascript, "mainframe");
 
     return NPERR_NO_ERROR;
 }
@@ -390,7 +395,7 @@ int nsPluginInstance::callback_on_conversation_end(void *user_on_newcall, int li
 
     sprintf(javascript, "javascript:regist_return(%d);", lineno);
 
-	NPN_GetURL(plugin->mInstance, javascript, NULL);
+	NPN_GetURL(plugin->mInstance, javascript, "mainframe");
 
     return NPERR_NO_ERROR;
 }
@@ -403,7 +408,7 @@ int nsPluginInstance::callback_on_bye(void *user_on_newcall, int lineno, char *c
 
     sprintf(javascript, "javascript:regist_return(%d, %s, %s);", lineno, caller, reason);
 
-	NPN_GetURL(plugin->mInstance, javascript, NULL);
+	NPN_GetURL(plugin->mInstance, javascript, "mainframe");
 
     return NPERR_NO_ERROR;
 }
@@ -453,6 +458,8 @@ NPError nsPluginInstance::sipua_init()
     
 	client_start(this->sipua);
 
+    clie_log(("plugin.sipua_init: ok!\n"));
+    
     return NPERR_NO_ERROR;
 }
 
@@ -470,7 +477,7 @@ void nsPluginInstance::load_user(const char *uid, PRInt32 uidsz)
     /* locate user when plugin initialized */
     this->sipua->locate_user(this->sipua, this->user);
     
-    NPN_GetURL(mInstance, "javascript:load_user_return('loaduser_ok');", NULL);
+    NPN_GetURL(mInstance, "javascript:load_user_return('loaduser_ok');", "mainframe");
 }
 
 void nsPluginInstance::regist(const char *fullname, PRInt32 fnsz, const char *home_router, const char *user_at_domain, PRInt32 seconds)
@@ -480,6 +487,8 @@ void nsPluginInstance::regist(const char *fullname, PRInt32 fnsz, const char *ho
 
     user_profile_t* prof;
 
+    clie_log (("nsPluginInstance::regist: 1\n"));
+    
     if(!this->user)
     {
         clie_log (("nsPluginInstance::regist: Must load user first!\n"));
@@ -492,14 +501,16 @@ void nsPluginInstance::regist(const char *fullname, PRInt32 fnsz, const char *ho
     prof = user_add_profile(this->user, (char*)fullname, fnsz, NULL/*char* book_loc*/, (char*)sip_router, (char*)sip_user, seconds);
     if(!prof)
     {
-        NPN_GetURL(mInstance, "javascript:regist_return('reg_fail');", NULL);
+        NPN_GetURL(mInstance, "javascript:regist_return('reg_fail');", "mainframe");
 
         return;
     }
 
+    clie_log (("nsPluginInstance::regist: 2\n"));
+
     this->sipua->regist(this->sipua, prof, this->user->userloc);
     
-    NPN_GetURL(mInstance, "javascript:regist_return('reg_ing');", NULL);
+    NPN_GetURL(mInstance, "javascript:regist_return('reg_ing');", "mainframe");
     
     return;
 }
@@ -577,15 +588,23 @@ nsScriptablePeer *nsPluginInstance::getScriptablePeer()
         if (!mScriptablePeer)
             return NULL;
 
+        /* Initialize sipua when it is created */
+        if(this->sipua_init() != NPERR_NO_ERROR)
+        {
+            delete(nsScriptablePeer *) mScriptablePeer;
+            return NULL;
+        }
+
         NS_ADDREF(mScriptablePeer);
 
-        /* Initialize sipua when it is created */
-        this->sipua_init();
+        clie_log(("nsPluginInstance::getScriptablePeer: init ok!\n"));
     }
 
     // add reference for the caller requesting the object
     NS_ADDREF(mScriptablePeer);
    
+    clie_log(("nsPluginInstance::getScriptablePeer: ref ok!\n"));
+    
     return mScriptablePeer;
 }
 
