@@ -139,6 +139,22 @@ NS_IMETHODIMP nsScriptablePeer::GetVersion(char* *aVersion)
 	return NS_OK;
 }
 
+NS_IMETHODIMP nsScriptablePeer::Func_one()
+{
+    printf("JS Func_one issued\n");
+    mPlugin->func_one();
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsScriptablePeer::Func_two()
+{
+    printf("JS Func_two issued\n");
+    mPlugin->func_two();
+
+    return NS_OK;
+}
+
 #if 0
 NS_IMETHODIMP nsScriptablePeer::Play(void)
 {

@@ -77,6 +77,9 @@ class nsPluginInstance:public nsPluginInstanceBase {
 
     // JS Methods
   	 void getVersion(char* *aVersion);
+	 
+  	 void func_one();
+  	 void func_two();
 
 	 /*
     void Play();

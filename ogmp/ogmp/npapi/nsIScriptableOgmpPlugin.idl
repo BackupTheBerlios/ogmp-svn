@@ -10,7 +10,9 @@ interface nsIScriptableWMPPlugin : nsISupports
 [scriptable, uuid(f728830f-1dd1-4444-6666-fb9f414f2465)]
 interface nsIScriptableOgmpPlugin : nsISupports
 {
-	readonly attribute string version;
+	void func_one();
+	void func_two();
+
 	/*
 	void Play();
 	void Pause();
@@ -35,5 +37,23 @@ interface nsIScriptableOgmpPlugin : nsISupports
 	
 	readonly attribute long playState;
 	*/
+	readonly attribute string version;
+
 	readonly attribute nsIScriptableWMPPlugin controls;
+};
+
+/***
+ * http://www.mozilla.org/projects/plugins/bi-directional-plugin-scripting.html
+ */
+[scriptable, uuid(f728830e-1dd1-4444-6666-fb9f414f2465)]
+interface acmeJSObject : nsISupports
+{
+	string getProperty(in string name);
+	void setProperty(in string name, in string value);
+};
+
+[scriptable, uuid(f728830e-1dd1-4444-6666-fb9f414f2465)]
+interface acmeScriptablePlugin : nsISupports
+{
+	attribute acmeJSObject document;
 };

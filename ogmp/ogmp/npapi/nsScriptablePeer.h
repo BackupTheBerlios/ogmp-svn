@@ -87,7 +87,7 @@ class nsClassInfoMixin:public nsIClassInfo {
 };
  
 class nsControlsScriptablePeer:public nsIScriptableWMPPlugin,
-    public nsClassInfoMixin {
+                               public nsClassInfoMixin {
   public:
     nsControlsScriptablePeer(nsPluginInstance * plugin);
     virtual ~ nsControlsScriptablePeer();
@@ -104,13 +104,14 @@ class nsControlsScriptablePeer:public nsIScriptableWMPPlugin,
   public:
     // native methods callable from JavaScript
     NS_DECL_NSISCRIPTABLEWMPPLUGIN
-	void SetInstance(nsPluginInstance * plugin);
+	 void SetInstance(nsPluginInstance * plugin);
+	 
   protected:
      nsPluginInstance * mPlugin;
 };
 
 class nsScriptablePeer:public nsIScriptableOgmpPlugin,
-    public nsClassInfoMixin {
+                       public nsClassInfoMixin {
   public:
     nsScriptablePeer(nsPluginInstance * plugin);
     virtual ~ nsScriptablePeer();
@@ -127,8 +128,9 @@ class nsScriptablePeer:public nsIScriptableOgmpPlugin,
   public:
     // native methods callable from JavaScript
     NS_DECL_NSISCRIPTABLEOGMPPLUGIN
-	void SetInstance(nsPluginInstance * plugin);
-        void InitControls(nsControlsScriptablePeer *aControls);
+	 void SetInstance(nsPluginInstance * plugin);
+    void InitControls(nsControlsScriptablePeer *aControls);
+
   protected:
      nsPluginInstance * mPlugin;
      nsControlsScriptablePeer *mControls;

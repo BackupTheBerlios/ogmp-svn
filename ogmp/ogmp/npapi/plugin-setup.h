@@ -212,3 +212,4 @@ void SetupPlayer(nsPluginInstance * instance, XEvent * event);
 void *playPlaylist(void *td);
 
 #endif
+

@@ -38,10 +38,10 @@ int enable_smil;
 
 #endif
 
-#define MIME_TYPES_HANDLED  "application/simple-plugin"
-#define PLUGIN_NAME         "Simple Plugin Example for Mozilla"
+#define MIME_TYPES_HANDLED  "application/x-vnd-callnet-sipua"
+#define PLUGIN_NAME         "Callnet SIP UA for Mozilla"
 #define MIME_TYPES_DESCRIPTION  MIME_TYPES_HANDLED"::"PLUGIN_NAME
-#define PLUGIN_DESCRIPTION  PLUGIN_NAME " (Plug-ins SDK sample)"
+#define PLUGIN_DESCRIPTION  PLUGIN_NAME " (Callnet Client)"
 
 char *GetMIMEDescription()
 {

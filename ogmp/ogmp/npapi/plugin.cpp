@@ -217,6 +217,18 @@ void nsPluginInstance::getVersion(char* *aVersion)
 	NS_IF_RELEASE(nsMemoryService);
 }
 
+void nsPluginInstance::func_one()
+{
+	/* display on status bar */
+	NPN_Status(mInstance, "func_one invoked");
+}
+
+void nsPluginInstance::func_two()
+{
+	/* return to javascript */
+	NPN_GetURL(mInstance, "javascript:func_two_return('sipua: func_two invoked');", NULL);
+}
+
 #if 0
 void nsPluginInstance::Play()
 {

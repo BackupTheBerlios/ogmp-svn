@@ -20,8 +20,7 @@ CFLAGS= -Wall -g -O2  -I/usr/X11R6/include  -g -O2  -DMOZ_X11\
 			 -Iinclude -fPIC -DMOZILLA_STRICT_API
 
 LDFLAGS=    -L/usr/X11R6/lib  -lX11 -lSM -lICE -lXext -lX11 -lXpm -lXt \
-				-L$(GECKO_SDK)/lib -lxpcomglue \
-				-L$(GECKO_SDK)/bin -lnspr4 -lplds4
+				-L$(GECKO_SDK)/lib -lxpcomglue -lnspr4 -lplds4
 
 PLUGININFO= nsIScriptableOgmpPlugin.h \
 				nsIScriptableOgmpPlugin.xpt
@@ -31,7 +30,10 @@ PLUGINIDL= nsIScriptableOgmpPlugin.idl
 LIBOBJS=
 
 OBJ= plugin.o nsScriptablePeer.o plugin-setup.o npp_gate.o \
-		np_entry.o npn_gate.o strlcpy.o strlcat.o $(LIBOBJS)
+		np_entry.o npn_gate.o $(LIBOBJS)
+
+#OBJ= plugin.o nsScriptablePeer.o plugin-setup.o npp_gate.o \
+#		np_entry.o npn_gate.o strlcpy.o strlcat.o $(LIBOBJS)
 
 INSTALL = /usr/bin/install -c
 SHAREDTARGET=ogmpplugin.so
@@ -70,15 +72,15 @@ plugin-setup.o: plugin-setup.cpp $(SCRIPTABLEHEADERS)
 
 nsScriptablePeer.o: nsScriptablePeer.cpp $(SCRIPTABLEHEADERS)
 	$(CXX) -c $(CFLAGS) nsScriptablePeer.cpp
-	
-memmem.o: extras/memmem.c $(HEADERS)
-	$(CXX) -c $(CFLAGS) extras/memmem.c
 
-strlcat.o: extras/strlcat.c $(HEADERS)
-	$(CXX) -c $(CFLAGS) extras/strlcat.c
+#memmem.o: extras/memmem.c $(HEADERS)
+#	$(CXX) -c $(CFLAGS) extras/memmem.c
 
-strlcpy.o: extras/strlcpy.c $(HEADERS)
-	$(CXX) -c $(CFLAGS) extras/strlcpy.c
+#strlcat.o: extras/strlcat.c $(HEADERS)
+#	$(CXX) -c $(CFLAGS) extras/strlcat.c
+
+#strlcpy.o: extras/strlcpy.c $(HEADERS)
+#	$(CXX) -c $(CFLAGS) extras/strlcpy.c
 
 clean:
 	$(RM) $(OBJ) $(SHAREDTARGET) $(PLUGININFO)

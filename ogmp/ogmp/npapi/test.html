@@ -1,6 +1,25 @@
 <HTML>
 <HEAD>
 <TITLE>Simple Plug-in Test</TITLE>
+<script type="text/javascript">
+
+  function func_one(sipua)
+  {
+	 document.formname.status.value="func_one pushed";
+  }
+
+  function func_two(sipua)
+  {
+	 document.sipua.func_two();
+  }
+
+  function func_two_return(result)
+  {
+	 document.formname.status.value=result;
+  }
+
+</script>
+
 </HEAD>
 <BODY>
 
@@ -19,20 +38,30 @@ in the alert box.
 
 <center>
 
-<embed type="application/simple-plugin" width=1 height=1 hidden="true"><br>
+<embed name="sipua" type="application/x-vnd-callnet-sipua" width=1 height=1 hidden="true" />
 
-<script>
-var embed = document.embeds[0];
+<br>
 
-function ShowVersion()
-{
-  alert(embed.version);
-}
+<script language="javascript">
+
+  var sipua = document.sipua;
+  if (sipua)
+  {
+    document.write(sipua.version);
+  }
+  else
+  {
+    alert("No plugin");
+  }
+
 </script>
 
 <br>
+
 <form name="formname">
-<input type=button value="Show Version" onclick='ShowVersion()'>
+<input type="text" name="status" value="idle">
+<input type="button" value="func_one" onclick='func_one(sipua)'>
+<input type="button" value="func_two" onclick='func_two(sipua)'>
 </form>
 
 </center>
