@@ -23,12 +23,11 @@
  
  #include "stdio.h"
 
- #ifdef PACKET_LOG
-   const int packet_log = 1;
- #else
-   const int packet_log = 0;
- #endif
- #define packet_log(fmtargs)  do{if(packet_log) printf fmtargs;}while(0)
+#ifdef PACKET_LOG
+ #define packet_log(fmtargs)  do{printf fmtargs;}while(0)
+#else
+ #define packet_log(fmtargs)
+#endif
 
  /* ------------------- General Packet interface ------------------------ */
 
@@ -149,12 +148,13 @@
     return XRTP_OK;
  }
 
- /**
-  * Release payload data
-  */
- int rtp_packet_done_payload(xrtp_rtp_packet_t * pac, xrtp_rtp_payload_t * pay){
+/**
+ * Release payload data
+ */
+int rtp_packet_done_payload(xrtp_rtp_packet_t * pac, xrtp_rtp_payload_t * pay){
 
     if(pac->direct == RTP_SEND){
+
         packet_log(("rtp_packet_done_payload: free payload as its seperated from packet in sending\n"));
         free(pac->$payload.data);
     }
@@ -164,7 +164,7 @@
     packet_log(("rtp_packet_done_payload: payload data freed\n"));
 
     return XRTP_OK;
- }
+}
 
  /**
   * See packet.h
@@ -419,18 +419,30 @@
 
  /**
   * Set Payload in the packet.
-  */
  int rtp_packet_set_payload(xrtp_rtp_packet_t * pac, int len, char * pay){
+  */
+ int rtp_packet_set_payload(xrtp_rtp_packet_t *rtp, buffer_t *payload_buf){
 
-    pac->$payload.len = len;
+    rtp->$payload.out_buffer = payload_buf;
 
-    /* Don't need to copy data for performance consider*/
-    pac->$payload.data = pay;
+    if(payload_buf == NULL)
+	{
+		rtp->$payload.data = NULL;
+		rtp->$payload.len = 0;
+		packet_log(("_rtp_packet_set_payload: unset payload\n"));
 
-    pac->packet_bytes += len;
+		return XRTP_OK;
+	}
+	
+	/* Don't need to copy data for performance consider*/
+    rtp->$payload.data = buffer_data(payload_buf);
 
-    packet_log(("_rtp_packet_set_payload: payload %d bytes\n", len));
-    packet_log(("_rtp_packet_set_payload: packet+headext+payload %d bytes\n", pac->packet_bytes));
+	rtp->$payload.len = buffer_datalen(payload_buf);
+
+    rtp->packet_bytes += rtp->$payload.len;
+
+    packet_log(("_rtp_packet_set_payload: payload %d bytes\n", rtp->$payload.len));
+    packet_log(("_rtp_packet_set_payload: packet+headext+payload %d bytes\n", rtp->packet_bytes));
 
     return XRTP_OK;
  }
@@ -2037,7 +2049,7 @@
  /**
   * Pack RTP Packet to byte stream for send, invoken by Profile Handler
   */
- xrtp_buffer_t * rtp_pack(xrtp_rtp_packet_t * rtp){
+ xrtp_buffer_t* rtp_pack(xrtp_rtp_packet_t * rtp){
 
     profile_handler_t * hand;
     xrtp_buffer_t * buf;
@@ -2119,9 +2131,10 @@
     }
 
     /* Pack RTP Payload */
-    buffer_add_data(buf, rtp->$payload.data, rtp->$payload.len);
-
     packet_log(("rtp_pack: Packing RTP Payload\n"));
+
+    buffer_add_data(buf, rtp->$payload.data, rtp->$payload.len);
+	rtp->$payload.out_buffer = NULL; /* no more use */
 
     /* Pad RTP packet */
     if(rtp->$head.padding){

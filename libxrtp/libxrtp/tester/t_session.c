@@ -452,6 +452,7 @@ int cb_media_sent(void * u, xrtp_media_t * media){
 
     med = session_new_media(ses, plugid, profile_no);
     printf("Sending tester: media handler for '%s' created.\n", plugid);
+
     /* Can add more handler for maybe compression, security or whatever handler */
 
     /* Set callbacks of the session
@@ -475,6 +476,7 @@ int cb_media_sent(void * u, xrtp_media_t * media){
        CALLBACK_SESSION_HRT2MT,             hrt2mt,             NULL;
     };
     */
+
     session_set_callback(ses, CALLBACK_SESSION_MEDIA_SENT, cb_media_sent, &sender);
     session_set_callback(ses, CALLBACK_SESSION_MEMBER_UPDATE, cb_member_update, &sender);
     session_set_callback(ses, CALLBACK_SESSION_MEMBER_DELETED, cb_member_deleted, &sender);

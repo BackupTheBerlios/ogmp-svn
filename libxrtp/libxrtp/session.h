@@ -384,10 +384,10 @@ struct xrtp_session_s {
     uint rtcp_avg_size;
 
     packet_pipe_t *rtp_recv_pipe;
-	  packet_pipe_t *rtcp_recv_pipe;
-	  uint32 recv_seq;
+	packet_pipe_t *rtcp_recv_pipe;
+	uint32 recv_seq;
 
-	  xrtp_clock_t * clock;
+	xrtp_clock_t * clock;
 
     uint  bandwidth;
     uint  rtp_bw;     /* RTP bandwidth */
@@ -474,6 +474,7 @@ extern DECLSPEC
 int
 session_set_id(xrtp_session_t * session, int id);
 
+extern DECLSPEC
 int 
 session_id(xrtp_session_t * session);
 
@@ -517,6 +518,10 @@ extern DECLSPEC
 xrtp_media_t * 
 session_new_media(xrtp_session_t * ses, char * id, uint8 payload_type);
 
+extern DECLSPEC
+xrtp_media_t*
+session_media(xrtp_session_t *ses);
+
 /**
  * The middle process b/w import and export, order in addition
  * Can be compress module and crypo module, number of module less than MAX_PIPE_STEP
@@ -544,15 +549,18 @@ packet_pipe_t * session_process(xrtp_session_t * session, int type);
  * Reserved function
  int session_enable_process(xrtp_session_t * session, char * id, int enable); 
  */
-  
-uint32 session_ssrc(xrtp_session_t * session);
+
+uint32 session_ssrc(xrtp_session_t *session);
+
+extern DECLSPEC
+clock_t*
+session_clock(xrtp_session_t *session);
 
 /**
  * Set bandwidth for this session, REMEMBER: multiuser need share the bandwidth!!!
  */
 extern DECLSPEC
 int 
-
 session_set_bandwidth(xrtp_session_t * session, int32 total_bw, int32 rtp_bw);
 
 uint32 session_rtp_bandwidth(xrtp_session_t * session);

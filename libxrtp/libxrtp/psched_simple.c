@@ -22,7 +22,7 @@
 
 #include "internal.h"
 
-//#define PSCHED_SIMPLE_LOG
+#define PSCHED_SIMPLE_LOG
  
 #ifdef PSCHED_SIMPLE_LOG
  #define simple_sched_log(fmtargs)  do{printf fmtargs;}while(0)
@@ -132,6 +132,9 @@ struct ssch_unit_s{
     xthr_lock(ssch->lock);
     ssch->stop = 1;
     xthr_unlock(ssch->lock);
+
+	xthr_cond_signal(ssch->wait_rtp_request);
+	xthr_cond_signal(ssch->wait_rtcp_request);
 
     xthr_wait(ssch->rtp_run, (void*)&ret);
     ssch->rtp_run = NULL;
@@ -357,14 +360,14 @@ struct ssch_unit_s{
  }
  */
  
- int simple_sched_rtp_out(session_sched_t * sched, xrtp_session_t * ses, xrtp_hrtime_t hrt_allow, int sync){
+ int simple_sched_rtp_out(session_sched_t * sched, xrtp_session_t * ses, rtime_t hrt_allow, int sync){
 
     simple_sched_t * ssch = (simple_sched_t *)sched;
     ssch_unit_t * unit = (ssch_unit_t *)session_schedinfo(ses);
     ssch_rtp_request_t * rtp_req = unit->rtp_request;
 
-    xrtp_hrtime_t hrt_now = 0;
-    xrtp_hrtime_t dl = 0;
+    rtime_t hrt_now = 0;
+    rtime_t dl = 0;
 
     if(!unit)
         return XRTP_INVALID;
@@ -462,6 +465,9 @@ int simple_schedule_rtp(void * gen){
          }
       }
 
+      /* check if need to quit */
+      if(ssch->stop) break;
+         
       /* got the lock */
       now = time_nsec_now(ssch->clock);
 
@@ -503,9 +509,6 @@ int simple_schedule_rtp(void * gen){
             
          req = ssch->rtp_queue_head;
       }
-         
-      /* before sleep check if need to quit */
-      if(ssch->stop) break;
          
       xthr_unlock(ssch->lock);
 
@@ -574,6 +577,10 @@ int simple_schedule_rtcp(void * gen){
          xthr_unlock(ssch->lock);
          i_locked_ssch = 0;
       }
+
+      /* see if stop */
+      if(ssch->stop)
+         break;
 
       now = time_msec_now(ssch->clock);
       simple_sched_log(("simple_schedule_rtcp: clock[@%u] is %d csec now\n", (int)(ssch->clock), now));
@@ -720,13 +727,6 @@ int simple_schedule_rtcp(void * gen){
                n_arrived--;
             }
          }
-      }
-
-      /* Before sleep, set signal handler for interrupt */
-      if(ssch->stop){
-
-         xthr_unlock(ssch->rtcp_lock);
-         break;
       }
 
       /* To detect all ports see if any incoming */

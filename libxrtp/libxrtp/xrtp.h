@@ -25,15 +25,25 @@
 #define XRTP_VERSION_PATCH 1
 #define XRTP_VERSION  000001
 
-extern DECLSPEC int xrtp_init();
+extern DECLSPEC 
+int 
+xrtp_init();
 
-extern DECLSPEC int xrtp_done();
+extern DECLSPEC
+int 
+xrtp_done();
 
-extern DECLSPEC module_catalog_t* xrtp_catalog();
+extern DECLSPEC 
+module_catalog_t* 
+xrtp_catalog();
 
-extern DECLSPEC session_sched_t* xrtp_scheduler();
+extern DECLSPEC 
+session_sched_t* 
+xrtp_scheduler();
 
-extern DECLSPEC xrtp_session_t* xrtp_session(char * cname);
+extern DECLSPEC 
+xrtp_session_t* 
+xrtp_session(int id);
 
 #endif
 

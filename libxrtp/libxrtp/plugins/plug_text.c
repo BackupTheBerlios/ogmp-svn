@@ -30,6 +30,8 @@
  #define tm_log(fmtargs)
 #endif
 
+#define MAX_PAYLOAD_BYTES 1280
+
  const char tm_mime[] = "text/rtp-test";
  
  char plugin_desc[] = "The text media module for timing profile";
@@ -58,6 +60,8 @@ module_loadin_t xrtp_handler;
     uint rtcp_size;
 
     uint32 seqno_next_unit;
+
+	buffer_t *payload_buf;
  };
 
  struct media_time_s{
@@ -71,9 +75,8 @@ module_loadin_t xrtp_handler;
 
     tm_handler_t * handler;
 
-    uint32 dolen;
-    media_data_t * data_out;
-
+	//uint32 dolen;
+    //media_data_t * data_out;
  };
  
 /**
@@ -259,12 +262,7 @@ int tm_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
 
     rtp_packet_set_mark(rtp, 0);
     
-    if(!rtp_packet_new_payload(rtp, ((tm_handler_t *)handler)->media->dolen, ((tm_handler_t *)handler)->media->data_out)){
-
-        return XRTP_FAIL;
-    }
-
-    tm_log(("text/rtp-test.tm_rtp_out: new payload %d bytes\n", ((tm_handler_t *)handler)->media->dolen));
+    rtp_packet_set_payload(rtp, ((tm_handler_t *)handler)->payload_buf);
 
     if(!rtp_pack(rtp)){
 
@@ -473,10 +471,12 @@ int tm_media_rate(xrtp_media_t * media){
 
     /* One media unit per rtp packet */
     int is_last_pack = 1;
+	int ret = OS_OK;
+
+	tm_handler_t *th = ((tm_media_t *)media)->handler;
     
     /* Fine, no racing condition!!! */
-    ((tm_media_t *)media)->dolen = len;
-    ((tm_media_t *)media)->data_out = data;
+	buffer_add_data(th->payload_buf, data, len);
     
     /* Determine the deadline of sending by
      *
@@ -489,7 +489,12 @@ int tm_media_rate(xrtp_media_t * media){
 
     /* invoke the Session.rtp_to_send() */
     tm_log(("text/rtp-test.tm_media_go: %d bytes media data need to go\n", len));
-    return session_rtp_to_send(media->session, TEXT_MAX_DELAY, is_last_pack);  /* '0' means the quickness decided by xrtp */
+
+    ret = session_rtp_to_send(media->session, TEXT_MAX_DELAY, is_last_pack);  /* '0' means the quickness decided by xrtp */
+ 
+	buffer_clear(th->payload_buf, BUFFER_QUICKCLEAR);
+
+	return ret;
  }
 
  xrtp_media_t * tm_media(profile_handler_t *handler){
@@ -565,6 +570,8 @@ int tm_media_rate(xrtp_media_t * media){
     memset(_h, 0, sizeof(tm_handler_t));
     
     _h->session = ses;
+    _h->payload_buf = buffer_new(MAX_PAYLOAD_BYTES, NET_ORDER);
+    tm_log(("text.vrtp_new_handler: FIXME - error probe\n"));
 
     h = (profile_handler_t *)_h;
 
@@ -592,7 +599,9 @@ int tm_media_rate(xrtp_media_t * media){
 
  int tm_done_handler(profile_handler_t * h){
    
-    free(h);
+    buffer_done(((tm_handler_t*)h)->payload_buf);
+
+	free(h);
     
     --num_handler;
     

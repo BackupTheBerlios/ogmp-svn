@@ -24,15 +24,14 @@
  #include <string.h>
  
  #include "stdio.h"
-
- #define PIPELINE_LOG
- 
- #ifdef PIPELINE_LOG
-   const int pipe_log = 1;
- #else
-   const int pipe_log = 0;
- #endif
- #define pipe_log(fmtargs)  do{if(pipe_log) printf fmtargs;}while(0)
+/*
+#define PIPELINE_LOG
+*/
+#ifdef PIPELINE_LOG
+ #define pipe_log(fmtargs)  do{printf fmtargs;}while(0)
+#else
+ #define pipe_log(fmtargs)
+#endif
 
  #define TIME_NEWER(x,y) (((x) - (y)) >> (HRTIME_BITS - 1))
 

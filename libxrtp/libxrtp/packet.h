@@ -69,16 +69,19 @@
   */
  struct xrtp_rtp_payload_s {
 
-    int   len;
-    char * data;
+	/* info for incoming payload, data could be part of the whole incoming packet buffer */
+    char *data;		/* pointer to the data in the buffer */
+    int  len;		/* payload bytes */
+    int  buf_pos;	/* payload position in buffer if parsed from buffer */
 
-    int  buf_pos;  /* payload position in buffer if parsed from buffer */
+	/* the buffer for outgoing payload */
+	buffer_t *out_buffer;
  };
 
  enum xrtp_direct_e{
 
-       RTP_SEND,
-       RTP_RECEIVE
+    RTP_SEND,
+    RTP_RECEIVE
  };
  
  /**
@@ -408,22 +411,24 @@ extern DECLSPEC
 uint32
 rtp_packet_timestamp(xrtp_rtp_packet_t * packet);
 
- /**
-  * Add a CSRC and return num of CSRC in the packet.
-  */
- int rtp_packet_add_csrc(xrtp_rtp_packet_t * packet, uint32 CSRC);
+/**
+ * Add a CSRC and return num of CSRC in the packet.
+ */
+int rtp_packet_add_csrc(xrtp_rtp_packet_t * packet, uint32 CSRC);
 
- /**
-  * Set head extension in the packet.
-  */
- int rtp_packet_set_headext(xrtp_rtp_packet_t * packet, uint16 info, uint16 len, char * xdata);
+/**
+ * Set head extension in the packet.
+ */
+int rtp_packet_set_headext(xrtp_rtp_packet_t * packet, uint16 info, uint16 len, char * xdata);
 
- uint16 rtp_packet_headext_info(xrtp_rtp_packet_t * packet);
+uint16 rtp_packet_headext_info(xrtp_rtp_packet_t * packet);
  
- uint16 rtp_packet_headext(xrtp_rtp_packet_t * packet, char* *ret_data);
+uint16 rtp_packet_headext(xrtp_rtp_packet_t * packet, char* *ret_data);
  
- /* Just point payload to source data, no copying involved */
- int rtp_packet_set_payload(xrtp_rtp_packet_t * packet, int len, char * payload);
+/* Just point payload to source data, no copying involved */
+extern DECLSPEC
+int 
+rtp_packet_set_payload(xrtp_rtp_packet_t *packet, buffer_t *payload);
 
 /* Copy payload data from source */
 extern DECLSPEC

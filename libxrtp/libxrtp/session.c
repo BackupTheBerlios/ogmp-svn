@@ -15,21 +15,20 @@
  *                                                                         *
  ***************************************************************************/
 
- #include <string.h>
- #include "internal.h"      
- #include <timedia/md5.h>
+#include <string.h>
+#include "internal.h"      
+#include <timedia/md5.h>
  
- #define MAX_PRODUCE_TIME  (20 * HRTIME_MILLI)
- #define SESSION_DEFAULT_RTCP_NPACKET  0
- 
- #define SESSION_LOG
- 
- #ifdef SESSION_LOG
-   const int session_log = 1;
- #else
-   const int session_log = 0;
- #endif
- #define session_log(fmtargs)  do{if(session_log) printf fmtargs;}while(0)
+#define MAX_PRODUCE_TIME  (20 * HRTIME_MILLI)
+#define SESSION_DEFAULT_RTCP_NPACKET  0
+
+#define SESSION_LOG
+
+#ifdef SESSION_LOG
+ #define session_log(fmtargs)  do{printf fmtargs;}while(0)
+#else
+ #define session_log(fmtargs)
+#endif
     
  #define RTP_SEQ_MOD 65536
  void session_init_seqno(member_state_t * mem, uint16 seq){
@@ -317,7 +316,12 @@
     return XRTP_OK;
  }
 
- int session_set_bandwidth(xrtp_session_t * ses, int total_bw, int rtp_bw){
+clock_t* session_clock(xrtp_session_t *session)
+{
+	return session->clock;
+}
+
+int session_set_bandwidth(xrtp_session_t * ses, int total_bw, int rtp_bw){
 
     if(ses->media == NULL){
 
@@ -332,7 +336,7 @@
     ses->rtcp_bw = ses->bandwidth - ses->rtp_bw;
     
     return XRTP_OK;
- }
+}
 
  /*
  int session_set_rtp_bandwidth(xrtp_session_t * ses, int bw){
@@ -1456,6 +1460,9 @@ xrtp_media_t * session_new_media(xrtp_session_t * ses, char * id, uint8 payload_
    return ses->media;
 }
   
+xrtp_media_t*
+session_media(xrtp_session_t *ses){ return ses->media; }
+
 /**
  * The middle process b/w import and export, order in addition
  * Can be compress module and crypo module, number of module less than MAX_PIPE_STEP
@@ -1689,15 +1696,13 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
  /**
   * Send number of empty rtp packet to out/in pipe for containing media unit.
   */
- int session_rtp_to_send(xrtp_session_t *ses, xrtp_hrtime_t hrt_allow, int last_packet){
+ int session_rtp_to_send(xrtp_session_t *ses, rtime_t ns_allow, int last_packet){
 
     xrtp_rtp_packet_t * rtp;
-    xrtp_hrtime_t hrts_start;
+    rtime_t ns_start;
     static int mc;
     int packet_bytes;
     int pump_ret = 0;
-        
-    session_log(("session_rtp_to_send: Session[%u] gets to produce last rtp frame packet within %d nsec for scheduling.\n", session_id(ses), hrt_allow));
 
     /* Packet must be made within certain hrtime 
     if(hrt_allow == 0) hrt_allow = MAX_PRODUCE_TIME;
@@ -1706,12 +1711,12 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
     /* <debug> */
     if(last_packet){
       
-        session_log(("session_rtp_to_send: Session[%u] gets to produce last rtp frame packet within %d nsec for scheduling.\n", session_id(ses), hrt_allow));
+        session_log(("session_rtp_to_send: Session[%u] produce last rtp frame packet within %d nsec for scheduling.\n", session_id(ses), ns_allow));
         mc = 0;
         
     }else{
       
-        session_log(("session_rtp_to_send: Session[%u] gets to produce %d frame packet within %d nsec for scheduling.\n", session_id(ses), mc++, hrt_allow));
+        session_log(("session_rtp_to_send: Session[%u] produce %d frame packet within %d nsec for scheduling.\n", session_id(ses), mc++, ns_allow));
     }
     /* </debug> */
     
@@ -1741,10 +1746,10 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
     session_log(("session_rtp_to_send: Session[%d] ssrc is %d\n", session_id(ses), ses->self->ssrc));
 
     /* Check time */
-    hrts_start = time_nsec_now(ses->clock);
+    ns_start = time_nsec_now(ses->clock);
     if(ses->$state.n_pack_sent == 0){
 
-       ses->$state.hrts_start_send = hrts_start;
+       ses->$state.hrts_start_send = ns_start;
        ses->$state.lrts_start_send = time_msec_now(ses->clock);
     }
 
@@ -1765,7 +1770,7 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
     /* set the time to send, delay one period */
     session_log(("session_rtp_to_send: rtp packet will be produced\n"));
     
-    pump_ret = pipe_pump(ses->rtp_send_pipe, hrt_allow, rtp, &packet_bytes);
+    pump_ret = pipe_pump(ses->rtp_send_pipe, ns_allow, rtp, &packet_bytes);
     if(pump_ret == XRTP_ETIMEOUT){
 
        session_log(("< session_rtp_to_send: Can't made packet on time, cancelled producing >\n"));
@@ -1784,18 +1789,15 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
 
     if(pump_ret >= XRTP_OK){
 
-       xrtp_hrtime_t hrt_pass = time_nsec_spent(ses->clock, hrts_start);  /* Get the making time */
-       session_log(("session_rtp_to_send: rtp packet production spent %d nanoseconds, while allowed processing time is %d nsecs\n", hrt_pass, hrt_allow));
+       rtime_t ns_pass = time_nsec_spent(ses->clock, ns_start);  /* Get the making time */
+       session_log(("session_rtp_to_send: rtp packet production spent %d nanoseconds, while allowed processing time is %d nsecs\n", ns_pass, ns_allow));
 
        rtp_packet_set_info(rtp, packet_bytes);
        queue_wait(ses->packets_in_sched, rtp);
        
-       if(last_packet){
-
-          session_log(("session_rtp_to_send: Session[%d]'s scheduler is sched[@%u]\n", session_id(ses), (int)(ses->sched)));
-          ses->sched->rtp_out(ses->sched, ses, hrt_allow - hrt_pass, 0);
-          ses->timestamp += ses->media->sampling_instance;
-       }
+       session_log(("session_rtp_to_send: Session[%d]'s scheduler is sched[@%u]\n", session_id(ses), (int)(ses->sched)));
+       ses->sched->rtp_out(ses->sched, ses, ns_allow - ns_pass, 0);
+       ses->timestamp += ses->media->sampling_instance;
     }
 
     return XRTP_OK;

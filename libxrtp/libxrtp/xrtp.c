@@ -42,10 +42,13 @@
 module_catalog_t * module_catalog = NULL;
 
 xrtp_list_t * sessions = NULL;
+xthr_lock_t * sessions_lock = NULL;
 
 session_sched_t * main_scheduler = NULL;
 
 portman_t * xrtp_portman;
+
+int initialized = 0;
 
 char * plugins_dir = ".";
 
@@ -58,6 +61,8 @@ int xrtp_init(){
 	  xrtp_debug(("xrtp_init: network down\n"));
 	  return XRTP_FAIL;
    }
+
+   sessions_lock = xthr_new_lock();
 
    module_catalog = catalog_new("xrtp_handler");
    nplug = catalog_scan_modules(module_catalog, XRTP_VERSION, plugins_dir);
@@ -98,23 +103,29 @@ int xrtp_init(){
 
       return XRTP_FAIL;
    }
+
+   initialized = 1;
         
    xrtp_log(("xrtp_init: libxrtp Initialized ...\n"));
     
    return XRTP_OK;
 }
 
-int xrtp_free_session(void * gen){
+int xrtp_done_session(void * gen){
 
    return session_done((xrtp_session_t *)gen);
 }
 
 int xrtp_done(){
 
+	if(!initialized) return XRTP_OK;
+
    main_scheduler->done(main_scheduler);
    main_scheduler = NULL;
 
-   xrtp_list_free(sessions, xrtp_free_session);
+   xthr_done_lock(sessions_lock);
+
+   xrtp_list_free(sessions, xrtp_done_session);
    catalog_done(module_catalog);
 
    return XRTP_OK;
@@ -130,4 +141,26 @@ session_sched_t* xrtp_scheduler() {
    return main_scheduler;
 }
 
-xrtp_session_t * xrtp_session(char * cname);
+xrtp_session_t* xrtp_session(int id){
+
+	xlist_user_t lu;
+	xrtp_session_t *ses;
+
+	xthr_lock(sessions_lock);
+	ses = xlist_first(sessions, &lu);
+	while(ses){
+	
+		if(id == ses->id) break;
+
+		ses = xlist_next(sessions, &lu);
+	}
+	xthr_lock(sessions_lock);
+
+	if(!ses) xrtp_log(("xrtp_session: can not find session #%d\n", id));
+
+	return ses;
+}
+
+int xrtp_register_session(xrtp_session_t *session);
+
+int xrtp_unregister_session(xrtp_session_t *session);
