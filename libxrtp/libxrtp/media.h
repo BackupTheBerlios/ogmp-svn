@@ -39,7 +39,7 @@ struct xrtp_media_s
 
 	void* (*info)(xrtp_media_t *media, void *rtpcap);
 	int (*sdp)(xrtp_media_t *media, void *sdp_info);
-	int (*new_sdp)(xrtp_media_t *media, char *netaddr, int* rtp_portno, int* rtcp_portno, int pt, int clockrate, int coding_param, int bw_budget, void* control, void* sdp_info);
+	int (*new_sdp)(xrtp_media_t *media, char *nettype, char *addrtype, char *netaddr, int* rtp_portno, int* rtcp_portno, int pt, int clockrate, int coding_param, int bw_budget, void* control, void* sdp_info);
 
 	int (*set_callback)(xrtp_media_t *media, int type, int(*cb)(), void *user);
      

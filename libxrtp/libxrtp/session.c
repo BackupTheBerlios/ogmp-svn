@@ -875,6 +875,7 @@ int member_deliver_media_loop(void *gen)
 		media_hold_t *hold;
 
 		xthr_lock(mem->delivery_lock);
+
 		hold = (media_hold_t*)xlist_first(mem->delivery_buffer, &lu);
 		if(!hold)
 		{
@@ -985,7 +986,10 @@ int session_member_hold_media(member_state_t * mem, void *media, int bytes, uint
  
 int session_member_deliver(member_state_t * mem, uint16 seqno, int64 packetno)
 {
-    mem->expect_seqno = seqno;
+    if(mem->deliver_thread)
+		return XRTP_OK;
+	
+	mem->expect_seqno = seqno;
 	mem->packetno = packetno; /* count for decoder */
 
 	mem->deliver_thread = xthr_new(member_deliver_media_loop, mem, XTHREAD_NONEFLAGS);
@@ -1505,6 +1509,11 @@ int session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, u
 	if(mem)
 	{
 		xthr_unlock(ses->members_lock);
+
+		/* info of the remote media to playback */
+		if(!mem->mediainfo && rtp_capable)
+			mem->mediainfo = ses->media->info(ses->media, rtp_capable);
+
 		return XRTP_OK;
 	}
 
@@ -1562,7 +1571,8 @@ int session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, u
 
 	xthr_unlock(ses->members_lock);
 
-	mem->mediainfo = ses->media->info(ses->media, rtp_capable);
+	if(rtp_capable)
+		mem->mediainfo = ses->media->info(ses->media, rtp_capable);
 	
 	session_log(("session_add_cname: verify [%s@%s:%u|%u], %d participants\n", cn, ipaddr, rtp_portno, rtcp_portno, nmem));
 
@@ -2001,7 +2011,7 @@ int session_done_module(void *gen)
    return OS_OK;
 }
 
-int session_new_sdp(module_catalog_t* cata, char* netaddr, int* default_rtp_portno, int* default_rtcp_portno, int pt, char* mime, int clockrate, int coding_param, int bw_budget, void* control, void* sdp_info)
+int session_new_sdp(module_catalog_t* cata, char* nettype, char* addrtype, char* netaddr, int* default_rtp_portno, int* default_rtcp_portno, int pt, char* mime, int clockrate, int coding_param, int bw_budget, void* control, void* sdp_info)
 {
 	profile_class_t * modu = NULL;    
 	profile_handler_t * prof = NULL;
@@ -2055,7 +2065,7 @@ int session_new_sdp(module_catalog_t* cata, char* netaddr, int* default_rtp_port
 	/* How to determine default portno for media type 
 	 * Need a default portmap table!
 	 */
-	bw = media->new_sdp(media, netaddr, default_rtp_portno, default_rtcp_portno, pt, clockrate, coding_param, bw_budget, control, sdp_info);
+	bw = media->new_sdp(media, nettype, addrtype, netaddr, default_rtp_portno, default_rtcp_portno, pt, clockrate, coding_param, bw_budget, control, sdp_info);
 		
 	modu->done_handler(prof);
 	modu->done(modu);

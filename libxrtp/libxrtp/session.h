@@ -569,10 +569,11 @@ uint session_mode(xrtp_session_t * session);
  
 extern DECLSPEC
 int 
-session_new_sdp(module_catalog_t* cata, char* netaddr, 
-					int* rtp_portno, int* rtcp_portno, 
-					int pt, char* mime, int clockrate, int coding_param, 
-					int bw_budget, void* control, void* sdp_info);
+session_new_sdp(module_catalog_t* cata, 
+				char* nettype, char* addrtype, char* netaddr, 
+				int* default_rtp_portno, int* default_rtcp_portno, 
+				int pt, char* mime, int clockrate, int coding_param, 
+				int bw_budget, void* control, void* sdp_info);
 
 /**
  * Retrieve a Media handler associated with the session and allocate a payload type to
