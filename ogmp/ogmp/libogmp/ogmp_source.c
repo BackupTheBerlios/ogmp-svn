@@ -116,6 +116,7 @@ int source_stop (media_source_t *msrc)
 
    src_log (("source_stop: source stops ...\n"));
 
+
    {/*lock*/ xthr_lock(source->lock);}
 
    source->finish = 1;
@@ -411,6 +412,7 @@ int source_associate_guests(media_source_t* msrc, media_format_t* rtp_fmt)
 
          if(player->match_play_type(player, "netcast") && player->receiver.match_type(&player->receiver, strm->mime, NULL))
          {
+
             media_transmit_t *transmit;
             xrtp_session_t *tr_ses;
 

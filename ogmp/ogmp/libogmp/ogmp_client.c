@@ -45,6 +45,7 @@ extern ogmp_ui_t* global_ui;
 
 
 
+
 #define MAX_CALL_BANDWIDTH  20480  /* in Bytes */
 
 /****************************************************************************************/
@@ -172,20 +173,19 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			user_profile_t* user_prof = client->reg_profile;
 
-            if(user_prof == NULL)
-                break;
+         if(user_prof == NULL)
+            break;
                 
-            if(user_prof->reg_reason_phrase)
-            {
+         if(user_prof->reg_reason_phrase)
+         {
                 xfree(user_prof->reg_reason_phrase);
                 user_prof->reg_reason_phrase = NULL;
-            }
+         }
             
-            if(reg_e->server_info)
-                user_prof->reg_reason_phrase = xstr_clone(reg_e->server_info);
+         if(reg_e->server_info)
+            user_prof->reg_reason_phrase = xstr_clone(reg_e->server_info);
 
-            if(user_prof->reg_status == SIPUA_STATUS_REG_DOING)
-
+         if(user_prof->reg_status == SIPUA_STATUS_REG_DOING)
 			{
 				user_prof->reg_server = xstr_clone(reg_e->server);
 
@@ -195,16 +195,15 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			}
 
 			if(user_prof->reg_status == SIPUA_STATUS_UNREG_DOING)
-            {
-                xstr_done_string(user_prof->reg_server);
-                user_prof->reg_server = NULL;
+         {
+            xstr_done_string(user_prof->reg_server);
+            user_prof->reg_server = NULL;
 
-				   user_prof->reg_status = SIPUA_STATUS_NORMAL;
-            }
+			   user_prof->reg_status = SIPUA_STATUS_NORMAL;
+         }
 
 			/* registering transaction completed */
-            client->reg_profile = NULL;
-
+         client->reg_profile = NULL;
 
 			/* Should be exact expire seconds returned by registrary*/
 			user_prof->seconds_left = reg_e->seconds_expires;
@@ -223,10 +222,10 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				user_prof->thread_register = xthr_new(client_register_loop, user_prof, XTHREAD_NONEFLAGS);
 
 
-            if(client->on_register)
-                client->on_register(client->user_on_register, user_prof->reg_status, user_prof->reg_reason_phrase);
+         if(client->on_register)
+            client->on_register(client->user_on_register, user_prof->reg_status, user_prof->reg_reason_phrase);
                 
-            //client->ogui->ui.beep(&client->ogui->ui);
+         //client->ogui->ui.beep(&client->ogui->ui);
 
 			break;
 		}
@@ -387,18 +386,20 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			sdp_message_t *sdp_message;
 			char* sdp_body = (char*)e->content;
 
-            int bw;
+         int bw;
 
 			sipua_set_t *call = e->call_info; 
 			call->status = SIPUA_EVENT_ANSWERED;
-			/*
-			printf("client_sipua_event: call[%s] answered\n", call->subject);
+
+         /*
+         printf("client_sipua_event: call[%s] answered\n", call->subject);
 			printf("client_sipua_event: SDP\n");
 			printf("------------------------\n");
 			printf("%s", sdp_body);
 			printf("------------------------\n");
-			*/
-			sdp_message_init(&sdp_message);
+         */
+
+         sdp_message_init(&sdp_message);
 
 			if (sdp_message_parse(sdp_message, sdp_body) != 0)
 			{
@@ -430,13 +431,13 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
          /**
           * Find sessions in the format which match cname and mimetype in source
           * Move_member_from_session_of(call->rtp_format) to_session_of(source->players);
-          */
-         if(call->status == SIPUA_STATUS_QUEUE)
+         if(call->status == SIPUA_STATUS_QUEUE && client->background_source)
          {
             sipua->unsubscribe_bandwidth(sipua, call);
 
             source_associate_guests(client->background_source, call->rtp_format);
          }
+          */
          
 			break;
 		}
@@ -446,7 +447,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			sipua_set_t *call = e->call_info;
             
-            if(call->status == SIPUA_EVENT_ONHOLD)
+         if(call->status == SIPUA_EVENT_ONHOLD)
 			{
 				client->sipua.attach_source(&client->sipua, call, (transmit_source_t*)client->background_source);
 				break;
@@ -468,7 +469,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
           * Find sessions in the format which match cname and mimetype in source
           * Move_member_from_session_of(call->rtp_format) to_session_of(source->players);
           */
-         if(call->status == SIPUA_STATUS_QUEUE)
+         if(call->status == SIPUA_STATUS_QUEUE && client->background_source)
          {
             sipua->unsubscribe_bandwidth(sipua, call);
 

@@ -805,15 +805,15 @@ int uas_invite(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_
 
 	sprintf(sdp_size,"%i", sdp_bytes);
 
-	/*
-	printf("uas_invite: [%s] from %s to %s, proxy[%s]\n", call_info->subject, from, to, proxy);
+   /*
+   printf("uas_invite: [%s] from %s to %s, proxy[%s]\n", call_info->subject, from, to, proxy);
 	printf("\n-------Initiate SDP [%d bytes]--------\n", sdp_bytes);
 	printf("Callid[%s]\n", call_info->setid.id);
 	printf("----------------------------------------\n");
 	printf("%s", sdp_body);
 	printf("----------------------------------------\n");
-	getchar();
-	*/
+	exit(1);
+   */
 
 	if (eXosip_build_initial_invite(&invite, to, from, proxy, call_info->subject) != 0)
 		return UA_FAIL;
@@ -966,6 +966,7 @@ module_interface_t* sipua_new_server()
 	uas->done = uas_done;
     
 	uas->start = uas_start;
+
 
 	uas->shutdown = uas_shutdown;
 

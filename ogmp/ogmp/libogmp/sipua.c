@@ -377,6 +377,7 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 	if (sdp_message_t_time_descr_add (sdp_info.sdp_message, tmp, tmp2) != 0)
 	{
 		sdp_message_free(sdp_info.sdp_message);
+
 		
 		xfree(set);
 
@@ -768,6 +769,7 @@ int sipua_session_sdp(sipua_t *sipua, sipua_set_t* set, char** sdp_body)
 }
 #endif
 
+
 int sipua_regist(sipua_t *sipua, user_profile_t *user, char *userloc)
 {
 	int ret;
@@ -817,7 +819,6 @@ int sipua_unregist(sipua_t *sipua, user_profile_t *user)
 
 int sipua_call(sipua_t *sipua, sipua_set_t* call, char *callee, char *sdp_body) 
 {
-	/*char *sdp_body = NULL;*/
 	int ret;
 
 	if(sipua->incall)
@@ -830,11 +831,13 @@ int sipua_call(sipua_t *sipua, sipua_set_t* call, char *callee, char *sdp_body)
 
 	ret = sipua->uas->invite(sipua->uas, callee, call, sdp_body, strlen(sdp_body)+1);
 
-    if(ret < UA_OK)
+   if(ret < UA_OK)
+   {
+	   ua_debug(("sipua_call: Call from [%s] to [%s] fail\n", call->user_prof->regname, callee));
 		return ret;
-
-	/*free(sdp_body);*/
-    sipua->incall = call;
+   }
+   
+   sipua->incall = call;
 
 	return UA_OK;
 }
