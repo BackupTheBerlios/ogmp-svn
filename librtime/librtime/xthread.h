@@ -58,6 +58,6 @@ extern DECLSPEC  int xthr_cond_broadcast(xthr_cond_t * cond);
 
 extern DECLSPEC  int xthr_cond_wait(xthr_cond_t * cond, xthr_lock_t * lock);
 
-extern DECLSPEC  int xthr_cond_wait_timeout(xthr_cond_t * cond, xthr_lock_t * lock, uint32 time);
+extern DECLSPEC  int xthr_cond_wait_millisec(xthr_cond_t * cond, xthr_lock_t * lock, uint32 ms);
 
 #endif

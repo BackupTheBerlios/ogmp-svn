@@ -146,7 +146,7 @@ int xthr_cond_wait(xthr_cond_t * cond, xthr_lock_t * lock){
 }
 
 /* The time unit is millisecond */
-int xthr_cond_wait_timeout(xthr_cond_t * cond, xthr_lock_t * lock, uint32 millisec){
+int xthr_cond_wait_millisec(xthr_cond_t * cond, xthr_lock_t * lock, uint32 millisec){
 
     return SDL_CondWaitTimeout((SDL_cond*)cond, (SDL_mutex*)lock, millisec);
 }

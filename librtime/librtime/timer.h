@@ -19,9 +19,11 @@
  
  #define TIMER_H
 
- #ifndef OS_H
  #include <timedia/os.h>
- #endif
+ #include <time.h>
+
+ /* seconds b/w 1970(epoch) and 1900(ntp) */
+ #define EPOCH_OFFSET 2208988800
  
  /* FIXME: Consider time warp */
  #define HRTIME_BITS   32
@@ -66,12 +68,15 @@ time_end(xclock_t * clock);
  * Note: hrt value MUST fall in the range of the ONE unit of lrt value
  */
 extern DECLSPEC int 
-time_adjust(xclock_t * clock, int dmsec, int dusec, int dnsec);
+time_adjust(xclock_t * clock, rtime_t dmsec, rtime_t dusec, rtime_t dnsec);
 
-extern DECLSPEC int 
-time_rightnow(xclock_t * clock, int *msec, int *usec, int *nsec); 
-extern DECLSPEC int 
-time_spent(xrtp_clock_t * clock, int ms_then, int us_then, int ns_then, int *ms_spent, int *us_spent, int *ns_spent);
+extern DECLSPEC 
+int 
+time_rightnow(xclock_t * clock, rtime_t *msec, rtime_t *usec, rtime_t *nsec); 
+
+extern DECLSPEC 
+int 
+time_spent(xrtp_clock_t * clock, rtime_t ms_then, rtime_t us_then, rtime_t ns_then, rtime_t *ms_spent, rtime_t *us_spent, rtime_t *ns_spent);
 
 /* for nanosecond */
 extern DECLSPEC
@@ -80,15 +85,15 @@ time_nsec_now(xclock_t * clock);
 
 extern DECLSPEC
 rtime_t 
-time_nsec_spent(xclock_t * clock, int ns_then);
+time_nsec_spent(xclock_t * clock, rtime_t ns_then);
 
 extern DECLSPEC
 rtime_t
-time_nsec_checkpass(xclock_t * clock, int * then);
+time_nsec_checkpass(xclock_t * clock, rtime_t *then);
 
 extern DECLSPEC
 int 
-time_nsec_sleep(xclock_t * clock, int howlong, int * remain);
+time_nsec_sleep(xclock_t * clock, rtime_t howlong, rtime_t *remain);
 
 /* for microsecond */
 extern DECLSPEC
@@ -97,15 +102,15 @@ time_usec_now(xclock_t * clock);
 
 extern DECLSPEC
 rtime_t
-time_usec_spent(xclock_t * clock, int us_then);
+time_usec_spent(xclock_t * clock, rtime_t us_then);
 
 extern DECLSPEC
 rtime_t
-time_usec_checkpass(xclock_t * clock, int * then);
+time_usec_checkpass(xclock_t * clock, rtime_t *then);
 
 extern DECLSPEC
 int 
-time_usec_sleep(xclock_t * clock, int howlong, int * remain);
+time_usec_sleep(xclock_t * clock, rtime_t howlong, rtime_t *remain);
  
 /* for millisecond */
 extern DECLSPEC
@@ -114,14 +119,18 @@ time_msec_now(xclock_t * clock);
 
 extern DECLSPEC
 rtime_t
-time_msec_spent(xclock_t * clock, int ms_then);
+time_msec_spent(xclock_t * clock, rtime_t ms_then);
 
 extern DECLSPEC
 rtime_t
-time_msec_checkpass(xclock_t * clock, int * then);
+time_msec_checkpass(xclock_t * clock, rtime_t *then);
 
 extern DECLSPEC
 int 
-time_msec_sleep(xclock_t * clock, int howlong, int * remain);
+time_msec_sleep(xclock_t * clock, int howlong, rtime_t *remain);
+
+extern DECLSPEC
+int 
+time_ntp(xrtp_clock_t * clock, uint32 *hintp, uint32 *lontp);
 
 #endif
