@@ -780,7 +780,8 @@ session_sched_t * sched_new()
     
    ssch->stop = 0;
    ssch->rtcp_run = xthr_new(simple_schedule_rtcp, ssch, XTHREAD_NONEFLAGS);
+   /*
    ssch->rtp_run = xthr_new(simple_schedule_rtp, ssch, XTHREAD_NONEFLAGS);
-    
+   */ 
    return (session_sched_t *)ssch;
 }

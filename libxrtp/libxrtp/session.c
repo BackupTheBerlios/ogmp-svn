@@ -14,7 +14,7 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-
+ 
 #include <string.h>
 #include "internal.h"      
 #include <timedia/md5.h>
@@ -263,6 +263,7 @@ int session_done(xrtp_session_t* ses)
  */
 xrtp_session_t* session_new(xrtp_set_t* set, char *cname, int clen, char *ip, uint16 default_rtp_portno, uint16 default_rtcp_portno, module_catalog_t *cata, void *media_control)
 {
+
     char *name;
 	xrtp_session_t* ses;
 
@@ -706,6 +707,7 @@ int session_match_member(void * tar, void * pat)
 
 /* return zero means match */
 int session_match_cname(void *tar, void *pat)
+
 {
     member_state_t * mem = (member_state_t *)tar;
     char *cn = (char*)pat;
@@ -935,6 +937,7 @@ int member_deliver_media_loop(void *gen)
 		}
 	}
 
+
 	xthr_unlock(mem->delivery_lock);
 	mem->deliver_thread = NULL;
 
@@ -971,6 +974,7 @@ int session_member_hold_media(member_state_t * mem, void *media, int bytes, uint
 	hold->last_in_ts = last;
 	hold->memory = memblock;
 	
+
 	xthr_lock(mem->delivery_lock);
 
 
@@ -1083,6 +1087,7 @@ int session_member_connects(member_state_t * mem, session_connect_t **rtp_conn, 
     return XRTP_OK;
 }
 
+
 int session_quit(xrtp_session_t * ses, int immidiately)
 {
     ses->bye_mode = 1;
@@ -1138,6 +1143,7 @@ xrtp_hrtime_t session_ts2hrt(xrtp_session_t * ses, uint32 ts)
      skew_threshold = session_rtp_period(mem->session);
      
      if(mem->n_rtp_received == 1)
+
 	 {
         /* First valid rtp packet */
 		mem->delay_estimate = transit;
@@ -1280,6 +1286,7 @@ session_member_synchronise(member_state_t * mem, uint32 ts_remote, uint32 ts_loc
 
 	xthr_lock(mem->sync_lock);
 
+
 	mem->timestamp_sync = session_member_mapto_local_time(mem, ts_remote, ts_local, level);
 	mem->msec_sync = ms;
 	mem->usec_sync = us;
@@ -1297,6 +1304,7 @@ session_member_synchronise(member_state_t * mem, uint32 ts_remote, uint32 ts_loc
 int session_member_synchronise(member_state_t *mem, uint32 ts_remote, uint32 hi_ntp, uint32 lo_ntp, int clockrate)
 {
 	rtime_t ms,us,ns;
+
 	xrtp_session_t *ses = mem->session;
 	
 	time_rightnow(ses->clock, &ms,&us,&ns);
@@ -1521,8 +1529,6 @@ int session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, u
 		return XRTP_OK;
 	}
 
-	printf("session_add_cname: 2\n");
-
     mem = (member_state_t *)xmalloc(sizeof(struct member_state_s));
     if(!mem)
 	{
@@ -1568,8 +1574,6 @@ int session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, u
 	mem->cname = xstr_nclone(cn, cnlen);
 	mem->cname_len = cnlen;
 
-	printf("session_add_cname: 3\n");
-
 	/* used to verify the incoming */
 	mem->rtp_port = teleport_new(ipaddr, rtp_portno);
 	mem->rtcp_port = teleport_new(ipaddr, rtcp_portno);
@@ -1579,14 +1583,10 @@ int session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, u
 
 	xthr_unlock(ses->members_lock);
 
-	printf("session_add_cname: 4\n");
-
 	if(rtp_capable)
 		mem->mediainfo = ses->media->info(ses->media, rtp_capable);
 	
 	session_log(("session_add_cname: cn[%s]@[%s:%u|%u] added, %d participants\n", cn, ipaddr, rtp_portno, rtcp_portno, nmem));
-
-	session_log(("session_add_cname: sched@%x\n", ses->sched));
 
 	/* start the rtcp schedule */
 	if(nmem > 1)
@@ -1623,6 +1623,7 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 	{
 		/* collise with me, i need to change ssrc */
 		uint32 my_ssrc;
+
 
 		ses->self->in_collision = 1;
 		my_ssrc = session_make_ssrc(ses);
@@ -1890,6 +1891,7 @@ int session_set_buffer(xrtp_session_t *ses, int size, xrtp_hrtime_t timesize)
          return XRTP_EMEM;
       }
    }
+
 
    ses->timesize = timesize;
 
@@ -2223,6 +2225,7 @@ xrtp_media_t * session_new_media(xrtp_session_t * ses, uint8 profile_no, char *p
 		port_set_session(ses->rtp_port, ses);
 		port_set_session(ses->rtcp_port, ses);
 	}
+
 
 	ses->bandwidth_rtp = ses->media->bps / OS_BYTE_BITS;
 	ses->bandwidth = (int)((2 * ses->bandwidth_rtp) * 1.05);
@@ -2834,6 +2837,7 @@ int session_rtp_to_receive(xrtp_session_t *ses)
 	if(in == NULL)
 	{
        session_log(("session_rtp_to_receive: incoming packet lost\n"));
+
        return XRTP_FAIL;
 	}
 
@@ -3410,6 +3414,7 @@ int session_set_scheduler(xrtp_session_t *ses, session_sched_t *sched)
 
     return XRTP_OK;
  }
+
 
  /* Notify the session a rtcp arrival and schedule the process */
  int session_rtcp_arrival_notified(xrtp_session_t * ses, session_connect_t * conn, rtime_t msec_arrival)

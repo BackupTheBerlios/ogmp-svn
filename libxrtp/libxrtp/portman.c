@@ -24,8 +24,8 @@
 
 #include <stdio.h>
 /*
-*/
 #define PORTMAN_LOG
+*/
 #ifdef PORTMAN_LOG
   #define portman_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -144,6 +144,7 @@ int portman_remove_port(portman_t * man, xrtp_port_t * port)
    }
    portman_log(("\nportman_remove_port: maxio=%d\n", man->maxio));
 
+
    return XRTP_OK;
 }
 
@@ -174,6 +175,7 @@ int portman_poll(portman_t * man)
    int io;
    int c = 0;
     
+
    int n;
    
    n= select(man->maxio+1, &io_mask, NULL, NULL, &tv);

@@ -25,8 +25,8 @@
 #include <timedia/xmalloc.h>
 #include <timedia/socket.h> 
 #include <timedia/inet.h> 
-#define UDP_LOG
 /*
+#define UDP_LOG
 #define UDP_DEBUG
 */
 #ifdef UDP_LOG
@@ -470,6 +470,7 @@ int port_portno(xrtp_port_t* port)
      struct in_addr addr;
      addr.s_addr = tport->addr;
      
+
      return inet_ntoa(addr);
   }
 
