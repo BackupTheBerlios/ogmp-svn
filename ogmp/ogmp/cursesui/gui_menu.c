@@ -197,7 +197,7 @@ int window_menu_run_command(gui_t *gui, int c)
 			if(user_profile)
 				cursor_menu = 0;
 			else
-				bgui_updateeep();
+				beep();
 			break;
 		case 'i':
 			if(user_profile)
@@ -291,8 +291,8 @@ gui_t gui_window_menu =
 	-999,
 	2,
 	9,
-	NULL,
 	window_menu_event,
+	NULL,
 	window_menu_print,
 	window_menu_run_command,
 	NULL,

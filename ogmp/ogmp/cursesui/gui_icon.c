@@ -76,8 +76,8 @@ gui_t gui_window_icon =
 	20,
 	1,
 	10,
-	NULL,
     NULL, /* window_icon_event */
+	NULL,
 	window_icon_print,
 	NULL,
 	NULL,

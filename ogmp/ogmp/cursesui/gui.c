@@ -647,12 +647,13 @@ int gui_hide_window(gui_t* gui)
 int
 gui_update(gui_t* gui)
 {
+	gui_event_t* ge;
 	ogmp_ui_t* ogui = (ogmp_ui_t*)gui->topui;
     
     if(gui->on_off != GUI_ON)
         return UA_OK;
     
-    gui_event_t* ge = gui_new_event(gui, GUI_EVENTID_UPDATE);
+    ge = gui_new_event(gui, GUI_EVENTID_UPDATE);
     if(ge)
         return gui_add_event(ogui, ge);
 

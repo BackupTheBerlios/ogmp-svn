@@ -24,8 +24,8 @@
 char log_buf[LOG_MAXLINE][LOG_MAXLEN];
 
 int log_ln1=0, log_lnn=0;
-int log_maxline = LOG_MAXLINE,
-int log_maxlen = LOG_MAXLEN,
+int log_maxline = LOG_MAXLINE;
+int log_maxlen = LOG_MAXLEN;
 int log_nline = 0;
 
 int cursor_log_view;
@@ -102,9 +102,8 @@ gui_t gui_window_loglines =
 	-3,      /* y0 */
 	0,       /* y1 */
     
-	NULL,
     window_loglines_event,
-
+	NULL,
 	window_loglines_print,
 	NULL,
 	NULL,
