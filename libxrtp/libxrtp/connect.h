@@ -73,7 +73,7 @@ port_done(xrtp_port_t * port);
   
   int port_is_multicast(xrtp_port_t * port);
 
-  int port_poll(xrtp_port_t * port, xrtp_hrtime_t timeout);
+  int port_poll(xrtp_port_t * port, rtime_t timeout_usec);
   
   int port_incoming(xrtp_port_t * port);
   

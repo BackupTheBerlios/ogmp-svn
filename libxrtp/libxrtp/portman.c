@@ -176,17 +176,13 @@ int portman_poll(portman_t * man){
    int n = select(man->maxio+1, &io_mask, NULL, NULL, &tv);
    if(!n) return n;
     
-   portman_log(("portman_poll: maxio = %d, %d incoming on sockets\n", man->maxio, n));
-
    /* retrieve port io which readable */
    port = xlist_first(man->portlist, &lu);
    while(port){
 
       io = port_io(port);
-      if(FD_ISSET(io, &io_mask)){
-
-         portman_log(("portman_poll: socket[%d] incoming detected !\n", port_io(port)));
-
+      if(FD_ISSET(io, &io_mask))
+	  {
          if(port_incoming(port) >= XRTP_OK) c++;
       }
 

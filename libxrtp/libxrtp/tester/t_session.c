@@ -112,7 +112,9 @@ int cb_media_sent(void * u, xrtp_media_t * media){
 
     printf("\nspu_sender_run: sender started ...\n");
     
-    while(1){
+    while(1)
+	{
+	   int ret;
 
        xthr_lock(sender.lock);
        
@@ -120,7 +122,7 @@ int cb_media_sent(void * u, xrtp_media_t * media){
 
           printf("spu_sender_run: waiting for receiver ...\n");
           xthr_cond_wait(sender.wait_receiver, sender.lock);
-          printf("spu_sender_run: Wake up, got a receiver ...\n");
+          printf("spu_sender_run: receiver available\n");
        }
        
        if(!tryagain){
@@ -161,18 +163,18 @@ int cb_media_sent(void * u, xrtp_media_t * media){
           first = 0;
           lrbegin = time_msec_now(sender.clock);
           lrnow = lrbegin;
-          printf("spu_sender_run: Got lrtime first lrtime[%d]\n", lrbegin);
+          printf("\nspu_sender_run: Begin @ %dms\n", lrbegin);
 
        }else{
 
           lrnow = time_msec_now(sender.clock);
-          printf("spu_sender_run: Get lrtime[%d]\n", lrnow);
+          printf("\nspu_sender_run: %dms now\n", lrnow);
        }
 
        delt = subt->start_ms - lrnow;
        if(delt > 0){
 
-          printf("spu_sender_run: sleep %u msec\n", (uint)delt);
+          printf("spu_sender_run: sleep %u msec\n\n", (uint)delt);
           
           xthr_unlock(sender.lock);
           time_msec_sleep(sender.clock, (xrtp_lrtime_t)delt, NULL);
@@ -186,18 +188,15 @@ int cb_media_sent(void * u, xrtp_media_t * media){
        demux_sputext_show_title(subt);
        */
        
-       { /* Send really */
+       /* Send really */
+       ret = sender.subt->post(sender.subt, str, slen, 1);
+       if(ret == XRTP_EAGAIN)
+	   {
+		   tryagain = 1;
+           continue;
+       }
 
-          int ret = sender.subt->post(sender.subt, str, slen, (subt->end_ms - subt->start_ms)*1000);
-          if(ret == XRTP_EAGAIN){
-
-              tryagain = 1;
-              continue;
-          }
-
-          tryagain = 0;
-          
-       } /* Send really */
+       tryagain = 0;         
     }
 
     xthr_unlock(sender.lock);
@@ -291,7 +290,7 @@ int cb_media_sent(void * u, xrtp_media_t * media){
     
     if(user == &sender){
       
-        printf("tester.cb_member_update: '%s' accepted\n", cname);
+        printf("\ntester.cb_member_update: '%s' accepted\n", cname);
         sender.n_recvr++;
         xthr_cond_signal(sender.wait_receiver);
     }
@@ -333,13 +332,12 @@ int cb_media_sent(void * u, xrtp_media_t * media){
 
        if(!f && !recvr.end){
          
-          printf("spu_recvr_run: No more media to play, idle. zzzzzzzzzzz\n");
+          printf("spu_recvr_run: No more media to play, idle...\n");
           xthr_cond_wait(recvr.wait, recvr.lock);
-          printf("spu_recvr_run: Wake up, Media received\n");
+          printf("spu_recvr_run: Media received\n");
           f = (subt_frame_t *)xrtp_list_first(recvr.frames, &lu);
        }
 
-       printf("spu_recvr_run: Frame[@%d]\n", (int)(f));
        mts = f->start;
        
        printf("spu_recvr_run: Media ts is hrt[%d]\n", mts);
@@ -501,7 +499,6 @@ int cb_media_sent(void * u, xrtp_media_t * media){
     printf("Sending tester: Sender session created\n");
 
     /* Member management test
-
     member_state_t * mem = NULL;
     if(session_new_member(ses, 34567, NULL) < XRTP_OK)
        printf("Session test: Can't create member 34567 state info!\n");
@@ -510,15 +507,15 @@ int cb_media_sent(void * u, xrtp_media_t * media){
        printf("Session test: Can't create member 56789 state info!\n");
 
     mem = session_member_state(ses, 56789);
-    if(!mem){
-
+    if(!mem)
+	{
        printf("Session test: Bug of finding a exist member!\n");
        exit(1);
     }
 
     mem = session_member_state(ses, 87654);
-    if(mem){
-
+    if(mem)
+	{
        printf("Session test: Bug of finding a none exist member!\n");
        exit(1);
     }
@@ -538,8 +535,8 @@ int cb_media_sent(void * u, xrtp_media_t * media){
 
     /* Create and initialise the session */
     ses = session_new(recvr_rtp_port, recvr_rtcp_port, cname_recvr, strlen(cname_recvr), xrtp_catalog());
-    if(!ses){
-
+    if(!ses)
+	{
         port_done(recvr_rtp_port);
         port_done(recvr_rtcp_port);
         printf("Receiving tester: Session fail to create!\n");

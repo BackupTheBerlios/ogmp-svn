@@ -51,7 +51,7 @@
         #define CALLBACK_MEDIA_REPORT       0x2
         
         /* callid: CALLBACK_MEDIA_ARRIVED */
-        int (* media_arrived)(void * user, media_data_t * data, int len, uint32 src, xrtp_hrtime_t ts_play, xrtp_hrtime_t duration);
+        int (* media_arrived)(void * user, media_data_t * data, int len, uint32 src, uint32 timestamp);
         void * media_arrived_user;
 
         /* callid: CALLBACK_MEDIA_FINISH */

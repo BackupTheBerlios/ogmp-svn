@@ -97,8 +97,8 @@ typedef struct member_state_s{
     uint32 expected_prior;
     uint32 received_prior;
     
-    rtime_t last_hrt_local;
-    rtime_t last_hrt_rtpts;
+    //rtime_t last_hrt_local;
+    //rtime_t last_hrt_rtpts;
 
     uint32 last_transit;       /* For playout time computing, session_local_time() */
     uint32 last_last_transit;
@@ -117,7 +117,9 @@ typedef struct member_state_s{
     int play_mode;
 
     rtime_t last_playout_offset;
-    xrtp_lrtime_t lrts_last_heard;
+
+	/* latest heart beat */
+    rtime_t msec_last_heard;
 
     double jitter;
 
@@ -137,17 +139,17 @@ typedef struct member_state_s{
      * uint32 total_lost;  calc on_fly
      */
     uint32 lsr_ts; 
-    rtime_t lsr_hrt;   /* time of last sr received */
-    xrtp_lrtime_t lsr_lrt;   /* time of last sr received */
+    rtime_t lsr_usec;   /* time of last sr received */
+    rtime_t lsr_msec;   /* time of last sr received */
     
-    xrtp_list_t * rtp_buffer; /* Playout buffer */
+    xlist_t * rtp_buffer; /* Playout buffer */
 
     void * user_info;    /* Extenal info given by the session user */
 
-    xrtp_lrtime_t lrt_last_rtcp_sent;
+    rtime_t lrt_last_rtcp_sent;
     
-    xrtp_lrtime_t lrts_last_rtp_sent;
-    rtime_t hrts_last_rtp_sent;
+    rtime_t msec_last_rtp_sent;
+    rtime_t usec_last_rtp_sent;
 
     char * cname;
     int cname_len;
@@ -164,7 +166,7 @@ typedef struct session_state_s{
 	 int n_pack_recvd;
 	 int n_pack_sent;
 
-   rtime_t hrts_start_send;
+   rtime_t usec_start_send;
    xrtp_lrtime_t lrts_start_send;
     
 	 int oct_recvd;
@@ -397,7 +399,7 @@ struct xrtp_session_s {
 
     rtime_t hrts_last_rtp_sent;
 
-    rtime_t period;
+    rtime_t usec_period;
     rtime_t rtcp_interval;
     
     session_sched_t *sched;
@@ -432,7 +434,9 @@ struct xrtp_session_s {
     
     uint32 next_report_ssrc;
 
+	/* should be maintained by profile for different meaning
     uint32 timestamp;
+	*/
 
     rtime_t rtp_cancel_ts;
     int rtp_cancelled;
@@ -633,8 +637,8 @@ media_time_t session_hrt2mt(xrtp_session_t * session, rtime_t hrt);
 rtime_t session_mt2hrt(xrtp_session_t * session, media_time_t mt);
 
 extern DECLSPEC
-rtime_t 
-session_member_mapto_local_time(member_state_t * member, xrtp_rtp_packet_t * rtp);
+uint32 
+session_member_mapto_local_time(member_state_t * member, uint32 rtpts_packet, uint32 rtpts_local);
 
 uint32
 session_signature(xrtp_session_t * session);

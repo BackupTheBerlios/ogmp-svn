@@ -87,23 +87,21 @@
  /**
   * RTP Packet
   */
- struct xrtp_rtp_packet_s {
-
-    int is_sync;
-
+ struct xrtp_rtp_packet_s
+ {
+    /*
+	int is_sync;
     uint32 hi_ntp;
     uint32 lo_ntp;
-
+	*/
     void * handler;
 
     xrtp_session_t * session;
     
-    xrtp_hrtime_t hrt_arrival;
-    xrtp_lrtime_t lrt_arrival;
-    
-    xrtp_hrtime_t hrt_rtpts;  /* hrt value of rtpts */
-    xrtp_hrtime_t hrt_local;
-    int local_mapped;
+    rtime_t usec_arrival;
+    rtime_t lrt_arrival;
+
+	uint32 rtpts_playout;
     
     session_connect_t * connect;
 
@@ -150,9 +148,8 @@
 
     xrtp_session_t * session;
 
-    xrtp_hrtime_t hrt_arrival;  /* used for media sync */
-
-    xrtp_hrtime_t lrt_arrival;  /* used for lsr_delay */
+    rtime_t usec_arrival;  /* used for media sync */
+    rtime_t msec_arrival;  /* used for lsr_delay */
 
     int bytes_received;
 
@@ -345,7 +342,7 @@ extern "C"
  /**
   * Create an empty RTP packet associated to the given RTP session, detail done by Session.
   */
- xrtp_rtp_packet_t * rtp_new_packet(xrtp_session_t * session, int pt, enum xrtp_direct_e dir, session_connect_t * connect, xrtp_lrtime_t lrt_arrival, xrtp_hrtime_t ts_arrival);
+ xrtp_rtp_packet_t * rtp_new_packet(xrtp_session_t * session, int pt, enum xrtp_direct_e dir, session_connect_t * connect, xrtp_lrtime_t lrt_arrival, xrtp_hrtime_t usec_arrival);
 
  /**
   * Get rtp buffer
@@ -364,11 +361,10 @@ extern DECLSPEC
 int 
 rtp_packet_done(xrtp_rtp_packet_t * packet);
 
- /**
-  * Set head info related to the given RTP packet.
-  */
- xrtp_rtp_head_t * rtp_packet_set_head(xrtp_rtp_packet_t * packet, uint32 ssrc,
-                                       uint16 seqno, uint32 ts);
+/**
+ * Set head info related to the given RTP packet.
+ */
+xrtp_rtp_head_t * rtp_packet_set_head(xrtp_rtp_packet_t * packet, uint32 ssrc, uint16 seqno);
 
 extern DECLSPEC
 uint32 
@@ -404,12 +400,21 @@ extern DECLSPEC
 uint16 
 rtp_packet_seqno(xrtp_rtp_packet_t * packet);
 
+extern DECLSPEC
 int 
 rtp_packet_set_timestamp(xrtp_rtp_packet_t * packet, uint32 ts);
 
 extern DECLSPEC
 uint32
 rtp_packet_timestamp(xrtp_rtp_packet_t * packet);
+
+extern DECLSPEC
+int 
+rtp_packet_set_playout_timestamp(xrtp_rtp_packet_t * packet, uint32 ts);
+
+extern DECLSPEC
+uint32
+rtp_packet_playout_timestamp(xrtp_rtp_packet_t * packet);
 
 /**
  * Add a CSRC and return num of CSRC in the packet.

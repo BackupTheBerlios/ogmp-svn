@@ -55,7 +55,7 @@
     
     void * packet;
 
-    xrtp_hrtime_t ts;
+    rtime_t max_usec;
 
     int packet_bytes;
  };
@@ -80,7 +80,7 @@
     /* rtp/rtcp packets to process */
     spin_queue_t * packets;
      
-    xrtp_hrtime_t next_ts;
+    xrtp_hrtime_t next_us;
     xrtp_hrtime_t timesize;
 
     int stop;
@@ -127,7 +127,7 @@
  /**
   * Each pump will process one packet
   */
- int pipe_pump(packet_pipe_t * pipe, xrtp_hrtime_t ts, void * packet, int *bytes_made);
+ int pipe_pump(packet_pipe_t * pipe, rtime_t max_msec, void * packet, int *bytes_made);
 
  #define PIPE_CALLBACK_STEP_IDEL 1
  #define PIPE_CALLBACK_STEP_UNLOAD 2

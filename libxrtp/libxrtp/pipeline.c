@@ -344,15 +344,15 @@
     int npacket = 0, nbytes = 0;
     pipe_step_t * step = NULL;
 
-    xrtp_hrtime_t ts_prev;
+    rtime_t us_prev;
 
     *r_nts = 0;
 
     load = (pipe_load_t*)queue_head(pipe->packets);
 
-    ts_prev = load->ts;
+    us_prev = load->max_usec;
 
-    while( load && !TIME_NEWER(deadline, load->ts) && pipe->curr_bytes_budget >= load->packet_bytes){
+    while( load && !TIME_NEWER(deadline, load->max_usec) && pipe->curr_bytes_budget >= load->packet_bytes){
 
        queue_serve(pipe->packets);
 
@@ -379,21 +379,21 @@
        
        load = (pipe_load_t*)queue_head(pipe->packets);
        
-       if(load->ts != ts_prev)
+       if(load->max_usec != us_prev)
           *r_nts++;
     }
 
     if(load){
 
-       *r_nextts = pipe->next_ts = load->ts;
+       *r_nextts = pipe->next_us = load->max_usec;
        
     }else{
 
-       *r_nextts = pipe->next_ts = HRTIME_INFINITY;
+       *r_nextts = pipe->next_us = HRTIME_INFINITY;
     }
 
     if(pipe->pipe_complete_cb)
-        pipe->pipe_complete_cb(pipe->pipe_complete_callee, pipe->next_ts, npacket, nbytes);
+        pipe->pipe_complete_cb(pipe->pipe_complete_callee, pipe->next_us, npacket, nbytes);
     
     return XRTP_OK;
  }
@@ -405,7 +405,7 @@
 
     load = (pipe_load_t*)queue_head(pipe->packets);
 
-    while( load && TIME_NEWER(deadline, load->ts) ){
+    while( load && TIME_NEWER(deadline, load->max_usec) ){
       
        queue_serve(pipe->packets);
        
@@ -432,20 +432,20 @@
     
     if(load){
 
-        pipe->next_ts = load->ts;
+        pipe->next_us = load->max_usec;
         
     }else{
 
-        pipe->next_ts = HRTIME_INFINITY;
+        pipe->next_us = HRTIME_INFINITY;
     }
 
     if(pipe->pipe_discard_cb)
-        pipe->pipe_discard_cb(pipe->pipe_discard_callee, pipe->next_ts, npacket);
+        pipe->pipe_discard_cb(pipe->pipe_discard_callee, pipe->next_us, npacket);
 
     return npacket;
  }
 
- int pipe_pump(packet_pipe_t * pipe, xrtp_hrtime_t ts, void * pac, int * packet_bytes){
+ int pipe_pump(packet_pipe_t * pipe, rtime_t max_usec, void * pac, int * packet_bytes){
 
     pipe_load_t * load;
     pipe_step_t * step = NULL;
@@ -460,7 +460,7 @@
     }
     
     load->packet = pac;
-    load->ts = ts;
+    load->max_usec = max_usec;
 
     pipe->stop = 0;
 

@@ -62,7 +62,7 @@
  /**
   * See packet.h
   */
- xrtp_rtp_packet_t * rtp_new_packet(xrtp_session_t * ses, int pt, enum xrtp_direct_e dir, session_connect_t * conn, xrtp_lrtime_t lrt_arrival, xrtp_hrtime_t hrt_arrival){
+ xrtp_rtp_packet_t * rtp_new_packet(xrtp_session_t * ses, int pt, enum xrtp_direct_e dir, session_connect_t * conn, xrtp_lrtime_t lrt_arrival, xrtp_hrtime_t usec_arrival){
 
     xrtp_rtp_packet_t * rtp = (xrtp_rtp_packet_t *)malloc(sizeof(struct xrtp_rtp_packet_s));
     if(!rtp){
@@ -72,19 +72,19 @@
     }
 
     memset(rtp, 0, sizeof(struct xrtp_rtp_packet_s));
-    
-    rtp->is_sync = 0;               /* for sync rtp only */
+
+    /* for sync rtp only  
+    rtp->is_sync = 0; 
     rtp->hi_ntp = rtp->lo_ntp = 0;
-    
+    */   
     rtp->session = ses;
     rtp->handler = NULL;
     rtp->valid_to_get = 0;
-    rtp->local_mapped = 0; /* if the local time is calc'd */
 
     if(dir == RTP_RECEIVE){
       
         rtp->lrt_arrival = lrt_arrival;
-        rtp->hrt_arrival = hrt_arrival;
+        rtp->usec_arrival = usec_arrival;
     }
     
     rtp->connect = conn;
@@ -291,6 +291,17 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t * pac, xrtp_rtp_payload_t * pay){
     return pac->$head.timestamp;
  }
 
+ int rtp_packet_set_playout_timestamp(xrtp_rtp_packet_t * rtp, uint32 ts){
+
+    rtp->rtpts_playout = ts;
+    return XRTP_OK;
+ }
+
+ uint32 rtp_packet_playout_timestamp(xrtp_rtp_packet_t * rtp){
+
+    return rtp->rtpts_playout;
+ }
+
  /**
   * Add a CSRC and return num of CSRC in the packet.
   */
@@ -313,14 +324,12 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t * pac, xrtp_rtp_payload_t * pay){
  /**
   * See packet.h
   */
- xrtp_rtp_head_t * rtp_packet_set_head(xrtp_rtp_packet_t * pac, uint32 ssrc,
-                                        uint16 seqno, uint32 ts){
-
+ xrtp_rtp_head_t * rtp_packet_set_head(xrtp_rtp_packet_t * pac, uint32 ssrc, uint16 seqno)
+ {
     pac->$head.SSRC = ssrc;
     pac->$head.seqno = seqno;
-    pac->$head.timestamp = ts;
 
-    packet_log(("rtp_packet_set_head: ssrc=%u, seqno=%u, timestamp=%u\n", ssrc, seqno, ts));
+    packet_log(("rtp_packet_set_head: ssrc=%u, seqno=%u\n", ssrc, seqno));
 
     return &(pac->$head);
  }
@@ -547,23 +556,25 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t * pac, xrtp_rtp_payload_t * pay){
   *
   * param in: max number of packets allowed
   */
- xrtp_rtcp_compound_t * rtcp_new_compound(xrtp_session_t * ses, uint npack, enum xrtp_direct_e dir, session_connect_t * conn, xrtp_hrtime_t hrts_arrival, xrtp_lrtime_t lrts_arrival){
+ xrtp_rtcp_compound_t * rtcp_new_compound(xrtp_session_t * ses, uint npack, enum xrtp_direct_e dir, session_connect_t * conn, 
+											rtime_t usec_arrival, rtime_t msec_arrival)
+ {
 
     xrtp_rtcp_compound_t * comp = (xrtp_rtcp_compound_t *)malloc(sizeof(struct xrtp_rtcp_compound_s));
-    if(!comp){
+    
+	if(!comp)
        return NULL;
-    }
     
     memset(comp, 0, sizeof(struct xrtp_rtcp_compound_s));
 
     comp->session = ses;
     
     if(dir == RTP_RECEIVE)
-        comp->hrt_arrival = hrts_arrival;
+        comp->usec_arrival = usec_arrival;
     else
-        comp->hrt_arrival = HRTIME_INFINITY;
+        comp->usec_arrival = HRTIME_INFINITY;
 
-    comp->lrt_arrival = lrts_arrival;
+    comp->msec_arrival = msec_arrival;
 
     comp->connect = conn;
 

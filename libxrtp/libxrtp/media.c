@@ -25,12 +25,12 @@
  #define media_log(fmtargs)  do{if(media_log) printf fmtargs;}while(0)
 
 /* Convert realtime to rtp ts */
-uint32 media_realtime_to_rtpts(xrtp_media_t * media, xrtp_lrtime_t lrt, xrtp_hrtime_t hrt){
+uint32 media_realtime_to_rtpts(xrtp_media_t * media, rtime_t msec, rtime_t usec){
 
-   uint32 rtpts = lrt / LRTIME_SECOND_DIVISOR * media->clockrate * media->sampling_instance;
-   rtpts += (hrt % LRT_HRT_DIVISOR) / (HRTIME_SECOND_DIVISOR / media->clockrate) * media->sampling_instance;
+   uint32 rtpts = msec / 1000 * media->clockrate * media->sampling_instance;
+   rtpts += (usec % LRT_HRT_DIVISOR) / (HRTIME_SECOND_DIVISOR / media->clockrate) * media->sampling_instance;
 
-   media_log(("media_realtime_to_rtpts: lrt[%d]:hrt[%d] on arrival\n", lrt, hrt));
+   media_log(("media_realtime_to_rtpts: lrt[%d]:hrt[%d] on arrival\n", msec, usec));
    media_log(("media_realtime_to_rtpts: rtp_ts on arrival is %d\n", rtpts));
    return rtpts;
 }
