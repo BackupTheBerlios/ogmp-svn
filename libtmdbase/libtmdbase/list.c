@@ -55,10 +55,12 @@ xrtp_list_t * xrtp_list_new(){
 
 int xrtp_list_free(xrtp_list_t *list, int(*free_data)(void *)){
 
-   if(list == NULL)
+    xrtp_list_node_t *curr = NULL;
+
+	if(list == NULL)
       return OS_OK;
 
-   xrtp_list_node_t *curr = list->head;
+   curr = list->head;
    
    while(curr != NULL){
 
@@ -124,9 +126,11 @@ int xrtp_list_freeuser(xrtp_list_user_t * user){
 
 void * xrtp_list_first(xrtp_list_t * list, xrtp_list_user_t * u){
   
-   if(list->num == 0) return NULL;
+    xrtp_list_node_t * n = NULL;
+	
+	if(list->num == 0) return NULL;
   
-   xrtp_list_node_t * n = list->head;
+   n = list->head;
 
    u->curr = n;
    u->prev = NULL;
@@ -175,7 +179,7 @@ xrtp_list_node_t * _xrtp_list_newnode(){
       return NULL;
    }
   
-   bzero(node, sizeof(xrtp_list_node_t));
+   memset(node, 0, sizeof(xrtp_list_node_t));
   
    return node;
 }

@@ -14,8 +14,7 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-
- #include <dlfcn.h>
+ #include "dlfcn.h"
  
  #define XRTP_DLFLAGS RTLD_LAZY
  

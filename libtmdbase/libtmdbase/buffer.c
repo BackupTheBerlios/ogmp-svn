@@ -336,7 +336,7 @@
 
  int buffer_skip(xrtp_buffer_t * buf, int step){
 
-    int pos = buf->pos + step;
+    uint pos = buf->pos + step;
     
     if(pos < 0 || pos > buf->len_data || pos >= buf->len){
 

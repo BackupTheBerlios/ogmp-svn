@@ -49,7 +49,7 @@
        map->max_size = sz;
        map->n_item = 0;
        
-       bzero(map->items, sz);
+       memset(map->items, 0, sz);
     }
 
     return map;
@@ -110,7 +110,7 @@
 
     map->max_key = 0;
     map->n_item = 0;
-    bzero(map->items, map->max_size);
+    memset(map->items, 0, map->max_size);
 
     return OS_OK;
  }

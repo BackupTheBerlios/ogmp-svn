@@ -24,11 +24,11 @@
  #include "xstring.h"
  #include "catalog.h"
  #include "loader.h"
+ #include "dirent.h"
  
  #include <stdlib.h>
  #include <stdio.h>
  #include <string.h>
- #include <dirent.h>
  #include <sys/stat.h>
 
  #define CATALOG_LOG
@@ -114,26 +114,29 @@ int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* pat
    xrtp_list_user_t *list_u;
    int num_plugin;
 
+   DIR* dir;
+   struct dirent *entry;
+
+   module_info_t *minfo;
+   module_loadin_t *loadin;
+
+   struct stat entinfo;
+   void* lib;
+
    if(!catalog || !path){
       return OS_EPARAM;
    }
 
-   DIR* dir = opendir(path); /* POSIX call */
+   dir = opendir(path); /* POSIX call */
    if(!dir){
 
       catalog_log(("< catalog_scan_modules: Fail to open dir:%s >\n", path));
       return OS_EPARAM;
    }      
 
-   struct dirent *entry;
     
-   module_info_t *minfo;
-   module_loadin_t *loadin;
-
    list_u = xrtp_list_newuser(catalog->infos);
 
-   struct stat entinfo;
-   void* lib;
    while((entry = readdir(dir)) != NULL){
 
       char * entname = (char *)malloc(strlen(path) + strlen(entry->d_name) + 2);
@@ -203,7 +206,7 @@ int _catalog_match(void * target, void * pattern){
 
    catalog_log(("_catalog_match: Try matching pattern [%s] to target(%s)\n", (char*)pattern, minfo->loadin->label));
 
-   return strcasecmp(minfo->loadin->label, (char*)pattern);
+   return strcmp(minfo->loadin->label, (char*)pattern);
 }
 
 /*
