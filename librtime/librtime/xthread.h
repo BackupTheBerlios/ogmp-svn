@@ -23,11 +23,14 @@
 
 #define XTHREAD_NONEFLAGS 0 
  
+/* Need to change name, remove xrtp prefix */
 typedef struct xrtp_thread_s xrtp_thread_t;
 typedef struct xrtp_lock_s xthr_lock_t;
 typedef struct xrtp_cond_s xthr_cond_t;
 
-extern DECLSPEC  xrtp_thread_t * xthr_new(int (*fn)(void *), void *, int flag);
+typedef struct xrtp_thread_s xthread_t;
+
+extern DECLSPEC  xthread_t * xthr_new(int (*fn)(void *), void *, int flag);
 
 extern DECLSPEC  int xthr_wait(xrtp_thread_t * anoth, void *ret_anoth);
 
