@@ -209,7 +209,7 @@ const char* vsend_media_type(media_player_t * mp){
    return global_const.media_type;
 }
 
-char* vsend_codec_type(media_player_t * mp){
+const char* vsend_codec_type(media_player_t * mp){
 
    return "";
 }

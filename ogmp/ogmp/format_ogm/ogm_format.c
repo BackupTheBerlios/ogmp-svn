@@ -949,7 +949,7 @@ int ogm_set_control (media_format_t * mf, media_control_t * control) {
 int ogm_set_player (media_format_t * mf, media_player_t * player) {
 
    int ret;
-   char * type;
+   const char * type;
 
    type = player->media_type(player);
    if ( (ret = ogm_set_mime_player (mf, player, type)) >= MP_OK ) {

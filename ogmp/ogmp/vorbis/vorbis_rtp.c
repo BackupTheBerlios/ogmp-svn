@@ -437,7 +437,7 @@ void * rtp_vorbis_master(profile_handler_t *handler){
    return _h->master;
 }
 
-char * rtp_vorbis_mime(xrtp_media_t * media){
+const char * rtp_vorbis_mime(xrtp_media_t * media){
 
    return vorbis_mime;
 }
@@ -542,7 +542,7 @@ xrtp_media_t * rtp_vorbis(profile_handler_t *handler){
    return media;
 }
 
-char * vrtp_id(profile_class_t * clazz){
+const char * vrtp_id(profile_class_t * clazz){
 
    return vorbis_mime;
 }
