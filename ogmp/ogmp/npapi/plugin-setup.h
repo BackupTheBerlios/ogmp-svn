@@ -1,12 +1,17 @@
 #include "plugin.h"
 #include "../config.h"
+
+#ifdef X_ENABLE
 #include <X11/Xlib.h>
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
+#endif
+
 #include <ctype.h>
 #include <stdio.h>
+/*
 #include <unistd.h>
-
+*/
 #ifdef GTK_ENABLED
 #include <gdk/gdkx.h>
 #include <gtk/gtk.h>
@@ -16,22 +21,20 @@
 #include <gdk/gdk.h>
 extern GMutex *gdk_threads_mutex;
 #endif
-
+/*
 #ifdef DPMSExtension
 #include <X11/Xlib.h>
 #ifndef DPMS_SERVER
-
 #include <X11/X.h>
 #include <X11/Xmd.h>
-//#include <X11/extensions/dpms.h>
+#include <X11/extensions/dpms.h>
 extern "C" Bool DPMSQueryExtension(Display *, int *, int *);
 extern "C" Bool DPMSCapable(Display *);
 extern "C" Status DPMSInfo(Display *, CARD16 *, BOOL *);
 extern "C" Status DPMSEnable(Display *);
 #endif
 #endif
-
-
+*/
 #define STATE_RESET 0
 #define STATE_NEW 1
 #define STATE_HAVEURL 3
@@ -73,6 +76,7 @@ extern "C" Status DPMSEnable(Display *);
 // not sure we should just add a state here since the states are from WMP
 #define JS_STATE_INITIALIZING   12
 
+#if 0
 #ifndef STRUCTURES
 #define STRUCTURES
 typedef struct area {
@@ -113,6 +117,7 @@ typedef struct _ThreadData {
 } ThreadData;
 
 #endif
+#endif
 
 // function defintions, grouped by source file
 #ifndef HAVE_MEMMEM
@@ -152,6 +157,7 @@ int DPMSIsEnabled(nsPluginInstance * instance);
 void DPMSReenable(nsPluginInstance * instance);
 #endif
 
+#if 0
 //plugin-list.cpp
 void initialize(Node * l);
 Node *newNode();
@@ -204,3 +210,5 @@ void launchPlayerThread(nsPluginInstance * instance);
 void signalPlayerThread(nsPluginInstance * instance);
 void SetupPlayer(nsPluginInstance * instance, XEvent * event);
 void *playPlaylist(void *td);
+
+#endif

@@ -456,7 +456,7 @@ void New(nsPluginInstance * instance, nsPluginCreateData * parameters)
 
 void LoadConfigFile(nsPluginInstance * instance)
 {
-
+#if 0
     FILE *config;
     char buffer[1000];
     char parse[1000];
@@ -682,5 +682,5 @@ void LoadConfigFile(nsPluginInstance * instance)
 
     if (instance->download_dir == NULL && instance->keep_download == 1)
 	instance->download_dir = strdup(getenv("HOME"));
-
+#endif
 }

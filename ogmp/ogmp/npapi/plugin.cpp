@@ -120,10 +120,10 @@ void NS_DestroyPluginInstance(nsPluginInstanceBase * aPlugin)
 // nsPluginInstance class implementation
 //
 nsPluginInstance::nsPluginInstance(NPP aInstance) : nsPluginInstanceBase(),
-																		mInstance(aInstance),
-																		mInitialized(FALSE),
-																		mScriptablePeer(NULL),
-																		mControlsScriptablePeer(NULL)
+													mInstance(aInstance),
+													mInitialized(FALSE),
+													mScriptablePeer(NULL),
+													mControlsScriptablePeer(NULL)
 {
   mString[0] = '\0';
 }

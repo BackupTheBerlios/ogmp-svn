@@ -53,7 +53,9 @@
 #include "pluginbase.h"
 #include "nsScriptablePeer.h"
 #include "plugin-setup.h"
+/*
 #include <pthread.h>
+*/
 #include <sys/types.h>
 #include <signal.h>
 #include <string.h>
@@ -133,7 +135,7 @@ class nsPluginInstance:public nsPluginInstanceBase {
     char *hostname;
     int control;
     FILE *player;
-    pid_t pid;
+    /*pid_t pid;*/
     int noredraw;
     int hrefrequested;
     int threadsetup;
@@ -147,6 +149,7 @@ class nsPluginInstance:public nsPluginInstanceBase {
     int showbuttons;
     int showfsbutton;
     int mmsstream;
+	/*
     Node *list;
     Node *currentnode;
     ThreadData *td;
@@ -154,6 +157,7 @@ class nsPluginInstance:public nsPluginInstanceBase {
     Window player_window;
     Display *display;
     Widget widget;
+	*/
     uint32 nQtNext;
     char *qtNext[256];
     int panel_height;
@@ -170,14 +174,14 @@ class nsPluginInstance:public nsPluginInstanceBase {
     int DPMSEnabled;
     int hidden;
     int black_background;
-    
+    /*
     pthread_t player_thread;
     pthread_attr_t thread_attr;
     pthread_cond_t playlist_complete_cond;
     pthread_mutex_t playlist_mutex;
     pthread_mutex_t playlist_cond_mutex;
     pthread_mutex_t control_mutex;
-
+	*/
     // options
     char *vo;
     char *vop;
