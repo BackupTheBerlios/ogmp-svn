@@ -289,16 +289,17 @@ int vrtp_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
  */
 int vrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp) {
 
-   vrtp_handler_t * vh = (vrtp_handler_t *)handler;
-   //vrtp_media_t *vm = (vrtp_media_t *)vh->vorbis_media;
+   vrtp_handler_t * profile = (vrtp_handler_t *)handler;
 
    /* Mark always '0', Audio silent suppression not used */
    rtp_packet_set_mark(rtp, 0);
 
-   rtp_packet_set_payload(rtp, vh->payload_buf);
+   /* timestamp */
+   rtp_packet_set_timestamp(rtp, profile->usec_payload_timestamp);
 
+   rtp_packet_set_payload(rtp, profile->payload_buf);
 
-   vrtp_log(("audio/vorbis.vrtp_rtp_out: new payload %d bytes\n", buffer_datalen(vh->payload_buf)));
+   vrtp_log(("audio/vorbis.vrtp_rtp_out: payload[%d] (%d bytes)\n", profile->usec_payload_timestamp, buffer_datalen(profile->payload_buf)));
 
    if(!rtp_pack(rtp)){
 
@@ -307,6 +308,7 @@ int vrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp) {
       return XRTP_FAIL;
    }
 
+   /* unset after pack into the rtp buffer */
    rtp_packet_set_payload(rtp, NULL);
    
    return XRTP_OK;
@@ -910,29 +912,27 @@ int rtp_vorbis_loop(void *gen)
 				usec_payload_schedule = usec_payload_deadline - usec_now;
 			}
 
+			if(continue_packet)
+				usec_payload = 0;
+			else
+				usec_payload = (int64)payload_samples * 1000000 / vinfo->vi.rate;
 
 			/* Test purpose */
-			//vrtp_log(("audio/vorbis.rtp_vorbis_loop: payload %dP,%dS,%dus...%dus\n", n_packet, payload_samples, usec_payload, usec_payload_deadline));
-			vrtp_log(("audio/vorbis.rtp_vorbis_loop: %dus now, payload @%dus...#%dus\n", usec_now, usec_payload_deadline, usec_payload_schedule));
-
+			//vrtp_log(("audio/vorbis.rtp_vorbis_loop: payload[%d] (%dP,%dS,%dus)\n", profile->usec_payload_timestamp, n_packet, payload_samples, usec_payload));
+			//vrtp_log(("audio/vorbis.rtp_vorbis_loop: %dus now, payload @%dus...#%dus\n", usec_now, usec_payload_deadline, usec_payload_schedule));
 			/* Test end */
 
 			/* call for session sending 
 			 * usec_payload_launch: 
 			 * usec left before send rtp packet to the net
 			 * deadline<=0, means ASAP, the quickness decided by bandwidth
-			session_rtp_to_send(session, usec_payload_deadline, eots);  
 			 */
+			session_rtp_to_send(session, usec_payload_schedule, eots);  
 
 			/* timestamp update */
 			profile->usec_payload_timestamp += (int)usec_payload; 
 
 			usec_group_payload += (rtime_t)usec_payload;
-
-			if(continue_packet)
-				usec_payload = 0;
-			else
-				usec_payload = (int64)payload_samples * 1000000 / vinfo->vi.rate;
 
 			usec_payload_deadline += (rtime_t)usec_payload;
 
