@@ -1,0 +1,3 @@
+20050112:
+- Currently, module path is determined at compiling time, by MOD_DIR in Makefile.posix,
+	prefer to configure from config file at runtime.

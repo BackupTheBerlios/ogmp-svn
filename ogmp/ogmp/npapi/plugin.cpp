@@ -339,10 +339,9 @@ int nsPluginInstance::callback_on_register(void *user_on_register, int result, c
     
     nsPluginInstance *plugin = static_cast<nsPluginInstance*>(user_on_register);
     
-    sprintf(javascript, "javascript:regist_return(%d, %s);", result, reason);
-
-	NPN_GetURL(plugin->mInstance, javascript, NULL);
-
+    sprintf(javascript, "javascript:regist_return('reg_ok', '%s');", reason);
+	NPN_GetURL(plugin->mInstance, javascript, "_top");
+    
     return NPERR_NO_ERROR;
 }
 
@@ -448,32 +447,23 @@ NPError nsPluginInstance::sipua_init()
 
 void nsPluginInstance::load_user(const char *uid, PRInt32 uidsz)
 {
-    char javascript_callback[128];
-    
     if(!this->user)
         this->user = user_new((char*)uid, uidsz);
 
     if(!this->user)
     {
-        sprintf(javascript_callback, "javascript:load_user_return(-1);");
-        NPN_GetURL(mInstance, javascript_callback, NULL);
+        NPN_GetURL(mInstance, "javascript:load_user_return('loaduser_fail');", NULL);
+        return;
     }
 
     /* locate user when plugin initialized */
-	clie_log (("nsPluginInstance::load_user: user_uid[%s]\n", this->user->uid));
-
     this->sipua->locate_user(this->sipua, this->user);
     
-	clie_log (("nsPluginInstance::load_user: userloc[%s]\n", this->user->userloc));
-
-    sprintf(javascript_callback, "javascript:load_user_return(0);");
-    NPN_GetURL(mInstance, javascript_callback, NULL);
+    NPN_GetURL(mInstance, "javascript:load_user_return('loaduser_ok');", NULL);
 }
 
 void nsPluginInstance::regist(const char *fullname, PRInt32 fnsz, const char *home_router, const char *user_at_domain, PRInt32 seconds)
 {
-    char javascript_callback[128];
-
     char sip_router[256];
     char sip_user[256];
 
@@ -491,21 +481,14 @@ void nsPluginInstance::regist(const char *fullname, PRInt32 fnsz, const char *ho
     prof = user_add_profile(this->user, (char*)fullname, fnsz, NULL/*char* book_loc*/, (char*)sip_router, (char*)sip_user, seconds);
     if(!prof)
     {
-        sprintf(javascript_callback, "javascript:regist_return(%d);", SIPUA_STATUS_REG_FAIL);
-        NPN_GetURL(mInstance, javascript_callback, NULL);
+        NPN_GetURL(mInstance, "javascript:regist_return('reg_fail');", NULL);
+
         return;
     }
 
-	clie_log (("nsPluginInstance::regist: user@%x\n", (int)this->user));
-	clie_log (("nsPluginInstance::regist: userloc@%x\n", (int)this->user->userloc));
-	clie_log (("nsPluginInstance::regist: userloc[%s]\n", this->user->userloc));
-
     this->sipua->regist(this->sipua, prof, this->user->userloc);
-
-	clie_log (("nsPluginInstance::regist: 3\n"));
-
-    sprintf(javascript_callback, "javascript:regist_return(%d);", SIPUA_STATUS_REG_DOING);
-    NPN_GetURL(mInstance, javascript_callback, NULL);
+    
+    NPN_GetURL(mInstance, "javascript:regist_return('reg_ing');", NULL);
     
     return;
 }
