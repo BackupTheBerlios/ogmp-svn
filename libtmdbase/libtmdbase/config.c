@@ -40,8 +40,8 @@
 #endif
 #define config_debug(fmtargs)  do{if(config_debug) printf fmtargs;}while(0)
 
-struct config_item_s {
-
+struct config_item_s
+{
    int klen;
    char * key;
 
@@ -49,21 +49,143 @@ struct config_item_s {
    char * value;
 };
 
-struct config_s {
-
+struct config_s
+{
    int nitem;
    xrtp_list_t * items;
 
    FILE * file;
+   
+	char buf[256];
+
+	char *pc;
+	int nc;
 };
 
-int conf_parse (config_t *conf, FILE * file) {
+char* conf_next_nchar (config_t* conf, FILE* f, int n)
+{
+	if(n >= 256)
+		return NULL;
 
+	if(conf->pc+n >= conf->buf + conf->nc)
+	{
+		if(feof(f))
+			return NULL;
+
+		conf->nc = fread(conf->buf, 1, 256, f);
+
+		conf->pc = conf->pc + n - conf->nc;
+	}
+
+	conf->pc += n;
+
+	return conf->pc;
+}
+
+char* conf_next_line (config_t* conf, FILE* f)
+{
+	while(*conf->pc != '\n')
+	{
+		if(conf->pc >= conf->buf + conf->nc)
+		{
+			if(feof(f))
+				return NULL;
+
+			conf->nc = fread(conf->buf, 1, 256, f);
+			conf->pc = conf->buf;
+		}
+		else
+			conf->pc++;
+	}
+
+	return conf->pc;
+}
+
+int conf_next_token (config_t* conf, FILE* f, char **start, char **end)
+{
+	while(*conf->pc == '\t' || *conf->pc == '\n' || *conf->pc == ' ')
+	{
+		if(conf->pc >= conf->buf + conf->nc)
+		{
+			if(feof(f))
+				goto e;
+
+			conf->nc = fread(conf->buf, 1, 256, f);
+			conf->pc = conf->buf;
+		}
+		else
+			conf->pc++;
+	}
+	*start = conf->pc;
+
+	while(*conf->pc != '\t' || *conf->pc != '\n' || *conf->pc != ' ')
+	{
+		if(conf->pc >= conf->buf + conf->nc)
+		{
+			int d = *start - conf->buf;
+
+			if(d==0)
+				goto e;
+
+			memmove(conf->buf, *start, conf->nc-(*start-conf->buf));
+			*start = conf->buf;
+
+			if(feof(f))
+				goto e;
+
+			conf->nc = fread(conf->buf+conf->nc-d, 1, d, f);
+			conf->pc -= d;
+		}
+		else
+			conf->pc++;
+	}
+
+	*end = conf->pc;
+
+	return OS_OK;
+
+e:
+	*start = *end = NULL;
+	return OS_FAIL;
+}
+
+int sipua_read_nchar (config_t* conf, FILE* f, char *dest, int n)
+{
+	int nr = conf->pc - conf->buf;
+	int c=0;
+
+	if(conf->nc - nr > n)
+	{
+		strncpy(dest, conf->pc, n);
+		conf->pc += n;
+		return n;
+	}
+
+	while(nr < conf->nc && n>0)
+	{
+		strncpy(dest, conf->buf, conf->nc - nr);
+
+		n -= conf->nc - nr;
+		c += conf->nc - nr;
+
+		if(feof(f))
+			return c;
+
+		conf->nc = fread(conf->buf, 1, 256, f);
+		conf->pc = conf->buf;
+		nr = 0;
+	}
+
+	return c;
+}
+
+int conf_parse (config_t *conf, FILE * file)
+{
    return OS_OK;
 }
 
-config_t * conf_new (char *fname) {
-
+config_t * conf_new (char *fname)
+{
    config_t * conf = (config_t*)xmalloc(sizeof(struct config_s));
    if (!conf) {
 

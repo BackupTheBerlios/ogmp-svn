@@ -56,6 +56,7 @@ struct xlist_s
    int num;   
 };
 
+
 typedef struct xlist_user_s xlist_user_t;
 
 struct xlist_user_s
@@ -85,7 +86,7 @@ extern DECLSPEC int xlist_addonce_ascent(xlist_t * list, void * data, int cmp(vo
 
 extern DECLSPEC void * xlist_remove_first(xlist_t * list);
 extern DECLSPEC int xlist_remove_item(xlist_t * list, void *item);
-extern DECLSPEC void * xlist_remove_if(xlist_t * list, void * data, int(*match)(void*, void*));
+extern DECLSPEC void * xlist_remove(xlist_t * list, void * data, int(*match)(void*, void*));
 extern DECLSPEC int xlist_delete_if(xlist_t * list, void * cdata, int(*condition)(void*, void*), int(*freer)(void*));
 extern DECLSPEC void * xlist_find(xlist_t * list, void * data, int (*match)(void*, void*), xlist_user_t *user);
 

@@ -25,7 +25,7 @@ INCINST = $(TOPDIR)/include
 CC = gcc
 
 CFLAGS = -fPIC -I$(INCINST)
-LIBS = -ldl -lSDL -L$(TOPDIR)/lib/$(PROGNAME)
+LIBS = -ldl -L$(LIBINST) -lSDL
 
 LIBFILES:= libtmdbase/libtmdbase.so
 INCFILES:= libtmdbase/list.h libtmdbase/buffer.h libtmdbase/md5.h libtmdbase/os.h \
