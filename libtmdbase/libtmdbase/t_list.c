@@ -44,9 +44,12 @@
 
    find = 5;
    found = xrtp_list_find(list, &find, match, list_u);
-   if(found == NULL){
+   if(found == NULL)
+   {
       printf("[%d] is not found in list\n", find);     
-   }else{
+   }
+   else
+   {
       printf("[%d] matches (%d) in list\n", *found, find);
    }
    xrtp_list_freeuser(list_u);

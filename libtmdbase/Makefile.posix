@@ -17,6 +17,7 @@
 
 TOPDIR = /home/hling/timedia-project
 PROJNAME = timedia
+PROGNAME = ogmp
 
 LIBINST = $(TOPDIR)/lib
 INCINST = $(TOPDIR)/include
@@ -24,15 +25,16 @@ INCINST = $(TOPDIR)/include
 CC = gcc
 
 CFLAGS = -fPIC -I$(INCINST)
+LIBS = -ldl -lSDL -L$(TOPDIR)/lib/$(PROGNAME) -logmp
 
 LIBFILES:= libtmdbase/libtmdbase.so
 INCFILES:= libtmdbase/list.h libtmdbase/buffer.h libtmdbase/md5.h libtmdbase/os.h \
 	   libtmdbase/spinqueue.h libtmdbase/xmap.h libtmdbase/xstring.h	\
 	   libtmdbase/loader.h libtmdbase/catalog.h libtmdbase/config.h \
 	   libtmdbase/socket.h libtmdbase/inet.h libtmdbase/io.h \
-		libtmdbase/xmalloc.h libtmdbase/xthread.h
+		libtmdbase/ui.h libtmdbase/xmalloc.h libtmdbase/xthread.h
 
-all: sharedlib test
+all: sharedlib
 
 .c.o:
 	-gcc $(CFLAGS) -c $< -o $*.o
@@ -57,7 +59,7 @@ sharedlib:	libtmdbase/*.c
 	$(CC) -shared libtmdbase/list.o libtmdbase/buffer.o libtmdbase/md5.o libtmdbase/spinqueue.o \
 		libtmdbase/socket_posix.o libtmdbase/xmap.o libtmdbase/xstring.o libtmdbase/loader.o \
 		libtmdbase/catalog.o libtmdbase/config.o libtmdbase/xmalloc.o libtmdbase/libsdl/xthread_sdl.o \
-		-ldl -lSDL -o  libtmdbase/libtmdbase.so
+		$(LIBS) -o  libtmdbase/libtmdbase.so
 
 install:	libtmdbase/libtmdbase.so
 	@cp -f $(INCFILES) $(INCINST)/$(PROJNAME)
