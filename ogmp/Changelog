@@ -1,0 +1,5 @@
+Jan 29, 2004
+
+The test player ogmplayer can playout the Ogg Vorbis Stream today, but encount
+audio buffer overrun and underrun problem, Need to compensate the gap when swith
+between the buffers.

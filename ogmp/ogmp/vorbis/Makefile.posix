@@ -1,0 +1,48 @@
+# Make Ogmplayer for Linux
+
+PROGNAME = ogmp
+
+PREFIX = /home/hling/timedia-project
+
+CC = gcc
+
+LIBS = -L$(PREFIX)/lib -lxrtp
+
+INCLUDES = -I$(PREFIX)/include
+
+INSTDIR = $(PREFIX)/lib/$(PROGNAME)
+
+FILES = vorbis_player.c vorbis_decoder.c ogm_vorbis.c vorbis_sender.c vorbis_rtp.c
+
+LIBFILES = vorbis_player.so ogm_vorbis.so vorbis_sender.so vorbis_rtp.so
+
+CFLAGS = -Wall -fPIC
+
+all:	 libs install
+
+.c.o:
+	-$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $*.o
+
+libs: $(FILES:.c=.o)
+	gcc -shared -lvorbis vorbis_player.o vorbis_decoder.o  -o vorbis_player.so
+	gcc -shared -lvorbis ogm_vorbis.o -o ogm_vorbis.so
+
+	gcc -shared -lvorbis vorbis_sender.o -o vorbis_sender.so
+	gcc -shared $(LIBS) vorbis_rtp.o -o vorbis_rtp.so
+
+install: $(LIBFILES)
+	-@cp -f $(LIBFILES) $(INSTDIR)
+
+uninstall:
+	-@rm -f $(INSTDIR)/vorbis_player.so
+	-@rm -f $(INSTDIR)/ogm_vorbis.so
+	
+	-@rm -f $(INSTDIR)/vorbis_sender.so
+	-@rm -f $(INSTDIR)/vorbis_rtp.so
+
+clean:
+	-@rm -f *.o
+	-@rm -f *.lo
+	-@rm -f *.so
+
+
