@@ -14,11 +14,16 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
- #include "dlfcn.h"
+
+#ifdef WIN32
+ #include "win32/dlfcn.h"
+#else
+ #include <dlfcn.h>
+#endif
  
- #define XRTP_DLFLAGS RTLD_LAZY
+#define XRTP_DLFLAGS RTLD_LAZY
  
- void* modu_dlopen(char *fn, int flag);
- int modu_dlclose(void * lib);
- void* modu_dlsym(void *h, char *name);
- const char * modu_dlerror(void);
+void* modu_dlopen(char *fn, int flag);
+int modu_dlclose(void * lib);
+void* modu_dlsym(void *h, char *name);
+const char * modu_dlerror(void);

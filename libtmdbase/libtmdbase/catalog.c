@@ -21,32 +21,37 @@
  *
  */
  
- #include "xstring.h"
- #include "catalog.h"
- #include "loader.h"
- #include "dirent.h"
- 
- #include <stdlib.h>
- #include <stdio.h>
- #include <string.h>
- #include <sys/stat.h>
+#include "xstring.h"
+#include "catalog.h"
+#include "loader.h"
 
- #define CATALOG_LOG
- #define CATALOG_DEBUG
+#ifdef WIN32
+ #include "win32/dirent.h"
+#else
+ #include <dirent.h>
+#endif
  
- #ifdef CATALOG_LOG 
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+
+#define CATALOG_LOG
+#define CATALOG_DEBUG
+ 
+#ifdef CATALOG_LOG 
    const int catalog_log = 1;
- #else
+#else
    const int catalog_log = 0;
- #endif
- #define catalog_log(fmtargs)  do{if(catalog_log) printf fmtargs;}while(0)
+#endif
+#define catalog_log(fmtargs)  do{if(catalog_log) printf fmtargs;}while(0)
 
- #ifdef CATALOG_DEBUG
+#ifdef CATALOG_DEBUG
    const int catalog_debug = 1;
- #else
+#else
    const int catalog_debug = 0;
- #endif
- #define catalog_debug(fmtargs)  do{if(catalog_debug) printf fmtargs;}while(0)
+#endif
+#define catalog_debug(fmtargs)  do{if(catalog_debug) printf fmtargs;}while(0)
 
 module_catalog_t* catalog_new( char * type ){
    

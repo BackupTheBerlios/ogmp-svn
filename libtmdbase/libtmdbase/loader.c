@@ -18,7 +18,7 @@
  
  void * modu_dlopen(char *fn, int flag){
     return dlopen(fn, flag);
- }
+ }     
  
  int modu_dlclose(void * lib){
     return dlclose(lib);
@@ -26,7 +26,7 @@
 
  void * modu_dlsym(void *h, char *name){
     return dlsym(h, name);
- }
+ }   
 
  const char * modu_dlerror(void){
     return dlerror();
