@@ -20,25 +20,24 @@
   * The maximum according to the constance MAX_SCHED_SESSION
   */
 
- #include "internal.h"
+#include "internal.h"
 
- #define PSCHED_SIMPLE_LOG
+//#define PSCHED_SIMPLE_LOG
  
- #ifdef PSCHED_SIMPLE_LOG
-   const int ssch_log = 1;
- #else
-   const int ssch_log = 0;
- #endif
- #define simple_sched_log(fmtargs)  do{if(ssch_log) printf fmtargs;}while(0)
+#ifdef PSCHED_SIMPLE_LOG
+ #define simple_sched_log(fmtargs)  do{printf fmtargs;}while(0)
+#else
+ #define simple_sched_log(fmtargs)
+#endif
 
- #define MAX_SCHED_SESSION 64
+#define MAX_SCHED_SESSION 64
 
- typedef struct simple_sched_s simple_sched_t;
- typedef struct ssch_unit_s ssch_unit_t;
- typedef struct ssch_rtp_request_s ssch_rtp_request_t;
- typedef struct ssch_rtcp_request_s ssch_rtcp_request_t;
+typedef struct simple_sched_s simple_sched_t;
+typedef struct ssch_unit_s ssch_unit_t;
+typedef struct ssch_rtp_request_s ssch_rtp_request_t;
+typedef struct ssch_rtcp_request_s ssch_rtcp_request_t;
  
- struct ssch_unit_s{
+struct ssch_unit_s{
 
     xrtp_session_t * session;
     xrtp_hrtime_t period;
@@ -67,7 +66,7 @@
     ssch_rtcp_request_t * rtcp_request;
 
     xthr_lock_t * lock;
- };
+};
 
  struct ssch_rtp_request_s{
 
@@ -440,7 +439,7 @@ int simple_schedule_rtp(void * gen){
      
    ssch_unit_t * unit;
 
-   simple_sched_log(("simple_schedule_rtp(): rtp scheduler started\n"));
+   simple_sched_log(("simple_schedule_rtp: rtp scheduler started\n"));
 
    while(1){
 
@@ -457,7 +456,7 @@ int simple_schedule_rtp(void * gen){
 
             /* Time to schedule rtcp */
             /* xthr_cond_signal(sched->wait_on_rtcp); */
-            simple_sched_log(("simple_schedule_rtp: rtp scheduler idles ...\n"));
+            simple_sched_log(("simple_schedule_rtp: rtp scheduler waiting for request\n"));
             xthr_cond_wait(ssch->wait_rtp_request, ssch->lock);
             simple_sched_log(("simple_schedule_rtp: Wake up, Got a rtp request!\n"));
          }

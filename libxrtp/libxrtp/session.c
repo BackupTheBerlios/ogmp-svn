@@ -146,7 +146,7 @@
     name = (char *)malloc(clen + 1);
     if(!name){
 
-        session_log(("< session_set_cname: fail to allocate cname memery >\n"));
+        session_log(("session_new: fail to allocate cname memery\n"));
         free(ses);
         return NULL;
     }
@@ -159,6 +159,7 @@
     ses->rtp_cancel_ts = HRTIME_INFINITY;
     
     ses->rtp_port = rtp_port;
+    session_log(("session_new: rtp_port@%d\n", (int)rtp_port));
     port_set_session(rtp_port, ses);
     
     ses->rtcp_port = rtcp_port;

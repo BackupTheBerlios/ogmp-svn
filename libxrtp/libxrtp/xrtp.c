@@ -25,11 +25,18 @@
 #endif
 
 #define XRTP_LOG
+#define XRTP_DEBUG
  
 #ifdef XRTP_LOG
  #define xrtp_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define xrtp_log(fmtargs)
+#endif
+
+#ifdef XRTP_DBUG
+ #define xrtp_debug(fmtargs)  do{printf fmtargs;}while(0)
+#else
+ #define xrtp_debug(fmtargs)
 #endif
 
 module_catalog_t * module_catalog = NULL;
@@ -45,6 +52,12 @@ char * plugins_dir = ".";
 int xrtp_init(){
 
    int nplug;
+
+   if(socket_init()!=OS_OK){
+
+	  xrtp_debug(("xrtp_init: network down\n"));
+	  return XRTP_FAIL;
+   }
 
    module_catalog = catalog_new("xrtp_handler");
    nplug = catalog_scan_modules(module_catalog, XRTP_VERSION, plugins_dir);

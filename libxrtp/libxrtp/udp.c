@@ -25,12 +25,20 @@
  #include <timedia/socket.h> 
  #include <timedia/inet.h> 
 
+//#define UDP_LOG
+//#define UDP_DEBUG
+
  #ifdef UDP_LOG
-   const int udp_log = 1;
+	#define udp_log(fmtargs)  do{printf fmtargs;}while(0)
  #else
-   const int udp_log = 0;
+	#define udp_log(fmtargs)  
  #endif
- #define udp_log(fmtargs)  do{if(udp_log) printf fmtargs;}while(0)
+
+ #ifdef UDP_DEBUG
+	#define udp_debug(fmtargs)  do{printf fmtargs;}while(0)
+ #else
+	#define udp_debug(fmtargs)  
+ #endif
 
  #define LOOP_RTP_PORT  5000
  #define LOOP_RTCP_PORT  5001
@@ -73,9 +81,11 @@
   session_connect_t * connect_new(xrtp_port_t * port, xrtp_teleport_t * tport){
 
      session_connect_t * udp = (session_connect_t *)malloc(sizeof(struct session_connect_s));
-     if(!udp)
+     if(!udp){
+
+		udp_debug(("connect_new: No memory\n"));
         return NULL;
-        
+     }   
      memset(udp, 0, sizeof(struct session_connect_s));
     
      udp->port = port;
@@ -137,8 +147,12 @@
       int n;
 
 	  /* test */                                                                               
-      udp_log(("connect_send: socket[%d] sent %d bytes data[@%u] to [%s:%u] \n", conn->port->socket, datalen, (int)data, inet_ntoa(conn->remote_addr.sin_addr), ntohs(conn->remote_addr.sin_port)));
       n = sendto(conn->port->socket, data, datalen, 0, (struct sockaddr *)&(conn->remote_addr), sizeof(struct sockaddr_in));
+	  if(n<0){
+		udp_debug(("connect_send: sending fail\n"));
+	  }
+
+      udp_log(("connect_send: socket[%d] sent %d bytes data[@%u] to [%s:%u] \n", conn->port->socket, datalen, (int)data, inet_ntoa(conn->remote_addr.sin_addr), ntohs(conn->remote_addr.sin_port)));
 
       return n;
   }
@@ -230,6 +244,12 @@
      port->type = type;
 
      port->socket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	 if(port->socket == SOCKET_INVALID){
+	 
+		 udp_debug(("port_new: fail to create  socket\n"));
+		 return NULL;
+	 }
+	
      /*
      setsockopt(port->socket, SOL_IP, IP_PKTINFO, (void *)1, sizeof(int));
      */
@@ -238,17 +258,18 @@
      sin.sin_port = htons(local_portno);
      if(inet_aton(local_addr, &(sin.sin_addr)) == 0){ /* string to int addr */
 
-        udp_log(("port_new: Illegal ip address\n"));
+        udp_debug(("port_new: Illegal ip address\n"));
         socket_close(port->socket);
         free(port);
         
         return NULL;
      }
      
-     if(bind(port->socket, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) == -1){
+     if(bind(port->socket, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) == SOCKET_FAIL){
 
-        udp_log(("port_new: Fail to bind socket\n"));
+        udp_debug(("port_new: Fail to name socket '%s:%d', errno=%d\n", local_addr, local_portno, WSAGetLastError()));
         socket_close(port->socket);
+		port->socket = 0;
         free(port);
            
         return NULL;
@@ -311,9 +332,9 @@
      FD_ZERO(&io_set);
      FD_SET(port->socket, &io_set);
 
-     /* Warning: High Frequent output */
+     /* Warning: High Frequent output 
      udp_log(("port_poll: check incoming and timeout is set to %d seconds %d microseconds\n", (int)(tout.tv_sec), (int)(tout.tv_usec)));
-
+	 */
      n = select(port->socket+1, &io_set, NULL, NULL, &tout);
 
      if(n == 1)
@@ -326,6 +347,7 @@
 
      char data[UDP_MAX_LEN];
      struct sockaddr_in remote_addr;
+
      int addrlen, datalen;
      session_connect_t * conn = NULL;
 
@@ -334,6 +356,7 @@
      udp_log(("port_incoming: incoming\n"));
      
      /* Determine the incoming packet address from recvfrom return */
+	 addrlen = sizeof(remote_addr);
      datalen = recvfrom(port->socket, data, UDP_MAX_LEN, UDP_FLAGS, (struct sockaddr *)&remote_addr, &addrlen);
 
      if(!port->session){

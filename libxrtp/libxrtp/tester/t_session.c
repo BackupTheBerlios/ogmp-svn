@@ -422,9 +422,15 @@ int cb_media_sent(void * u, xrtp_media_t * media){
         return -1;
 
     /* Create rtp port */
-    sender_rtp_port = port_new("127.0.0.1", 9000, RTP_PORT);
-    sender_rtcp_port = port_new("127.0.0.1", 9001, RTCP_PORT);
-    printf("Sending tester: port pair created!\n");
+    sender_rtp_port = port_new("127.0.0.1", 3000, RTP_PORT);
+    sender_rtcp_port = port_new("127.0.0.1", 3001, RTCP_PORT);
+	if(!sender_rtp_port || !sender_rtcp_port){
+    
+		printf("Sending tester: fail to create ports, exit\n");
+		return -1;
+	}
+
+    printf("Sending tester: rtp_port@%d!\n", (int)sender_rtp_port);
 
     /* Create and initialise the session */
     ses = session_new(sender_rtp_port, sender_rtcp_port, cname_sender, strlen(cname_sender), xrtp_catalog()); 
@@ -523,8 +529,9 @@ int cb_media_sent(void * u, xrtp_media_t * media){
     printf("Sending tester: Scheduler added\n");
 
     /** recvr preparation **/
-    recvr_rtp_port = port_new("127.0.0.1", 8000, RTP_PORT);
-    recvr_rtcp_port = port_new("127.0.0.1", 8001, RTCP_PORT);
+    recvr_rtp_port = port_new("127.0.0.1", 4000, RTP_PORT);
+    recvr_rtcp_port = port_new("127.0.0.1", 4001, RTCP_PORT);
+
     printf("Receiving tester: port pair created!\n");
 
     /* Create and initialise the session */
@@ -570,8 +577,8 @@ int cb_media_sent(void * u, xrtp_media_t * media){
     th_recvr = xthr_new(spu_recvr_run, NULL, XTHREAD_NONEFLAGS);
     th_sender = xthr_new(spu_sender_run, NULL, XTHREAD_NONEFLAGS);
         
-    tp_rtp = teleport_new("127.0.0.1", 9000);
-    tp_rtcp = teleport_new("127.0.0.1", 9001);
+    tp_rtp = teleport_new("127.0.0.1", 3000);
+    tp_rtcp = teleport_new("127.0.0.1", 3001);
     
     xthr_lock(recvr.lock);
     session_join(recvr.session, tp_rtp, tp_rtcp);
