@@ -165,6 +165,7 @@ module_interface_t * ogm_new_media() {
 /**
  * Loadin Infomation Block
  */
+extern DECLSPEC
 module_loadin_t mediaformat = {
 
    "ogm",   /* Label */

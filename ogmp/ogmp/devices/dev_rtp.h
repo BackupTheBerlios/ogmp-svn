@@ -19,6 +19,10 @@
 
 #include "../media_format.h"
 
+#define MP_RTP_NONEFLAG 0x0
+#define MP_RTP_LAST		0x1
+#define MP_RTP_END		0x2
+
 typedef struct rtp_setting_s rtp_setting_t;
 typedef struct rtp_callback_s rtp_callback_t;
 typedef struct rtp_frame_s rtp_frame_t;
@@ -61,7 +65,8 @@ struct rtp_frame_s {
 
    struct media_frame_s frame;
 
-   int samplestamp;
+   uint rtp_flag;
+   int64 samplestamp;
    void *media_info;
    
    long  unit_bytes;

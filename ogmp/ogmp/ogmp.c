@@ -160,7 +160,8 @@ int done_format_handler(void *gen){
 
 int main(int argc, char** argv){
 
-   char * fname = argv[1];
+   char * controlmode = argv[1];
+   char * fname = argv[2];
    
    /* define a player */
    media_player_t *playa = NULL;
@@ -226,7 +227,7 @@ int main(int argc, char** argv){
    /* player controler */
    sender.control = (media_control_t*)new_media_control();
    
-   sender.control->config(sender.control, "playback", conf, mod_cata);
+   sender.control->config(sender.control, controlmode, conf, mod_cata);
 
    sender.control->put_configer(sender.control, "rtp", ogmp_config_rtp, conf);
    

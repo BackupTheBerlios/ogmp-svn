@@ -40,6 +40,14 @@
 #endif
 #define vorbis_player_debug(fmtargs)  do{if(vorbis_pa_debug) printf fmtargs;}while(0)
 
+typedef struct vorbis_packet_s {
+   
+	int vorbis_flag;
+	ogg_packet *packet;
+	ogg_int64_t samplestamp;
+
+} vorbis_packet_t;
+   
 struct global_const_s {
 
    const char media_type[6];
@@ -89,6 +97,55 @@ int vorbis_match_type (media_player_t * mp, char *mime, char *fourcc) {
    return 0;
 }
 
+int vorbis_loop(void *gen){
+
+	vorbis_decoder_t *vd = (vorbis_decoder_t*)gen;
+	media_player_t *mp = (media_player_t*)vd;
+
+	media_frame_t * auf = NULL;
+	//rtp_frame_t *rtpf = NULL;
+
+    media_pipe_t *output = mp->device->pipe(mp->device);
+	vd->stop = 0;
+	while(1)
+	{
+		xthr_lock(vd->pending_lock);
+
+		if (vd->stop)
+		{			
+			xthr_unlock(vd->pending_lock);
+			break;
+		}
+
+		if (xlist_size(vd->pending_queue) == 0) 
+		{
+			//vsend_log(("vsend_loop: no packet waiting, sleep!\n"));
+			xthr_cond_wait(vd->packet_pending, vd->pending_lock);
+			//vsend_log(("vsend_loop: wakeup! %d packets pending\n", xlist_size(vs->pending_queue)));
+		}
+
+		/* sometime it's still empty, weired? */
+		if (xlist_size(vd->pending_queue) == 0)
+		{
+			xthr_unlock(vd->pending_lock);
+			continue;
+		}
+
+		auf = (media_frame_t*)xlist_remove_first(vd->pending_queue);
+
+		xthr_unlock(vd->pending_lock);
+
+		output->put_frame (output, auf, auf->eots);
+	}
+
+	while(auf = (media_frame_t*)xlist_remove_first(vd->pending_queue)){
+		
+		output->recycle_frame (output, auf);
+	}
+
+	return MP_OK;
+}
+
 int vorbis_open_stream (media_player_t *mp, media_info_t *media_info) {
 
    vorbis_decoder_t *vp = NULL;
@@ -121,20 +178,40 @@ int vorbis_open_stream (media_player_t *mp, media_info_t *media_info) {
 
       return ret;
    }
+
+   /* thread start */
+   vp->pending_queue = xlist_new();
+   vp->pending_lock = xthr_new_lock();
+   vp->packet_pending = xthr_new_cond(XTHREAD_NONEFLAGS);
+   vp->thread = xthr_new(vorbis_loop, vp, XTHREAD_NONEFLAGS);
    
    return ret;
 }
 
 int vorbis_close_stream (media_player_t * mp) {
 
-   vorbis_player_debug (("vorbis_close_stream: Not implemented yet\n"));
+   int loop_ret;
+   vorbis_decoder_t *vd = (vorbis_decoder_t*)mp;
+
+   xthr_lock(vd->pending_lock);
+   vd->stop = 1;
+   xthr_unlock(vd->pending_lock);
    
-   return MP_EIMPL;
+   xthr_cond_signal(vd->packet_pending);
+
+   xthr_wait(vd->thread, &loop_ret);
+
+   xlist_done(vd->pending_queue, NULL);
+   xthr_done_lock(vd->pending_lock);
+   xthr_done_cond(vd->packet_pending);
+   
+   return MP_OK;
 }
 
 int vorbis_stop (media_player_t *mp) {
 
    vorbis_player_debug(("vorbis_stop: to stop vorbis player\n"));
+   vorbis_close_stream(mp);
    mp->device->stop (mp->device);
 
    ((vorbis_decoder_t*)mp)->receiving_media = 0;
@@ -149,6 +226,8 @@ int vorbis_receive_next (media_player_t *mp, void *vorbis_packet, int64 samplest
    
    vorbis_decoder_t *vp = (vorbis_decoder_t *)mp;
    int sample_rate = vp->vorbis_info->vi.rate;
+   
+   //move decode process into vorbis_loop thread...
    
    if (!mp->device) {
 
@@ -179,12 +258,23 @@ int vorbis_receive_next (media_player_t *mp, void *vorbis_packet, int64 samplest
    }
    
    auf->ts = vp->ts_usec_now;
+
+   if(last_packet)
+	   auf->eots = 1;
+   else
+	   auf->eots = 0;
    
+   xthr_lock(vp->pending_lock);
+   xlist_addto_last(vp->pending_queue, auf);
+   xthr_unlock(vp->pending_lock);
+   
+   xthr_cond_signal(vp->packet_pending);
+
    /*
    if ( last_packet || (vp->last_msec_sync == 0 && microstamp != 0) )
       vp->last_msec_sync = microstamp;
-   */
    output->put_frame(output, auf, last_packet);
+   */
 
    vp->receiving_media = 1;
 

@@ -84,7 +84,7 @@ static int pa_callback( void *inbuf, void *outbuf,
    int itval = 0;
 
    int pick_us_start = time_usec_now(pa->clock);
-   int ret = pa->out->pick_frame(pa->out, (media_info_t*)&pa->ai, outbuf, npcm_once);
+   int ret = pa->out->pick_content(pa->out, (media_info_t*)&pa->ai, outbuf, npcm_once);
    int pick_us = time_usec_spent(pa->clock, pick_us_start);
 
    if (pa->dev.running == 0) pa->dev.running = 1;

@@ -345,8 +345,8 @@ static int ogm_read_page (ogm_format_t * ogm) {
    int sync = ogg_sync_pageout(&(ogm->sync), &(ogm->page));
    while ( sync != 1 ) {
 
-      if( sync == 0 ) ogm_log(("(ogm_read_page: page need more data)\n"));
-      if( sync == -1 ) ogm_log(("ogm_read_page: page out of sync, skipping...\n"));
+      if( sync == 0 ) ogm_log(("\nogm_read_page: page need more data\n"));
+      if( sync == -1 ) ogm_log(("\nogm_read_page: page out of sync, skipping...\n"));
 
       buffer = ogg_sync_buffer(&(ogm->sync), CHUNKSIZE);
 
@@ -357,13 +357,16 @@ static int ogm_read_page (ogm_format_t * ogm) {
       }
 
       bytes = fread(buffer, 1, CHUNKSIZE, ogm->format.fdin);
+	  /*
       ogm_log(("ogm_read_page: %ld bytes read\n", bytes));
+	  */
       ogg_sync_wrote(&(ogm->sync), bytes);
 
       sync = ogg_sync_pageout(&(ogm->sync), &(ogm->page));
    }
-
-   ogm_log(("\n(ogm_read_page: read Page[%ld:%d])\n", ogg_page_pageno(&(ogm->page)), ogg_page_serialno(&(ogm->page))));
+   /*
+   ogm_log(("ogm_read_page: read #%d:page[%ld]\n\n", ogg_page_serialno(&(ogm->page)), ogg_page_pageno(&(ogm->page))));
+   */
    ogm->page_ready = 1;
 
    return 1;
@@ -720,7 +723,7 @@ int ogm_seek_millisecond (media_format_t *mf, int millis) {
 int demux_ogm_process_packet(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int64 samplestamp, int last_packet, int stream_end) {
 
    int i, hdrlen;
-   int64 lenbytes;
+   int64 lenbytes=0;
 
    int ret = MP_OK;
 
@@ -780,19 +783,17 @@ int ogm_demux_next (media_format_t *mf, int stream_end) {
    ogm_format_t * ogm = (ogm_format_t *)mf;
 
    int               sno;
-   ogg_int64_t       page_granul;
 
-   media_stream_t         *stream;
-   ogm_stream_t           *ogm_strm;
+   media_stream_t         *stream = NULL;
+   ogm_stream_t           *ogm_strm = NULL;
 
-   int us_page = 0;
+   //int us_page = 0;
+   int page_bytes = 0;
 
    /* Start to handle stream body
     * each time, it will send all packet in enable streams with same granulepos
     * each packet send to its belonged rtp media handler
     */
-   int scanned = 0;
-
    ogg_packet pack2;         
    ogg_packet *dual_pack[2] = {&ogm->packet, &pack2};
    int send = 0;    /* MUST BE */
@@ -813,27 +814,13 @@ int ogm_demux_next (media_format_t *mf, int stream_end) {
          
          ogm->page_ready = 1;
          ogm->packet_ready = 0;
+		 page_bytes = 0;
       }
-
-      page_granul = ogg_page_granulepos(&ogm->page);
 
       sno = ogg_page_serialno(&(ogm->page));
       
       stream = ogm_find_stream(mf, sno);
       ogm_strm = (ogm_stream_t*)stream;
-
-      if ( mf->time_ref == sno && scanned ) {
-      
-         xrtp_hrtime_t us_interval = (int)(1000000 * (page_granul - ogm->sync_granulepos) / stream->sample_rate);
-
-         ogm_log(("............................................................................\n"));
-         ogm_log(("(ogm_demux_next: demux break point at %dms, next Page[%lld] in %dus)\n\n", ogm->sync_msec, page_granul, us_interval));
-
-         ogm->sync_granulepos = page_granul;
-         ogm->sync_msec += us_interval / 1000;
-         
-         return us_interval;
-      }
 
       if (stream == NULL) {
 
@@ -849,9 +836,7 @@ int ogm_demux_next (media_format_t *mf, int stream_end) {
       } else {
 
          /* Figure millisecond from page granulepos */
-         int us_interval = (int)(1000000 * (page_granul - ogm_strm->last_granulepos) / stream->sample_rate);
-
-         us_page = ogm_strm->last_microsec + us_interval;
+		 ogg_int64_t page_granul = ogg_page_granulepos(&ogm->page);
 
          ogg_stream_pagein(ogm_strm->instate, &(ogm->page));
 
@@ -869,39 +854,52 @@ int ogm_demux_next (media_format_t *mf, int stream_end) {
          while (ogg_stream_packetout(ogm_strm->instate, dual_pack[recv]) == 1){
 
             n_pack++;
-            
+
+			//ogm_log(("ogm_demux_next: packet %d bytes\n", dual_pack[send]->bytes));            
             ret = demux_ogm_process_packet(ogm, ogm_strm, &(ogm->page), dual_pack[send], page_granul, 0, stream_end);
             if(ret < MP_OK) return ret;
             
             recv = send;
             send = (send + 1) % 2;
+
+			page_bytes += dual_pack[send]->bytes;
          }
          
          /* last packet of the page */          
+		 //ogm_log(("ogm_demux_next: packet %d bytes\n", dual_pack[send]->bytes));
          ret = demux_ogm_process_packet(ogm, ogm_strm, &(ogm->page), dual_pack[send], page_granul, 1, stream_end);
          if(ret < 0) {
 
             ogm_log(("ogm_demux_next: Need resync stream(%d) when fail process\n", sno));
             return ret;
          }
+		 page_bytes += dual_pack[send]->bytes;
 
          ogm->packet_ready = 0;
          
-         ogm_strm->last_granulepos = page_granul;
-         ogm_strm->last_microsec = us_page;
+         ogm_log(("ogm_demux_next: %d packet(s) %d bytes found in the #%d:Page[%lld]\n", n_pack, page_bytes, sno, page_granul));
 
-         ogm->last_granulepos = page_granul;
-         
-         ogm_log(("ogm_demux_next: %d packet(s) found in the Page[%d:%lld] at %dus\n", n_pack, sno, page_granul, us_page));
-
-         if( !ogm_read_page (ogm) ) {
+		 if( !ogm_read_page (ogm) ) {
 
             ogm->page_ready = 0;
             return 0;
          }
-      }
 
-      scanned = 1;
+		 if ( mf->time_ref == sno ) {
+		 
+			 ogg_int64_t delta_granu = page_granul - ogm_strm->last_granulepos;
+			 ogg_int64_t us_interval = 1000000 * delta_granu / stream->sample_rate;
+
+			 ogm_log(("............................................................................\n"));
+			 ogm_log(("(ogm_demux_next: %lld samples in the page)\n", delta_granu));
+			 ogm_log(("(ogm_demux_next: sleep %lldus)\n\n", us_interval));
+
+			 ogm_strm->last_granulepos = page_granul;
+			 ogm_strm->last_microsec += (int)us_interval;
+			
+			 return (int)us_interval;
+		 }
+      }
    }          
 
    /* never reach here */

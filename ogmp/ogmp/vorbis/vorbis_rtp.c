@@ -22,24 +22,20 @@
 #include <stdio.h>
 #include <string.h>
 
-#define TEXT_SAMPLING_INSTANCE  1  /* One sample per sampling */
-
 #define VRTP_LOG
 #define VRTP_DEBUG
  
 #ifdef VRTP_LOG
-   const int vrtp_log = 1;
+ #define vrtp_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int vrtp_log = 0;
+ #define vrtp_log(fmtargs)
 #endif
-#define vrtp_log(fmtargs)  do{if(vrtp_log) printf fmtargs;}while(0)
 
 #ifdef VRTP_DEBUG
-   const int vrtp_debug = 1;
+ #define vrtp_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
-   const int vrtp_debug = 0;
+ #define vrtp_debug(fmtargs)
 #endif
-#define vrtp_debug(fmtargs)  do{if(vrtp_debug) printf fmtargs;}while(0)
 
 const char vorbis_mime[] = "audio/vorbis";
 
@@ -79,10 +75,12 @@ struct vrtp_media_s{
    uint32 dolen;
    media_data_t * data_out;
 
+   /* a queue of vorbis packet to bundle into one rtp packet */
+   xlist_t *vorbis_pending;
 };
 
 /**
- * Main Methods MUST BE implemented
+ * Handle inward rtp packet
  */
 int vrtp_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
 
@@ -261,11 +259,44 @@ int vrtp_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
    return XRTP_CONSUMED;
 }
 
+/**
+ * Handle outward rtp packet
+ * Several packets in same timestamp are bundled together according to rtp-profile-vorbis
+ *
+ * RFC3550 indicate: 
+ * Timestamp: 32 bits, representing the sampling time of the first sample of the first vorbis packet in the RTP packet;
+ * Timestamp initial value is random, generate timestamp CAN NOT relay on stamp in the media storage, MUST generate on the fly
+ * according to the media clock that increase in a linear and monotonic fashion (except wrap-around); 
+ *
+ * The whole rtp packet maxmum size limited to MTU size, typically 1500 bytes include RTP and Payload header;
+ * Normal vorbis packet in average 800 bytes, but header packets are 4-12k, maximum header block is 64k;
+ * 
+ * Vorbis payload header:
+ * [C|F|R=0|# of packets]+[len of vorbis]+[ vorbis data ]
+ * [1|1| 1 |<----5----->]+[<-----8----->]+[<-len--byte->] bits
+ * c=1: the first packet is a continued fragment;
+ * f=1: have a completed packet or the last fragment;
+ * r=0: reserved as '0'
+ *
+ * For single complete vorbis: 
+ *  {rtp header}{[(C=0)|(F=1)|(0)|(1)]+[ len ][  vorbis  ]}
+ *
+ * For fragment: 
+ *  {rtp header}{[(C=1)|(F=?)|(0)|(0)]+[ len ][ fragment ]}
+ *
+ * For multi-packet: 
+ *  {rtp header}{[(C=0)|(F=1)|(0)|n=(2...32)]+[len#1][vorbis#1]+[len#2][vorbis#2]+...+[len#n][vorbis#n]} 
+ *
+ * NOTE: 
+ * Only complete packet no more than 256 bytes can be bundled together, 
+ * so a Fragment or a Packet larger than 256 bytes must in a rtp packet by itself.
+ */
 int vrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp) {
 
    vrtp_handler_t * vh = (vrtp_handler_t *)handler;
    vrtp_media_t *vm = (vrtp_media_t *)vh->vorbis_media;
 
+   /* Mark always '0', Audio silent suppression not used */
    rtp_packet_set_mark(rtp, 0);
 
    if(!rtp_packet_new_payload(rtp, vm->dolen, vm->data_out)){
@@ -458,6 +489,9 @@ int rtp_vorbis_set_parameter(xrtp_media_t * media, int key, void * val){
    return XRTP_OK;
 }
 
+/**
+ * Get the media clockrate when the stream is opened
+ */
 int rtp_vorbis_set_rate(xrtp_media_t * media, int rate){
 
    media->clockrate = rate;
@@ -479,30 +513,28 @@ uint32 rtp_vorbis_sign(xrtp_media_t * media){
    return rand();
 }
 
-/* For media, this means the time to display
- * xrtp will schedule the time to send media by this parameter.
+/**
+ * 
+ *
+ * Param:
+ * last - the last packet of the same samplestamp
+ *
+ * NOTE: '*data' is NOT what 'mlen' indicated.
  */
-int rtp_vorbis_post(xrtp_media_t * media, media_data_t *data, int mlen, int in_usec){
+int rtp_vorbis_post(xrtp_media_t * media, media_data_t *data, int mlen, int last){
 
-   char *media_unit = NULL;
+   rtp_frame_t *rf = (rtp_frame_t*)data;   
+   long  media_bytes = rf->unit_bytes;
    
-   long  unit_bytes = ((rtp_frame_t*)data)->unit_bytes;
-   int samplestamp = ((rtp_frame_t*)data)->samplestamp;
+   vorbis_info_t *vinfo = (vorbis_info_t*)rf->media_info;
 
-   int ret = MP_OK;
+   /* Test purpose */
+   vrtp_log(("audio/vorbis.rtp_vorbis_post: packet %d bytes\n", media_bytes));
 
-   vorbis_info_t *vinfo = (vorbis_info_t*)((rtp_frame_t*)data)->media_info;
+   return MP_OK;
+   /* Test end */
 
-   media_unit = ((rtp_frame_t*)data)->media_unit;
-   
-   if (in_usec < 0)
-      vrtp_log(("rtp_vorbis_post: ready to post the last %ld bytes vorbis packet[@%d]\n", unit_bytes, samplestamp));
-   else
-      vrtp_log(("rtp_vorbis_post: ready to post a %ld bytes vorbis packet[@%d]\n", unit_bytes, samplestamp));
-
-   //ret = session_rtp_to_send(media->session, ,);  /* '0' means the quickness decided by xrtp */
-
-   return ret;
+   //return session_rtp_to_send(media->session, 0, last);  /* '0' means the quickness decided by xrtp */
 }
 
 xrtp_media_t * rtp_vorbis(profile_handler_t *handler){
@@ -520,12 +552,22 @@ xrtp_media_t * rtp_vorbis(profile_handler_t *handler){
 
       memset(h->vorbis_media, 0, sizeof(struct vrtp_media_s));
 
+	  h->vorbis_media->vorbis_pending = xlist_new();
+	  if(!h->vorbis_media->vorbis_pending){
+
+		vrtp_debug(("audio/vorbis.rtp_vorbis: no memory to allocate for pending list\n"));
+		free(h->vorbis_media);
+		h->vorbis_media = NULL;
+		return NULL;
+	  }
+
       h->vorbis_media->vorbis_profile = h;
       
       media = ((xrtp_media_t*)(h->vorbis_media));
 
       media->clockrate = 0;
-      media->sampling_instance = TEXT_SAMPLING_INSTANCE;
+      media->sampling_instance = 0;
+
       media->session = h->session;
 
       media->mime = rtp_vorbis_mime;
@@ -644,6 +686,7 @@ module_interface_t * module_init(){
 /**
  * Plugin Infomation Block
  */
+extern DECLSPEC
 module_loadin_t mediaformat = {
 
    "rtp_profile",   /* Plugin ID */

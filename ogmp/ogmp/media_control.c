@@ -22,10 +22,8 @@
 #include <timedia/xstring.h>
 #include <timedia/list.h>
 
-/*
 #define MEDIA_CONTROL_LOG
 #define MEDIA_CONTROL_DEBUG
-*/
 
 #ifdef MEDIA_CONTROL_LOG
    const int media_ctrl_log = 1;
@@ -257,37 +255,32 @@ int cont_seek_millisec (media_control_t * cont, int msec) {
 
 int cont_demux_next (media_control_t * cont, int strm_end) {
 
-   xrtp_hrtime_t period_us = 0, real_period = 0, period_adjust = 0;
-   xrtp_hrtime_t demux_start, demux_us;
+   rtime_t period_us = 0, real_period = 0, sleep_us = 0;
+   rtime_t demux_start, demux_us;
 
    control_impl_t *impl = (control_impl_t *)cont;
 
-   real_period = time_usec_spent(impl->clock, impl->prev_period_start);
    demux_start = time_usec_now(impl->clock);
-
-   if (impl->started == 0) {
-
-      impl->started = 1;
-      
-   } else {
-
-      period_adjust = real_period - impl->prev_period_us;
-
-      cont_log(("cont_demux_next: %dus real period, expect %dus period, adjust %dus\n", real_period, impl->prev_period_us, period_adjust));
+   if(impl->started)
+   {
+	   real_period = time_usec_spent(impl->clock, impl->prev_period_start);
+	   impl->prev_period_start = demux_start;
    }
 
-   impl->prev_period_start = demux_start;
-   
    period_us = impl->format->demux_next(impl->format, strm_end);
-   impl->prev_period_us = period_us;
 
-   if (period_us < 0) return period_us;   /* errno < 0 */
-      
+   if(period_us <= 0) return period_us; /* errno < 0 */
+   
+   cont_log(("cont_demux_next: %dus period, real period %dus\n", period_us, real_period));
+   
    demux_us = time_usec_spent(impl->clock, demux_start);
    
-   cont_log(("cont_demux_next: %dus period, demux cost %dus, wait %dus, adjust %dus\n", period_us, demux_us, period_us - demux_us, period_adjust));
-   time_usec_sleep(impl->clock, period_us - demux_us - period_adjust, NULL);
+   sleep_us = period_us - demux_us;
+
+   time_usec_sleep(impl->clock, sleep_us, NULL);
    
+   impl->started = 1;
+
    return MP_OK;
 }
 
@@ -313,7 +306,7 @@ module_interface_t* new_media_control () {
       return NULL;
    }
 
-   memset(impl, 0, sizeof(struct media_control_s));
+   memset(impl, 0, sizeof(struct control_impl_s));
 
    impl->clock = time_start();
 

@@ -75,48 +75,63 @@ struct dev_rtp_s{
    rtp_pipe_t * pipe;
 };
 
-media_frame_t* rtp_new_frame (media_pipe_t *pipe, int bytes) {
+media_frame_t* rtp_new_frame (media_pipe_t *pipe, int bytes, char *init_data) {
 
    /* better recycle to garrantee */
-   rtp_frame_t * rtpf = (rtp_frame_t*)malloc(sizeof(struct rtp_frame_s)+bytes);
+   rtp_frame_t * rtpf = (rtp_frame_t*)malloc(sizeof(struct rtp_frame_s));
    if(!rtpf){
 
-      rtp_log(("rtp_new_frame: No memory for frame\n"));
+      rtp_debug(("rtp_new_frame: No memory for frame\n"));
       return NULL;
-   }
-   
+   }   
    memset(rtpf, 0, sizeof(*rtpf));
-   rtpf->media_unit = (char*)&(rtpf->media_unit)+1;
+
+   rtpf->media_unit = (char*)malloc(bytes);
+   if(rtpf->media_unit == NULL){
+		
+	   free(rtpf);
+	   rtp_debug(("rtp_new_frame: No memory for data"));
+	   
+	   return NULL;
+   }
+
+   rtpf->unit_bytes = bytes;
+
+   /* initialize data */
+   if(init_data != NULL){
+
+		//rtp_log(("rtp_new_frame: initialize %d bytes data\n", bytes));
+		memcpy(rtpf->media_unit, init_data, bytes);
+   }
 
    return (media_frame_t*)rtpf;
 }
 
 int rtp_recycle_frame (media_pipe_t *pipe, media_frame_t *f) {
 
-   free(f);
+   rtp_frame_t * rtpf = (rtp_frame_t*)f;
+
+   if(rtpf->media_unit) free(rtpf->media_unit);
+   free(rtpf);
+
+   //rtp_debug(("rtp_recycle_frame: OK\n"));
 
    return MP_OK;
 }
 
 int rtp_put_frame (media_pipe_t *pipe, media_frame_t *frame, int last) {
 
-   int ret;
    xrtp_media_t *rtp_media = ((rtp_pipe_t*)pipe)->rtp_media;
    rtp_frame_t *rtpf = (rtp_frame_t*)frame;
 
-   if (last)
-      ret = rtp_media->post(rtp_media, frame, rtpf->unit_bytes, -last);
-   else
-      ret = rtp_media->post(rtp_media, frame, rtpf->unit_bytes, 0);
-
-   return ret;
+   return rtp_media->post(rtp_media, frame, rtpf->unit_bytes, last);
 }
 
 /*
  * return 0: stream continues
  * return 1: stream ends
  */
-int rtp_pick_frame (media_pipe_t *pipe, media_info_t *media_info, char* raw, int nraw_once) {
+int rtp_pick_content (media_pipe_t *pipe, media_info_t *media_info, char* raw, int nraw_once) {
 
    rtp_log(("rtp_pick_frame: No operation\n"));
 
@@ -147,7 +162,7 @@ rtp_pipe_t * rtp_pipe_new() {
    mp->new_frame = rtp_new_frame;
    mp->recycle_frame = rtp_recycle_frame;
    mp->put_frame = rtp_put_frame;
-   mp->pick_frame = rtp_pick_frame;
+   mp->pick_content = rtp_pick_content;
    mp->done = rtp_pipe_done;
 
    return rp;
@@ -267,8 +282,12 @@ int rtp_done (media_device_t *dev) {
 module_interface_t * rtp_new () {
 
    media_device_t * dev;
+   dev_rtp_t *vrtp;
 
-   dev_rtp_t *vrtp = (dev_rtp_t*)malloc(sizeof(struct dev_rtp_s));
+   /* Realised the xrtp lib */
+   if(xrtp_init() < XRTP_OK) return NULL;
+   
+   vrtp = (dev_rtp_t*)malloc(sizeof(struct dev_rtp_s));
    if (!vrtp) {
 
       rtp_debug(("vrtp_new: No free memory\n"));
@@ -279,7 +298,6 @@ module_interface_t * rtp_new () {
 
    dev = (media_device_t*)vrtp;
 
-   dev->setting = rtp_setting;
    dev->pipe = rtp_pipe;
    dev->start = rtp_start;
    dev->stop = rtp_stop;
@@ -294,6 +312,7 @@ module_interface_t * rtp_new () {
 /**
  * Loadin Infomation Block
  */
+extern DECLSPEC
 module_loadin_t mediaformat = {
 
    "device",   /* Label */

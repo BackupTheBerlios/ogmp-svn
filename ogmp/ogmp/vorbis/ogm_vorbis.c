@@ -28,10 +28,8 @@
    #include <vorbis/codec.h>
 #endif
 
-/*
 #define OGM_VORBIS_LOG_FLAG
 #define OGM_VORBIS_DEBUG_FLAG
-*/
 
 #ifdef OGM_VORBIS_LOG_FLAG
  #define ogm_vorbis_log(fmtargs)  do{printf fmtargs;}while(0)
@@ -353,7 +351,8 @@ module_interface_t * ogm_new_media() {
 /**
  * Loadin Infomation Block
  */
-extern DECLSPEC module_loadin_t mediaformat = {
+extern DECLSPEC 
+module_loadin_t mediaformat = {
 
    "ogm",   /* Label */
 

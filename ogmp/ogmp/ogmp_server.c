@@ -27,8 +27,8 @@ int ogmp_config_rtp(void *conf, control_setting_t *setting){
 
    rset->ipaddr = "127.0.0.1";
 
-   rset->rtp_portno = 5000;
-   rset->rtcp_portno = 5001;
+   rset->rtp_portno = 3000;
+   rset->rtcp_portno = 3001;
 
    rset->total_bw = 128*1024;
    rset->rtp_bw = 96*1024;

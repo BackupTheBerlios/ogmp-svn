@@ -45,7 +45,7 @@
 #define MUTE_VALUE 0
 #define PIPE_ADJUST_FACTOR 200
 
-media_frame_t * pout_new_frame(media_pipe_t * mo, int bytes){
+media_frame_t * pout_new_frame(media_pipe_t * mo, int bytes, char *data){
 
    media_frame_t * found = NULL;
    media_frame_t * prev = NULL;
@@ -75,14 +75,21 @@ media_frame_t * pout_new_frame(media_pipe_t * mo, int bytes){
 
    if (found){
 
-      /* init the frame */
-      int bytes = found->bytes;
+      /* init the frame but keep databuf info */
+      int rawbytes = found->bytes;
       char* raw = found->raw;
 
       memset(found, 0, sizeof(struct media_frame_s));
 
-      found->bytes = bytes;
+      found->bytes = rawbytes;
       found->raw = raw;
+
+	  /* initialize data */
+	  if(data != NULL){
+
+		pout_log(("pout_new_frame: initialize %d bytes data\n", bytes));
+		memcpy(found->raw, data, bytes);
+	  }
 
       return found;
    }
@@ -107,6 +114,13 @@ media_frame_t * pout_new_frame(media_pipe_t * mo, int bytes){
    found->raw = raw;
    found->bytes = bytes;
    out->bytes_allbuf += bytes;
+
+   /* initialize data */
+   if(data != NULL){
+
+		pout_log(("pout_new_frame: initialize %d bytes data\n", bytes));
+		memcpy(found->raw, data, bytes);
+   }
 
    /*
    pout_debug ("pout_new_frame: new frame %d bytes / total %d bytes\n"
@@ -423,7 +437,7 @@ sample_buffer_t * pout_switch_buffer(timed_pipe_t *pipe) {
  * Return 0: stream continues
  * return 1: stream ends
  */
-int pout_pick_frame(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_once) {
+int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_once) {
 
    sample_buffer_t * bufr = NULL;
    int do_switch = 0;
@@ -452,7 +466,7 @@ int pout_pick_frame(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_onc
       
       bufr->samples_mute += nraw_once;
       
-      pout_log(("pout_pick_frame: Buf[%d] is buffering %d samples (%dus), mute %d samples\n"
+      pout_log(("pout_pick_content: Buf[%d] is buffering %d samples (%dus), mute %d samples\n"
                , pipe->bufn_write, bufw->samples_in, bufw->usec_in, bufr->samples_mute));
 
       return 0;
@@ -466,13 +480,13 @@ int pout_pick_frame(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_onc
 
       if (do_switch - 1 != pipe->bufn_read ) {
 
-         pout_log(("pout_pick_frame: to switch buffer ...\n"));
+         pout_log(("pout_pick_content: to switch buffer ...\n"));
          bufr = pout_switch_buffer (pipe);
-         pout_log(("pout_pick_frame: done switch buffer.\n"));
+         pout_log(("pout_pick_content: done switch buffer.\n"));
 
       } else {
 
-         pout_log(("pout_pick_frame: start playing\n"));
+         pout_log(("pout_pick_content: start playing\n"));
          //pipe->beat_start = time_usec_now(pipe->clock);
       }
    }
@@ -490,7 +504,7 @@ int pout_pick_frame(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_onc
          nraw_add = nraw_once / PIPE_ADJUST_FACTOR;
       }
 
-      pout_log(("pout_pick_frame: adjust %d/%d samples\n", nraw_add, nraw_once));
+      pout_log(("pout_pick_content: adjust %d/%d samples\n", nraw_add, nraw_once));
       nraw_tofill = nraw_once - nraw_add;
 
    } else {
@@ -514,7 +528,7 @@ int pout_pick_frame(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_onc
             nsample_total = pipe->nsample_write_left + pipe->nsample_read_left;
             usec_inbuf = (int)((double)nsample_total / pipe->sample_rate * 1000000);
 
-            pout_log(("pout_pick_frame: Total %d samples (%dus) in the buffer\n", nsample_total, usec_inbuf));
+            pout_log(("pout_pick_content: Total %d samples (%dus) in the buffer\n", nsample_total, usec_inbuf));
             pout_log(("************************ END OF TIMESTAMP *********************\n\n"));
          }
 
@@ -531,7 +545,7 @@ int pout_pick_frame(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_onc
          /* finish when the stream ends */
          if (pipe->frame_read_now->eos) {
 
-            pout_log(("pout_pick_frame: reach stream end\n"));
+            pout_log(("pout_pick_content: reach stream end\n"));
 
             memset((void*)out, 0, nraw_tofill * ai->channels_bytes);
 
@@ -548,7 +562,7 @@ int pout_pick_frame(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_onc
             if (pipe->frame_read_now == bufr->oldhead) {
 
                pout_log(("============================================================\n"));
-               pout_log(("(pout_pick_frame: playout the transfer part, now play my own)\n\n"));
+               pout_log(("(pout_pick_content: playout the transfer part, now play my own)\n\n"));
             }
 
          } else {
@@ -564,7 +578,7 @@ int pout_pick_frame(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_onc
                pout_log(("        >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"));
                pout_log(("        >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"));
                pout_log(("        >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"));
-               pout_log(("        (pout_pick_frame: Sth. Wrong! %d/%d samples played only)\n\n"
+               pout_log(("        (pout_pick_content: Sth. Wrong! %d/%d samples played only)\n\n"
                         , bufr->samples_out, bufr->samples_in));
             }
             
@@ -581,7 +595,7 @@ int pout_pick_frame(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_onc
                   pout_log(("        0000000000000000000000000000000000000000000000000000000000000\n"));
                   pout_log(("        0000000000000000000000000000000000000000000000000000000000000\n"));
                   pout_log(("        0000000000000000000000000000000000000000000000000000000000000\n"));
-                  pout_log(("        (pout_pick_frame: fill in %d sample gap with last sample)\n\n", nraw_tofill));
+                  pout_log(("        (pout_pick_content: fill in %d sample gap with last sample)\n\n", nraw_tofill));
 
                   for (i=0; i<nraw_tofill; i++){
 
@@ -627,7 +641,7 @@ int pout_pick_frame(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_onc
       nsample_total = pipe->nsample_write_left + pipe->nsample_read_left;
       
       /*
-      pout_log(("pout_pick_frame: [@%dms] (-)%d, %dw + %dr = %d samples left\n"
+      pout_log(("pout_pick_content: [@%dms] (-)%d, %dw + %dr = %d samples left\n"
           , pipe->frame_read_now->ts, ncpy, pipe->nsample_write_left
           , pipe->nsample_read_left, nsample_total));
       */
@@ -640,7 +654,7 @@ int pout_pick_frame(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_onc
    } /* while (nraw_tofill) */
 
    /*
-   pout_log("pout_pick_frame: pick Buf[%d], %d/%d samples, %d/%d us, frame_read_now[%d->%d]:%d/%d\n"
+   pout_log("pout_pick_content: pick Buf[%d], %d/%d samples, %d/%d us, frame_read_now[%d->%d]:%d/%d\n"
             , pipe->bufn_read, bufr->samples_out, bufr->samples_in, bufr->usec_out, bufr->usec_in
             , (int)pipe->frame_read_now, (int)pipe->frame_read_now->next
             , pipe->frame_read_now->nraw_done, pipe->frame_read_now->nraw);
@@ -656,10 +670,17 @@ int pout_pick_frame(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_onc
    if (pipe->frame_read_now->nraw_done == pipe->frame_read_now->nraw && pipe->frame_read_now->eos) {
 
       pipe->pulsing = 0;
-      pout_log(("pout_pick_frame: stream end, player stop\n"));
+      pout_log(("pout_pick_content: stream end, player stop\n"));
    }
    
    return pipe->frame_read_now->eos;
+}
+
+media_frame_t* pout_pick_frame(media_pipe_t *mp) {
+	
+	pout_log(("pout_pick_frame: Not Implemented yet, see pout_pick_frame_content()\n"));
+
+	return NULL;
 }
 
 int pout_done_buffer(timed_pipe_t * pipe, sample_buffer_t * buf){
@@ -773,6 +794,7 @@ media_pipe_t * timed_pipe_new(int sample_rate, int usec_pulse, int ms_min, int m
    
    mout->put_frame = pout_put_frame;
    mout->pick_frame = pout_pick_frame;
+   mout->pick_content = pout_pick_content;
 
    return mout;
 }

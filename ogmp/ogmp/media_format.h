@@ -202,19 +202,21 @@ typedef struct media_input_s media_input_t;
 
 typedef struct media_pipe_s media_pipe_t;
 struct media_pipe_s {
+
+   int (*done) (media_pipe_t *pipe);
    
-   media_frame_t* (*new_frame) (media_pipe_t *pipe, int bytes);
+   media_frame_t* (*new_frame) (media_pipe_t *pipe, int bytes, char *init_data);
    int (*recycle_frame) (media_pipe_t *pipe, media_frame_t *frame);
 
    int (*put_frame) (media_pipe_t *pipe, media_frame_t *frame, int last);
+   
+   media_frame_t* (*pick_frame)(media_pipe_t *pipe);
 
    /*
     * return 0: stream continues
     * return 1: stream ends
     */
-   int (*pick_frame) (media_pipe_t *pipe, media_info_t *media_info, char* raw, int nraw_once);
-
-   int (*done) (media_pipe_t *pipe);
+   int (*pick_content) (media_pipe_t *pipe, media_info_t *media_info, char* raw, int nraw_once);
 };
 media_pipe_t * media_new_pipe (void);
 

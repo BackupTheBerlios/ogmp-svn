@@ -114,10 +114,6 @@ struct ogm_format_s {
    //xrtp_media_t         *strm_rtps[MAX_STREAMS];  /* the rtp handlers for every enabled stream */
    uint64               last_pts;
 
-   ogg_int64_t          last_granulepos;
-   ogg_int64_t          sync_granulepos;
-   
-   int                  sync_msec;
 };
 
 struct ogm_media_s {

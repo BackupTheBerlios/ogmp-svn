@@ -16,6 +16,7 @@
  ***************************************************************************/
 
 #include "vorbis_info.h"
+#include <timedia/xthread.h>
 
 #define VORBIS_SAMPLE_BITS 16  /* See vorbis_decode() */
 
@@ -38,6 +39,8 @@ struct vorbis_decoder_s{
 
    /* Delay Adapt Detect: if the buffer fall into this range
     * special process will activated to smooth the effect
+	*
+	* No in use yet.
     */
    int dad_min_ms;
    int dad_max_ms;
@@ -47,6 +50,16 @@ struct vorbis_decoder_s{
 
    int (*stop_media) (void * user);
    void * stop_media_user;
+
+   /* parallel with demux thread */
+   xthread_t *thread;
+   /* stop the thread */
+   int stop;
+   /* queue protected by lock*/
+   xlist_t *pending_queue;
+   xthr_lock_t *pending_lock;
+   /* thread running condiftion */
+   xthr_cond_t *packet_pending;
 };
 
 media_frame_t * vorbis_decode (vorbis_info_t *vinfo, ogg_packet * packet, media_pipe_t * output);

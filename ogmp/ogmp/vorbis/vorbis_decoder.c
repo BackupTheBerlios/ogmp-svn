@@ -139,7 +139,7 @@ media_frame_t * vorbis_decode (vorbis_info_t *vorbis, ogg_packet * packet, media
    /* vorbis float version implementation:
     * convert floats to 16 bit signed ints (host order) and interleave
     */
-   auf = (media_frame_t*)output->new_frame(output, channels * samples * sizeof(int16));
+   auf = (media_frame_t*)output->new_frame(output, channels * samples * sizeof(int16), NULL);
    if (!auf) {
 
       vorbis_player_debug(("vorbis_decode: no available frame retrieved\n"));
