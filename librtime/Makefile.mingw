@@ -1,0 +1,59 @@
+
+# Makefile borrow from PortAudio Project
+# Contributed by Bill Eldridge, bill@rfa.org, Radio Free Asia
+
+# Makefile for librtime on mingw (http://mingw.sourceforge.net)
+
+# by "Heming Ling"<heming@bigfoot.com>, Timedia project
+# Copyright 2003-2004, GPL
+
+# Uses a common mingw32 cross-compiler that defaults
+# to everything in /usr/local/cross-tools
+
+# First edit your mingw cross-compiler path with
+export PATH=/usr/local/cross-tools/bin:$PATH
+
+# Usage: make -f Makefile.mingw all
+# or     make -f Makefile.mingw sharedlib
+#        make -f Makefile.mingw tests
+#
+# Then copy executables & librtime.dll to your Windows machine
+
+CC= i386-mingw32msvc-gcc
+DLLTOOL= i386-mingw32msvc-dlltool
+DLLWRAP= i386-mingw32msvc-dllwrap
+
+PREFIX= /home/hling/platform/i386-mingw32msvc
+
+ARCH = mingw
+
+.c.o:
+	-$(CC) -I. -c $< -o $*.o
+	-$(CC) -L$(PREFIX)/lib -lSDL $*.o -o $*.exe
+
+all:	sharedlib test
+
+sharedlib: ./librtime/timer_win32.c
+	$(CC) -c -I. librtime/timer_win32.c -o $(ARCH)/timer_win32.o
+	$(CC) -c -I. -I$(PREFIX)/include librtime/xthread_sdl.c -o $(ARCH)/xthread_sdl.o
+	$(CC) -shared -mthreads -o $(ARCH)/librtime.dll $(ARCH)/timer_win32.o $(ARCH)/xthread_sdl.o	\
+		-L$(PREFIX)/lib -lSDL
+	$(DLLWRAP) --export-all --output-def=$(ARCH)/librtime.def --output-lib=$(ARCH)/librtime.a	\
+		--dllname=$(ARCH)/librtime.dll --drivername=i386-mingw32msvc-gcc $(ARCH)/timer_win32.o	\
+		$(ARCH)/xthread_sdl.o -L$(PREFIX)/lib -lSDL
+	$(CC) -shared -Wl,--enable-auto-image-base -o $(ARCH)/librtime.dll	\
+		-Wl,--out-implib=$(ARCH)/librtime.dll.a				\
+		$(ARCH)/timer_win32.o $(ARCH)/xthread_sdl.o -L$(PREFIX)/lib -lSDL
+
+
+test:
+	$(CC) -I. -c librtime/t_time.c -o $(ARCH)/t_time.o
+	$(CC) -I. -c librtime/spu_text.c -o $(ARCH)/spu_text.o
+	$(CC) $(ARCH)/t_time.o $(ARCH)/spu_text.o -L$(ARCH) -lrtime.dll -o $(ARCH)/subtime.exe
+
+clean:
+	-@rm $(ARCH)/*.exe
+	-@rm $(ARCH)/*.o
+	-@rm $(ARCH)/librtime.*
+
+
