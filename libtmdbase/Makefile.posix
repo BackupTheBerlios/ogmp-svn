@@ -25,7 +25,7 @@ INCINST = $(TOPDIR)/include
 CC = gcc
 
 CFLAGS = -fPIC -I$(INCINST)
-LIBS = -ldl -lSDL -L$(TOPDIR)/lib/$(PROGNAME) -logmp
+LIBS = -ldl -lSDL -L$(TOPDIR)/lib/$(PROGNAME)
 
 LIBFILES:= libtmdbase/libtmdbase.so
 INCFILES:= libtmdbase/list.h libtmdbase/buffer.h libtmdbase/md5.h libtmdbase/os.h \
@@ -55,11 +55,12 @@ sharedlib:	libtmdbase/*.c
 	$(CC) $(CFLAGS) -c libtmdbase/config.c -o libtmdbase/config.o
 	$(CC) $(CFLAGS) -c libtmdbase/xmalloc.c -o libtmdbase/xmalloc.o
 	$(CC) $(CFLAGS) -c libtmdbase/libsdl/xthread_sdl.c -o libtmdbase/libsdl/xthread_sdl.o
+	$(CC) $(CFLAGS) -c libtmdbase/ui_stub.c -o libtmdbase/ui_stub.o
 
 	$(CC) -shared libtmdbase/list.o libtmdbase/buffer.o libtmdbase/md5.o libtmdbase/spinqueue.o \
 		libtmdbase/socket_posix.o libtmdbase/xmap.o libtmdbase/xstring.o libtmdbase/loader.o \
 		libtmdbase/catalog.o libtmdbase/config.o libtmdbase/xmalloc.o libtmdbase/libsdl/xthread_sdl.o \
-		$(LIBS) -o  libtmdbase/libtmdbase.so
+		libtmdbase/ui_stub.o $(LIBS) -o  libtmdbase/libtmdbase.so
 
 install:	libtmdbase/libtmdbase.so
 	@cp -f $(INCFILES) $(INCINST)/$(PROJNAME)

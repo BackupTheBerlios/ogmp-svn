@@ -12,7 +12,7 @@
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
  *   (at your option) any later version.                                   *
- *                                                                         *
+ *                                                                      *
  ***************************************************************************/
 
 #include "buffer.h"
@@ -135,6 +135,7 @@ int buffer_done(xrtp_buffer_t * buf)
     }
 
 	xfree(buf->data);
+
 
     buf->len = size;
     buf->pos = 0;
@@ -467,6 +468,7 @@ int buffer_done(xrtp_buffer_t * buf)
     }
     else
     {
+
        buffer_log(("buffer_next_uint32: LE (%u) at buf[%d]@%d\n", *ret, buf->pos, (int)(buf->data)));
        *ret = IVAL(buf->data, buf->pos);
     }
