@@ -221,25 +221,29 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		}
 		case(SIPUA_EVENT_PROCEEDING):
 		{
-			printf("client_sipua_event: SIPUA_EVENT_PROCEEDING\n");
+			sipua_set_t *call = e->call_info;
+
+			call->status = SIPUA_EVENT_PROCEEDING;
+
 			break;
 		}
 		case(SIPUA_EVENT_RINGING):
 		{	
-			printf("client_sipua_event: SIPUA_EVENT_RINGING\n");
+			sipua_set_t *call = e->call_info;
+
+			call->status = SIPUA_EVENT_RINGING;
+
 			break;
 		}
 		case(SIPUA_EVENT_ANSWERED):
 		{
 			/* Caller establishs call when callee is answered */
-			sipua_set_t *call = e->call_info; 
-            /*
-            sipua_call_event_t *call_e = (sipua_call_event_t*)e;
-            */
 			rtpcap_set_t* rtpcapset;
-
 			sdp_message_t *sdp_message;
 			char* sdp_body = (char*)e->content;
+
+			sipua_set_t *call = e->call_info; 
+			call->status = SIPUA_EVENT_ANSWERED;
 
 			printf("client_sipua_event: SIPUA_EVENT_ANSWERED\n");
 

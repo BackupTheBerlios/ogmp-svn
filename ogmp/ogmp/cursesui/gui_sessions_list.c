@@ -26,6 +26,7 @@ int window_sessions_list_print(gui_t* gui, int wid)
 {
 	int y,x;
 	char buf[250];
+	char status[20];
 
 	sipua_set_t* call;
 
@@ -91,25 +92,37 @@ int window_sessions_list_print(gui_t* gui, int wid)
     {
 		call = ocui->sipua->line(ocui->sipua, busylines[line]);
 
+		switch(call->status)
+		{
+			case SIPUA_EVENT_PROCEEDING:
+				strcpy(status, "Proceeding"); break;
+			case SIPUA_EVENT_RINGING:
+				strcpy(status, "Ringing"); break;
+			case SIPUA_EVENT_ANSWERED:
+				strcpy(status, "Answered"); break;
+			default:
+				strcpy(status, "Unknown");
+		}
+
 		if(line==calllist_line)
 		{
 			if(call->from)
-				snprintf(buf, x - gui->x0, " %c%c [%d] <%s>: %s - %-80.80s",
-						'-', '>', line, call->from, call->subject, call->info);
+				snprintf(buf, x - gui->x0, " %c%c [%d] (%s) From <%s>: %s - %-80.80s",
+						'-', '>', line, status, call->from, call->subject, call->info);
 			else
-				snprintf(buf, x - gui->x0, " %c%c [%d] Myself: %s - %-80.80s",
-						'-', '>', line, call->subject, call->info);
+				snprintf(buf, x - gui->x0, " %c%c [%d] (%s) From Myself: %s - %-80.80s",
+						'-', '>', line, status, call->subject, call->info);
       
 			attrset(COLOR_PAIR(10));
 		}
 		else
 		{
 			if(call->from)
-				snprintf(buf, x - gui->x0, " %c%c  %d  <%s>: %s - %-80.80s",
-						' ', ' ', line, call->from, call->subject, call->info);
+				snprintf(buf, x - gui->x0, " %c%c  %d  (%s) From <%s>: %s - %-80.80s",
+						' ', ' ', line, status, call->from, call->subject, call->info);
 			else
-				snprintf(buf, x - gui->x0, " %c%c  %d  Myself: %s - %-80.80s",
-						' ', ' ', line, call->subject, call->info);
+				snprintf(buf, x - gui->x0, " %c%c  %d  (%s) From Myself: %s - %-80.80s",
+						' ', ' ', line, status, call->subject, call->info);
       
 			attrset(COLOR_PAIR(1));
 		}
