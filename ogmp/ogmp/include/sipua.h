@@ -152,6 +152,8 @@ struct sipua_reg_event_s
 
 	char *server_info;
 	char *server;
+
+	int seconds_expires;
 };
 
 typedef struct sipua_call_event_s sipua_call_event_t;

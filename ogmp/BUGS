@@ -1,0 +1,2 @@
+BUG OGMP12162004: When run ogmp on remote host in ssh mode, and routing with a seperate SIP Server, Some stranger behavar such as:
+			contact to manopulated ip address lead to contact router fail. 

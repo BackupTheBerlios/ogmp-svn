@@ -199,7 +199,14 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
             client->reg_profile = NULL;
 
 			/* Should be exact expire seconds returned by registrary*/
-			user_prof->seconds_left = user_prof->seconds;
+			user_prof->seconds_left = reg_e->seconds_expires;
+			if(reg_e->seconds_expires == 0)
+			{
+				/* This is not expected */
+				user_prof->reg_status = SIPUA_STATUS_NORMAL;
+				break;
+			}
+
 			user_prof->sipua = client;
 			user_prof->enable = 1;
 
@@ -356,10 +363,14 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			sipua_set_t *call = e->call_info; 
 			call->status = SIPUA_EVENT_ANSWERED;
 
-			printf("client_sipua_event: SIPUA_EVENT_ANSWERED\n");
+			printf("client_sipua_event: call[%s] answered\n", call->subject);
+
+			printf("client_sipua_event: SDP\n");
+			printf("------------------------\n");
+			printf("%s", sdp_body);
+			printf("------------------------\n");
 
 			sdp_message_init(&sdp_message);
-
 
 			if (sdp_message_parse(sdp_message, sdp_body) != 0)
 			{

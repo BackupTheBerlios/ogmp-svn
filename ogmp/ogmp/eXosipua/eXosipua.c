@@ -20,6 +20,9 @@
 
 #include "eXosipua.h"
 
+/* from Josua/src */
+#include "eXosip2.h"
+
 #include <timedia/xstring.h>
 #include <timedia/xmalloc.h>
 #include <timedia/ui.h>
@@ -72,11 +75,22 @@ int jua_process_event(eXosipua_t *jua)
 
 		if (je->type==EXOSIP_CALL_NEW)
 		{
-			/*
-			snprintf(buf, 99, "<- (%i %i) INVITE from: %s",
-					je->cid, je->did, je->remote_uri);
-	  
-            josua_printf(buf);
+			/* Gain more info in this way
+			
+			if(je->jd->d_200Ok)
+			{
+				osip_contact_t *contact;
+				osip_generic_param_t *param;
+
+				osip_message_get_contact(je->jd->d_200Ok, 0, &contact);
+				if(contact)
+				{
+					osip_contact_param_get_byname(contact, "...", &param);
+
+					if (param && param->gvalue)
+						....
+				}
+			}
             */
 
 			jcall_new(jua, je);
@@ -211,7 +225,8 @@ int jua_process_event(eXosipua_t *jua)
 		else if (je->type==EXOSIP_REGISTRATION_SUCCESS)
 		{
 			sipua_reg_event_t reg_e;
-		
+			eXosip_reg_t *jr;
+
 			reg_e.event.call_info = NULL;
 
 			reg_e.event.type = SIPUA_EVENT_REGISTRATION_SUCCEEDED;
@@ -224,12 +239,17 @@ int jua_process_event(eXosipua_t *jua)
 
 			/*Open issue:
 			How to retrieve exactly returned expiration seconds
+			eXosip now has not implement retrieving server expires);
 			*/
+			jr = eXosip_event_get_reginfo(je);
+
+			reg_e.seconds_expires = jr->r_reg_period;
 
 			/*
 			snprintf(buf, 99, "<- (%i) [%i %s] %s for REGISTER %s",
 					je->rid, je->status_code, je->reason_phrase,
 					je->remote_uri, je->req_uri);
+
 			printf("jua_process_event: reg ok! [%s]\n", buf);
 			*/
 
