@@ -7,7 +7,7 @@ PREFIX = /home/hling/timedia-project
 CC = gcc
 
 LIBS = -L$(PREFIX)/lib -lxrtp -lspeex \
-		 -L$(PREFIX)/lib/$(PROGNAME) -logmp_ui
+		 -L$(PREFIX)/lib/$(PROGNAME) -logmp
 
 INCLUDES = -I$(PREFIX)/include -I../include
 
@@ -25,8 +25,8 @@ all:	 libs install
 	-$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $*.o
 
 libs: $(FILES:.c=.o)
-	gcc -shared -lspeex speex_player.o speex_codec.o  -o speex_player.so
-	gcc -shared -lspeex ogm_speex.o -o ogm_speex.so
+	gcc -shared $(LIBS) speex_player.o speex_codec.o  -o speex_player.so
+	gcc -shared $(LIBS) ogm_speex.o -o ogm_speex.so
 
 install: $(LIBFILES)
 	-@cp -f $(LIBFILES) $(INSTDIR)

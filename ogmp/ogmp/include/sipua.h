@@ -30,6 +30,7 @@
 #define UA_FAIL		-1
 #define UA_REJECT	-2
 #define UA_IGNORE	-3
+#define UA_BUSY     -4
 
 #define MAX_CN_BYTES 256 /* max value in rtcp */
 #define MAX_IP_LEN   64  /* may enough for ipv6 ? */

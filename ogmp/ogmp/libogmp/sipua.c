@@ -554,6 +554,8 @@ int sipua_session_sdp(sipua_t *sipua, sipua_set_t* set, char** sdp_body)
 									-1 /* media_pos */,
 									xstr_clone(nettype) /* IN */,
 									xstr_clone(addrtype) /* IP4 */,
+
+
 									xstr_clone(netaddr),
 									NULL /* multicast_ttl */, 
 									NULL /* multicast_int */);
@@ -643,26 +645,33 @@ int sipua_unregist(sipua_t *sipua, user_profile_t *user)
 	return ret;
 }
 
-int sipua_call(sipua_t *sipua, sipua_set_t* set, char *callee) 
+int sipua_call(sipua_t *sipua, sipua_set_t* call, char *callee) 
 {
 	/*char *sdp_body = NULL;*/
 	int ret;
 
-	ua_log(("sipua_connect: Call from [%s] to [%s]\n", set->user_prof->regname, callee));
+    if(sipua->incall)
+    {
+        ua_log(("sipua_connect: You are in call, can not make a new call\n"));
+        return UA_BUSY;
+    }
+
+	ua_log(("sipua_connect: Call from [%s] to [%s]\n", call->user_prof->regname, callee));
 
 	/*sipua_session_sdp(sipua, set, &sdp_body);*/
 
-	ua_log(("sipua_connect: Call-ID#%u initial sdp\n", set->setid.id));
+	ua_log(("sipua_connect: Call-ID#%u initial sdp\n", call->setid.id));
 	ua_log(("--------------------------\n"));
-	ua_log(("%s", set->sdp_body));
+	ua_log(("%s", call->sdp_body));
 	ua_log(("--------------------------\n"));
 
-	ret = sipua->uas->invite(sipua->uas, callee, set, set->sdp_body, strlen(set->sdp_body)+1);
+	ret = sipua->uas->invite(sipua->uas, callee, call, call->sdp_body, strlen(call->sdp_body)+1);
 
     if(ret < UA_OK)
 		return ret;
 
 	/*free(sdp_body);*/
+    sipua->incall = call;
 
 	return UA_OK;
 }

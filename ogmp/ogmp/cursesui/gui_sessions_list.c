@@ -272,7 +272,13 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 		}
 		case 'n': 
 		{
-			gui_show_window(gui, GUI_NEWCALL, GUI_SESSION);
+            if(ocui->sipua->incall)
+            {
+                beep();
+                break;
+            }
+
+            gui_show_window(gui, GUI_NEWCALL, GUI_SESSION);
             
 			break;
 		}

@@ -139,6 +139,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
                 break;
                 
             if(user_prof->reg_reason_phrase)
+
             {
                 xfree(user_prof->reg_reason_phrase);
                 user_prof->reg_reason_phrase = NULL;
@@ -407,6 +408,7 @@ int sipua_done_sip_session(void* gen)
 	
 	if(set->setid.nettype) xfree(set->setid.nettype);
 
+
 	if(set->setid.addrtype) xfree(set->setid.addrtype);
 	if(set->setid.netaddr) xfree(set->setid.netaddr);
 
@@ -513,7 +515,7 @@ sipua_set_t* client_find_call(sipua_t* sipua, char* id, char* username, char* ne
 
 sipua_set_t* client_new_call(sipua_t* sipua, char* subject, int sbytes, char *desc, int dbytes)
 {
-	int i;
+	/*int i;*/
 
 	ogmp_setting_t *setting;
 	ogmp_client_t* clie = (ogmp_client_t*)sipua;
@@ -531,7 +533,8 @@ sipua_set_t* client_new_call(sipua_t* sipua, char* subject, int sbytes, char *de
 		return NULL;
 	}
 
-	for(i=0; i<MAX_SIPUA_LINES; i++)
+    /*
+    for(i=0; i<MAX_SIPUA_LINES; i++)
 	{
 		if(!clie->lines[i])
 		{
@@ -541,6 +544,7 @@ sipua_set_t* client_new_call(sipua_t* sipua, char* subject, int sbytes, char *de
 	}
 
 	clie_log(("client_new_call: new call on line %d\n", i));
+    */
 	
 	return call;
 }
