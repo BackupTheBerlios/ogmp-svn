@@ -15,593 +15,99 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "../xrtp.h"
- 
-#include "spu_text.h"
-#include <string.h>                          
-#include <stdlib.h>
+#include "t_session.h"
 
-#define OK 0
-
-/*
 #define TEST_LOG
-*/
+
 #ifdef TEST_LOG
  #define test_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define test_log(fmtargs)
 #endif
 
-typedef struct subt_frame_s
+struct rtp_params_s
 {
-   rtime_t start;
-   media_time_t dur;
+    int8 profile_no; /* dynamic assignment */
+    char profile_type[256];
 
-   int len;
-   char *data;
-    
-} subt_frame_t;
- 
-typedef struct subt_sender_s subt_sender_t;
+	char ip[64];
+	uint16 rtp_port;
+	uint16 rtcp_port;
 
-struct subt_sender_s
+} rtp_params = {96, "text/rtp-test", "127.0.0.1", 3000, 3001};
+
+int rtp_done_capable(capable_t *cap)
 {
-   xrtp_session_t *  session;
-    
-   xrtp_media_t *    subt;
-    
-   demux_sputext_t * spu;
-    
-   int ms_seek;
-
-   xrtp_clock_t * clock;
-
-   xthr_lock_t * lock;
-   xthr_cond_t * wait;
-   
-   int n_recvr;
-   xthr_cond_t * wait_receiver;
-
-   int end;
-    
-   xrtp_thread_t * thread;
-        
-} sender;
- 
-typedef struct subt_recvr_s subt_recvr_t;
-
-struct subt_recvr_s
-{
-   xrtp_session_t *  session;
-   xrtp_media_t *    subt;
-
-   media_time_t next_ts;
-
-   xrtp_list_t * frames;
-   
-   xthr_lock_t * lock;
-   xthr_cond_t * wait;
-
-   int end;
-
-   xrtp_thread_t * thread;
-
-} recvr;
-
-void subt_show(subt_frame_t * frm)
-{
-   char str[SUB_MAXLEN];
-
-   memcpy(str, frm->data, frm->len);
-   str[frm->len] = '\0';
-    
-   printf("\n\n['%s']\n\n", str);
-
-   return;
+	free(cap);
+	return UA_OK;
 }
 
-int cb_media_sent(void * u, xrtp_media_t * media)
+int rtp_match_capable(capable_t *cap1, capable_t *cap2)
 {
-   subt_sender_t * s = (subt_sender_t *)u;
-   printf("media_sent: one unit sent\n");
-   xthr_cond_signal(s->wait);
-
-   return XRTP_OK;
-}
-
-int spu_sender_run(void * param)
-{
-    subtitle_t * subt;
-    char str[1024];
-    int slen = 0;
-
-    rtime_t ms_now, ms_begin;
-    
-    int line, tryagain = 0, first = 1;
-
-    printf("\nspu_sender_run: sender started ...\n");
-    
-	sender.clock = time_start();    
-    
-    while(1)
-	{
-	   int ret;
-	   rtime_t dms = 0;
-	   uint32 timestamp;
-
-       xthr_lock(sender.lock);
-       
-       if(sender.n_recvr == 0){
-
-          test_log(("spu_sender_run: waiting for receiver ...\n"));
-          xthr_cond_wait(sender.wait_receiver, sender.lock);
-          test_log(("spu_sender_run: receiver available\n"));
-       }
-       
-       if(!tryagain){
-
-         if(sender.ms_seek > 0){
-
-            demux_sputext_seek_msec(sender.spu, sender.ms_seek);
-			time_adjust(sender.clock, sender.ms_seek,0,0);
-            sender.ms_seek = 0;
-         }
-         
-         subt = demux_sputext_next_subtitle(sender.spu);
-         if(!subt){
-           
-            printf("spu_sender_run: No more subtitle, quit\n");
-            break;
-         }
-         
-         //start = (sender.spu->uses_time) ? subt->start * 10 : subt->start;
-         //end = (sender.spu->uses_time) ? subt->end * 10 : subt->end;
-
-         slen = 0;
-         for (line = 0; line < subt->lines; line++) {
-
-            if(slen+strlen(subt->text[line])+1 >= 1024)
-                break;
-                
-            strcpy(str+slen, subt->text[line]);
-            slen += strlen(subt->text[line]);
-         }
-         
-       }else{
-
-          xthr_cond_wait(sender.wait, sender.lock);
-       }
-
-       if(first){
-
-          first = 0;
-          ms_now = ms_begin = time_msec_now(sender.clock);
-          test_log(("\nspu_sender_run: Begin at %dms\n", ms_begin));
-
-       }else{
-
-          ms_now = time_msec_now(sender.clock);
-          test_log(("\nspu_sender_run: %dms now\n", ms_now));
-       }
-
-       dms = subt->start_ms - ms_now;
-       if(dms > 0){
-
-          test_log(("spu_sender_run: sleep %dms\n\n", dms));
-          
-          xthr_unlock(sender.lock);
-          time_msec_sleep(sender.clock, dms, NULL);
-
-       }else{
-
-          xthr_unlock(sender.lock);
-       }
-       
-       /* This is for debug perposal only
-       demux_sputext_show_title(subt);
-       */
-       
-       /* Sending */
-	   timestamp = time_msec_now(session_clock(sender.session));
-       ret = sender.subt->post(sender.subt, str, slen, timestamp);
-       if(ret == XRTP_EAGAIN)
-	   {
-		   tryagain = 1;
-           continue;
-       }
-
-       tryagain = 0;         
-    }
-
-    xthr_unlock(sender.lock);
-    
-    test_log(("\nspu_sender_run: end thread ...\n"));
-
-    return XRTP_OK;
- }
-
- int spu_done_frame(void * gen){
-
-    free(((subt_frame_t*)gen)->data);
-    free(gen);
-
-    return XRTP_OK;
- }
- 
- int frame_cmp_mts(void * targ, void * patt){
-
-    subt_frame_t *f_targ = (subt_frame_t *)targ;
-    subt_frame_t *f_patt = (subt_frame_t *)patt;
-
-    return f_targ->start - f_patt->start;
- }
- 
- int cb_media_recvd(void* u, char *data, int dlen, uint32 ssrc, uint32 ts)
- {
-    subt_recvr_t * r = (subt_recvr_t *)u;
-    subt_frame_t * frm = NULL;
-
-    test_log(("test.cb_media_recvd: Media[#%u] ready\n", ts));
-
-    frm = malloc(sizeof(struct subt_frame_s));
-    if(!frm)
-    {
-        xthr_unlock(r->lock);
-        test_log(("cb_media_recvd: Fail to allocated frame memery\n"));
-        return XRTP_EMEM;
-    }
-      
-    frm->start = (rtime_t)ts;
-    frm->len = dlen;
-    frm->data = data;
-    
-    xthr_lock(r->lock);
-    xrtp_list_add_ascent_once(r->frames, frm, frame_cmp_mts);    
-    xthr_unlock(r->lock);
-
-    xthr_cond_signal(r->wait);
-
-    return XRTP_OK;
- }
-
- int cb_member_update(void* user, uint32 member_src, char * cname, int clen){
-
-    cname[clen] = '\0';
-    
-    if(user == &sender){
-      
-        printf("\ntester.cb_member_update: '%s' accepted\n", cname);
-        sender.n_recvr++;
-        xthr_cond_signal(sender.wait_receiver);
-    }
-    
-    return XRTP_OK;
- }
- 
- int cb_member_deleted(void* user, uint32 member_src, void * user_info){
-
-    if(user == &sender){
-
-        sender.n_recvr--;
-    }
-    
-    return XRTP_OK;
- }
-
- int spu_recvr_run(void * param){
-
-    subt_frame_t *f;
-    
-    xrtp_hrtime_t now, dt;
-    
-    struct xrtp_list_user_s lu;
-
-    xclock_t *sclock = session_clock(recvr.session);
-    
-    test_log(("\nspu_recvr_run: start thread ...\n"));
-    
-    while(1){
-
-       xthr_lock(recvr.lock);
-       
-       f = (subt_frame_t *)xrtp_list_first(recvr.frames, &lu);
-       
-       if(!f && recvr.end){
-         
-          xthr_unlock(recvr.lock);
-          break;
-       }
-
-       if(!f && !recvr.end){
-         
-          test_log(("spu_recvr_run: wait next...\n"));
-
-          xthr_cond_wait(recvr.wait, recvr.lock);
-
-          f = (subt_frame_t *)xrtp_list_first(recvr.frames, &lu);
-          test_log(("spu_recvr_run: play Media[#%d]\n", f->start));
-       }
-
-       now = time_msec_now(sclock);
-       
-       dt = f->start - now;
-       test_log(("spu_recvr_run: %dms now, wait %dms\n", now, dt));
-
-       if(dt > 0)
-       {
-          /* snap sometime */
-          xthr_unlock(recvr.lock);
-          time_msec_sleep(sclock, dt, NULL);
-          continue;
-       }
-
-       f = (subt_frame_t *)xrtp_list_remove_first(recvr.frames);
-       xthr_unlock(recvr.lock);
-       
-       subt_show(f);
-       spu_done_frame(f);
-    }
-
-    test_log(("\nspu_recvr_run: end thread ...\n"));
-    
-    return XRTP_OK;
- }
-
- void test_xthr(){
-
-    xthr_lock_t * lock = xthr_new_lock();
-    printf("test_xthr: lock ok\n");
-    xthr_done_lock(lock);
- }
- 
- #include <timedia/inet.h>
-
- int sender_setup()
- {
-    /* Session Var */
-    int8 profile_no = 96; /* dynamic assignment */
-    char cname_sender[] = "spu_sender";    
-    char *plugid = "text/rtp-test";
-	char *ip_addr = "127.0.0.1";
-	uint16 rtp_port = 3000;
-	uint16 rtcp_port = 3001;
-
-	/* Sender Var */
-    FILE * f;
-    char * title = "subtitle.srt";                         
-    demux_sputext_t * spu = NULL;
-    xrtp_session_t *ses = NULL; 
-
-    profile_handler_t * mh = NULL;
-    xrtp_media_t * med = NULL;
-
-    xrtp_port_t * sender_rtp_port = NULL;
-    xrtp_port_t * sender_rtcp_port = NULL;
-
-	printf("Session Tester: FD_SETSIZE = %u", FD_SETSIZE);
-    printf("\nSession Tester:{ This is a RTP Session tester }\n\n");
-
-    f = fopen(title, "r");
-
-    spu = demux_sputext_new(f);
-    printf("Session tester: Subtitle '%s' specialised\n", title);
-
-    //fclose(f);
-    
-    /* Create rtp port */
-    sender_rtp_port = port_new(ip_addr, rtp_port, RTP_PORT);
-    sender_rtcp_port = port_new(ip_addr, rtcp_port, RTCP_PORT);
-
-	if(!sender_rtp_port || !sender_rtcp_port)
-	{
-		printf("Sending tester: fail to create ports, exit\n");
-		return -1;
-	}
-
-    printf("Sending tester: rtp_port@%d!\n", (int)sender_rtp_port);
-
-    /* Create and initialise the session */
-    ses = session_new(sender_rtp_port, sender_rtcp_port, cname_sender, strlen(cname_sender), xrtp_catalog()); 
-    if(!ses){
-
-        port_done(sender_rtp_port);
-        port_done(sender_rtcp_port);
-        printf("Sending tester: Session fail to create!\n");
-        return 1;
-    }
-    
-    session_set_id(ses, 12345);
-    
-    session_allow_anonymous(ses, XRTP_YES);
-    session_set_bandwidth(ses, 28800, 20000);
-
-    mh = session_add_handler(ses, plugid);
-    printf("Sending tester: plugin '%s' added.\n", plugid);
-
-    med = session_new_media(ses, plugid, profile_no);
-    printf("Sending tester: media handler for '%s' created.\n", plugid);
-
-    /* Can add more handler for maybe compression, security or whatever handler */
-
-    /* Set callbacks of the session
-    session_callbacks_t callbacks[CALLBACK_SESSION_MAX] = {
-
-       CALLBACK_SESSION_MEDIA_RECVD,        media_recvd,        NULL;
-       CALLBACK_SESSION_MEDIA_SENT,         media_sent,         NULL;
-       CALLBACK_SESSION_APPINFO_RECVD,      NULL,               NULL;
-       CALLBACK_SESSION_MEMBER_APPLY,       cb_member_apply,    NULL;
-       CALLBACK_SESSION_MEMBER_DELETED,     cb_member_deleted,  NULL;
-       CALLBACK_SESSION_MEMBER_REPORT,      NULL,               NULL;
-       CALLBACK_SESSION_BEFORE_RESET,       NULL,               NULL;
-       CALLBACK_SESSION_AFTER_RESET,        NULL,               NULL;
-       CALLBACK_SESSION_NEED_SIGNATURE,     NULL,               NULL;
-       CALLBACK_SESSION_NOTIFY_DELAY,       NULL,               NULL;
-       CALLBACK_SESSION_SYNC_TIMESTAMP,     NULL,               NULL;
-       CALLBACK_SESSION_RESYNC_TIMESTAMP,   NULL,               NULL;
-       CALLBACK_SESSION_RTP_TIMESTAMP,      NULL,               NULL;
-       CALLBACK_SESSION_NTP_TIMESTAMP,      NULL,               NULL;
-       CALLBACK_SESSION_MT2HRT,             mt2hrt,             NULL;
-       CALLBACK_SESSION_HRT2MT,             hrt2mt,             NULL;
-    };
-    */
-
-    session_set_callback(ses, CALLBACK_SESSION_MEDIA_SENT, cb_media_sent, &sender);
-    session_set_callback(ses, CALLBACK_SESSION_MEMBER_UPDATE, cb_member_update, &sender);
-    session_set_callback(ses, CALLBACK_SESSION_MEMBER_DELETED, cb_member_deleted, &sender);
-
-    sender.session = ses;
-    sender.subt = med;
-    sender.spu = spu;
-    sender.n_recvr = 0;
-    sender.lock = xthr_new_lock();
-    sender.wait = xthr_new_cond( XTHREAD_NONEFLAGS );
-    sender.wait_receiver = xthr_new_cond( XTHREAD_NONEFLAGS );
-    
-    /* seekable */
-    sender.ms_seek = 600000;
-
-    printf("Sending tester: Sender session created\n");
-
-    session_set_scheduler(ses, xrtp_scheduler());
-    printf("Sending tester: Scheduler added\n");
-
-    sender.thread = xthr_new(spu_sender_run, NULL, XTHREAD_NONEFLAGS);
-
-	return OK;
- }
-
- int sender_shutdown()
- {
-    sender.subt = NULL;
-
-    session_done(sender.session);
-    xthr_done_cond(sender.wait);
-    xthr_done_lock(sender.lock);
-    demux_sputext_done(sender.spu);
-
-    printf("Session tester: sender down\n");
-
-	return OK;
- }
-
- int recvr_setup()
- {
-    /* Session Var */
-	int8 profile_no = 96; /* dynamic assignment */
-    char * plugid = "text/rtp-test";
-    char cname_recvr[] = "spu_recvr";
-	char *ip_addr = "127.0.0.1";
-	uint16 rtp_port = 4000;
-	uint16 rtcp_port = 4001;
-
-    /* Recvr Var */
-    xrtp_session_t *ses = NULL;
+	rtp_capable_t *rtp1 = (rtp_capable_t*)cap1;
+	rtp_capable_t *rtp2 = (rtp_capable_t*)cap2;
+
+	if(strcmp(rtp1->profile_type, rtp2->profile_type))
+		return 1;
 	
-    profile_handler_t * mh = NULL;
-    xrtp_media_t * med = NULL;
+	return 0;
+}
 
-	xrtp_port_t * recvr_rtp_port = NULL;
-    xrtp_port_t * recvr_rtcp_port = NULL;
+capable_t* rtp_new_capable(uint8 pt, char *type, char *ip, uint16 rtp_port, uint16 rtcp_port)
+{
+	rtp_capable_t *cap = malloc(sizeof(rtp_capable_t));
+	cap->profile_no = pt;
+	strcpy(cap->profile_type, type);
+	strcpy(cap->ip, ip);
+	cap->rtp_port = rtp_port;
+	cap->rtcp_port = rtcp_port;
 
-    /** recvr preparation **/
-    recvr_rtp_port = port_new(ip_addr, rtp_port, RTP_PORT);
-    recvr_rtcp_port = port_new(ip_addr, rtcp_port, RTCP_PORT);
+	cap->capable.done = rtp_done_capable;
+	cap->capable.match = rtp_match_capable;
 
-    printf("Receiving tester: port pair created!\n");
+	return (capable_t*)cap;
+}
 
-    /* Create and initialise the session */
-    ses = session_new(recvr_rtp_port, recvr_rtcp_port, cname_recvr, strlen(cname_recvr), xrtp_catalog());
-    if(!ses)
-	{
-        port_done(recvr_rtp_port);
-        port_done(recvr_rtcp_port);
-        printf("Receiving tester: Session fail to create!\n");
-        return 1;
-    }
+int main(int argc, char** argv)
+{
+	subt_sender_t *sender = NULL;
+	subt_recvr_t *recvr = NULL;
+	sipua_t *sipua;
 
-    session_set_id(ses, 54321);
+	char *proxy_ip = "127.0.0.1";
+	uint16 proxy_port = 3500;
 
-    //session_allow_anonymous(ses, XRTP_YES);
-    session_set_bandwidth(ses, 28800, 20000);
+	char *sender_cn = "subtitle.srt";
 
-    mh = session_add_handler(ses, plugid);
-    printf("Receiving tester: plugin '%s' added.\n", plugid);
+	xclock_t *clock = time_start();
+	rtime_t ms_remain;
 
-    med = session_new_media(ses, plugid, profile_no);
-    media_set_callback(med, CALLBACK_MEDIA_ARRIVED, cb_media_recvd, &recvr);
-    printf("Receiving tester: media handler for '%s' created.\n", plugid);
-
-    session_set_callback(ses, CALLBACK_SESSION_MEMBER_UPDATE, cb_member_update, &recvr);
-    session_set_callback(ses, CALLBACK_SESSION_MEMBER_DELETED, cb_member_deleted, &recvr);
-
-    recvr.session = ses;
-    recvr.subt = med;
-    recvr.frames = xrtp_list_new();
-    recvr.lock = xthr_new_lock();
-    recvr.wait = xthr_new_cond( XTHREAD_NONEFLAGS );
-    printf("Receiving tester: Recvr session created\n");
-    
-    /* Put the session in schedule */
-    session_set_scheduler(ses, xrtp_scheduler());
-    printf("Receiving tester: Scheduler added\n");
-    
-    recvr.thread = xthr_new(spu_recvr_run, NULL, XTHREAD_NONEFLAGS);
-    
-    return OK;
- }
- 
- int recvr_shutdown()
- {
-    recvr.subt = NULL;
-
-    session_done(recvr.session);
-    xthr_done_cond(recvr.wait);
-    xthr_done_lock(recvr.lock);
-    xrtp_list_free(recvr.frames, spu_done_frame);
-
-    printf("Session tester: recvr down\n");
-
-	return OK;
- }
-
- int main(int argc, char** argv)
- {
-    xrtp_teleport_t * tp_rtp = NULL;
-    xrtp_teleport_t * tp_rtcp = NULL;
-
-	int ret;
-    
     /* Init xrtp */
     if(xrtp_init() < XRTP_OK)
         return -1;
 
+	sipua = sipua_new(proxy_ip, proxy_port, NULL);
+
     /* setup end point */
-	sender_setup();
-	recvr_setup();
+	sender = sender_new(sipua);
+	recvr = recvr_new(sipua);
+
+	recvr_start(recvr, sender_cn, strlen(sender_cn));
+	test_log(("main: recvr started\n"));
+
+	time_msec_sleep(clock, 600000, &ms_remain);
+	test_log(("main: wake up\n"));
+	
+	recvr_end(recvr, sender_cn, strlen(sender_cn));
+	time_msec_sleep(clock, 3000, &ms_remain);
 	 
-	/* sender's address */
-	tp_rtp = teleport_new("127.0.0.1", 3000);
-    tp_rtcp = teleport_new("127.0.0.1", 3001);
-    
-    xthr_lock(recvr.lock);
-
-    /* contact to sender */
-	session_join(recvr.session, tp_rtp, tp_rtcp);
-
-    session_start_receipt(recvr.session);
-
-    xthr_unlock(recvr.lock);
-
-    printf("Session tester: Contacting the sender ...\n");
-
-    xthr_wait(sender.thread, &ret);
-    xthr_wait(recvr.thread, &ret);
-    
-	sender_shutdown();
-	recvr_shutdown();
+	sender_shutdown(sender);
+	recvr_shutdown(recvr);
     
     /* Fin xrtp */
     xrtp_done();
+
+	time_end(clock);
         
     return 0;
- }
+}

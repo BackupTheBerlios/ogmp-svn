@@ -87,8 +87,8 @@ module_loadin_t xrtp_handler;
 /**
  * Main Methods MUST BE implemented
  */
-int tm_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
-   
+int tm_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp)
+{
    tm_handler_t * profile = (tm_handler_t *)handler;
    xrtp_media_t * media = (xrtp_media_t *)profile->media;
 
@@ -260,8 +260,8 @@ int tm_rtp_in(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
    return XRTP_CONSUMED;
 }
 
- int tm_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
-
+int tm_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp)
+{
     tm_handler_t *profile = (tm_handler_t *)handler;
 
     rtp_packet_set_mark(rtp, 0);
@@ -405,7 +405,7 @@ int tm_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 	    * reports exclude the new one 
 	    */ 
 	   tm_log(("text/rtp-test.tm_rtcp_in:-----------------------------\n"));
-      tm_log(("text/rtp-test.tm_rtcp_in: No report for Member[%u]\n", src_sender));
+       tm_log(("text/rtp-test.tm_rtcp_in: No report for Member[%u]\n", src_sender));
 	   tm_log(("text/rtp-test.tm_rtcp_in:-----------------------------\n"));
    }
 
@@ -418,14 +418,14 @@ int tm_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
    return XRTP_CONSUMED;   
 }
 
- /*
-  * Following need to be sent by rtcp:
-  * - SR/RR depends on the condition
-  * - SDES:CNAME
-  * - BYE if bye
-  */
- int tm_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp){
-
+/*
+ * Following need to be sent by rtcp:
+ * - SR/RR depends on the condition
+ * - SDES:CNAME
+ * - BYE if bye
+ */
+int tm_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
+{
     tm_handler_t * profile = (tm_handler_t *)handler;
 
     uint32 ms_timestamp = time_msec_now(session_clock(profile->session));
@@ -441,86 +441,87 @@ int tm_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
     profile->rtcp_size = rtcp_length(rtcp);
 
     return XRTP_OK;
- }
+}
 
- int tm_rtp_size(profile_handler_t *handler, xrtp_rtp_packet_t *rtp){
-
+int tm_rtp_size(profile_handler_t *handler, xrtp_rtp_packet_t *rtp)
+{
     return ((tm_handler_t *)handler)->rtp_size;
- }
+}
 
- int tm_rtcp_size(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp){
-
+int tm_rtcp_size(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
+{
     return ((tm_handler_t *)handler)->rtcp_size;
- }
+}
 
- /**
-  * Methods for module class
-  */
- profile_class_t * tm_module(profile_handler_t * handler){
-   
+/**
+ * Methods for module class
+ */
+profile_class_t * tm_module(profile_handler_t * handler)
+{
     return text;
- }
+}
 
- int tm_set_master(profile_handler_t *handler, void *master){
-
+int tm_set_master(profile_handler_t *handler, void *master)
+{
     tm_handler_t * _h = (tm_handler_t *)handler;
     _h->master = master;
 
     return XRTP_OK;
- }
+}
 
- void * tm_master(profile_handler_t *handler){
-
+void * tm_master(profile_handler_t *handler)
+{
     tm_handler_t * _h = (tm_handler_t *)handler;
 
     return _h->master;
- }
+}
 
- const char * tm_media_mime(xrtp_media_t * media){
-
+const char * tm_media_mime(xrtp_media_t * media)
+{
     return tm_mime;
- }
+}
 
- int tm_media_done(xrtp_media_t * media){
-
+int tm_media_done(xrtp_media_t * media)
+{
     tm_handler_t * h = ((tm_media_t *)media)->handler;
     h->media = NULL;
     
     free(media);
     return XRTP_OK;
- }
+}
 
-int tm_media_set_parameter(xrtp_media_t * media, int key, void * val){
-
+int tm_media_set_parameter(xrtp_media_t * media, int key, void * val)
+{
    /* Do nothing */
    return XRTP_OK;
 }
 
-int tm_media_set_rate(xrtp_media_t * media, int rate){
-
+int tm_media_set_rate(xrtp_media_t * media, int rate)
+{
    tm_log(("text/rtp-test.tm_media_set_rate: Always be %d Hz\n", TEXT_CLOCKRATE));
 
    return XRTP_OK;
 }
  
-int tm_media_rate(xrtp_media_t * media){
-
+int tm_media_rate(xrtp_media_t * media)
+{
    return TEXT_CLOCKRATE;
 }
 
- uint32 tm_media_sign(xrtp_media_t * media){
+uint32 tm_media_sign(xrtp_media_t * media)
+{
 
     srand(rand());
     return rand();
- }
+}
 
- #define TEXT_MAX_USEC  20000  /* the max produce time */
+#define TEXT_MAX_USEC  20000  /* the max produce time */
  
- /* For media, this means the time to display
-  * xrtp will schedule the time to send media by this parameter.
-  */
- int tm_media_post(xrtp_media_t * media, media_data_t *data, int bytes, uint32 timestamp){
-
+/* For media, this means the time to display
+ * xrtp will schedule the time to send media by this parameter.
+ */
+int tm_media_post(xrtp_media_t * media, media_data_t *data, int bytes, uint32 timestamp)
+{
     /* One media unit per rtp packet */
 	int ret = OS_OK;
 
@@ -547,9 +548,10 @@ int tm_media_rate(xrtp_media_t * media){
 	buffer_clear(profile->payload_buf, BUFFER_QUICKCLEAR);
 
 	return ret;
- }
+}
 
- xrtp_media_t * tm_media(profile_handler_t *handler){
+xrtp_media_t * tm_media(profile_handler_t *handler)
+{
 
     tm_handler_t * h = (tm_handler_t *)handler;
 
@@ -585,37 +587,41 @@ int tm_media_rate(xrtp_media_t * media){
     }
 
     return (xrtp_media_t *)h->media;
- }
+}
 
- const char * tm_id(profile_class_t * clazz){
-   
+const char * tm_id(profile_class_t * clazz)
+{
     return tm_mime;
- }
+}
 
- int tm_type(profile_class_t * clazz){
-
+int tm_type(profile_class_t * clazz)
+{
     return XRTP_HANDLER_TYPE_MEDIA;
- }
+}
 
- char * tm_description(profile_class_t * clazz){
+char * tm_description(profile_class_t * clazz)
+{
     return plugin_desc;
- }
+}
 
- int tm_capacity(profile_class_t * clazz){
+int tm_capacity(profile_class_t * clazz)
+{
     return XRTP_CAP_NONE;
- }
+}
 
- int tm_handler_number(profile_class_t *clazz){
+int tm_handler_number(profile_class_t *clazz)
+{
     return num_handler;
- }
+}
 
- int tm_done(profile_class_t * clazz){
+int tm_done(profile_class_t * clazz)
+{
     free(clazz);
     return XRTP_OK;
- }
+}
 
- profile_handler_t * tm_new_handler(profile_class_t * clazz, xrtp_session_t * ses){
-   
+profile_handler_t * tm_new_handler(profile_class_t * clazz, xrtp_session_t * ses)
+{
     tm_handler_t * _h;
     profile_handler_t * h;
     
@@ -648,10 +654,10 @@ int tm_media_rate(xrtp_media_t * media){
     ++num_handler;
     
     return h;
- }
+}
 
- int tm_done_handler(profile_handler_t * h){
-   
+int tm_done_handler(profile_handler_t * h)
+{
     buffer_done(((tm_handler_t*)h)->payload_buf);
 
 	free(h);
@@ -659,13 +665,13 @@ int tm_media_rate(xrtp_media_t * media){
     --num_handler;
     
     return XRTP_OK;
- }
+}
 
- /**
-  * Methods for module initializing
-  */
- void * module_init(){
-   
+/**
+ * Methods for module initializing
+ */
+void * module_init()
+{
     text = (profile_class_t *)malloc(sizeof(profile_class_t));
 
     text->id = tm_id;
@@ -683,13 +689,13 @@ int tm_media_rate(xrtp_media_t * media){
     tm_log(("plug_text.module_init: Module['text/rtp-test'] loaded.\n"));
 
     return text;
- }
+}
 
 /**
  * Plugin Infomation Block
  */
-module_loadin_t xrtp_handler = {
-
+module_loadin_t xrtp_handler = 
+{
    "rtp_profile",   /* Plugin ID */
 
    000001,         /* Plugin Version */

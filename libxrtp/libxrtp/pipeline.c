@@ -257,7 +257,6 @@
     xrtp_rtp_packet_t * rtp;
     xrtp_rtcp_compound_t * rtcp;
     
-    pipe_log(("_pipe_step: step->pipe = %u, step->load->packet = %u\n", (int)step->pipe, (int)step->load->packet));
     if(step->pipe->type == XRTP_RTP)
     {
        rtp = (xrtp_rtp_packet_t *)(step->load->packet);

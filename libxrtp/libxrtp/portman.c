@@ -15,16 +15,16 @@
  *                                                                         *
  ***************************************************************************/
 
- #include <timedia/socket.h>    /* POSIX 1003.1 - 2001 compliant */
+#include <timedia/socket.h>    /* POSIX 1003.1 - 2001 compliant */
  
- #include "portman.h"
- #include <timedia/xmap.h>
- #include <stdlib.h>
+#include "portman.h"
+#include <timedia/xmap.h>
+#include <stdlib.h>
 
- #include <stdio.h>
-
+#include <stdio.h>
+/*
 #define PORTMAN_LOG
- 
+*/
 #ifdef PORTMAN_LOG
   #define portman_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -173,13 +173,15 @@ int portman_poll(portman_t * man){
    int io;
    int c = 0;
     
-   int n = select(man->maxio+1, &io_mask, NULL, NULL, &tv);
+   int n;
+   
+   n= select(man->maxio+1, &io_mask, NULL, NULL, &tv);
    if(!n) return n;
     
    /* retrieve port io which readable */
    port = xlist_first(man->portlist, &lu);
-   while(port){
-
+   while(port)
+   {
       io = port_io(port);
       if(FD_ISSET(io, &io_mask))
 	  {

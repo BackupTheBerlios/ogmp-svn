@@ -23,7 +23,7 @@
 #include "internal.h"
 /*
 #define PSCHED_SIMPLE_LOG
-*/ 
+*/
 #ifdef PSCHED_SIMPLE_LOG
  #define simple_sched_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -336,7 +336,7 @@ struct ssch_unit_s{
     return XRTP_OK;
  }
 
- /* Not used recently */
+ /* to start the rtcp schedule */
  int simple_sched_rtcp_out(session_sched_t * sched, xrtp_session_t * ses){
 
     simple_sched_t * ssch = (simple_sched_t *)sched;

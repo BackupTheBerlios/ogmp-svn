@@ -79,8 +79,8 @@
     uint32 addr;
   };
 
-  session_connect_t * connect_new(xrtp_port_t * port, xrtp_teleport_t * tport){
-
+  session_connect_t * connect_new(xrtp_port_t * port, xrtp_teleport_t * tport)
+  {
      session_connect_t * udp = (session_connect_t *)malloc(sizeof(struct session_connect_s));
      if(!udp){
 
@@ -95,7 +95,8 @@
      udp->remote_addr.sin_port = tport->portno;       /* Already in Network byteorder, see teleport_new() */
      udp->remote_addr.sin_addr.s_addr = tport->addr;  /* Already in Network byteorder, see inet_addr() */
 
-     udp_log(("connect_new: new connect to [%s:%u]\n", inet_ntoa(udp->remote_addr.sin_addr), ntohs(udp->remote_addr.sin_port)));
+     udp_log(("connect_new: new connect to [%s:%u]\n", 
+		 inet_ntoa(udp->remote_addr.sin_addr), ntohs(udp->remote_addr.sin_port)));
 
      return udp;   
   }
@@ -144,8 +145,8 @@
       return datalen;
   }
 
-  int connect_send(session_connect_t * conn, char *data, int datalen){
-                                                                                 
+  int connect_send(session_connect_t * conn, char *data, int datalen)
+  {
       int n;
 
 	  /* test */                                                                               
@@ -154,6 +155,7 @@
 		udp_debug(("connect_send: sending fail\n"));
 	  }
 
+      udp_log(("connect_send: send to [%s:%d]\n", inet_ntoa(conn->remote_addr.sin_addr), ntohs(conn->remote_addr.sin_port)));
       return n;
   }
 
