@@ -103,11 +103,11 @@ int window_profiles_print(gui_t* gui, int wid)
     {
 		if (prof->reg_status == SIPUA_STATUS_REG_OK)
 		{
-			snprintf(buf, 199, " %c%c %c %d.'%s'<%s> [%-s] %-100.100s",
+			snprintf(buf, 199, " %c%c %c %d.'%s'<%s> [%-s] %ds %-100.100s",
 						(cursor_profiles_pos==k) ? '-' : ' ',
 						(cursor_profiles_pos==k) ? '>' : ' ',
 						(prof == user_profile) ? '*' : ' ',
-						k+1, prof->fullname, prof->regname, prof->registrar, "ON");
+						k+1, prof->fullname, prof->regname, prof->registrar, prof->seconds_left, " ");
 		}
 		else if (prof->reg_status == SIPUA_STATUS_REG_FAIL)
 		{
@@ -309,7 +309,6 @@ int window_profiles_run_command(gui_t* gui, int c)
 		}
 		case 19:  /* Ctrl-S */
 		{
-
 			/* Save profiles list to storage */
 			user_t* user = ocui->user;
 

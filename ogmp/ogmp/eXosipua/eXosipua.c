@@ -531,7 +531,6 @@ int jua_process_event(eXosipua_t *jua)
             josua_printf(buf);
             */
 		}
-
 	
 		eXosip_event_free(je);
 	}

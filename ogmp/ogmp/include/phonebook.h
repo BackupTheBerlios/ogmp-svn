@@ -19,6 +19,7 @@
 #define PHONEBOOK_H
 
 #include <timedia/list.h>
+#include <timedia/xthread.h>
 
 typedef struct user_s user_t;
 typedef struct user_profile_s user_profile_t;
@@ -80,23 +81,20 @@ sipua_contacts(sipua_phonebook_t* book);
 
 struct user_profile_s
 {
-	char *username;
+	char* username;
 
-	char *fullname;		/* could be multibytes char */
+	char* fullname;		/* could be multibytes char */
 	int fbyte;
-	/*
-	char *email;
-	char *phone;
-	*/
-	char *regname;		/* sip name notation */
+
+	char* regname;		/* sip name notation */
 	
 	int seconds;		/* lifetime */
 	
 	char* registrar;
 
-	char* cname;	/* username@netaddr */
+	char* cname;		/* username@netaddr */
 
-	user_t *user;
+	user_t* user;
 
 	char* book_location;
 
@@ -105,8 +103,15 @@ struct user_profile_s
 	int online_status;
 	int reg_status;
 
-	char *reg_reason_phrase;
-	char *reg_server;
+	char* reg_reason_phrase;
+	char* reg_server;
+
+	void* sipua;
+	int enable;
+
+	int seconds_left;
+	
+	xthread_t* thread_register;
 };
 
 struct user_s

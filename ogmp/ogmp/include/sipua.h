@@ -238,6 +238,8 @@ struct sipua_s
 
 	sipua_set_t* incall;  /* The call in conversation */
 	
+	user_profile_t* user_profile;
+
 	int (*done)(sipua_t *ua);
 
 	char* (*userloc)(sipua_t* sipua, char* uid);

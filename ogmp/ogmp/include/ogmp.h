@@ -125,7 +125,6 @@ struct ogmp_client_s
 	xthr_cond_t* wait_unregistered;
 
 	/* below is sipua related */
-	user_profile_t* user_prof;
 	user_profile_t* reg_profile;
 
 	int expire_sec; /* registration expired seconds, time() */

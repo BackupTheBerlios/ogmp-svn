@@ -121,6 +121,35 @@ int client_done(ogmp_client_t *client)
    return MP_OK;
 }
 
+/* FIXME: resource greedy, need better solution */
+int client_register_loop(void *gen)
+{
+	int intv = 2;  /* second */
+	rtime_t ms_remain;
+	
+	user_profile_t* user_prof = (user_profile_t*)gen;
+	ogmp_client_t* client = (ogmp_client_t*)user_prof->sipua;
+
+	xclock_t* clock = time_start();
+
+	user_prof->enable = 1;
+	while(user_prof->enable)
+	{
+		user_prof->seconds_left -= intv;
+
+		if(user_prof->seconds_left <= 0)
+			sipua_regist(&client->sipua, user_prof, user_prof->cname);
+
+		time_msec_sleep(clock, intv*1000, &ms_remain);
+	}
+
+	time_end(clock);
+
+	user_prof->thread_register = NULL;
+
+	return UA_OK;
+}
+
 int client_sipua_event(void* lisener, sipua_event_t* e)
 {
 	sipua_t *sipua = (sipua_t*)lisener;
@@ -139,7 +168,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
                 break;
                 
             if(user_prof->reg_reason_phrase)
-
             {
                 xfree(user_prof->reg_reason_phrase);
                 user_prof->reg_reason_phrase = NULL;
@@ -152,7 +180,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			{
 				user_prof->reg_server = xstr_clone(reg_e->server);
 
-				client->user_prof = client->reg_profile;
+				client->sipua.user_profile = client->reg_profile;
 
 				user_prof->reg_status = SIPUA_STATUS_REG_OK;
 			}
@@ -167,6 +195,14 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			/* registering transaction completed */
             client->reg_profile = NULL;
+
+			user_prof->seconds_left = user_prof->seconds;
+			user_prof->sipua = client;
+			user_prof->enable = 1;
+
+			/* Create a register thread */
+			if(!user_prof->thread_register)
+				user_prof->thread_register = xthr_new(client_register_loop, user_prof, XTHREAD_NONEFLAGS);
 
             client->ogui->ui.beep(&client->ogui->ui);
 
@@ -199,7 +235,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			client->reg_profile = NULL;
 
 			break;
-
 		}
 		case(SIPUA_EVENT_NEW_CALL):
 		{
@@ -233,7 +268,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			/* now to negotiate call, which will generate call structure with sdp message for reply
 			 * still no rtp session created !
 			 */
-			call = sipua_negotiate_call(sipua, client->user_prof, rtpcapset,
+			call = sipua_negotiate_call(sipua, client->sipua.user_profile, rtpcapset,
 							client->mediatypes, client->default_rtp_ports, 
 							client->default_rtcp_ports, client->nmedia,
 							client->control);
@@ -343,9 +378,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		}
 		case(SIPUA_EVENT_ACK):
 		{
-			/* Callee establishs call after its answer is acked
-			sipua_set_t *call = e->call_info; */
-
 			/* rtp sessions created */
 			sipua_establish_call(sipua, e->call_info, "playback", e->call_info->rtpcapset, client->format_handlers, client->control, client->pt);
 
@@ -526,7 +558,7 @@ sipua_set_t* client_new_call(sipua_t* sipua, char* subject, int sbytes, char *de
 
 	setting = client_setting(clie->control);
 
-	call = sipua_new_call(sipua, clie->user_prof, NULL, subject, sbytes, desc, dbytes,
+	call = sipua_new_call(sipua, clie->sipua.user_profile, NULL, subject, sbytes, desc, dbytes,
 						clie->mediatypes, clie->default_rtp_ports, clie->default_rtcp_ports, clie->nmedia,
 						clie->control, bw_budget, setting->codings, setting->ncoding, clie->pt);
 
@@ -543,17 +575,15 @@ int client_set_profile(sipua_t* sipua, user_profile_t* prof)
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
-	client->user_prof = prof;
+	client->sipua.user_profile = prof;
 
 	return UA_OK;
 }
 
 user_profile_t* client_profile(sipua_t* sipua)
-
 {
-	return ((ogmp_client_t*)sipua)->user_prof;
+	return sipua->user_profile;
 }
-
 
 int client_regist(sipua_t *sipua, user_profile_t *user, char * userloc)
 {
@@ -586,6 +616,12 @@ int client_unregist(sipua_t *sipua, user_profile_t *user)
 		return UA_FAIL;
 
 	client->reg_profile = user;
+
+	if(user->thread_register)
+	{
+		user->enable = 0;
+		xthr_wait(user->thread_register, &ret);
+	}
 
 	ret = sipua_unregist(sipua, user);
 
