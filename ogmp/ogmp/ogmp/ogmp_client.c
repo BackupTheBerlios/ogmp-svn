@@ -82,6 +82,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
                 break;
                 
             if(user_prof->reg_reason_phrase)
+
             {
                 xfree(user_prof->reg_reason_phrase);
                 user_prof->reg_reason_phrase = NULL;
@@ -118,6 +119,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		case(SIPUA_EVENT_UNREGISTRATION_FAILURE):
 		{
 			char buf[100];
+
 
 			sipua_reg_event_t *reg_e = (sipua_reg_event_t*)e;
 			user_profile_t* user_prof = client->reg_profile;
@@ -188,6 +190,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			call->cid = call_e->cid;
 			call->did = call_e->did;
 			call->rtpcapset = rtpcapset;
+            
+			call->status = SIPUA_EVENT_NEW_CALL;
 
             /* Parse from uri */
 			p = call_e->remote_uri;

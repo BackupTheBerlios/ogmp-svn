@@ -94,6 +94,8 @@ int window_sessions_list_print(gui_t* gui, int wid)
 
 		switch(call->status)
 		{
+			case SIPUA_EVENT_NEW_CALL:
+				strcpy(status, "Incoming"); break;
 			case SIPUA_EVENT_PROCEEDING:
 				strcpy(status, "Proceeding"); break;
 			case SIPUA_EVENT_RINGING:
