@@ -74,6 +74,7 @@ struct ogmp_ui_s
     
     int (*logbuf)(ogmp_ui_t *ui, char** buf);
     int (*print_log)(ogmp_ui_t *ui, char* buf);
+    int (*beep)(ogmp_ui_t *ui);
     
 	ogmp_command_t*(*wait_command)(ogmp_ui_t *ui);
 };

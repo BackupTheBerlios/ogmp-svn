@@ -107,7 +107,7 @@ int window_profiles_print(gui_t* gui, int wid)
 						(cursor_profiles_pos==k) ? '-' : ' ',
 						(cursor_profiles_pos==k) ? '>' : ' ',
 						(prof == user_profile) ? '*' : ' ',
-						k+1, prof->fullname, prof->regname, prof->registrar, "OK");
+						k+1, prof->fullname, prof->regname, prof->registrar, "ON");
 		}
 		else if (prof->reg_status == SIPUA_STATUS_REG_FAIL)
 		{
@@ -139,7 +139,7 @@ int window_profiles_print(gui_t* gui, int wid)
 						(cursor_profiles_pos==k) ? '-' : ' ',
 						(cursor_profiles_pos==k) ? '>' : ' ',
 						(prof == user_profile) ? '*' : ' ',
-						k+1, prof->fullname, prof->regname, prof->registrar, "---");
+						k+1, prof->fullname, prof->regname, prof->registrar, "OFF");
 		}
       
 		attrset((k==cursor_profiles_pos) ? COLOR_PAIR(10) : COLOR_PAIR(1));
@@ -309,6 +309,7 @@ int window_profiles_run_command(gui_t* gui, int c)
 		}
 		case 19:  /* Ctrl-S */
 		{
+
 			/* Save profiles list to storage */
 			user_t* user = ocui->user;
 

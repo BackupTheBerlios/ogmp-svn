@@ -80,33 +80,40 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			sipua_reg_event_t *reg_e = (sipua_reg_event_t*)e;
 			user_profile_t* user_prof = client->reg_profile;
 
-			if(user_prof && user_prof->reg_status == SIPUA_STATUS_REG_DOING)
+            if(user_prof == NULL)
+                break;
+                
+            if(user_prof->reg_reason_phrase)
+            {
+                xfree(user_prof->reg_reason_phrase);
+                user_prof->reg_reason_phrase = NULL;
+            }
+            
+            if(reg_e->server_info)
+                user_prof->reg_reason_phrase = xstr_clone(reg_e->server_info);
+
+            if(user_prof->reg_status == SIPUA_STATUS_REG_DOING)
 			{
 				user_prof->reg_server = xstr_clone(reg_e->server);
-
-                if(user_prof->reg_reason_phrase)
-                    xfree(user_prof->reg_reason_phrase);
-				
-				user_prof->reg_reason_phrase = xstr_clone(reg_e->server_info);
 
 				client->user_prof = client->reg_profile;
 
 				user_prof->reg_status = SIPUA_STATUS_REG_OK;
-
-                client->reg_profile = NULL;
 			}
 
-			if(user_prof && user_prof->reg_status == SIPUA_STATUS_UNREG_DOING)
+			if(user_prof->reg_status == SIPUA_STATUS_UNREG_DOING)
             {
+                xstr_done_string(user_prof->reg_server);
+                user_prof->reg_server = NULL;
+
 				user_prof->reg_status = SIPUA_STATUS_NORMAL;
-
-                if(user_prof->reg_reason_phrase)
-                    xfree(user_prof->reg_reason_phrase);
-
-                client->reg_profile = NULL;
             }
 
 			/* registering transaction completed */
+            client->reg_profile = NULL;
+
+            client->ui->beep(client->ui);
+
 			break;
 		}
 		case(SIPUA_EVENT_REGISTRATION_FAILURE):
@@ -136,6 +143,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			client->reg_profile = NULL;
 
 			break;
+
 		}
 		case(SIPUA_EVENT_NEW_CALL):
 		{
@@ -298,6 +306,7 @@ int client_done_call(sipua_t* sipua, sipua_set_t* set)
 
 	ua->control->release_bandwidth(ua->control, set->bandwidth);
 
+
 	return sipua_done_sip_session(set);
 }
 
@@ -423,13 +432,13 @@ int client_regist(sipua_t *sipua, user_profile_t *user, char * userloc)
 		return UA_FAIL;
 	}
 
+	client->reg_profile = user;
+
 	ret = sipua_regist(sipua, user, userloc);
 
 	if(ret < UA_OK)
-		return ret;
+        client->reg_profile = NULL;
 		
-	client->reg_profile = user;
-
 	return ret;
 }
 
@@ -447,9 +456,7 @@ int client_unregist(sipua_t *sipua, user_profile_t *user)
 	ret = sipua_unregist(sipua, user);
 
 	if(ret < UA_OK)
-		return ret;
-		
-	client->reg_profile = user;
+        client->reg_profile = NULL;
 
 	return ret;
 }
@@ -579,6 +586,7 @@ int client_attach_source(sipua_t* sipua, sipua_set_t* call, transmit_source_t* t
 
 int client_detach_source(sipua_t* sipua, sipua_set_t* call, transmit_source_t* tsrc)
 {
+
 	return MP_EIMPL;
 }
 	

@@ -391,6 +391,7 @@ int gui_next_view(ogmp_curses_t* ocui)
 }
 
 int gui_previous_view(ogmp_curses_t* ocui)
+
 {
 	int i = 0;
 
@@ -420,6 +421,7 @@ int gui_key_pressed(ogmp_curses_t* ocui)
     if (ocui->active_gui->xcursor == -1)
 	{
 		noecho();
+
 
 		c = getch();
 	}
@@ -861,6 +863,13 @@ int gui_print_log(ogmp_ui_t* ogui, char *buf)
 	return l;
 }
 
+int gui_beep(ogmp_ui_t* ui)
+{
+    beep();
+    
+    return UA_OK;
+}
+
 int gui_done(ogmp_ui_t* ui)
 {
 	ogmp_curses_t *ocui = (ogmp_curses_t*)ui;
@@ -895,6 +904,7 @@ module_interface_t* ogmp_new_ui()
 	ogui->show = gui_show;
     ogui->logbuf = gui_logbuf;
     ogui->print_log = gui_print_log;
+    ogui->beep = gui_beep;
     
 	return ogui;
 }
