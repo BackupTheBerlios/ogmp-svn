@@ -590,17 +590,8 @@ int sipua_session_sdp(sipua_t *sipua, sipua_set_t* set, char** sdp_body)
 int sipua_regist(sipua_t *sipua, user_profile_t *user, char *userloc)
 {
 	int ret;
-	char* siploc, *p;
-	
-	p = siploc = xmalloc(strlen(userloc)+5);
-	if(!siploc)
-		return UA_FAIL;
 
-	strcpy(p, "sip:");
-	p += 4;
-	strcpy(p, userloc);
-
-	ret = sipua->uas->regist(sipua->uas, siploc, user->registrar, user->regname, user->seconds);
+    ret = sipua->uas->regist(sipua->uas, userloc, user->registrar, user->regname, user->seconds);
 
 	if(ret < UA_OK)
 		user->reg_status = SIPUA_STATUS_REG_FAIL;
@@ -610,8 +601,6 @@ int sipua_regist(sipua_t *sipua, user_profile_t *user, char *userloc)
 
 		user->reg_status = SIPUA_STATUS_REG_DOING;
 	}
-
-	xfree(siploc);
 
 	return ret;
 }

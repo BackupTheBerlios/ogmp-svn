@@ -668,11 +668,23 @@ int uas_regist(sipua_uas_t *sipuas, char *loc, char *registrar, char *id, int se
 
 	eXosipua_t *jua = (eXosipua_t*)sipuas;
 
+	char* siploc, *p;
+
+	p = siploc = xmalloc(4+strlen(loc)+1+10+1);
+	if(!siploc)
+		return UA_FAIL;
+
+	strcpy(p, "sip:");
+	p += 4;
+	strcpy(p, loc);
+    while(*p) p++;
+    snprintf(p, 12, ":%d", sipuas->portno);
+
 	jua_log(("uas_regist: %s on %s within %ds\n", id, registrar, seconds));
 
 	eXosip_lock();
 
-	regno = eXosip_register_init(id, registrar, loc);
+	regno = eXosip_register_init(id, registrar, siploc);
 
 	if (regno < 0)
 	{
@@ -683,6 +695,8 @@ int uas_regist(sipua_uas_t *sipuas, char *loc, char *registrar, char *id, int se
 	ret = eXosip_register(regno, seconds);
 
 	eXosip_unlock();
+
+	xfree(siploc);
 
 	if(ret != 0)
 	{
