@@ -14,7 +14,7 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-
+ 
 #include "rtp_format.h"
 
 #include <timedia/xmalloc.h>
@@ -67,6 +67,10 @@ int rtp_done_format(media_format_t * mf)
       xfree(cur);
       
 
+
+
+
+
       cur = next;
    }
 
@@ -102,7 +106,7 @@ int rtp_add_stream(media_format_t * rtp, media_stream_t *strm, int strmno, unsig
 		/* default first audio stream as time reference */
         if (rtp->nastreams == 1)
 		{
-			rtp_log(("rtp_set_mime_player: stream #%d as default time stream\n", rtp->numstreams));
+			rtp_log(("rtp_add_stream: stream #%d as default time stream\n", rtp->numstreams));
             rtp->time_ref = strmno;
         }
                   
@@ -148,7 +152,7 @@ media_player_t * rtp_stream_player(media_format_t * mf, int strmno)
   return NULL;
 }
 
-media_stream_t * rtp_find_mime(media_format_t * mf, const char * mime)
+media_stream_t * rtp_find_mime(media_format_t * mf, char *mime)
 {
    media_stream_t *cur = mf->first;
 
@@ -178,14 +182,14 @@ media_player_t * rtp_mime_player(media_format_t * mf, const char * mime)
       }
     
       cur = cur->next;
-   }
+   }                                                  
 
    return NULL;
 }
 
-int rtp_set_mime_player (media_format_t * mf, media_player_t * player, const char * mime)
+int rtp_set_mime_player (media_format_t * mf, char * mime, media_player_t * player)
 {
-   media_stream_t *cur = mf->first;
+   media_stream_t *cur = mf->first; 
 
    while (cur != NULL)
    {
@@ -204,7 +208,7 @@ int rtp_set_mime_player (media_format_t * mf, media_player_t * player, const cha
    return MP_FAIL;
 }
 
-media_stream_t * rtp_find_fourcc(media_format_t * mf, const char *fourcc)
+media_stream_t * rtp_find_fourcc(media_format_t * mf, char *fourcc)
 {
    media_stream_t *cur = mf->first;
 
@@ -235,6 +239,7 @@ media_player_t * rtp_fourcc_player(media_format_t * mf, const char *fourcc)
 
    return NULL;
 }
+
 
 int rtp_set_fourcc_player (media_format_t * mf, media_player_t * player, const char *fourcc)
 {
@@ -546,17 +551,17 @@ int rtp_set_control (media_format_t * mf, media_control_t * control)
 int rtp_set_player (media_format_t * mf, media_player_t * player)
 {
    int ret;
-   const char * type;
+   char * type;
 
    type = player->media_type(player);
-   if ( (ret = rtp_set_mime_player (mf, player, type)) >= MP_OK )
+   if ( (ret = rtp_set_mime_player (mf, type, player)) >= MP_OK )
    {
       rtp_log (("rtp_set_player: '%s' stream playable\n", type));
       return ret;
    }
    
    type = player->codec_type(player);
-   if ( (ret = rtp_set_mime_player (mf, player, type)) >= MP_OK )
+   if ( (ret = rtp_set_mime_player (mf, type, player)) >= MP_OK )
    {
       rtp_log (("rtp_set_player: play '%s' stream\n", type));
       return ret;
@@ -566,6 +571,123 @@ int rtp_set_player (media_format_t * mf, media_player_t * player)
 
 
    return ret;
+}
+
+int rtp_new_all_player(media_format_t *mf, media_control_t* ctrl, char* mode, void* mode_param)
+{
+	int c=0;
+
+	media_stream_t *cur = mf->first;
+
+    if(!mode)
+        mode = "rtp";
+
+	while (cur != NULL)
+	{
+		cur->player = ctrl->find_player(ctrl, mode, cur->media_info->mime, cur->media_info->fourcc, mode_param);
+
+		if(!cur->player)
+		{
+			cur->playable = -1;
+
+			rtp_log(("rtp_new_all_player: No %s player\n", cur->media_info->mime));
+		}
+		else if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
+		{
+			cur->playable = -1;
+
+			rtp_log(("rtp_new_all_player: open %s stream fail!\n", cur->media_info->mime));
+		}
+		else
+		{
+			cur->playable = 1;
+			c++;
+
+			rtp_log(("ogm_new_mime_player: %s stream ok\n", cur->media_info->mime));
+		}
+
+		cur = cur->next;
+	}
+
+	return c;
+}
+
+media_player_t* rtp_new_stream_player(media_format_t *mf, int strmno, media_control_t* ctrl, char* mode, void* mode_param)
+{
+	media_stream_t *cur = mf->first;
+
+    if(!mode)
+        mode = "rtp";
+
+	while (cur != NULL)
+	{
+		rtp_stream_t* rtp_strm = (rtp_stream_t*)cur;
+		if (rtp_strm->sno == strmno)
+		{
+			cur->player = ctrl->find_player(ctrl, mode, cur->media_info->mime, cur->media_info->fourcc, mode_param);
+
+			if(!cur->player)
+			{
+				rtp_debug(("rtp_new_stream_player: stream can't be played\n"));
+				cur->playable = -1;
+				return NULL;
+
+			}
+
+			if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
+			{
+				cur->playable = -1;
+				return NULL;
+			}
+
+			cur->playable = 1;
+
+			rtp_log(("rtp_new_stream_player: player ok\n"));
+
+			return cur->player;
+		}
+
+		cur = cur->next;
+	}
+
+	return NULL;
+}
+
+media_player_t * rtp_new_mime_player(media_format_t * mf, char * mime, media_control_t* ctrl, char* mode, void* mode_param)
+{
+	media_stream_t *cur = mf->first;
+
+    if(!mode)
+        mode = "rtp";
+
+	while (cur != NULL)
+	{
+		if (!strcmp(cur->mime, mime))
+		{
+			cur->player = ctrl->find_player(ctrl, mode, mime, NULL, mode_param);
+
+			if(!cur->player)
+			{
+				rtp_debug(("rtp_new_mime_player: stream can't be played\n"));
+				cur->playable = -1;
+				return NULL;
+			}
+
+			if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
+			{
+				cur->playable = -1;
+				return NULL;
+			}
+
+			cur->playable = 1;
+
+			rtp_log(("rtp_new_mime_player: player ok\n"));
+		}
+
+		cur = cur->next;
+	}
+
+	return NULL;
 }
 
 module_interface_t * media_new_format()
@@ -597,12 +719,13 @@ module_interface_t * media_new_format()
 
    /* Stream management */
    mf->add_stream = rtp_add_stream;
-
+   
    mf->find_stream = rtp_find_stream;
    mf->find_mime = rtp_find_mime;
    mf->find_fourcc = rtp_find_fourcc;
 
    mf->set_control = rtp_set_control;
+
    mf->set_player = rtp_set_player;
 
    /* Stream info */
@@ -613,6 +736,12 @@ module_interface_t * media_new_format()
    mf->stream_player = rtp_stream_player;
    mf->mime_player = rtp_mime_player;
    mf->fourcc_player = rtp_fourcc_player;
+
+   mf->new_all_player = rtp_new_all_player;
+
+   mf->new_stream_player = rtp_new_stream_player;
+   mf->new_mime_player = rtp_new_mime_player;
+   mf->set_mime_player = rtp_set_mime_player;
 
    mf->players = rtp_players;
 

@@ -73,6 +73,8 @@ int ogm_done_format(media_format_t * mf)
    return MP_OK;
 }
 
+
+
 /* New detected stream add to group */
 int ogm_add_stream(media_format_t * ogm, media_stream_t *strm, int sno, unsigned char type)
 {
@@ -118,6 +120,7 @@ int ogm_add_stream(media_format_t * ogm, media_stream_t *strm, int sno, unsigned
 
 media_stream_t * ogm_find_stream(media_format_t * mf, int strmno)
 {
+
   media_stream_t *cur = mf->first;
 
   while (cur != NULL)
@@ -146,7 +149,7 @@ media_player_t * ogm_stream_player(media_format_t * mf, int strmno)
   return NULL;
 }
 
-media_stream_t * ogm_find_mime(media_format_t * mf, const char * mime)
+media_stream_t * ogm_find_mime(media_format_t * mf, char * mime)
 {
    media_stream_t *cur = mf->first;
 
@@ -209,8 +212,8 @@ media_player_t* ogm_new_stream_player(media_format_t *mf, int strmno, media_cont
 		if (ogm_strm->serial == strmno)
 		{
 			cur->player = ctrl->find_player(ctrl, mode, cur->media_info->mime, cur->media_info->fourcc, mode_param);
-			
-			if(!cur->player)
+
+            if(!cur->player)
 			{
 				ogm_debug(("ogm_new_mime_player: stream can't be played\n"));
 				cur->playable = -1;
@@ -290,7 +293,7 @@ int ogm_set_mime_player(media_format_t *mf, char *mime, media_player_t* player)
 		cur = cur->next;
 	}
 
-   ogm_log(("ogm_set_mime_player: stream '%s' not exist\n", mime));
+    ogm_log(("ogm_set_mime_player: stream '%s' not exist\n", mime));
    
 	return MP_FAIL;
 }
@@ -312,7 +315,7 @@ media_player_t * ogm_mime_player(media_format_t * mf, const char * mime)
    return NULL;
 }
 
-media_stream_t * ogm_find_fourcc(media_format_t * mf, const char *fourcc)
+media_stream_t * ogm_find_fourcc(media_format_t * mf, char *fourcc)
 {
    media_stream_t *cur = mf->first;
 
@@ -325,6 +328,7 @@ media_stream_t * ogm_find_fourcc(media_format_t * mf, const char *fourcc)
 
       cur = cur->next;
    }
+
 
    return NULL;
 }
@@ -503,6 +507,7 @@ int ogm_support_type (media_format_t *mf, char *type, char *subtype)
 int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_stream_state *sstate, ogg_packet *packet)
 {
    //stream_header sth;
+
    xrtp_list_user_t $u;
    ogm_media_t *handler;
    
@@ -634,6 +639,7 @@ static int64 get_pts (ogm_stream_t *ogm_strm, int64 granulepos)
 
       /*return the smallest valid pts*/
       return 1;
+
 
     } else {
 
@@ -1070,6 +1076,7 @@ int ogm_players(media_format_t * mf, char *play_type, media_player_t* players[],
 	return n;
 }
 
+
 int ogm_set_control (media_format_t * mf, media_control_t * control)
 {
    mf->control = control;
@@ -1124,7 +1131,7 @@ module_interface_t * media_new_format()
    /* Open/Close a media source */
    mf->open = ogm_open;
    mf->close = ogm_close;
-
+   
    /* Stream management */
    mf->add_stream = ogm_add_stream;
 
@@ -1154,6 +1161,7 @@ module_interface_t * media_new_format()
    mf->players = ogm_players;
 
    /* Seek the media by time */
+
    mf->seek_millisecond = ogm_seek_millisecond;
 
    /* demux next sync stream group */

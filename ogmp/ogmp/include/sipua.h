@@ -94,6 +94,9 @@ struct sipua_setid_s
 
 typedef struct sipua_set_s sipua_set_t;
 
+
+
+
 struct sipua_set_s
 {
 	sipua_setid_t setid;
@@ -128,6 +131,7 @@ struct sipua_set_s
 	rtpcap_set_t* rtpcapset;
 
 	char* reply_body;
+    char* renew_body;
 
 	int ring_num;
 };
@@ -287,7 +291,7 @@ struct sipua_s
 	media_source_t* (*set_background_source)(sipua_t* sipua, char* name);
 
 	/* call media attachment */
-	media_source_t* (*open_source)(sipua_t* sipua, char* name, char* mode, void* param);
+	media_source_t* (*open_source)(sipua_t* sipua, char* name, char* mode);
 	int (*close_source)(sipua_t* sipua, media_source_t* src);
 
 	int (*attach_source)(sipua_t* sipua, sipua_set_t* call, transmit_source_t* src);
@@ -296,14 +300,14 @@ struct sipua_s
 	/* session description */
 	int (*session_sdp)(sipua_t *sipua, sipua_set_t* set, char** sdp);
 
-	int (*call)(sipua_t *ua, sipua_set_t* set, char *regname);
-	int (*answer)(sipua_t *ua, sipua_set_t* call, int reason);
+	int (*call)(sipua_t *ua, sipua_set_t* set, char *regname, char* sdp_body);
+	int (*answer)(sipua_t *ua, sipua_set_t* call, int reason, media_source_t* source);
 
 	int (*options_call)(sipua_t *ua, sipua_set_t* call);
 	int (*info_call)(sipua_t *ua, sipua_set_t* call, char *type, char *info);
 
 	int (*bye)(sipua_t *ua, sipua_set_t* set);
-	int (*recall)(sipua_t *sipua, sipua_set_t* set);
+	char* (*set_call_source)(sipua_t *sipua, sipua_set_t* set, media_source_t* source);
 };
 
 sipua_t* sipua_new(sipua_uas_t *uas, void* event_lisener, int(*lisen)(void*,sipua_event_t*), int bandwidth, media_control_t* control);
@@ -355,6 +359,12 @@ int
 sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char* mode, rtpcap_set_t* rtpcapset,
 							   xlist_t* format_handlers, media_control_t* control, int pt_pool[]);
 
+/* Create a SDP with new set of media info */
+char*
+sipua_call_sdp(sipua_t *sipua, sipua_set_t* call, int bw_budget, media_control_t* control,
+                char* mediatypes[], int rtp_ports[], int rtcp_ports[], int nmedia,
+                media_source_t* source, int pt_pool[]);
+                
 int sipua_done_sip_session(void* gen);
 
 /*
@@ -370,11 +380,11 @@ int sipua_session_sdp(sipua_t *sipua, sipua_set_t* set, char** sdp);
 DECLSPEC
 int 
 
-sipua_call(sipua_t *ua, sipua_set_t* set, char *regname);
+sipua_call(sipua_t *ua, sipua_set_t* set, char *regname, char *sdp_body);
 	
 DECLSPEC
 int 
-sipua_answer(sipua_t *ua, sipua_set_t* call, int reason);
+sipua_answer(sipua_t *ua, sipua_set_t* call, int reason, char* sdp_body);
 
 DECLSPEC
 int 

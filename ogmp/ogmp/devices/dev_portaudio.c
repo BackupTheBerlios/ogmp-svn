@@ -44,7 +44,7 @@
 #endif
 
 #ifdef PORTAUDIO_DEBUG
- #define pa_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
+ #define pa_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define pa_debug(fmtargs)
 #endif
@@ -280,7 +280,7 @@ int pa_online (media_device_t * dev) {
 
    pa_dev->online = 1;
 
-   pa_debug(("pa_online: portaudio initialized\n"));
+   pa_log(("pa_online: portaudio initialized\n"));
    
    return MP_OK;
 }
@@ -344,7 +344,7 @@ media_stream_t* pa_new_media_stream(media_device_t *dev, media_receiver_t* recvr
    else
       pa->input_usec_pulse = (int)((double)nsample_pulse / pa->ai_input.info.sample_rate * 1000000);
       
-   pa_debug(("pa_set_media_info: %d channels, %d rate, %d sample per pulse (%dus)\n", 
+   pa_log(("pa_set_media_info: %d channels, %d rate, %d sample per pulse (%dus)\n", 
 			pa->ai_input.channels, pa->ai_input.info.sample_rate, nsample_pulse, pa->usec_pulse));
    
    pa->ai_input.channels_bytes = pa->ai_input.channels * pa->ai_input.info.sample_bits / OS_BYTE_BITS;
@@ -384,7 +384,6 @@ media_stream_t* pa_new_media_stream(media_device_t *dev, media_receiver_t* recvr
    strm->creater = receiver;
 
    return strm;
-
 }
 #endif
 
@@ -420,7 +419,7 @@ int pa_set_input_media(media_device_t *dev, media_receiver_t* recvr, media_info_
    else
       pa->input_usec_pulse = (int)((double)nsample_pulse / pa->ai_input.info.sample_rate * 1000000);
       
-   pa_debug(("pa_set_media_info: %d channels, %d rate, %d sample per pulse (%dus)\n", 
+   pa_log(("pa_set_input_media: %d channels, %d rate, %d sample per pulse (%dus)\n", 
 			pa->ai_input.channels, pa->ai_input.info.sample_rate, nsample_pulse, pa->usec_pulse));
    
    pa->ai_input.channels_bytes = pa->ai_input.channels * pa->ai_input.info.sample_bits / OS_BYTE_BITS;
@@ -447,7 +446,7 @@ int pa_set_input_media(media_device_t *dev, media_receiver_t* recvr, media_info_
 
    if ( err != paNoError )
    {
-      pa_debug(("pa_set_media_info: %s\n", Pa_GetErrorText(err) ));
+      pa_debug(("pa_set_input_media: %s\n", Pa_GetErrorText(err) ));
       Pa_Terminate();
 
       return MP_FAIL;
@@ -455,7 +454,7 @@ int pa_set_input_media(media_device_t *dev, media_receiver_t* recvr, media_info_
 
    pa->receiver = recvr;
 
-   pa_log(("\n[pa_set_media_info: PortAudio use %d internal buffers]\n\n", Pa_GetMinNumBuffers (nsample_pulse, pa->ai_input.info.sample_rate)));
+   pa_log(("\n[pa_set_input_media: PortAudio use %d internal buffers]\n\n", Pa_GetMinNumBuffers (nsample_pulse, pa->ai_input.info.sample_rate)));
 
    /* Start PortAudio */
    return MP_OK;
@@ -495,7 +494,7 @@ int pa_set_output_media(media_device_t *dev, media_info_t *out_info)
    else
       pa->usec_pulse = (int)((double)nsample_pulse / pa->ai_output.info.sample_rate * 1000000);
       
-   pa_debug(("pa_set_media_info: %d channels, %d rate, %d sample per pulse (%dus)\n", 
+   pa_log(("pa_set_output_media: %d channels, %d rate, %d sample per pulse (%dus)\n", 
 			pa->ai_output.channels, pa->ai_output.info.sample_rate, nsample_pulse, pa->usec_pulse));
    
    pa->ai_output.channels_bytes = pa->ai_output.channels * pa->ai_output.info.sample_bits / OS_BYTE_BITS;
@@ -518,7 +517,7 @@ int pa_set_output_media(media_device_t *dev, media_info_t *out_info)
 
    if ( err != paNoError )
    {
-      pa_debug(("pa_set_media_info: %s\n", Pa_GetErrorText(err) ));
+      pa_debug(("pa_set_output_media: %s\n", Pa_GetErrorText(err) ));
       Pa_Terminate();
 
       return MP_FAIL;

@@ -32,7 +32,7 @@
 #endif
 
 #ifdef SPEEX_PLAYER_DEBUG
- #define spxp_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
+ #define spxp_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define spxp_debug(fmtargs)
 #endif
@@ -161,7 +161,7 @@ int spxp_open_stream (media_player_t *mp, media_info_t *media_info)
 	ret = mp->device->set_output_media(mp->device, (media_info_t*)&ai);
 	if (ret < MP_OK)
 	{
-		spxp_log (("spxp_open_stream: speex stream fail to open\n"));
+		spxp_debug(("spxp_open_stream: speex stream fail to open\n"));
 		return ret;
 	}
 

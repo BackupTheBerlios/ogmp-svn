@@ -101,7 +101,6 @@ int window_audio_test_print(gui_t* gui, int wid)
 		mvaddch(gui->y0+1, gui->x0+20+pos, c);
 	}
 
-
 	gui->gui_draw_commands(gui);
   
 	return 0;
@@ -112,9 +111,9 @@ void window_audio_test_draw_commands(gui_t* gui)
 	int x,y;
 	char *audio_test_commands[] = 
 	{
-		"^A",  "Play",
-		"^C",  "Stop" ,
-		"^S",  "SetBackgroud",
+		"^P",  "Play",
+		"^S",  "Stop" ,
+		"^A",  "SetAnswer",
 		"^D",  "Done",
 		NULL
 	};
@@ -193,17 +192,40 @@ int window_audio_test_run_command(gui_t* gui, int c)
 
 			break;
 		}
-		case 9:  /* Ctrl-I */
+		case 4:  /* Ctrl-D */
 		{
+			gui_hide_window(gui);
+
 			break;
 		}
 		case 1:  /* Ctrl-A */
 		{
 			if(!audio_test_source && audio_test_inputs[AUDIOTEST_FILE][0])
 			{
+                char* name = audio_test_inputs[AUDIOTEST_FILE];
+
+                if(ocui->sipua->set_background_source(ocui->sipua, name)==NULL)
+                {
+					beep();
+					break;
+				}
+                
+                printf("window_audio_test_run_command: 1\n");
+			}
+
+            break;
+		}
+		case 9:  /* Ctrl-I */
+		{
+			break;
+		}
+		case 16:  /* Ctrl-P */
+		{
+			if(!audio_test_source && audio_test_inputs[AUDIOTEST_FILE][0])
+			{
 				char* fname = audio_test_inputs[AUDIOTEST_FILE];
 
-				audio_test_source = ocui->sipua->open_source(ocui->sipua, fname, "playback", NULL);
+				audio_test_source = ocui->sipua->open_source(ocui->sipua, fname, "playback");
 				
 				if(!audio_test_source)
 				{
@@ -216,7 +238,7 @@ int window_audio_test_run_command(gui_t* gui, int c)
 
 			break;
 		}
-		case 3:  /* Ctrl-C */
+		case 19:  /* Ctrl-S */
 		{
 			if(audio_test_source)
 			{
@@ -227,29 +249,6 @@ int window_audio_test_run_command(gui_t* gui, int c)
 				audio_test_source = NULL;
 			}
 			
-			break;
-		}
-		case 4:  /* Ctrl-D */
-		{
-			gui_hide_window(gui);
-	
-			break;
-		}
-		case 18:  /* Ctrl-S */
-		{
-			if(!audio_test_source && audio_test_inputs[AUDIOTEST_FILE][0])
-			{
-				char* name = audio_test_inputs[AUDIOTEST_FILE];
-				
-				if(ocui->sipua->set_background_source(ocui->sipua, name)==NULL)
-				{
-					beep();
-					break;
-				}
-				
-				audio_test_source->start(audio_test_source);
-			}
-
 			break;
 		}
 		default:

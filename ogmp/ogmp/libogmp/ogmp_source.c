@@ -23,11 +23,18 @@
 #include <timedia/ui.h>
 
 #define SOURCE_LOG
+#define SOURCE_DEBUG
 
 #ifdef SOURCE_LOG
  #define src_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define src_log(fmtargs)
+#endif
+
+#ifdef SOURCE_DEBUG
+ #define src_debug(fmtargs)  do{printf fmtargs;}while(0)
+#else
+ #define src_debug(fmtargs)
 #endif
 
 int source_loop(void * gen)
@@ -62,7 +69,7 @@ int source_loop(void * gen)
       {/*unlock*/ xthr_unlock(source->lock);}
    }
    
-   source->demuxing = 0;
+   source->demuxer = NULL;
 
    {/*unlock*/ xthr_unlock(source->lock);}
 
@@ -147,7 +154,7 @@ int source_cb_on_player_ready(void *gen, media_player_t *player)
 
 int source_add_destinate(transmit_source_t *tsrc, char *mime, char *cname, char *nettype, char *addrtype, char *netaddr, int rtp_port, int rtcp_port)
 {
-	int i, c=0;
+	int i;
 	ogmp_source_t *src = (ogmp_source_t*)tsrc;
 
 	for(i=0; i<src->nstream; i++)
@@ -183,12 +190,8 @@ int source_remove_destinate(transmit_source_t *tsrc, char *mime, char *cname, ch
 	return -1;
 }
 
-/**
- * return capability number, if error, return ZERO
- */
-media_source_t* source_open(char* name, media_control_t* control, char *mode, void* extra)
+media_source_t* source_open(char* name, media_control_t* control, char *mode)
 {
-	/* define a player */
 	media_source_t *msrc;
 	transmit_source_t *tsrc;
 	ogmp_source_t* source;
@@ -202,9 +205,26 @@ media_source_t* source_open(char* name, media_control_t* control, char *mode, vo
    
 	module_catalog_t * mod_cata = NULL;
 
+    int support = 0;
+    
+    if(0 == strcmp(mode, "playback"))
+        support = 1;
+    if(0 == strcmp(mode, "netcast"))
+        support = 1;
+        
+    if(!support)
+    {
+        src_debug(("source_open: mode not support!\n"));
+        return NULL;
+    }
+    
 	source = xmalloc(sizeof(ogmp_source_t));
 	if(!source)
+    {
+        src_debug(("source_open: no memory!\n"));
 		return NULL;
+    }
+
 	memset(source, 0, sizeof(ogmp_source_t));
 
 	/* player controler */
@@ -222,7 +242,6 @@ media_source_t* source_open(char* name, media_control_t* control, char *mode, vo
 	{
 		/* open media source
 		 * mode: "playback"; "netcast"
-		 * extra: NULL for "playback; "rtpcap_set_t* extra for "netcast"
 		 */
 		source->nstream = format->open(format, name, source->control);
 		if (source->nstream > 0)
@@ -258,34 +277,31 @@ media_source_t* source_open(char* name, media_control_t* control, char *mode, vo
 	msrc->start = source_start;
 	msrc->stop = source_stop;
 
-	if(strcmp(mode, "playback")==0)
+	if(0 == format->new_all_player(format, source->control, mode, NULL))
 	{
-		if(format->new_all_player(format, source->control, "playback", NULL)==0)
-		{
-			source_done(msrc);
+        source_done(msrc);
 
-			return NULL;
-		}
-
-		source->lock = xthr_new_lock();
-		source->wait_request = xthr_new_cond(XTHREAD_NONEFLAGS);
-
-		return msrc;
+        return NULL;
 	}
 
-	tsrc = (transmit_source_t*)source;
-	tsrc->add_destinate = source_add_destinate;
-	tsrc->remove_destinate = source_remove_destinate;
+    if(0 == strcmp(mode, "netcast"))
+	{
+        /* In "netcast" mode */
+        tsrc = (transmit_source_t*)source;
+    
+        tsrc->add_destinate = source_add_destinate;
+        tsrc->remove_destinate = source_remove_destinate;
 
-	/* collect the caps of the players of the file */
-	nplayer = format->players(format, "rtp", source->players, MAX_NCAP);
-	src_log(("source_setup: '%s' opened by %d players\n", name, nplayer));
+        /* collect the players of the file */
+        nplayer = format->players(format, "rtp", source->players, MAX_NCAP);
+        src_log(("source_setup: '%s' opened by %d players\n", name, nplayer));
 
-	for(i=0; i<nplayer; i++)
-		source->players[i]->set_callback(source->players[i], CALLBACK_PLAYER_READY, source_cb_on_player_ready, source);
+        for(i=0; i<nplayer; i++)
+            source->players[i]->set_callback(source->players[i], CALLBACK_PLAYER_READY, source_cb_on_player_ready, source);
+    }
+    
+    source->lock = xthr_new_lock();
+    source->wait_request = xthr_new_cond(XTHREAD_NONEFLAGS);
 
-	source->lock = xthr_new_lock();
-	source->wait_request = xthr_new_cond(XTHREAD_NONEFLAGS);
-
-	return msrc;
+    return msrc;
 }

@@ -347,6 +347,7 @@ josua_clear_box_and_commands(gui_t *box)
 
 void
 gui_toggle_online_logline(ogmp_curses_t* ocui)
+
 {
 	static int log_or_online=0;
 
@@ -468,14 +469,6 @@ int gui_key_pressed(ogmp_curses_t* ocui)
 
 			return -1;
 		}
-
-		case 16: /* Ctrl P */
-		{
-			gui_previous_view(ocui);
-
-			return -1;
-		}
-
 		case 22: /* Ctrl V */
 		{
 			gui_toggle_online_logline(ocui);
@@ -502,6 +495,7 @@ gui_print_box(gui_t *box, int draw, int color)
 		{}
 		else 
 			x = box->x1;
+
       
 		if (box->y1<0)
 			y = y + box->y1;

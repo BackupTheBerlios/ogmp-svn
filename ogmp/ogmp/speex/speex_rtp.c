@@ -14,7 +14,7 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-
+ 
 #include "../devices/dev_rtp.h"
 #include "speex_info.h"
 
@@ -744,6 +744,8 @@ int rtp_speex_parameter(xrtp_media_t *media, char* key, void* value)
 		int *v = (int*)value;
 		*v = spxrtp->speex_profile->rtp_portno;
 		return MP_OK;
+
+
 	}
 	
 	if(0==strcmp(key, "rtcp_portno"))
@@ -881,7 +883,7 @@ int rtp_speex_sdp(xrtp_media_t* media, void* sdp_info)
 	return XRTP_OK;
 }
 
-int rtp_speex_new_sdp(xrtp_media_t *media, char* nettype, char* addrtype, char* netaddr, int* rtp_portno, int* rtcp_portno, int pt, int clockrate, int coding_param, int bw_budget, void* control, void* sdp_info)
+int rtp_speex_new_sdp(xrtp_media_t *media, char* nettype, char* addrtype, char* netaddr, int* rtp_portno, int* rtcp_portno, int pt, int clockrate, int coding_param, int bw_budget, void* control, void* sdp_info, void* mediainfo)
 {
 	speex_setting_t *spxset;
 	speex_info_t *spxinfo;
@@ -908,13 +910,23 @@ int rtp_speex_new_sdp(xrtp_media_t *media, char* nettype, char* addrtype, char* 
 	if(*rtcp_portno <= 0)
 		return 0;
 
-	spxinfo = xmalloc(sizeof(speex_info_t));
-	if(!spxinfo)
-	{
-		return 0;
-	}
+    if(!mediainfo)
+    {
+        spxinfo = xmalloc(sizeof(speex_info_t));
+        if(!spxinfo)
+        {
+            return 0;
+        }
 		
-	speex_info_setting(spxinfo, spxset);
+        speex_info_setting(spxinfo, spxset);
+    }
+    else
+    {
+        spxinfo = (speex_info_t*)mediainfo;
+
+        clockrate = spxinfo->audioinfo.info.sample_rate;
+        coding_param = spxinfo->audioinfo.channels;
+    }
 
 	if(spxinfo->audioinfo.info.bps > bw_budget)
 	{
@@ -1081,6 +1093,7 @@ int rtp_speex_send_loop(void *gen)
 			usec_now = time_usec_now(ses_clock);
 			if(in_group && usec_now > usec_group_end)
 			{
+
 				spxrtp_log(("rtp_speex_send_loop: timeout for samplestamp[%lld]\n", profile->recent_samplestamp));
 				discard = 1;
 

@@ -166,8 +166,6 @@ struct ogmp_source_s
    xthr_lock_t *lock;
    xthr_cond_t *wait_request;
 
-   //media_format_t *format;
-
    int nstream;
    media_player_t* players[MAX_NCAP];
 };
@@ -204,7 +202,7 @@ int client_call(ogmp_client_t *client, char *regname);
 
 DECLSPEC
 media_source_t* 
-source_open(char* name, media_control_t* control, char* mode, void* extra);
+source_open(char* name, media_control_t* control, char* mode);
 
 ogmp_setting_t* source_setting(media_control_t *control);
 

@@ -27,11 +27,18 @@
 extern ogmp_ui_t* global_ui;
 
 #define CLIE_LOG
+#define CLIE_DEBUG
 
 #ifdef CLIE_LOG
  #define clie_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define clie_log(fmtargs)
+#endif
+
+#ifdef CLIE_DEBUG
+ #define clie_debug(fmtargs)  do{printf fmtargs;}while(0)
+#else
+ #define clie_debug(fmtargs)
 #endif
 
 #define SIPUA_MAX_RING 6
@@ -80,7 +87,7 @@ int client_call_ringing(void* gen)
 					continue;
 				}
 				
-				sipua_answer(&client->sipua, call, SIPUA_STATUS_RINGING);
+				sipua_answer(&client->sipua, call, SIPUA_STATUS_RINGING, NULL);
 
 				call->ring_num--;
 			}
@@ -95,6 +102,8 @@ int client_call_ringing(void* gen)
 	}
 
 	xthr_unlock(client->nring_lock);
+
+
 
 	client->thread_ringing = NULL;
 
@@ -125,6 +134,8 @@ int client_done(ogmp_client_t *client)
 	   free(client->sdp_body);
 
 
+
+
    xfree(client);
 
    return MP_OK;
@@ -147,6 +158,7 @@ int client_register_loop(void *gen)
 	while(user_prof->enable)
 	{
 		user_prof->seconds_left -= intv;
+
 
 
 
@@ -412,7 +424,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
                                     client->format_handlers, client->control, client->pt);
 			if(bw < 0)
 			{
-				sipua_answer(&client->sipua, call, SIPUA_STATUS_DECLINE);
+				sipua_answer(&client->sipua, call, SIPUA_STATUS_DECLINE, NULL);
 
 
 				break;
@@ -435,7 +447,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
                                 client->format_handlers, client->control, client->pt);
 			if(bw < 0)
 			{
-				sipua_answer(&client->sipua, call, SIPUA_STATUS_REJECT);
+				sipua_answer(&client->sipua, call, SIPUA_STATUS_REJECT, NULL);
 
 				break;
 			}
@@ -456,6 +468,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				call->status = SIPUA_EVENT_REQUESTFAILURE;
 			else
 				call->status = call_e->status_code;
+
 
 			break;
 		}
@@ -632,6 +645,26 @@ sipua_set_t* client_new_call(sipua_t* sipua, char* subject, int sbytes, char *de
 	return call;
 }
 
+char* client_set_call_source(sipua_t* sipua, sipua_set_t* call, media_source_t* source)
+{
+	ogmp_setting_t *setting;
+	ogmp_client_t* clie = (ogmp_client_t*)sipua;
+    char *sdp;
+
+	int bw_budget = clie->control->book_bandwidth(clie->control, MAX_CALL_BANDWIDTH);
+
+	setting = client_setting(clie->control);
+
+	sdp = sipua_call_sdp(sipua, call, bw_budget, clie->control, clie->mediatypes,
+                       clie->default_rtp_ports, clie->default_rtcp_ports,
+                       clie->nmedia, source, clie->pt);
+ 
+    if(sdp)
+        call->renew_body = sdp;
+
+    return sdp;
+}
+
 int client_set_profile(sipua_t* sipua, user_profile_t* prof)
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
@@ -658,6 +691,7 @@ int client_regist(sipua_t *sipua, user_profile_t *user, char * userloc)
 	}
 
 	client->reg_profile = user;
+
 
 	ret = sipua_regist(sipua, user, userloc);
 
@@ -757,11 +791,11 @@ sipua_set_t* client_line(sipua_t* sipua, int line)
 	return client->lines[line];
 }
 
-media_source_t* client_open_source(sipua_t* sipua, char* name, char* mode, void* param)
+media_source_t* client_open_source(sipua_t* sipua, char* name, char* mode)
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 	
-	return source_open(name, client->control, mode, param);
+	return source_open(name, client->control, mode);
 }
 
 
@@ -775,24 +809,19 @@ int client_close_source(sipua_t* sipua, media_source_t* src)
 
 media_source_t* client_set_background_source(sipua_t* sipua, char* name)
 {
-	ogmp_client_t *client = (ogmp_client_t*)sipua;
-	
-	if(client->backgroud_source)
-	{
-		client->backgroud_source->stop(client->backgroud_source);
-		client->backgroud_source->done(client->backgroud_source);
-		client->backgroud_source = NULL;
-	}
+    ogmp_client_t *client = (ogmp_client_t*)sipua;
 
-	if(name && name[0])
-	{
-        /*
-        client->backgroud_source = source_open(name, client->control, "netcast", );
-        */
-	} 
+    if(client->backgroud_source)
+    {
+        client->backgroud_source->stop(client->backgroud_source);
+        client->backgroud_source->done(client->backgroud_source);
+        client->backgroud_source = NULL;
+    }
 
-	return client->backgroud_source;
+    if(name && name[0])
+        client->backgroud_source = source_open(name, client->control, "netcast");
 
+    return client->backgroud_source;
 }
 
 /* call media attachment */
@@ -818,7 +847,6 @@ int client_attach_source(sipua_t* sipua, sipua_set_t* call, transmit_source_t* t
 		rtpcap = xlist_next(call->rtpcapset->rtpcaps, &lu);
 	}
 
-	
 	return MP_EIMPL;
 }
 
@@ -851,6 +879,7 @@ int client_hold(sipua_t* sipua)
 	int i;
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
+
 	if(!client->sipua.incall)
 		return -1;
 
@@ -868,31 +897,42 @@ int client_hold(sipua_t* sipua)
 	return i;
 }
 	
-int client_answer(sipua_t *sipua, sipua_set_t* call, int reply)
-{
+int client_answer(sipua_t *sipua, sipua_set_t* call, int reply, media_source_t* source)
+{  
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
 	switch(reply)
-	{
+	{        
 		case SIPUA_STATUS_ANSWER:
 		{
-			/* Anser the call */
-			sipua_answer(&client->sipua, call, reply);
+			/**
+             * Anser the call with new sdp, if source available.
+             */
+            if(source)
+            {
+                char *sdp = client_set_call_source(sipua, call, source);
+            
+                sipua_answer(&client->sipua, call, reply, sdp);
 
-            /* FIXME: Shouldn't be here */
-            if(client->backgroud_source)
-				client_attach_source(sipua, call, (transmit_source_t*)client->backgroud_source);
+                /* FIXME: Shouldn't be here */
+                client_attach_source(sipua, call, (transmit_source_t*)source);
 
+                xstr_done_string(sdp);
+            }
+            else
+            {
+                sipua_answer(&client->sipua, call, reply, call->reply_body);
+            }
+            
 			xfree(call->reply_body);
 			call->reply_body = NULL;
 			
 			break;
 		}
-
 		default:
         {
 			/* Anser the call */
-			sipua_answer(&client->sipua, call, reply);
+			sipua_answer(&client->sipua, call, reply, NULL);
         }
 	}
 
@@ -962,6 +1002,8 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
 
 	uas->set_listener(uas, client, client_sipua_event);
 
+
+
 	sipua->uas = uas;
 
 	sipua->done = sipua_done;
@@ -999,17 +1041,17 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, 
 	/* switch current call session */
  	sipua->pick = client_pick;
  	sipua->hold = client_hold;
-
+  
 	sipua->call = sipua_call;
 	sipua->answer = client_answer;
 
 	sipua->options_call = sipua_options_call;
 	sipua->info_call = sipua_info_call;
 
-	sipua->bye = sipua_bye;
-	sipua->recall = sipua_recall;
-   
-	clie_log(("client_new: client ready\n\n"));
+    sipua->bye = sipua_bye;
+    sipua->set_call_source = client_set_call_source;
+
+    clie_log(("client_new: client ready\n\n"));
 
 	return sipua;
 }
@@ -1067,6 +1109,7 @@ sipua_uas_t* client_new_uas(module_catalog_t* mod_cata, char* type)
 }
 
 int main(int argc, char** argv)
+
 {
     sipua_t* sipua = NULL;
 	sipua_uas_t* uas = NULL;

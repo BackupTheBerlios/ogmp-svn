@@ -35,6 +35,7 @@ char newcall_inputs[3][LINE_MAX];
 
 
 
+
 editline_t *newcall_edit[3];
 int cursor_newcall = 0;
 
@@ -200,6 +201,7 @@ int window_new_call_run_command(gui_t* gui, int c)
 				beep();
 
 
+
 			break;
 		}
 		case 1: /* Ctrl-A */
@@ -208,10 +210,10 @@ int window_new_call_run_command(gui_t* gui, int c)
 			sipua_set_t* call;
 
             call = ocui->sipua->new_call(ocui->sipua, newcall_inputs[NEWCALL_SUBJ], strlen(newcall_inputs[NEWCALL_SUBJ]), newcall_inputs[NEWCALL_DESC], strlen(newcall_inputs[NEWCALL_DESC]));
-			
+
             if(call)
             {
-				ocui->sipua->call(ocui->sipua, call, newcall_inputs[NEWCALL_TO]);
+				ocui->sipua->call(ocui->sipua, call, newcall_inputs[NEWCALL_TO], call->sdp_body);
             }
             
 			gui_activate_window(gui, GUI_SESSION);

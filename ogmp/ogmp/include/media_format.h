@@ -158,8 +158,8 @@ struct media_format_s
    /* Stream management */
    int (*add_stream) (media_format_t * mf, media_stream_t *strm, int strmno, unsigned char type);
    media_stream_t* (*find_stream) (media_format_t * mf, int strmno);
-   media_stream_t* (*find_mime) (media_format_t * mf, const char * mime);
-   media_stream_t* (*find_fourcc) (media_format_t * mf, const char *fourcc);
+   media_stream_t* (*find_mime) (media_format_t * mf, char * mime);
+   media_stream_t* (*find_fourcc) (media_format_t * mf, char *fourcc);
 
    int (*set_control) (media_format_t * mf, media_control_t * control);
    
@@ -202,6 +202,8 @@ struct media_info_s
 	int sample_byteorder;
 	int bps;
 
+	int coding_parameter;
+    
 	char fourcc[4];
 	char* mime;
 };
@@ -373,6 +375,7 @@ struct media_source_s
 	media_format_t* format;
 
 	int (*done)(media_source_t* msrc);
+    
 	int (*start)(media_source_t* msrc);
 	int (*stop)(media_source_t* msrc);
 };
