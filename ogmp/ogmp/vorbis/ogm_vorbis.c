@@ -17,6 +17,7 @@
  
 /* some code took from Tremor vorbisfile.c */
 
+#include <timedia/xmalloc.h>
 #include <string.h>
 
 #include "../format_ogm/ogm_format.h"
@@ -89,10 +90,10 @@ int ogm_open_vorbis(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *c
    {
       ogm_vorbis_log(("ogm_open_vorbis: no stream #%d, new allocation\n", sno));
 
-      ogm_strm = malloc(sizeof(ogm_stream_t));
+      ogm_strm = xmalloc(sizeof(ogm_stream_t));
       if (ogm_strm == NULL)
 	  {
-         ogm_vorbis_log(("ogm_open_vorbis: stream malloc failed.\n"));
+         ogm_vorbis_log(("ogm_open_vorbis: stream xmalloc failed.\n"));
          return MP_EMEM;
       }
       
@@ -103,12 +104,12 @@ int ogm_open_vorbis(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *c
       strncpy(stream->mime, "audio/vorbis", strlen("audio/vorbis"));
       ((ogm_stream_t*)stream)->stype = 'a';
       
-      vinfo = malloc(sizeof(struct vorbis_info_s));
+      vinfo = xmalloc(sizeof(struct vorbis_info_s));
       if (!vinfo)
 	  {
-         ogm_vorbis_log(("ogm_open_vorbis: mediainfo malloc failed.\n"));
+         ogm_vorbis_log(("ogm_open_vorbis: mediainfo xmalloc failed.\n"));
 
-         free(ogm_strm);
+         xfree(ogm_strm);
 
          return MP_EMEM;
       }
@@ -155,7 +156,7 @@ int ogm_open_vorbis(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *c
 			vinfo->some_csi = (some_codec_setup_info*)vinfo->vi.codec_setup;
 			
 			/* Cache the header identification */
-            vinfo->header_identification = malloc(ogm->packet.bytes);
+            vinfo->header_identification = xmalloc(ogm->packet.bytes);
             if (!vinfo->header_identification)
 			{
                ogm_vorbis_log(("ogm_open_vorbis: no memory to cache header setup\n"));
@@ -191,7 +192,7 @@ int ogm_open_vorbis(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *c
          if (vinfo->head_packets == 2)
 		 {
 			/* Cache the header comment */
-            vinfo->header_comment = malloc(ogm->packet.bytes);
+            vinfo->header_comment = xmalloc(ogm->packet.bytes);
             if (!vinfo->header_comment)
 			{
                ogm_vorbis_log(("ogm_open_vorbis: no memory to cache header setup\n"));
@@ -218,7 +219,7 @@ int ogm_open_vorbis(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *c
                               ogm_strm->sno, mf->numstreams, ogm->packet.bytes));
 			
 			/* Cache the codebook */
-            vinfo->header_setup = malloc(ogm->packet.bytes);
+            vinfo->header_setup = xmalloc(ogm->packet.bytes);
             if (!vinfo->header_setup)
 			{
                ogm_vorbis_log(("ogm_open_vorbis: no memory to cache header setup\n"));
@@ -304,7 +305,7 @@ int ogm_process_vorbis(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *pag
       if (vinfo->head_packets == 2) {
 
 		 /* Cache the header comment */
-         vinfo->header_comment = malloc(ogm->packet.bytes);
+         vinfo->header_comment = xmalloc(ogm->packet.bytes);
          if (!vinfo->header_comment) {
 
             ogm_vorbis_log(("ogm_open_vorbis: no memory to cache header setup\n"));
@@ -331,7 +332,7 @@ int ogm_process_vorbis(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *pag
                               ogm_strm->sno, mf->numstreams, pack->bytes));
 
          /* Cache the codebook */
-         vinfo->header_setup = malloc(ogm->packet.bytes);
+         vinfo->header_setup = xmalloc(ogm->packet.bytes);
          if (!vinfo->header_setup) {
 
             ogm_vorbis_log(("ogm_open_vorbis: no memory to cache codebook\n"));
@@ -377,14 +378,14 @@ int ogm_process_vorbis(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *pag
 
 int ogm_done_vorbis (ogm_media_t * ogmm) {
 
-   free(ogmm);
+   xfree(ogmm);
 
    return MP_OK;
 }
 
 module_interface_t * ogm_new_media() {
 
-   ogm_media_t * ogmm = malloc(sizeof(struct ogm_media_s));
+   ogm_media_t * ogmm = xmalloc(sizeof(struct ogm_media_s));
    if (!ogmm) {
 
       ogm_vorbis_debug(("ogm_new_media: No memory\n"));
