@@ -226,7 +226,7 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
          session_member_set_connects(sender, rtp->connect, rtcp_conn);
       }
 
-      if(spxh->session->join_to_rtp_port && connect_from_teleport(rtp->connect, spxh->session->join_to_rtp_port))
+      if(spxh->session->join_to_rtp_port && connect_match_teleport(rtp->connect, spxh->session->join_to_rtp_port))
 	  {
          /* participant joined, clear the join desire */
          teleport_done(spxh->session->join_to_rtp_port);
@@ -473,8 +473,6 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 		rtcp_compound_done(rtcp);
 
 		spxrtp_log(("audio/speex.spxrtp_rtcp_in: discard ssrc[%d]\n", src_sender));
-
-		exit(0);
 
 		return XRTP_CONSUMED;
 	}

@@ -100,7 +100,7 @@ int source_start (media_source_t *msrc)
 		return MP_FAIL;
 	}
 
-	src_log (("source_start: start\n"));
+	src_debug (("source_start: start\n"));
 
 	source->demuxer = xthr_new(source_loop, source, XTHREAD_NONEFLAGS);
    
@@ -159,7 +159,6 @@ int source_cb_on_player_ready(void *gen, media_player_t *player)
 	ogmp_source_t *src = (ogmp_source_t*)gen;
 
 	src_debug (("source_cb_on_player_ready: player ready\n"));
-	exit(0);
 
 	source_start(&src->source);
 
