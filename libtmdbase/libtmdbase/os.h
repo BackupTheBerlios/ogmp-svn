@@ -52,6 +52,8 @@
 #define HOST_BYTEORDER LITTLEEND_ORDER
 #define NET_BYTEORDER BIGEND_ORDER
 
+#define OS_BYTE_BITS 8
+
 /* Make sure the correct platform symbols are defined */
 #if !defined(WIN32) && defined(_WIN32)
 #define WIN32
