@@ -49,7 +49,7 @@ struct xlist_node_s
 
 typedef struct xlist_s xlist_t;
 
-typedef struct xlist_s
+struct xlist_s
 {
    xlist_node_t *head;
    xlist_node_t *end;
@@ -58,7 +58,7 @@ typedef struct xlist_s
 
 typedef struct xlist_user_s xlist_user_t;
 
-typedef struct xlist_user_s
+struct xlist_user_s
 {
    xlist_node_t *curr;
    xlist_node_t *prev;

@@ -15,52 +15,53 @@
  *                                                                         *
  ***************************************************************************/
 
- #include "buffer.h"
- #include "byteorder.h"
+#include "buffer.h"
+#include "byteorder.h"
  
- #include <stdlib.h>
- #include <string.h>
+#include <stdlib.h>
+#include <string.h>
 
- #include <stdio.h>
- 
- #ifdef BUFFER_LOG
-   const int buffer_log = 1;
- #else
-   const int buffer_log = 0;
- #endif
- #define buffer_log(fmtargs)  do{if(buffer_log) printf fmtargs;}while(0)
+#include <stdio.h>
+/* 
+#define BUFFER_LOG
+*/
+#ifdef BUFFER_LOG
+   #define buffer_log(fmtargs)  do{printf fmtargs;}while(0)
+#else
+   #define buffer_log(fmtargs)
+#endif
 
- buffer_t * buffer_new(uint size, enum byte_order_e order){
+buffer_t * buffer_new(uint size, enum byte_order_e order)
+{
+   buffer_t * buf = (buffer_t *)malloc(sizeof(struct buffer_s));
 
-    buffer_t * buf = (buffer_t *)malloc(sizeof(struct buffer_s));
+   if(!buf || size < 0)
+   {
+      return NULL;
+   }
+   memset(buf, 0, sizeof(*buf));
 
-    if(!buf || size < 0){
+   buf->byte_order = order;
 
-       return NULL;
-    }
-	memset(buf, 0, sizeof(*buf));
+   if(size !=0)
+   {
+      buf->data = malloc(size);
+      if(!buf->data)
+      {
+         buffer_log(("buffer_new: No memory for data\n"));
+         free(buf);
 
-    buf->byte_order = order;
+         return NULL;
+      }
 
-	if(size !=0){
-    
-		buf->data = malloc(size);
-		if(!buf->data){
-		
-			buffer_log(("buffer_new: No memory for data\n"));
-			free(buf);
+      buf->len = size;
+      buf->mounted = 1;
 
-			return NULL;
-		}
-
-		buf->len = size;
-		buf->mounted = 1;
-
-		buffer_log(("buffer_new: %d bytes buffer mounted\n", buf->len));
-	}
-
-    return buf;
- }
+      buffer_log(("buffer_new: %d bytes buffer mounted\n", buf->len));
+   }
+   
+   return buf;
+}
 
  int buffer_done(xrtp_buffer_t * buf){
 
@@ -499,6 +500,7 @@
        *ret = RSVALS(&(buf->data), buf->pos);
     else
        *ret = SVALS(&(buf->data), buf->pos);
+
 
     buffer_log(("buffer_next_int16: (%d) at buf[%d]\n", *ret, buf->pos));
 
