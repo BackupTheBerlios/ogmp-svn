@@ -38,6 +38,8 @@ struct xrtp_media_s
 	int (*parameter)(xrtp_media_t *media, char *key, void *param);
 
 	void* (*info)(xrtp_media_t *media, void *rtpcap);
+   int (*done_info)(xrtp_media_t* media, void* mediainfo);
+
 	int (*sdp)(xrtp_media_t *media, void *sdp_info);
 	int (*new_sdp)(xrtp_media_t *media, char *nettype, char *addrtype, char *netaddr, int* rtp_portno, int* rtcp_portno, int pt, int clockrate, int coding_param, int bw_budget, void* control, void* sdp_info, void* mediainfo);
 

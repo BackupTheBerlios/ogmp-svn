@@ -705,6 +705,15 @@ extern DECLSPEC
 int 
 session_delete_cname(xrtp_session_t * ses, char *cname, int cnlen);
 
+/**
+ * Move member from one rtp session to other session.
+ */
+member_state_t *
+session_move_member_by_cname(xrtp_session_t *from_session, xrtp_session_t *to_session, char *cname, int cnlen);
+
+int
+session_add_member(xrtp_session_t *ses, member_state_t* member);
+
 extern DECLSPEC
 member_state_t * 
 session_update_member_by_rtcp(xrtp_session_t * session, xrtp_rtcp_compound_t * rtcp);
@@ -713,6 +722,7 @@ extern DECLSPEC
 int 
 session_member_set_connects(member_state_t * member, session_connect_t * rtp_conn, session_connect_t * rtcp_conn);
 int session_member_connects(member_state_t * member, session_connect_t **rtp_conn, session_connect_t **rtcp_conn);
+
 
 
 int session_quit(xrtp_session_t * session, int silently);

@@ -1181,6 +1181,7 @@ int session_member_connects(member_state_t * mem, session_connect_t **rtp_conn, 
     *rtp_conn = mem->rtp_connect;
     *rtcp_conn = mem->rtcp_connect;
 
+
     return XRTP_OK;
 }
 
@@ -1519,6 +1520,7 @@ int session_issue_mediainfo(xrtp_session_t *ses, void *minfo, int signum)
 		ses->self->minfo_signum = signum;
 	}
 		
+
 	xthr_lock(ses->renew_level_lock);
 	ses->renew_minfo_level = RENEW_MINFO_LEVEL;
 	xthr_unlock(ses->renew_level_lock);
@@ -1558,8 +1560,6 @@ void* session_member_player(member_state_t *mem)
 }
 
 void* session_member_set_player(member_state_t *mem, void *player)
-
-
 {
 	void *ex = mem->media_player;
 
@@ -1706,6 +1706,140 @@ int session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, u
 	return nmem;
 }
 
+int session_reset_member(xrtp_session_t* ses, member_state_t *mem)
+{
+   int ret_th = 0;
+
+   xlist_t* delivery_buffer;
+	xthr_lock_t* delivery_lock;
+	xthr_lock_t* sync_lock;
+	xthr_cond_t* wait_seqno;
+	xthr_cond_t* wait_media_available;
+   xthr_lock_t* mem_lock;
+
+   char* cname;
+	int cname_len;
+
+	xrtp_teleport_t* mem_rtp_port;
+   xrtp_teleport_t* mem_rtcp_port;
+   session_connect_t* mem_rtp_connect;
+   session_connect_t* mem_rtcp_connect;
+
+   void* user_info;
+
+   if(mem->deliver_thread)
+	{
+	   mem->stop_delivery = 1;
+	   xthr_wait(mem->deliver_thread, &ret_th);
+	}
+
+	xlist_done(mem->delivery_buffer, session_done_media);
+
+   if(mem->mediainfo)
+   {
+      ses->media->done_info(ses->media, mem->mediainfo);
+      mem->mediainfo = NULL;
+   }
+
+   delivery_buffer = mem->delivery_buffer;
+	delivery_lock = mem->delivery_lock;
+	sync_lock = mem->sync_lock;
+	wait_seqno = mem->wait_seqno;
+	wait_media_available = mem->wait_media_available;
+   mem_lock = mem->lock;
+
+   cname = mem->cname;
+	cname_len = mem->cname_len;
+
+	mem_rtp_port = mem->rtp_port;
+   mem_rtcp_port = mem->rtcp_port;
+   mem_rtp_connect = mem->rtp_connect;
+   mem_rtcp_connect = mem->rtcp_connect;
+
+   user_info = mem->user_info;
+
+   memset(mem, 0, sizeof(member_state_t));
+
+   mem->delivery_buffer = xlist_new();
+
+   mem->session = ses;
+   mem->user_info = user_info;
+
+	/* recieve MIN_SEQUENTIAL rtp before became official member */
+	mem->probation = MIN_SEQUENTIAL;
+   mem->delivery_buffer = delivery_buffer;
+	mem->delivery_lock = delivery_lock;
+	mem->sync_lock = sync_lock;
+	mem->wait_seqno = wait_seqno;
+	mem->wait_media_available = wait_media_available;
+   mem->lock = mem_lock;
+
+   mem->cname = cname;
+	mem->cname_len = cname_len;
+
+	mem->rtp_port = mem_rtp_port;
+   mem->rtcp_port = mem_rtcp_port;
+   mem->rtp_connect = mem_rtp_connect;
+   mem->rtcp_connect = mem_rtcp_connect;
+
+   mem->user_info = user_info;
+
+   return XRTP_OK;
+}
+
+/**
+ * Move member from one rtp session to other session.
+ */
+member_state_t *
+session_move_member(xrtp_session_t *ses, xrtp_session_t *to_ses, char *cn, int cnlen)
+{
+	member_state_t *mem;
+
+	xthr_lock(ses->members_lock);
+
+	mem = xlist_remove(ses->members, cn, session_match_cname);
+	if(!mem)
+	{
+		xthr_unlock(ses->members_lock);
+		return NULL;
+   }
+
+   /* FIXME: xthr_lock(ses->senders_lock); */
+   if(mem->we_sent && xlist_remove_item(ses->senders, mem) >= OS_OK)
+         ses->n_sender--;
+
+   ses->n_member--;
+
+   xthr_unlock(ses->members_lock);
+
+   session_reset_member(ses, mem);
+
+   session_add_member(to_ses, mem);
+
+   return mem;
+}
+
+int session_add_member(xrtp_session_t *ses, member_state_t* mem)
+{
+   xlist_user_t lu;
+
+   member_state_t* m = xlist_find(ses->members, mem->cname, session_match_cname, &lu);
+   if(m)
+   {
+      return XRTP_FAIL;
+   }
+
+   xthr_lock(ses->members_lock);
+
+   xlist_addto_first(ses->members, mem);
+   ses->n_member = xlist_size(ses->members);
+   mem->session = ses;
+
+   xthr_unlock(ses->members_lock);
+
+   return XRTP_OK;
+}
+
 member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_compound_t * rtcp)
 {
     uint32 ssrc = rtcp_sender(rtcp);
@@ -1833,8 +1967,6 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 				connect_done(rtcp_conn);
         
             session_debug(("session_update_member_by_rtcp: No cname yet to validate member[%u]\n", ssrc));
-
-
 
             return NULL;
 		}
@@ -3176,6 +3308,7 @@ int session_start_reception(xrtp_session_t * ses)
     member_state_t * mem = xrtp_list_find(ses->members, &ssrc, session_match_member_src, &(ses->$member_list_block));
     while(mem)
 	{
+
        mem = xrtp_list_next(ses->members, &(ses->$member_list_block));
        if(!mem)
           mem = xrtp_list_first(ses->members, &(ses->$member_list_block));
@@ -3526,6 +3659,7 @@ int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 time
 	/* New RTCP Packet, 0 packet means default implementation depends value */
     rtcp = rtcp_new_compound(ses, RTP_RECEIVE, ses->rtcp_incoming, ms_arrival, us_arrival, ns_arrival);
     if(!rtcp)
+
        return XRTP_EMEM;
 
      buf = buffer_new(0, NET_BYTEORDER);
