@@ -39,5 +39,3 @@ int rtp_media_set_callback(xrtp_media_t *media, int type, int (*cb)(), void *use
 {
 	return session_set_callback(media->session, type, cb, user);
 }
-
-

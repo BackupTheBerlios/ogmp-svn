@@ -567,6 +567,13 @@ session_mediainfo(xrtp_session_t *session);
 int session_set_mode(xrtp_session_t * session, int mode);
 uint session_mode(xrtp_session_t * session);
  
+extern DECLSPEC
+int 
+session_new_sdp(module_catalog_t* cata, char* netaddr, 
+					int* rtp_portno, int* rtcp_portno, 
+					int pt, char* mime, int clockrate, int coding_param, 
+					int bw_budget, void* control, void* sdp_info);
+
 /**
  * Retrieve a Media handler associated with the session and allocate a payload type to
  * this session to packet transfer. so send/receive packets with this pt.
@@ -574,7 +581,6 @@ uint session_mode(xrtp_session_t * session);
 extern DECLSPEC
 xrtp_media_t * 
 session_new_media(xrtp_session_t * ses, uint8 profile_no, char *profile_type, int clockrate, int coding_param);
-
 
 extern DECLSPEC
 xrtp_media_t*

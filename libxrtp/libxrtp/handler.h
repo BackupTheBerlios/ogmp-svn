@@ -21,99 +21,96 @@
  *
  */
  
- #ifndef XRTP_HANDLER_H
+#ifndef XRTP_HANDLER_H
 
- #define XRTP_HANDLER_H
+#define XRTP_HANDLER_H
  
- #include "packet.h"
+#include "packet.h"
 
- #include "media.h"
+#include "media.h"
  
- #define XRTP_CAP_NONE 0
+#define XRTP_CAP_NONE 0
 
- #define XRTP_HANDLER_IDEL 0
- #define XRTP_HANDLER_UNLOAD_PACKET 1
+#define XRTP_HANDLER_IDEL 0
+#define XRTP_HANDLER_UNLOAD_PACKET 1
 
- #define XRTP_HANDLER_TYPE_UNKNOWN   0
- #define XRTP_HANDLER_TYPE_MEDIA     1
- #define XRTP_HANDLER_TYPE_TRANS     2
- #define XRTP_HANDLER_TYPE_CONVERT   3
- #define XRTP_HANDLER_TYPE_TEST      4
- #define XRTP_HANDLER_TYPE_MAX       5
-
- typedef struct param_network_s{
-
-    int family;
-    int type;
-    int protocol;
-    struct sockaddr * address;
-
- } param_network_t;
-
- typedef struct profile_handler_s profile_handler_t;
+#define XRTP_HANDLER_TYPE_UNKNOWN   0
+#define XRTP_HANDLER_TYPE_MEDIA     1
+#define XRTP_HANDLER_TYPE_TRANS     2
+#define XRTP_HANDLER_TYPE_CONVERT   3
+#define XRTP_HANDLER_TYPE_TEST      4
+#define XRTP_HANDLER_TYPE_MAX       5
  
- typedef struct profile_class_s profile_class_t;
+typedef struct param_network_s
+{
+   int family;
+   int type;
+   int protocol;
+   struct sockaddr * address;
+ 
+} param_network_t;
 
- struct profile_class_s
- {
-	 int (*match_id)(profile_class_t *class, char *type);
+typedef struct profile_handler_s profile_handler_t;
+ 
+typedef struct profile_class_s profile_class_t;
 
-	 int (*type)(profile_class_t *class);
+struct profile_class_s
+{
+	int (*match_id)(profile_class_t *class, char *type);
 
-	 char* (*description)(profile_class_t *class);
+	int (*type)(profile_class_t *class);
+	char* (*description)(profile_class_t *class);
 
-	 int (*capacity)(profile_class_t *class);
+	int (*capacity)(profile_class_t *class);
 
-	 int (*handler_number)(profile_class_t *class);
+	int (*handler_number)(profile_class_t *class);
 
-	 int (*done)(profile_class_t *class);
+	int (*done)(profile_class_t *class);
 
-	 profile_handler_t* (*new_handler)(profile_class_t *class, xrtp_session_t * session);
+	profile_handler_t* (*new_handler)(profile_class_t *class, xrtp_session_t * session);
 
-	 int (*done_handler)(profile_handler_t * h);
- };
+	int (*done_handler)(profile_handler_t * h);
+};
 
- struct profile_handler_s {
+struct profile_handler_s
+{
+	profile_class_t* (*module)(profile_handler_t *handler);
 
-   profile_class_t* (*module)(profile_handler_t *handler);
+	xrtp_media_t* (*media)(profile_handler_t *handler, int clockrate, int coding_param);
 
-   xrtp_media_t* (*media)(profile_handler_t *handler, int clockrate, int coding_param);
+	session_connect_t* (*connect)(profile_handler_t *handler, xrtp_session_t * session, void* param);
 
-	 //int (*clockrate)(profile_handler_t *handler);
+	void* (*master)(profile_handler_t *handler);
+	int (*set_master)(profile_handler_t *handler, void *master);
 
-   session_connect_t* (*connect)(profile_handler_t *handler, xrtp_session_t * session, void* param);
+	int (*get_callback)(profile_handler_t *handler, int type, void **ret_callback, void **ret_data);   
+	int (*set_callout)(profile_handler_t *handler, int type, void *callout, void *data);
 
-   void* (*master)(profile_handler_t *handler);
-   int (*set_master)(profile_handler_t *handler, void *master);
-
-   int (*get_callback)(profile_handler_t *handler, int type, void **ret_callback, void **ret_data);   
-   int (*set_callout)(profile_handler_t *handler, int type, void *callout, void *data);
-
-   /* Must implement one of 2 kind of methods according to pipe type */
-   int (*rtp_in)(profile_handler_t *handler, xrtp_rtp_packet_t *rtp);
+	/* Must implement one of 2 kind of methods according to pipe type */
+	int (*rtp_in)(profile_handler_t *handler, xrtp_rtp_packet_t *rtp);
    
-   int (*rtp_out)(profile_handler_t *handler, xrtp_rtp_packet_t *rtp);
+	int (*rtp_out)(profile_handler_t *handler, xrtp_rtp_packet_t *rtp);
 
-   int (*rtp_size)(profile_handler_t *handler, xrtp_rtp_packet_t *rtp);
+	int (*rtp_size)(profile_handler_t *handler, xrtp_rtp_packet_t *rtp);
    
-   int (*rtcp_in)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp);
+	int (*rtcp_in)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp);
 
-   int (*rtcp_out)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp);
+	int (*rtcp_out)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp);
 
-   int (*rtcp_size)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp);
+	int (*rtcp_size)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp);
 
-   /* Pack Packet to byte buffer for send */
-   int (*pack_rtp)(profile_handler_t *handler, xrtp_rtp_packet_t *rtp, xrtp_session_t *session);
+	/* Pack Packet to byte buffer for send */
+	int (*pack_rtp)(profile_handler_t *handler, xrtp_rtp_packet_t *rtp, xrtp_session_t *session);
 
 	int (*pack_rtcp)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp, xrtp_session_t *session);
 
-   /* Unpack Packet from byte stream received */
-   int (*unpack_rtp)(profile_handler_t *handler, xrtp_rtp_packet_t *rtp, xrtp_session_t *session);
+	/* Unpack Packet from byte stream received */
+	int (*unpack_rtp)(profile_handler_t *handler, xrtp_rtp_packet_t *rtp, xrtp_session_t *session);
 
 	int (*unpack_rtcp)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp, xrtp_session_t *session);
 
-   /* Make RTP Data Packet */
-   int (*make_rtp_head)(profile_handler_t *handler, xrtp_rtp_packet_t *rtp, xrtp_session_t *session);
+	/* Make RTP Data Packet */
+	int (*make_rtp_head)(profile_handler_t *handler, xrtp_rtp_packet_t *rtp, xrtp_session_t *session);
 
 	int (*make_rtp_headext)(profile_handler_t *handler, xrtp_rtp_packet_t *rtp, xrtp_session_t *session, int xinfo);
 
@@ -121,15 +118,15 @@
 
 	int (*pack_rtp_headext)(profile_handler_t *handler, xrtp_rtp_packet_t *rtp, xrtp_session_t *session, int xinfo, int dwlen);
 
-   /* Parse RTP Data Packet */
+	/* Parse RTP Data Packet */
 	int (*parse_rtp_head)(profile_handler_t *handler, xrtp_rtp_packet_t *rtp, xrtp_session_t *session);
 
 	int (*parse_rtp_headext)(profile_handler_t *handler, xrtp_rtp_packet_t *rtp, xrtp_session_t *session);
 
 	int (*parse_rtp_payload)(profile_handler_t *handler, xrtp_rtp_packet_t *rtp, xrtp_session_t *session);
 
-   /* Make RTP Control Packet */
-   int (*make_rtcp_head)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp, xrtp_session_t *session);
+	/* Make RTP Control Packet */
+	int (*make_rtcp_head)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp, xrtp_session_t *session);
 
 	int (*make_rtcp_sender_info)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp, xrtp_session_t *session);
 
@@ -137,17 +134,17 @@
 
 	int (*make_rtcp_ext)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp, xrtp_session_t *session);
 
-   /* Parse RTP Control Packet */
+	/* Parse RTP Control Packet */
 	int (*parse_rtcp_head)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp, xrtp_session_t *session);
 
-   int (*parse_rtcp_sender_info)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp, xrtp_session_t *session);
+	int (*parse_rtcp_sender_info)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp, xrtp_session_t *session);
 
-   int (*parse_rtcp_report_block)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp, xrtp_session_t *session);
+	int (*parse_rtcp_report_block)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp, xrtp_session_t *session);
 
-   int (*parse_rtcp_ext)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp, xrtp_session_t *session);
+	int (*parse_rtcp_ext)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp, xrtp_session_t *session);
 
 	int (*parse_rtcp_packet)(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp, xrtp_rtcp_head_t * head, xrtp_session_t *session);
 
- };
+};
 
 #endif

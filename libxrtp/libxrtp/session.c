@@ -553,7 +553,7 @@ uint32 session_rtp_bandwidth(xrtp_session_t * ses)
 
     return ses->bandwidth_rtp;
 }
- 
+		
 /* Refer RFC-3550 A.7 */
 double session_determistic_interval(int members,
                                     int senders,
@@ -2001,6 +2001,68 @@ int session_done_module(void *gen)
    return OS_OK;
 }
 
+int session_new_sdp(module_catalog_t* cata, char* netaddr, int* default_rtp_portno, int* default_rtcp_portno, int pt, char* mime, int clockrate, int coding_param, int bw_budget, void* control, void* sdp_info)
+{
+	profile_class_t * modu = NULL;    
+	profile_handler_t * prof = NULL;
+	xrtp_media_t* media = NULL;
+
+	int bw;
+
+	xrtp_list_user_t $lu; 
+	xrtp_list_t *list = NULL;
+
+	/* Search a suitable media handling module */
+	list = xrtp_list_new();
+   
+	if (catalog_create_modules(cata, "rtp_profile", list) <= 0)
+	{
+		xrtp_list_free(list, NULL);
+		session_log(("session_update_sdp: No media module found\n"));
+      
+		return -1;
+	}
+
+	modu = (profile_class_t *)xrtp_list_first(list, &$lu);
+	while (modu)
+	{
+		if (modu->match_id(modu, mime))
+		{
+			xrtp_list_remove_item(list, modu);
+			break;
+		}
+      
+		modu = (profile_class_t *)xrtp_list_next(list, &$lu);
+	}
+
+	xrtp_list_free(list, session_done_module);
+   
+	if(!modu)
+	{
+		session_log(("session_new_sdp: No '%s' module found\n", mime));
+		return -1;
+	}
+    
+	prof = modu->new_handler(modu, NULL);
+	if(!prof)
+	{
+		modu->done(modu);
+		return -1;
+	}
+
+	media = prof->media(prof, clockrate, coding_param);
+
+	/* How to determine default portno for media type 
+	 * Need a default portmap table!
+	 */
+	bw = media->new_sdp(media, netaddr, default_rtp_portno, default_rtcp_portno, pt, clockrate, coding_param, bw_budget, control, sdp_info);
+		
+	modu->done_handler(prof);
+	modu->done(modu);
+
+	return bw;
+}
+
 xrtp_media_t * session_new_media(xrtp_session_t * ses, uint8 profile_no, char *profile_type, int clockrate, int coding_param)
 {
 	profile_class_t * modu = NULL;    
@@ -2139,9 +2201,9 @@ xrtp_media_t * session_new_media(xrtp_session_t * ses, uint8 profile_no, char *p
 		port_set_session(ses->rtcp_port, ses);
 	}
 
-	/*
-	ses->usec_period = 1000000 / ses->media->clockrate;
-	*/
+	ses->bandwidth_rtp = ses->media->bps / OS_BYTE_BITS;
+	ses->bandwidth = (int)((2 * ses->bandwidth_rtp) * 1.05);
+	
 	if(ses->bandwidth != 0)
 	{
 		ses->bandwidth_budget = ses->bandwidth;
