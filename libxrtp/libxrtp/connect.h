@@ -48,7 +48,7 @@
   session_connect_t * connect_rtp_to_rtcp(session_connect_t * rtp_conn);
   session_connect_t * connect_rtcp_to_rtp(session_connect_t * rtcp_conn);
   
-  xrtp_port_t * port_new(char * addr, uint32 portno, enum port_type_e type);
+  xrtp_port_t * port_new(char * addr, uint16 portno, enum port_type_e type);
 
   int port_done(xrtp_port_t * port);
 
@@ -64,7 +64,7 @@
   
   int port_incoming(xrtp_port_t * port);
   
-  xrtp_teleport_t * teleport_new(char * addr, uint32 portno);
+  xrtp_teleport_t * teleport_new(char * addr, uint16 portno);
 
   int teleport_done(xrtp_teleport_t * tport);
 

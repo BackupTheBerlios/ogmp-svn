@@ -69,7 +69,7 @@
   */
  struct xrtp_rtp_payload_s {
 
-    uint   len;
+    int   len;
     char * data;
 
     int  buf_pos;  /* payload position in buffer if parsed from buffer */
@@ -185,11 +185,11 @@
 
     uint8 version  :2;
     uint8 padding  :1;
-    uint8 count    :5;
+    int8 count    :5;
     uint8 type     :8;
     uint16 length   :16;
     
-    uint32 bytes; /* count bytes of each packet */
+    int32 bytes; /* count bytes of each packet */
  };
 
  /**
@@ -217,7 +217,7 @@
   */
  struct xrtp_rtcp_ext_s{
     
-    unsigned int len;
+    int len;
     char * data;
  };
  
@@ -287,7 +287,7 @@
  struct xrtp_rtcp_sdes_chunk_s{
 
     uint32 SRC;
-    uint n_item;
+    int n_item;
     int ended;
     uint8 padlen;
     uint max_item;
@@ -320,7 +320,7 @@
     
     uint32 name; /* ASCII string */
 
-    uint len_data;
+    int len_data;
     char * data;
  };
 

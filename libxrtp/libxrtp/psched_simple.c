@@ -29,7 +29,7 @@
  #else
    const int ssch_log = 0;
  #endif
- #define simple_sched_log(fmt, args...)  do{if(ssch_log) printf(fmt, ##args);}while(0)
+ #define simple_sched_log(fmtargs)  do{if(ssch_log) printf fmtargs;}while(0)
 
  #define MAX_SCHED_SESSION 64
 
@@ -162,9 +162,9 @@
     
     simple_sched_t * ssch = (simple_sched_t *)sched;
     
-    xthr_lock(ssch->lock);
-
     int i, free_slot = 0, found_slot = 0;
+
+    xthr_lock(ssch->lock);
 
     if(ssch->n_session == MAX_SCHED_SESSION){
 
@@ -201,7 +201,7 @@
 
     if(!found_slot) free_slot = ssch->n_session;
 
-    simple_sched_log("simple_sched_add: free_slot = %d\n", free_slot);
+    simple_sched_log(("simple_sched_add: free_slot = %d\n", free_slot));
     
     unit = (ssch_unit_t *)malloc(sizeof(struct ssch_unit_s));
     if(!unit){
@@ -213,7 +213,7 @@
 
        return XRTP_EMEM;
     }
-    bzero(unit, sizeof(struct ssch_unit_s));
+    memset(unit, 0, sizeof(struct ssch_unit_s));
     
     unit->session = ses;
     unit->period = session_rtp_period(ses);
@@ -232,8 +232,8 @@
     
     session_set_schedinfo(ses, (sched_schedinfo_t *)unit);
 
-    simple_sched_log("simple_sched_add: Session[%d] added to scheduler with sched_info[@%u]\n", session_id(ses), (int)(unit));
-    simple_sched_log("simple_sched_add: %d sessions in schedule\n", ssch->n_session);
+    simple_sched_log(("simple_sched_add: Session[%d] added to scheduler with sched_info[@%u]\n", session_id(ses), (int)(unit)));
+    simple_sched_log(("simple_sched_add: %d sessions in schedule\n", ssch->n_session));
 
     xthr_unlock(ssch->lock);
     /*
@@ -254,6 +254,8 @@
 
        if(ssch->units[i]->session == ses){
 
+          ssch_rtp_request_t * rtp_req = NULL;
+
           session_ports(ses, &rtp_port, &rtcp_port);
 
           portman_remove_port(ssch->rtp_portman, rtp_port);
@@ -265,7 +267,7 @@
           ssch->rtcp_queue[i].ssch_unit = NULL;
 
           /* Remove rtp request */
-          ssch_rtp_request_t * rtp_req = &(ssch->rtp_queue[i]);
+          rtp_req = &(ssch->rtp_queue[i]);
           if(rtp_req->prev){
             
               rtp_req->prev->next = rtp_req->next;
@@ -327,7 +329,7 @@
 
     /* xthr_lock(unit->lock); */
 
-    simple_sched_log("simple_sched_rtcp_in: data waiting for session to receive\n");
+    simple_sched_log(("simple_sched_rtcp_in: data waiting for session to receive\n"));
     unit->rtcp_arrived = 1;
     unit->rtcp_lrt_arrival = lrt_arrival;
 
@@ -360,11 +362,13 @@
 
     simple_sched_t * ssch = (simple_sched_t *)sched;
     ssch_unit_t * unit = (ssch_unit_t *)session_schedinfo(ses);
+    ssch_rtp_request_t * rtp_req = unit->rtp_request;
+
+    xrtp_hrtime_t hrt_now = 0;
+    xrtp_hrtime_t dl = 0;
 
     if(!unit)
         return XRTP_INVALID;
-
-    ssch_rtp_request_t * rtp_req = unit->rtp_request;
     
     xthr_lock(ssch->lock);
     
@@ -374,12 +378,12 @@
     }
     
     /* Calc the new ts and request number to catch up the delay */
-    xrtp_hrtime_t hrt_now = hrtime_now(ssch->clock);
-    xrtp_hrtime_t dl = hrt_now + hrt_allow;
+    hrt_now = hrtime_now(ssch->clock);
+    dl = hrt_now + hrt_allow;
     
     if(!rtp_req->prev && !rtp_req->next && ssch->rtp_queue_head != rtp_req){
 
-        simple_sched_log("simple_sched_rtp_out: Clock[@%u] is hrtime[%d] now, next deadline[%d] expired in %d nanosecs, request added\n", (int)(ssch->clock), hrt_now, dl, hrt_allow);
+        simple_sched_log(("simple_sched_rtp_out: Clock[@%u] is hrtime[%d] now, next deadline[%d] expired in %d nanosecs, request added\n", (int)(ssch->clock), hrt_now, dl, hrt_allow));
 
         rtp_req->hrts = dl;
         
@@ -436,9 +440,13 @@ int simple_schedule_rtp(void * gen){
      
    ssch_unit_t * unit;
 
-   simple_sched_log("simple_schedule_rtp(): rtp scheduler started\n");
+   simple_sched_log(("simple_schedule_rtp(): rtp scheduler started\n"));
 
    while(1){
+
+      xrtp_hrtime_t hrt_sleep = 0;
+      ssch_rtp_request_t * req = NULL;
+      xrtp_hrtime_t hrt_remain = 0;
 
       /* Check if need to quit */
       if(xthr_lock(ssch->lock) >= XRTP_OK){
@@ -449,9 +457,9 @@ int simple_schedule_rtp(void * gen){
 
             /* Time to schedule rtcp */
             /* xthr_cond_signal(sched->wait_on_rtcp); */
-            simple_sched_log("simple_schedule_rtp: rtp scheduler idles ...\n");
+            simple_sched_log(("simple_schedule_rtp: rtp scheduler idles ...\n"));
             xthr_cond_wait(ssch->wait_rtp_request, ssch->lock);
-            simple_sched_log("simple_schedule_rtp: Wake up, Got a rtp request!\n");
+            simple_sched_log(("simple_schedule_rtp: Wake up, Got a rtp request!\n"));
          }
       }
 
@@ -464,10 +472,9 @@ int simple_schedule_rtp(void * gen){
        * - action now if in tolarent range
        * - abandon otherwise
        */
-      xrtp_hrtime_t hrt_sleep = 0;
 
-      simple_sched_log("simple_schedule_rtp: next request[@%u]\n", (int)(ssch->rtp_queue_head));
-      ssch_rtp_request_t * req = ssch->rtp_queue_head;
+      simple_sched_log(("simple_schedule_rtp: next request[@%u]\n", (int)(ssch->rtp_queue_head)));
+      req = ssch->rtp_queue_head;
       
       while(req){
 
@@ -491,7 +498,7 @@ int simple_schedule_rtp(void * gen){
          if(req->next) req->next->prev = NULL;
          req->next = req->prev = NULL;
             
-         simple_sched_log("simple_schedule_rtp: hrtimer[%d] now, send rtp packet !\n", now);
+         simple_sched_log(("simple_schedule_rtp: hrtimer[%d] now, send rtp packet !\n", now));
 
          session_rtp_send_now(unit->session);
             
@@ -510,8 +517,7 @@ int simple_schedule_rtp(void * gen){
          NOTE: this is moved to seperate thread in session module
       */
          
-      simple_sched_log("simple_schedule_rtp: sleep %d nanosecs\n", hrt_sleep);         
-      xrtp_hrtime_t hrt_remain;
+      simple_sched_log(("simple_schedule_rtp: sleep %d nanosecs\n", hrt_sleep));         
       hrtime_sleep(ssch->clock, hrt_sleep, &hrt_remain);            
    }
 
@@ -529,9 +535,14 @@ int simple_schedule_rtcp(void * gen){
 
    int i_locked_ssch = 0;
 
-   simple_sched_log("simple_schedule_rtcp: rtcp scheduler started\n");
+   simple_sched_log(("simple_schedule_rtcp: rtcp scheduler started\n"));
 
    while(1){
+
+      xrtp_lrtime_t dt_min = 0;
+      int i, n_expired = 0;
+      int n_arrived = 0;
+      int nses_scaned = 0;
 
       if (xthr_lock(ssch->lock) == OS_OK) {
 
@@ -554,9 +565,9 @@ int simple_schedule_rtcp(void * gen){
             i_locked_ssch = 0;
          }
 
-         simple_sched_log("simple_schedule_rtcp: rtcp sched idles ...\n");
+         simple_sched_log(("simple_schedule_rtcp: rtcp sched idles ...\n"));
          xthr_cond_wait(ssch->wait_rtcp_request, ssch->rtcp_lock);
-         simple_sched_log("simple_schedule_rtcp: Wake up!\n");
+         simple_sched_log(("simple_schedule_rtcp: Wake up!\n"));
       }
 
       if(i_locked_ssch){
@@ -566,7 +577,7 @@ int simple_schedule_rtcp(void * gen){
       }
 
       now = lrtime_now(ssch->clock);
-      simple_sched_log("simple_schedule_rtcp: clock[@%u] is %d csec now\n", (int)(ssch->clock), now);
+      simple_sched_log(("simple_schedule_rtcp: clock[@%u] is %d csec now\n", (int)(ssch->clock), now));
 
       /* Scan if some deadline is reached */
 
@@ -576,11 +587,6 @@ int simple_schedule_rtcp(void * gen){
        * - action now if in tolarent range
        * - abandon otherwise
        */
-      xrtp_lrtime_t dt_min = 0;
-      int i, n_expired = 0;
-      int n_arrived = 0;
-      int nses_scaned = 0;
-
       for(i=0; i<MAX_SCHED_SESSION; i++){
 
          if(nses_scaned == ssch->n_session) break;
@@ -607,9 +613,9 @@ int simple_schedule_rtcp(void * gen){
                   ssch->n_rtcp_request--;
                   if(ssch->n_rtcp_request == 0){
 
-                     simple_sched_log("simple_schedule_rtcp: rtcp scheduler waiting for quest ...\n");
+                     simple_sched_log(("simple_schedule_rtcp: rtcp scheduler waiting for quest ...\n"));
                      xthr_cond_wait(ssch->wait_rtcp_request, ssch->rtcp_lock);
-                     simple_sched_log("simple_schedule_rtcp: Wake up! rtcp request pending ...\n");
+                     simple_sched_log(("simple_schedule_rtcp: Wake up! rtcp request pending ...\n"));
                      rtcp_wakeup = 1;
                   }
                }
@@ -633,7 +639,7 @@ int simple_schedule_rtcp(void * gen){
                unit->rtcp_doing = 1;
                ssch->n_rtcp_request++;
 
-               simple_sched_log("simple_schedule_rtcp: first rtcp at %u csec\n", ssch->rtcp_queue[i].next_lrts);
+               simple_sched_log(("simple_schedule_rtcp: first rtcp at %u csec\n", ssch->rtcp_queue[i].next_lrts));
                continue;
             }
 
@@ -674,19 +680,19 @@ int simple_schedule_rtcp(void * gen){
 
                if(unit->rtcp_arrived){
 
-                  simple_sched_log("simple_schedule_rtcp: Session[%d] receive data before send!\n", session_id(unit->session));
+                  simple_sched_log(("simple_schedule_rtcp: Session[%d] receive data before send!\n", session_id(unit->session)));
                   session_rtcp_to_receive(unit->session);
                   unit->rtcp_arrived = 0;
                   n_arrived--;
                }
 
-               simple_sched_log("simple_schedule_rtcp: Session[%d] send rtcp on time[%u]\n", session_id(unit->session), now);
+               simple_sched_log(("simple_schedule_rtcp: Session[%d] send rtcp on time[%u]\n", session_id(unit->session), now));
                session_rtcp_to_send(unit->session);
 
                /* calcu the next ts */
                dt = session_rtcp_interval(unit->session);
 
-               simple_sched_log("simple_schedule_rtcp: session[%d]'s next rtcp in %u csec\n", i, dt);
+               simple_sched_log(("simple_schedule_rtcp: session[%d]'s next rtcp in %u csec\n", i, dt));
 
                ssch->rtcp_queue[i].next_lrts = now + dt;
                
@@ -709,7 +715,7 @@ int simple_schedule_rtcp(void * gen){
 
             if(unit->rtcp_arrived){
 
-               simple_sched_log("simple_schedule_rtcp: session receive data NOW !\n");
+               simple_sched_log(("simple_schedule_rtcp: session receive data NOW !\n"));
                session_rtcp_to_receive(unit->session);
                unit->rtcp_arrived = 0;
                n_arrived--;
@@ -725,12 +731,12 @@ int simple_schedule_rtcp(void * gen){
       }
 
       /* To detect all ports see if any incoming */
-      simple_sched_log("simple_schedule_rtcp: to scan the rtcp ports\n");
+      simple_sched_log(("simple_schedule_rtcp: to scan the rtcp ports\n"));
       portman_poll(ssch->rtcp_portman);
 
       xthr_unlock(ssch->rtcp_lock);
 
-      simple_sched_log("simple_schedule_rtcp: sleep %u msec\n", dt_min);
+      simple_sched_log(("simple_schedule_rtcp: sleep %u msec\n", dt_min));
       lrtime_sleep(ssch->clock, dt_min, NULL);
    }
 
@@ -786,7 +792,7 @@ session_sched_t * sched_new(){
    ssch->rtcp_run = xthr_new(simple_schedule_rtcp, ssch, XTHREAD_NONEFLAGS);
    ssch->rtp_run = xthr_new(simple_schedule_rtp, ssch, XTHREAD_NONEFLAGS);
 
-   simple_sched_log("sched_new: Sched[@%u] start ...\n", (int)(ssch));
+   simple_sched_log(("sched_new: Sched[@%u] start ...\n", (int)(ssch)));
     
    return (session_sched_t *)ssch;
 }

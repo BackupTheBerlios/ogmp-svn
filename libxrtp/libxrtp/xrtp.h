@@ -15,11 +15,10 @@
  *                                                                         *
  ***************************************************************************/
 
+#ifndef XRTP_H
+#define XRTP_H
+
 #include "session.h"
-
-#include "const.h"
-
-#include <timedia/catalog.h>
 
 #define XRTP_VERSION_MAIN 0
 #define XRTP_VERSION_MINUS 0
@@ -35,4 +34,6 @@ module_catalog_t* xrtp_catalog();
 session_sched_t* xrtp_scheduler();
 
 xrtp_session_t* xrtp_session(char * cname);
+
+#endif
 

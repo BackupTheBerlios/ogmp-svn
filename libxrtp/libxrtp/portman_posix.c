@@ -15,7 +15,7 @@
  *                                                                         *
  ***************************************************************************/
 
- #include <sys/select.h>    /* POSIX 1003.1 - 2001 compliant */
+ #include <timedia/socket.h>    /* POSIX 1003.1 - 2001 compliant */
  
  #include "portman.h"
  #include <timedia/xmap.h>
@@ -66,10 +66,13 @@
 
  int portman_add_port(portman_t * man, xrtp_port_t * port){
 
-    if(man->n_port == FD_SETSIZE)
+    int io;
+    int i;
+
+	if(man->n_port == FD_SETSIZE)
         return XRTP_EFULL;
         
-    int io = port_io(port);
+    io = port_io(port);
 
     FD_SET(io, &(man->io_set));
     map_add(man->ports, port, io);
@@ -79,7 +82,6 @@
     portman_log(("portman_add_port: port[%d] added\n", io));
     portman_log(("portman_add_port: ports to detect are:"));
     
-    int i;
     for(i=0; i<= map_max_key(man->ports); i++){
       
        if(FD_ISSET(i, &(man->io_set))){
@@ -99,17 +101,19 @@
 
  int portman_remove_port(portman_t * man, xrtp_port_t * port){
 
+    uint io;
+    int i;
+
     if(man->n_port == 0)
         return XRTP_OK;
 
-    int io = port_io(port);
+    io = port_io(port);
     
     FD_CLR(io, &(man->io_set));
     map_remove(man->ports, io);
     man->n_port--;
 
     /* DEBUG Start */
-    int i;
     for(i=0; i<= map_max_key(man->ports); i++){
        if(FD_ISSET(i, &(man->io_set))){
 
@@ -148,6 +152,7 @@
     fd_set io_mask = man->io_set;
     
     int c = 0;
+    int i;
     
     int maxio = map_max_key(man->ports);
     int n = select(maxio+1, &io_mask, NULL, NULL, &tv);
@@ -156,7 +161,6 @@
     
     if(!n) return n;
 
-    int i;
     for(i=0; i<=maxio; i++){
 
        if(FD_ISSET(i, &io_mask)){

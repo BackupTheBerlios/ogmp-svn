@@ -22,7 +22,7 @@
  #else
    const int media_log = 0;
  #endif
- #define media_log(fmt, args...)  do{if(media_log) printf(fmt, ##args);}while(0)
+ #define media_log(fmtargs)  do{if(media_log) printf fmtargs;}while(0)
 
 /* Convert realtime to rtp ts */
 uint32 media_realtime_to_rtpts(xrtp_media_t * media, xrtp_lrtime_t lrt, xrtp_hrtime_t hrt){
@@ -30,8 +30,8 @@ uint32 media_realtime_to_rtpts(xrtp_media_t * media, xrtp_lrtime_t lrt, xrtp_hrt
    uint32 rtpts = lrt / LRTIME_SECOND_DIVISOR * media->clockrate * media->sampling_instance;
    rtpts += (hrt % LRT_HRT_DIVISOR) / (HRTIME_SECOND_DIVISOR / media->clockrate) * media->sampling_instance;
 
-   media_log("media_realtime_to_rtpts: lrt[%d]:hrt[%d] on arrival\n", lrt, hrt);
-   media_log("media_realtime_to_rtpts: rtp_ts on arrival is %d\n", rtpts);
+   media_log(("media_realtime_to_rtpts: lrt[%d]:hrt[%d] on arrival\n", lrt, hrt));
+   media_log(("media_realtime_to_rtpts: rtp_ts on arrival is %d\n", rtpts));
    return rtpts;
 }
 
@@ -43,26 +43,26 @@ int media_set_callback(xrtp_media_t *media, int type, void* call, void* user){
 
            media->$callbacks.media_arrived = call;
            media->$callbacks.media_arrived_user = user;
-           media_log("text/rtp-test.tm_media_set_callback: 'media_arrived' callback set\n");
+           media_log(("text/rtp-test.tm_media_set_callback: 'media_arrived' callback set\n"));
            break;
 
        case(CALLBACK_MEDIA_FINISH):
 
            media->$callbacks.media_finish = call;
            media->$callbacks.media_finish_user = user;
-           media_log("text/rtp-test.tm_media_set_callback: 'media_finish' callback set\n");
+           media_log(("text/rtp-test.tm_media_set_callback: 'media_finish' callback set\n"));
            break;
 
        case(CALLBACK_MEDIA_REPORT):
 
            media->$callbacks.media_report = call;
            media->$callbacks.media_report_user = user;
-           media_log("text/rtp-test.tm_media_set_callback: 'media_report' callback set\n");
+           media_log(("text/rtp-test.tm_media_set_callback: 'media_report' callback set\n"));
            break;
 
        default:
 
-           media_log("< text/rtp-test.tm_media_set_callback: callback[%d] unsupported >\n", type);
+           media_log(("< text/rtp-test.tm_media_set_callback: callback[%d] unsupported >\n", type));
            return XRTP_EUNSUP;
     }
 

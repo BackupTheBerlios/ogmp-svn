@@ -28,7 +28,7 @@
  #else
    const int packet_log = 0;
  #endif
- #define packet_log(fmt, args...)  do{if(packet_log) printf(fmt, ##args);}while(0)
+ #define packet_log(fmtargs)  do{if(packet_log) printf fmtargs;}while(0)
 
  /* ------------------- General Packet interface ------------------------ */
 
@@ -39,7 +39,7 @@
 
     pac->handler = hand;
     if(!hand){
-       packet_log("rtp_packet_set_handler: No handler assiated\n");
+       packet_log(("rtp_packet_set_handler: No handler assiated\n"));
     }
 
     return XRTP_OK;
@@ -52,7 +52,7 @@
 
     com->handler = hand;
     if(!hand){
-       packet_log("rtp_packet_set_handler: No handler assiated\n");
+       packet_log(("rtp_packet_set_handler: No handler assiated\n"));
     }
 
     return XRTP_OK;
@@ -68,11 +68,11 @@
     xrtp_rtp_packet_t * rtp = (xrtp_rtp_packet_t *)malloc(sizeof(struct xrtp_rtp_packet_s));
     if(!rtp){
        
-       packet_log("< rtp_new_packet: Can't allocate resource >\n");
+       packet_log(("< rtp_new_packet: Can't allocate resource >\n"));
        return NULL;
     }
 
-    bzero(rtp, sizeof(struct xrtp_rtp_packet_s));
+    memset(rtp, 0, sizeof(struct xrtp_rtp_packet_s));
     
     rtp->is_sync = 0;               /* for sync rtp only */
     rtp->hi_ntp = rtp->lo_ntp = 0;
@@ -102,7 +102,7 @@
 
     rtp->buffer = NULL;
     
-    packet_log("rtp_packet_new: New packet head %d bytes\n", rtp->packet_bytes);
+    packet_log(("rtp_packet_new: New packet head %d bytes\n", rtp->packet_bytes));
 
     return rtp;
  }
@@ -137,14 +137,14 @@
 
     if(pac->direct == RTP_SEND){
 
-       packet_log("_rtp_packet_done_headext: free data as its seperated from packet in sending\n");
+       packet_log(("_rtp_packet_done_headext: free data as its seperated from packet in sending\n"));
        free(hext->data);
     }
        
     free(hext);
     pac->headext = NULL;
     
-    packet_log("rtp_packet_done_headext: headext freed\n");
+    packet_log(("rtp_packet_done_headext: headext freed\n"));
 
     return XRTP_OK;
  }
@@ -155,13 +155,13 @@
  int rtp_packet_done_payload(xrtp_rtp_packet_t * pac, xrtp_rtp_payload_t * pay){
 
     if(pac->direct == RTP_SEND){
-        packet_log("rtp_packet_done_payload: free payload as its seperated from packet in sending\n");
+        packet_log(("rtp_packet_done_payload: free payload as its seperated from packet in sending\n"));
         free(pac->$payload.data);
     }
        
     pac->$payload.data = NULL;
     pac->$payload.len = 0;
-    packet_log("rtp_packet_done_payload: payload data freed\n");
+    packet_log(("rtp_packet_done_payload: payload data freed\n"));
 
     return XRTP_OK;
  }
@@ -186,7 +186,7 @@
         buffer_done(pac->buffer);
     
     free(pac);
-    packet_log("rtp_packet_done(): done packet\n");
+    packet_log(("rtp_packet_done(): done packet\n"));
     
     return XRTP_OK;
  }
@@ -296,7 +296,7 @@
 
     if(ncsrc == XRTP_MAX_CSRC){
 
-       packet_log("rtp_packet_add_csrc: Maximum reached\n");
+       packet_log(("rtp_packet_add_csrc: Maximum reached\n"));
        return 0;                                     
     }   
     pac->$head.csrc_list[pac->$head.n_CSRC++] = CSRC;
@@ -316,7 +316,7 @@
     pac->$head.seqno = seqno;
     pac->$head.timestamp = ts;
 
-    packet_log("rtp_packet_set_head: ssrc=%u, seqno=%u, timestamp=%u\n", ssrc, seqno, ts);
+    packet_log(("rtp_packet_set_head: ssrc=%u, seqno=%u, timestamp=%u\n", ssrc, seqno, ts));
 
     return &(pac->$head);
  }
@@ -334,7 +334,7 @@
     xrtp_rtp_headext_t * hx = (xrtp_rtp_headext_t *)malloc(sizeof(struct xrtp_rtp_headext_s));
     if(!hx){
 
-       packet_log("rtp_packet_new_headext: Can't allocate resource\n");
+       packet_log(("rtp_packet_new_headext: Can't allocate resource\n"));
 
        return NULL;
     }
@@ -357,7 +357,7 @@
     xrtp_rtp_headext_t * hx = (xrtp_rtp_headext_t *)malloc(sizeof(struct xrtp_rtp_headext_s));
     if(!hx){
 
-       packet_log("rtp_packet_new_headext: Can't allocate resource\n");
+       packet_log(("rtp_packet_new_headext: Can't allocate resource\n"));
 
        return XRTP_EMEM;
     }
@@ -377,10 +377,10 @@
 
     pac->packet_bytes += RTP_HEADEXT_FIX_BYTE + hx->len + hx->len_pad;
     
-    packet_log("rtp_packet_set_headext: RTP headext data %d bytes\n", len);
-    packet_log("rtp_packet_set_headext: RTP headext pad %d bytes\n", hx->len_pad);
-    packet_log("rtp_packet_set_headext: RTP headext %d bytes\n", RTP_HEADEXT_FIX_BYTE + hx->len + hx->len_pad);
-    packet_log("rtp_packet_set_headext: packet+headext %d bytes\n", pac->packet_bytes);
+    packet_log(("rtp_packet_set_headext: RTP headext data %d bytes\n", len));
+    packet_log(("rtp_packet_set_headext: RTP headext pad %d bytes\n", hx->len_pad));
+    packet_log(("rtp_packet_set_headext: RTP headext %d bytes\n", RTP_HEADEXT_FIX_BYTE + hx->len + hx->len_pad));
+    packet_log(("rtp_packet_set_headext: packet+headext %d bytes\n", pac->packet_bytes));
 
     return XRTP_OK;
  }
@@ -425,8 +425,8 @@
 
     pac->packet_bytes += len;
 
-    packet_log("_rtp_packet_set_payload: payload %d bytes\n", len);
-    packet_log("_rtp_packet_set_payload: packet+headext+payload %d bytes\n", pac->packet_bytes);
+    packet_log(("_rtp_packet_set_payload: payload %d bytes\n", len));
+    packet_log(("_rtp_packet_set_payload: packet+headext+payload %d bytes\n", pac->packet_bytes));
 
     return XRTP_OK;
  }
@@ -442,7 +442,7 @@
     
     if(!pac->$payload.data){
 
-        packet_log("< rtp_packet_new_payload: Fail to allocate payload memery >\n");
+        packet_log(("< rtp_packet_new_payload: Fail to allocate payload memery >\n"));
 
         return NULL;
     }
@@ -451,7 +451,7 @@
     pac->$payload.len = len;
     pac->packet_bytes += len;
         
-    packet_log("rtp_packet_new_payload: payload copied, packet size is %d bytes\n", pac->packet_bytes);
+    packet_log(("rtp_packet_new_payload: payload copied, packet size is %d bytes\n", pac->packet_bytes));
 
     return &(pac->$payload);
  }
@@ -538,7 +538,7 @@
        return NULL;
     }
     
-    bzero(comp, sizeof(struct xrtp_rtcp_compound_s));
+    memset(comp, 0, sizeof(struct xrtp_rtcp_compound_s));
 
     comp->session = ses;
     
@@ -561,7 +561,7 @@
     comp->heads = (xrtp_rtcp_head_t **)malloc(sizeof(xrtp_rtcp_head_t *) * npack);
     if(!comp->heads){
 
-       packet_log("rtcp_new_compound: Can't allocate resource for packet list\n");
+       packet_log(("rtcp_new_compound: Can't allocate resource for packet list\n"));
 
        free(comp);
        return NULL;
@@ -634,19 +634,19 @@
     xrtp_rtcp_compound_t * rtcp = (xrtp_rtcp_compound_t *)malloc(sizeof(struct xrtp_rtcp_compound_s));
     if(!rtcp){
        
-       packet_log("rtcp_sender_report_new: Can't allocate resource\n");
+       packet_log(("rtcp_sender_report_new: Can't allocate resource\n"));
        
        return NULL;
     }
     
-    bzero(rtcp, sizeof(struct xrtp_rtcp_compound_s));
+    memset(rtcp, 0, sizeof(struct xrtp_rtcp_compound_s));
     
     if(size == 0) size = XRTP_MAX_RTCP_PACKETS;
     
     rtcp->heads = (xrtp_rtcp_head_t **)malloc(sizeof(xrtp_rtcp_head_t *) * size);
     if(!rtcp->heads){
 
-       packet_log("rtcp_sender_report_new: Can't allocate resource for packet list\n");
+       packet_log(("rtcp_sender_report_new: Can't allocate resource for packet list\n"));
 
        free(rtcp);
        return NULL;
@@ -663,7 +663,7 @@
     sr = (xrtp_rtcp_sr_t *)malloc(sizeof(struct xrtp_rtcp_sr_s));
     if(!sr){
 
-       packet_log("rtcp_sender_report_new: Can't allocate resource for sender report packet\n");
+       packet_log(("rtcp_sender_report_new: Can't allocate resource for sender report packet\n"));
 
        free(rtcp->heads);
        free(rtcp);
@@ -686,7 +686,7 @@
     rtcp->maxlen = XRTP_RTCP_DEFAULTMAXBYTES;
     rtcp->bytes = sr->$head.bytes;
 
-    packet_log("rtcp_sender_report_new: SR = %d Bytes\n", rtcp_length(rtcp));
+    packet_log(("rtcp_sender_report_new: SR = %d Bytes\n", rtcp_length(rtcp)));
 
     return rtcp;
  }
@@ -701,19 +701,19 @@
     xrtp_rtcp_compound_t * rtcp = (xrtp_rtcp_compound_t *)malloc(sizeof(struct xrtp_rtcp_compound_s));
     if(!rtcp){
 
-       packet_log("rtcp_reveiver_report_new: Can't allocate resource\n");
+       packet_log(("rtcp_reveiver_report_new: Can't allocate resource\n"));
 
        return NULL;
     }
 
-    bzero(rtcp, sizeof(struct xrtp_rtcp_compound_s));
+    memset(rtcp, 0, sizeof(struct xrtp_rtcp_compound_s));
 
     if(size == 0) size = XRTP_MAX_RTCP_PACKETS;
 
     rtcp->heads = (xrtp_rtcp_head_t **)malloc(sizeof(xrtp_rtcp_head_t *) * size);
     if(!rtcp->heads){
 
-       packet_log("rtcp_receiver_report_new: Can't allocate resource for packet list\n");
+       packet_log(("rtcp_receiver_report_new: Can't allocate resource for packet list\n"));
 
        free(rtcp);
        return NULL;
@@ -731,7 +731,7 @@
     rr = (xrtp_rtcp_rr_t *)malloc(sizeof(struct xrtp_rtcp_rr_s));
     if(!rr){
 
-       packet_log("rtcp_receiver_report_new: Can't allocate resource for sender report packet\n");
+       packet_log(("rtcp_receiver_report_new: Can't allocate resource for sender report packet\n"));
 
        free(rtcp->heads);
        free(rtcp);
@@ -757,7 +757,7 @@
     rtcp->maxlen = XRTP_RTCP_DEFAULTMAXBYTES;
     rtcp->bytes = rr->$head.bytes;
 
-    packet_log("rtcp_receiver_report_new: RR is %d bytes\n", rtcp_length(rtcp));
+    packet_log(("rtcp_receiver_report_new: RR is %d bytes\n", rtcp_length(rtcp)));
 
     return rtcp;
  }
@@ -814,7 +814,7 @@
     
     if(com->n_packet == com->max_packets){
 
-       packet_log("rtcp_new_sdes: Maximum packet reached\n");
+       packet_log(("rtcp_new_sdes: Maximum packet reached\n"));
 
        return NULL;
     }
@@ -825,7 +825,7 @@
        return NULL;
     }
 
-    bzero(sdes, sizeof(struct xrtp_rtcp_sdes_s));
+    memset(sdes, 0, sizeof(struct xrtp_rtcp_sdes_s));
     
     sdes->$head.count = 0;
     sdes->$head.version = 2;
@@ -836,7 +836,7 @@
 
     com->heads[com->n_packet++] = (xrtp_rtcp_head_t *)sdes;
     
-    packet_log("rtcp_new_sdes: SDES head = %db\n", RTCP_HEAD_FIX_BYTE);
+    packet_log(("rtcp_new_sdes: SDES head = %db\n", RTCP_HEAD_FIX_BYTE));
 
     return sdes;
  }
@@ -847,7 +847,7 @@
 
     free(item);
     
-    packet_log("_rtcp_done_sdes_item: item freed\n");
+    packet_log(("_rtcp_done_sdes_item: item freed\n"));
 
     return XRTP_OK;
  }
@@ -862,7 +862,7 @@
     }
     free(chunk);
     
-    packet_log("_rtcp_done_sdes_chunk: chunk freed\n");
+    packet_log(("_rtcp_done_sdes_chunk: chunk freed\n"));
 
     return XRTP_OK;
  }
@@ -877,7 +877,7 @@
 
     free(sdes);
 
-    packet_log("_rtcp_done_sdes: sdes freed\n");
+    packet_log(("_rtcp_done_sdes: sdes freed\n"));
 
     return XRTP_OK;
  }
@@ -886,6 +886,7 @@
  
  int rtcp_add_sdes(xrtp_rtcp_compound_t * com, uint32 SRC, uint8 type, uint8 len, char * v){
 
+    int i;
     xrtp_rtcp_sdes_t * sdes = NULL;
     xrtp_rtcp_sdes_chunk_t * chunk = NULL;
     xrtp_rtcp_sdes_item_t *item = NULL;
@@ -895,16 +896,15 @@
     int _addlen = 0;
     int _room = com->maxlen - com->bytes;
 
-    packet_log("rtcp_add_sdes: %db free\n", _room);
+    packet_log(("rtcp_add_sdes: %db free\n", _room));
 
-    int i;
     for(i=0; i<com->n_packet; i++){
 
        if(com->heads[i]->type == RTCP_TYPE_SDES){
 
           sdes = (xrtp_rtcp_sdes_t *)com->heads[i];
           
-          packet_log("rtcp_add_sdes: Found SDES packet\n");
+          packet_log(("rtcp_add_sdes: Found SDES packet\n"));
 
           break;
        }
@@ -930,7 +930,7 @@
 
              chunk = sdes->chunks[i];
              
-             packet_log("rtcp_add_sdes: Found Chunk for SRC(%d)\n", SRC);
+             packet_log(("rtcp_add_sdes: Found Chunk for SRC(%d)\n", SRC));
 
              break;
           }
@@ -940,7 +940,7 @@
 
           if(sdes->$head.count == XRTP_MAX_SDES_CHUNK){
 
-             packet_log("rtcp_add_sdes(): No more chunk then %d\n", XRTP_MAX_SDES_CHUNK);
+             packet_log(("rtcp_add_sdes(): No more chunk then %d\n", XRTP_MAX_SDES_CHUNK));
 
              return XRTP_EREFUSE;
           }
@@ -948,7 +948,7 @@
           _room -= (RTCP_SRC_BYTE + RTCP_SDES_ID_BYTE + RTCP_SDES_LEN_BYTE);
           if(_room < len){
 
-             packet_log("rtcp_add_sdes: SDES Chunk needs more then %d bytes!\n", _room);
+             packet_log(("rtcp_add_sdes: SDES Chunk needs more then %d bytes!\n", _room));
 
              return XRTP_EREFUSE;
           }
@@ -967,7 +967,7 @@
 
                 item = chunk->items[i];
                 
-                packet_log("rtcp_add_sdes: Found item type %d\n", type);
+                packet_log(("rtcp_add_sdes: Found item type %d\n", type));
 
                 break;
              }
@@ -978,7 +978,7 @@
              _room -= (RTCP_SDES_ID_BYTE + RTCP_SDES_LEN_BYTE);
              if(_room < len){
 
-                packet_log("rtcp_add_sdes: SDES Item needs more then %d bytes!\n", _room);
+                packet_log(("rtcp_add_sdes: SDES Item needs more then %d bytes!\n", _room));
 
                 return XRTP_EREFUSE;
              }
@@ -987,7 +987,7 @@
 
           }else{
 
-             packet_log("rtcp_add_sdes: Replace old item\n");
+             packet_log(("rtcp_add_sdes: Replace old item\n"));
 
              _addlen = len - item->len;
 
@@ -1009,30 +1009,30 @@
              _rtcp_done_sdes(sdes);
        }
        
-       bzero(chunk, sizeof(struct xrtp_rtcp_sdes_chunk_s));
+       memset(chunk, 0, sizeof(struct xrtp_rtcp_sdes_chunk_s));
 
        chunk->SRC = SRC;
 
        _addlen += RTCP_SRC_BYTE;
        
-       packet_log("rtcp_add_sdes: New chunk(%d)=%db\n", SRC, RTCP_SRC_BYTE);
+       packet_log(("rtcp_add_sdes: New chunk(%d)=%db\n", SRC, RTCP_SRC_BYTE));
     }
 
     if(new_item){
 
-       packet_log("rtcp_add_sdes: may crash, get to malloc %d bytes memery\n", sizeof(struct xrtp_rtcp_sdes_item_s));
+       packet_log(("rtcp_add_sdes: may crash, get to malloc %d bytes memery\n", sizeof(struct xrtp_rtcp_sdes_item_s)));
        item = (xrtp_rtcp_sdes_item_t *)malloc(sizeof(struct xrtp_rtcp_sdes_item_s));
-       packet_log("rtcp_add_sdes: malloc succeed\n");
+       packet_log(("rtcp_add_sdes: malloc succeed\n"));
        if(!item){
 
-          packet_log("rtcp_add_sdes: Can't allocate Item resource\n");
+          packet_log(("rtcp_add_sdes: Can't allocate Item resource\n"));
 
           if(new_chunk) free(chunk);
 
           return XRTP_EMEM;
        }
 
-       bzero(item, sizeof(struct xrtp_rtcp_sdes_item_s));
+       memset(item, 0, sizeof(struct xrtp_rtcp_sdes_item_s));
 
        item->id = type;
        item->len = len;
@@ -1042,7 +1042,7 @@
 
        _addlen += RTCP_SDES_ID_BYTE + RTCP_SDES_LEN_BYTE + len;
        
-       packet_log("rtcp_add_sdes: New item=%db; chunk(%d)=%db; rtcp+%db\n",  RTCP_SDES_ID_BYTE + RTCP_SDES_LEN_BYTE + len, chunk->SRC, RTCP_SRC_BYTE, _addlen);
+       packet_log(("rtcp_add_sdes: New item=%db; chunk(%d)=%db; rtcp+%db\n",  RTCP_SDES_ID_BYTE + RTCP_SDES_LEN_BYTE + len, chunk->SRC, RTCP_SRC_BYTE, _addlen));
     }
 
     if(!new_sdes && new_chunk)
@@ -1068,7 +1068,7 @@
     
     sdes->$head.bytes += _addlen;
     
-    packet_log("rtcp_add_sdes: SDES = %dB\n", sdes->$head.bytes);
+    packet_log(("rtcp_add_sdes: SDES = %dB\n", sdes->$head.bytes));
 
     return _addlen;
  }
@@ -1078,6 +1078,7 @@
   */
  int rtcp_add_priv_sdes(xrtp_rtcp_compound_t * com, uint32 SRC, uint8 pre_len, char * pre_v, uint8 len, char * v){
 
+    int i;
     xrtp_rtcp_sdes_t * sdes = NULL;
     xrtp_rtcp_sdes_chunk_t * chunk = NULL;
     xrtp_rtcp_sdes_item_t *item = NULL;
@@ -1087,16 +1088,15 @@
     int _addlen = 0;
     int _room = com->maxlen - com->bytes;
 
-    packet_log("rtcp_add_priv_sdes: %d bytes to carry data\n", _room);
+    packet_log(("rtcp_add_priv_sdes: %d bytes to carry data\n", _room));
 
-    int i;
     for(i=0; i<com->n_packet; i++){
 
        if(com->heads[i]->type == RTCP_TYPE_SDES){
 
           sdes = (xrtp_rtcp_sdes_t *)com->heads[i];
 
-          packet_log("rtcp_add_priv_sdes: Found SDES packet\n");
+          packet_log(("rtcp_add_priv_sdes: Found SDES packet\n"));
 
           break;
        }
@@ -1110,7 +1110,7 @@
           return XRTP_EREFUSE;
        }
 
-       packet_log("rtcp_add_priv_sdes: Need a new SDES Packet\n");
+       packet_log(("rtcp_add_priv_sdes: Need a new SDES Packet\n"));
 
        new_sdes = new_chunk = new_item = 1;
 
@@ -1124,7 +1124,7 @@
 
              chunk = sdes->chunks[i];
 
-             packet_log("rtcp_add_priv_sdes: Found Chunk for SRC(%d)\n", SRC);
+             packet_log(("rtcp_add_priv_sdes: Found Chunk for SRC(%d)\n", SRC));
 
              break;
           }
@@ -1134,7 +1134,7 @@
 
           if(sdes->$head.count == XRTP_MAX_SDES_CHUNK){
 
-             packet_log("rtcp_add_priv_sdes: No more chunk then %d\n", XRTP_MAX_SDES_CHUNK);
+             packet_log(("rtcp_add_priv_sdes: No more chunk then %d\n", XRTP_MAX_SDES_CHUNK));
 
              return XRTP_EREFUSE;
           }
@@ -1142,12 +1142,12 @@
           _room -= (RTCP_SRC_BYTE + RTCP_SDES_ID_BYTE + RTCP_SDES_LEN_BYTE);
           if(_room < len){
 
-             packet_log("rtcp_add_priv_sdes: SDES Chunk needs more then %d bytes!\n", _room);
+             packet_log(("rtcp_add_priv_sdes: SDES Chunk needs more then %d bytes!\n", _room));
 
              return XRTP_EREFUSE;
           }
 
-          packet_log("rtcp_add_priv_sdes: Need a new SRC(%d) Chunk\n", SRC);
+          packet_log(("rtcp_add_priv_sdes: Need a new SRC(%d) Chunk\n", SRC));
 
           new_chunk = new_item = 1;
 
@@ -1163,7 +1163,7 @@
 
                 item = chunk->items[i];
 
-                packet_log("rtcp_add_priv_sdes: Found private sdes item\n");
+                packet_log(("rtcp_add_priv_sdes: Found private sdes item\n"));
 
                 break;
              }
@@ -1174,18 +1174,18 @@
              _room -= (RTCP_SDES_ID_BYTE + RTCP_SDES_LEN_BYTE);
              if(_room < len){
 
-                packet_log("rtcp_add_priv_sdes: SDES Item needs more then %d bytes!\n", _room);
+                packet_log(("rtcp_add_priv_sdes: SDES Item needs more then %d bytes!\n", _room));
 
                 return XRTP_EREFUSE;
              }
 
-             packet_log("rtcp_add_priv_sdes: Need a new private SDES item\n");
+             packet_log(("rtcp_add_priv_sdes: Need a new private SDES item\n"));
 
              new_item = 1;
 
           }else{
 
-             packet_log("rtcp_add_priv_sdes: Replace old item\n");
+             packet_log(("rtcp_add_priv_sdes: Replace old item\n"));
 
              _addlen = len + pre_len + RTCP_SDES_LEN_BYTE - item->len;
 
@@ -1217,7 +1217,7 @@
 
        _addlen += RTCP_SRC_BYTE;
        
-       packet_log("rtcp_add_priv_sdes: New Chunk(%d) = %dB\n", SRC, RTCP_SRC_BYTE);
+       packet_log(("rtcp_add_priv_sdes: New Chunk(%d) = %dB\n", SRC, RTCP_SRC_BYTE));
     }
 
     if(new_item){
@@ -1225,7 +1225,7 @@
        item = (xrtp_rtcp_sdes_item_t *)malloc(sizeof(struct xrtp_rtcp_sdes_item_s));
        if(!item){
 
-          packet_log("rtcp_add_priv_sdes: Can't allocate Item resource\n");
+          packet_log(("rtcp_add_priv_sdes: Can't allocate Item resource\n"));
 
           if(new_chunk) free(chunk);
 
@@ -1246,7 +1246,7 @@
 
        _addlen += RTCP_SDES_ID_BYTE + RTCP_SDES_LEN_BYTE + item->len;
        
-       packet_log("rtcp_add_priv_sdes: New Item=%dB:chunk(%d)\n", RTCP_SDES_ID_BYTE + RTCP_SDES_LEN_BYTE + item->len, chunk->SRC);
+       packet_log(("rtcp_add_priv_sdes: New Item=%dB:chunk(%d)\n", RTCP_SDES_ID_BYTE + RTCP_SDES_LEN_BYTE + item->len, chunk->SRC));
     }
 
     if(!new_sdes && new_chunk)
@@ -1268,7 +1268,7 @@
           return XRTP_EREFUSE;
        }
 
-       packet_log("rtcp_add_priv_sdes: New SDES Packet\n");
+       packet_log(("rtcp_add_priv_sdes: New SDES Packet\n"));
 
        sdes->chunks[sdes->$head.count++] = chunk;
 
@@ -1276,7 +1276,7 @@
 
     sdes->$head.bytes += _addlen;
 
-    packet_log("rtcp_add_priv_sdes: SDES = %dB\n", sdes->$head.bytes);
+    packet_log(("rtcp_add_priv_sdes: SDES = %dB\n", sdes->$head.bytes));
 
     return _addlen;
  }
@@ -1321,7 +1321,7 @@
     sdes->$head.bytes = sdes->$head.bytes + chunk->padlen;
     chunk->ended = 1;
     
-    packet_log("rtcp_end_sdes: RTCP is %d bytes\n", rtcp_length(rtcp));
+    packet_log(("rtcp_end_sdes: RTCP is %d bytes\n", rtcp_length(rtcp)));
 
     return XRTP_OK;        
  }
@@ -1346,7 +1346,7 @@
 
     if(!sdes){
 
-        packet_log("< rtcp_sdes: No SDES packet found in rtcp >\n");
+        packet_log(("< rtcp_sdes: No SDES packet found in rtcp >\n"));
         *r_sdes = NULL;
         return 0;  /* zero length means no found */
 
@@ -1363,7 +1363,7 @@
 
        if(!chunk){
 
-          packet_log("< rtcp_sdes: No SDES packet for SSRC[%d] found in the packet >\n", SRC);
+          packet_log(("< rtcp_sdes: No SDES packet for SSRC[%d] found in the packet >\n", SRC));
           *r_sdes = NULL;
           return 0;  /* zero length means no found */
 
@@ -1380,7 +1380,7 @@
 
           if(!item){
 
-              packet_log("< rtcp_sdes: No SDES[%d] packet for SSRC[%d] found in the packet >\n", type, SRC);
+              packet_log(("< rtcp_sdes: No SDES[%d] packet for SSRC[%d] found in the packet >\n", type, SRC));
               *r_sdes = NULL;
               return 0;  /* zero length means no found */
 
@@ -1465,28 +1465,30 @@
   */
  xrtp_rtcp_bye_t * rtcp_new_bye(xrtp_rtcp_compound_t * com, uint32 SRCs[], uint8 n_SRC, uint8 len, char * why){
 
-    xrtp_rtcp_bye_t * bye;
+    int i = 0;
+    uint8 pad = 0;
+	xrtp_rtcp_bye_t * bye;
 
     uint32 _addlen = RTCP_HEAD_FIX_BYTE + n_SRC * RTCP_SRC_BYTE + RTCP_WHY_BYTE + len;
 
-    packet_log("rtcp_new_bye: Bye=%dB(Before padding)\n", _addlen);
+    packet_log(("rtcp_new_bye: Bye=%dB(Before padding)\n", _addlen));
 
-    uint8 pad = (_addlen % 4) ? 4 - _addlen % 4 : 0;
+    pad = (_addlen % 4) ? 4 - _addlen % 4 : 0;
     
     _addlen = pad + _addlen;
 
-    packet_log("rtcp_new_bye: Bye=%dB(After padding)\n", _addlen);
+    packet_log(("rtcp_new_bye: Bye=%dB(After padding)\n", _addlen));
 
     if(com->n_packet == com->max_packets){
 
-       packet_log("rtcp_new_bye: Maximum packet reached\n");
+       packet_log(("rtcp_new_bye: Maximum packet reached\n"));
 
        return NULL;
     }
 
     if(_addlen + com->bytes > com->maxlen){
 
-       packet_log("rtcp_new_bye: Maximum compound size is %d bytes\n", com->maxlen);
+       packet_log(("rtcp_new_bye: Maximum compound size is %d bytes\n", com->maxlen));
 
        return NULL;
     }
@@ -1494,7 +1496,7 @@
     bye = (xrtp_rtcp_bye_t *)malloc(sizeof(struct xrtp_rtcp_bye_s));
     if(!bye){
 
-       packet_log("rtcp_new_bye: Can't allocate for BYE packet\n");
+       packet_log(("rtcp_new_bye: Can't allocate for BYE packet\n"));
 
        return NULL;
     }
@@ -1510,7 +1512,6 @@
     bye->len_why = len;
     bye->why = why;
 
-    int i;
     for(i=0; i<n_SRC; i++){
 
        bye->srcs[i] = SRCs[i];
@@ -1608,14 +1609,14 @@
 
     if(com->n_packet == com->max_packets){
 
-       packet_log("rtcp_new_app: Maximum packet reached\n");
+       packet_log(("rtcp_new_app: Maximum packet reached\n"));
 
        return NULL;
     }
 
     if(len % 4){
 
-       packet_log("rtcp_new_app: Data len MUST mutiple of 32bits\n");
+       packet_log(("rtcp_new_app: Data len MUST mutiple of 32bits\n"));
 
        return NULL;
     }
@@ -1623,7 +1624,7 @@
     app = (xrtp_rtcp_app_t *)malloc(sizeof(struct xrtp_rtcp_app_s));
     if(!app){
 
-       packet_log("rtcp_new_app: Can't allocate for BYE packet\n");
+       packet_log(("rtcp_new_app: Can't allocate for BYE packet\n"));
 
        return NULL;
     }
@@ -1642,7 +1643,7 @@
 
     com->heads[com->n_packet++] = (xrtp_rtcp_head_t *)app;
 
-    packet_log("rtcp_new_app: RTCP is %d bytes\n", rtcp_length(com));
+    packet_log(("rtcp_new_app: RTCP is %d bytes\n", rtcp_length(com)));
 
     return app;
  }
@@ -1753,7 +1754,7 @@
     sr->reports[sr->$head.count++] = repo;
     sr->$head.bytes += RTCP_REPORT_BYTE;
 
-    packet_log("_rtcp_sr_add_report: n_report=%d, bytes=%dB\n", sr->$head.count, RTCP_REPORT_BYTE);
+    packet_log(("_rtcp_sr_add_report: n_report=%d, bytes=%dB\n", sr->$head.count, RTCP_REPORT_BYTE));
 
     return XRTP_OK;
  }
@@ -1764,7 +1765,7 @@
 
     xrtp_rtcp_report_t * repo;
     
-    packet_log("_rtcp_rr_add_report: Add RR Report\n");
+    packet_log(("_rtcp_rr_add_report: Add RR Report\n"));
 
     if(rr->$head.count == XRTP_MAX_REPORTS){
 
@@ -1839,13 +1840,14 @@
 
     com->first_head->length = com->first_head->bytes / 4 - 1; /* RFC 1889 */
     
-    packet_log("rtcp_add_report: RTCP raw packet is %d bytes\n", rtcp_length(com));
+    packet_log(("rtcp_add_report: RTCP raw packet is %d bytes\n", rtcp_length(com)));
 
     return XRTP_OK;
  }
 
  int rtcp_done_all_reports(xrtp_rtcp_compound_t * com){
 
+    int i = 0;
     xrtp_rtcp_sr_t * sr = NULL;
     xrtp_rtcp_rr_t * rr = NULL;
 
@@ -1855,7 +1857,6 @@
 
           sr = (xrtp_rtcp_sr_t *)com->first_head;
 
-          int i;
           for(i=0; i<sr->$head.count; i++){
              free(sr->reports[i]);
           }
@@ -1910,6 +1911,7 @@
                      uint32 * ret_seqn, uint32 * ret_jit,
                      uint32 * ret_ts, uint32 * ret_delay){
                      
+    int i = 0;
     xrtp_rtcp_sr_t * sr;
     xrtp_rtcp_rr_t * rr;
 
@@ -1921,7 +1923,6 @@
 
           sr = (xrtp_rtcp_sr_t *)com->first_head;
 
-          int i;
           for(i=0; i<sr->$head.count; i++){
              
              if(sr->reports[i]->SRC == SRC){
@@ -1973,19 +1974,19 @@
 
     if(com->connect){
       
-        packet_log("rtcp_compound_done: free connect[@%d] in rtcp packet\n", (int)(com->connect));
+        packet_log(("rtcp_compound_done: free connect[@%d] in rtcp packet\n", (int)(com->connect)));
         connect_done(com->connect);
     }
         
     if(com->buffer){
       
-        packet_log("rtcp_compound_done: buffer freed\n");
+        packet_log(("rtcp_compound_done: buffer freed\n"));
         free(com->buffer);
     }
     
     free(com);
 
-    packet_log("rtcp_compound_done: freed\n");
+    packet_log(("rtcp_compound_done: freed\n"));
     
     return XRTP_OK;
  }
@@ -1994,6 +1995,7 @@
 
  void rtp_packet_show(xrtp_rtp_packet_t * rtp){
 
+    int i = 0;
     printf("\n<RTP Packet No.=%d>\n", rtp->$head.seqno);
     printf("<Version = %d/>\n", rtp->$head.version);
     printf("<Padding = %d/>\n", rtp->$head.padding);
@@ -2004,7 +2006,6 @@
     printf("<Timestamp = %d/>\n", rtp->$head.timestamp);
     printf("<SSRC src=%d/>\n", rtp->$head.SSRC);
     
-    int i;
     for(i=0; i<rtp->$head.n_CSRC; i++)
        printf("<CSRC n=%d src=%d>\n", i, rtp->$head.csrc_list[i]);
 
@@ -2037,6 +2038,9 @@
     profile_handler_t * hand;
     xrtp_buffer_t * buf;
 
+    uint16 w = 0;
+    int i = 0;
+
     if(rtp->packet_bytes % 4){
       
         rtp->$head.padding = 1;
@@ -2050,17 +2054,16 @@
     
     if(!buf){
 
-        packet_log("< rtp_pack: Fail to allocate buffer memery >\n");
+        packet_log(("< rtp_pack: Fail to allocate buffer memery >\n"));
         return NULL;
     }
 
-    packet_log("rtp_pack: rtp packet length is %d\n", rtp->packet_bytes);
-    packet_log("rtp_pack: buffer size is %d\n", buffer_maxlen(buf));
+    packet_log(("rtp_pack: rtp packet length is %d\n", rtp->packet_bytes));
+    packet_log(("rtp_pack: buffer size is %d\n", buffer_maxlen(buf)));
 
-    uint16 w = 0;
 
     /* Pack RTP Fixed Head */    
-    packet_log("rtp_pack: Packing RTP head\n");
+    packet_log(("rtp_pack: Packing RTP head\n"));
 
     w = (rtp->$head.version << 14) | (rtp->$head.padding << 13) | (rtp->$head.ext << 12) | (rtp->$head.n_CSRC << 8) | (rtp->$head.mark << 7) | rtp->$head.pt;
     buffer_add_uint16(buf, w);
@@ -2068,7 +2071,6 @@
     buffer_add_uint32(buf, rtp->$head.timestamp);
     buffer_add_uint32(buf, rtp->$head.SSRC);
 
-    int i;
     for(i=0; i<rtp->$head.n_CSRC; i++){
 
        buffer_add_uint32(buf, rtp->$head.csrc_list[i]);
@@ -2080,7 +2082,7 @@
        /* NOTE! The length is counting number of 4-BYTE */
        uint len;
        
-       packet_log("rtp_pack: Packing RTP head extension\n");
+       packet_log(("rtp_pack: Packing RTP head extension\n"));
     
        len = rtp->headext->len;
        len = (len % 4) ? (len / 4 + 1) : (len / 4);
@@ -2093,19 +2095,19 @@
        if(hand && hand->pack_rtp_headext){
           
           /* Profile specific method */
-          packet_log("rtp_pack: Call handler.pack_rtp_headext()\n");
+          packet_log(("rtp_pack: Call handler.pack_rtp_headext()\n"));
           hand->pack_rtp_headext(hand, rtp, rtp->session, rtp->headext->info, len);
 
        }else{
           
           /* Dummy method */
-          packet_log("rtp_pack: copy headext\n");
+          packet_log(("rtp_pack: copy headext\n"));
 
           buffer_add_data(buf, rtp->headext->data, rtp->headext->len);
           
           for(i=0; i<rtp->headext->len_pad; i++){
 
-             packet_log("rtp_pack: padding headext\n");
+             packet_log(("rtp_pack: padding headext\n"));
 
              buffer_add_uint8(buf, RTP_PADDING_VALUE);
           }
@@ -2115,7 +2117,7 @@
     /* Pack RTP Payload */
     buffer_add_data(buf, rtp->$payload.data, rtp->$payload.len);
 
-    packet_log("rtp_pack: Packing RTP Payload\n");
+    packet_log(("rtp_pack: Packing RTP Payload\n"));
 
     /* Pad RTP packet */
     if(rtp->$head.padding){
@@ -2127,7 +2129,7 @@
 
        buffer_add_uint8(buf, (char)pad);
        
-       packet_log("rtp_pack: %d padding byte RTP Payload\n", pad);
+       packet_log(("rtp_pack: %d padding byte RTP Payload\n", pad));
     }
 
     /* Cleaning house */
@@ -2151,10 +2153,18 @@
     
     int ret = XRTP_OK;
 
-    if(!rtp->buffer)
+    profile_handler_t * hand = NULL;
+	xrtp_rtp_head_t * rtph = NULL;
+	int prefix_bytes = 0;
+
+    int i = 0;
+
+    uint16 extinfo, extlen;
+
+	if(!rtp->buffer)
        return XRTP_INVALID;
        
-    profile_handler_t * hand = rtp->handler;
+    hand = rtp->handler;
     
     rtp->direct = RTP_RECEIVE;
     rtp->packet_bytes = buffer_datalen(rtp->buffer);
@@ -2162,7 +2172,7 @@
     /* Unpack RTP Fixed head */
     if(buffer_next_uint16(rtp->buffer, &w) != sizeof(uint16)){ return XRTP_EFORMAT; }
     
-    xrtp_rtp_head_t * rtph = &rtp->$head;
+    rtph = &rtp->$head;
     
     rtph->version = (w >> 14) & 0x3;   /* '11000000-00000000' */
     if(rtph->version != RTP_VERSION){
@@ -2177,11 +2187,11 @@
     rtph->mark = (w >> 7) & 0x1;       /* '00000000-10000000' */
     
     /*
-    packet_log("rtp_unpack: version = %d\n", rtph->version);
-    packet_log("rtp_unpack: padding = %d\n", rtph->padding);
-    packet_log("rtp_unpack: ext = %d\n", rtph->ext);
-    packet_log("rtp_unpack: n_csrc = %d\n", rtph->n_CSRC);
-    packet_log("rtp_unpack: mark = %d\n", rtph->mark);
+    packet_log(("rtp_unpack: version = %d\n", rtph->version));
+    packet_log(("rtp_unpack: padding = %d\n", rtph->padding));
+    packet_log(("rtp_unpack: ext = %d\n", rtph->ext));
+    packet_log(("rtp_unpack: n_csrc = %d\n", rtph->n_CSRC));
+    packet_log(("rtp_unpack: mark = %d\n", rtph->mark));
      */
      
     rtph->pt = (w & 0x7f);      /* '00000000-01111111' */
@@ -2204,10 +2214,9 @@
     if(buffer_next_uint32(rtp->buffer, &dw) != sizeof(uint32)){ return XRTP_EFORMAT; }
     rtph->SSRC = dw;
     
-    int prefix_bytes = RTP_HEAD_FIX_BYTE;
+    prefix_bytes = RTP_HEAD_FIX_BYTE;
 
     /* parsing CSRC list */
-    int i;
     for(i=0; i<rtph->n_CSRC; i++){
 
        if(buffer_next_uint32(rtp->buffer, &dw) != sizeof(uint32)){ return XRTP_EFORMAT; }
@@ -2224,7 +2233,6 @@
     }
 
     /* Unpack RTP Head Extension */
-    uint16 extinfo, extlen;
     if(rtph->ext){
 
        if(buffer_next_uint16(rtp->buffer, &extinfo) != sizeof(uint16)){ return XRTP_EFORMAT; }
@@ -2262,7 +2270,7 @@
     rtp->$payload.buf_pos = buffer_position(rtp->buffer);
     rtp->$payload.data = buffer_address(rtp->buffer);
     rtp->$payload.len = rtp->packet_bytes - prefix_bytes;
-    packet_log("rtp_unpack: payload + padding is %d bytes\n", rtp->$payload.len);
+    packet_log(("rtp_unpack: payload + padding is %d bytes\n", rtp->$payload.len));
 
     if(rtph->padding){
       
@@ -2274,7 +2282,7 @@
         if(b <= RTP_MAX_PAD && b >= RTP_MIN_PAD)
             rtp->$payload.len -= b;
         else
-            packet_log("< rtp_unpack: %d is illegal padding value >\n", b);
+            packet_log(("< rtp_unpack: %d is illegal padding value >\n", b));
     }
     
     if(hand && hand->parse_rtp_payload){
@@ -2289,6 +2297,9 @@
   * Display rtcp SR packet
   */
  void rtcp_show_sr(xrtp_rtcp_sr_t * sr){
+
+    int i;
+    xrtp_rtcp_report_t * rep;
 
     printf("<packet type=sr bytes=%d>\n", sr->$head.bytes);
     printf("<version = %d/>\n", sr->$head.version);
@@ -2305,8 +2316,6 @@
     printf("<num_octet_sent = %d/>\n", sr->$sender.n_octet_sent);
     printf("</senderinfo>\n\n");
 
-    int i;
-    xrtp_rtcp_report_t * rep;
     for(i=0; i<sr->$head.count; i++){
 
        rep = sr->reports[i];
@@ -2339,6 +2348,9 @@
   */
  void rtcp_show_rr(xrtp_rtcp_rr_t * rr){
 
+    int i;
+    xrtp_rtcp_report_t * rep;
+
     printf("<packet type=rr bytes=%d>\n", rr->$head.bytes);
     printf("<version = %d/>\n", rr->$head.version);
     printf("<padding = %d/>\n", rr->$head.padding);
@@ -2348,8 +2360,6 @@
 
     printf("<SSRC src=%d/>\n\n", rr->SSRC);
 
-    int i;
-    xrtp_rtcp_report_t * rep;
     for(i=0; i<rr->$head.count; i++){
 
        rep = rr->reports[i];
@@ -2381,6 +2391,10 @@
   */
  void rtcp_show_sdes(xrtp_rtcp_sdes_t * sdes){
 
+    int i, j, k;
+    xrtp_rtcp_sdes_chunk_t *chk = NULL;
+    xrtp_rtcp_sdes_item_t *item = NULL;
+
     printf("<packet type=sdes bytes=%d>\n", sdes->$head.bytes);
     printf("<version = %d/>\n", sdes->$head.version);
     printf("<padding = %d/>\n", sdes->$head.padding);
@@ -2388,9 +2402,6 @@
     printf("<type = %d/>\n", sdes->$head.type);
     printf("<length = %d/>\n\n", sdes->$head.length);
 
-    int i, j, k;
-    xrtp_rtcp_sdes_chunk_t *chk;
-    xrtp_rtcp_sdes_item_t *item;
     for(i=0; i<sdes->$head.count; i++){
 
        chk = sdes->chunks[i];
@@ -2434,6 +2445,8 @@
   */
  void rtcp_show_bye(xrtp_rtcp_bye_t * bye){
 
+    int i = 0;
+
     printf("<packet type=bye bytes=%d>\n", bye->$head.bytes);
     printf("<version = %d/>\n", bye->$head.version);
     printf("<padding = %d/>\n", bye->$head.padding);
@@ -2441,7 +2454,6 @@
     printf("<type = %d/>\n", bye->$head.type);
     printf("<length = %d/>\n\n", bye->$head.length);
 
-    int i;
     for(i=0; i<bye->$head.count; i++){
 
        printf("<to src=%d/>\n", bye->srcs[i]);
@@ -2459,6 +2471,8 @@
   */
  void rtcp_show_app(xrtp_rtcp_app_t * app){
 
+    int i;
+
     printf("<packet type=app SSRC=%d bytes=%d>\n", app->SSRC, app->$head.bytes);
     printf("<version = %d/>\n", app->$head.version);
     printf("<padding = %d/>\n", app->$head.padding);
@@ -2468,7 +2482,7 @@
 
     printf("<name = %d/>\n", app->name);
     printf("<data>");
-    int i;
+
     for(i=0; i<app->len_data; i++)
        printf("%d ", app->data[i]);
     printf("</data>\n");
@@ -2480,14 +2494,16 @@
   */
  void rtcp_show(xrtp_rtcp_compound_t * rtcp){
 
+    int i = 0;
+
     printf("<rtcp packets=%d bytes=%d>\n", rtcp->n_packet, rtcp_length(rtcp));
-    if(rtcp->first_head->type == RTCP_TYPE_SR)       
+    
+	if(rtcp->first_head->type == RTCP_TYPE_SR)       
        rtcp_show_sr((xrtp_rtcp_sr_t *)rtcp->first_head);
        
     if(rtcp->first_head->type == RTCP_TYPE_RR)       
        rtcp_show_rr((xrtp_rtcp_rr_t *)rtcp->first_head);
 
-    int i;
     for(i=1; i<rtcp->n_packet; i++){
 
        switch(rtcp->heads[i]->type){
@@ -2585,7 +2601,7 @@
        /* check padding */
        buffer_fill_value(buf, 0, chk->padlen);
        
-       packet_log("_rtcp_pack_sdes: padding %d byte in chunk\n", chk->padlen);
+       packet_log(("_rtcp_pack_sdes: padding %d byte in chunk\n", chk->padlen));
     }
     
     return ret;
@@ -2621,6 +2637,7 @@
  xrtp_buffer_t * rtcp_pack(xrtp_rtcp_compound_t * com){
 
     int ret;
+    int i = 0;
 
     xrtp_rtcp_head_t * rtcphead = com->first_head;
     
@@ -2636,9 +2653,7 @@
     
     /* Pack RTCP Fixed Head */
     ret = _rtcp_pack_head(rtcphead, buf);
-    
-    int i;
-    
+        
     /* Pack Report Packet */
     if(rtcphead->type == RTCP_TYPE_SR){
        
@@ -2724,7 +2739,7 @@
 
     if(buffer_next_uint16(buf, r_len) != sizeof(uint16)){ return XRTP_EFORMAT; }
 
-    packet_log("rtcp_parse_head: %d 32-bit RTCP #%d Packet found\n", *r_len, *r_type);
+    packet_log(("rtcp_parse_head: %d 32-bit RTCP #%d Packet found\n", *r_len, *r_type));
 
     return XRTP_OK;
  }
@@ -2788,7 +2803,7 @@
           /* As the function usually for rebuilding from byte stream
            * Assume no same id items will came at same time */
           sdes->chunks[i]->items[sdes->chunks[i]->n_item] = item;
-          packet_log("_rtcp_sdes_add_item: chunk(%d).items[%d]\n", sdes->chunks[i]->SRC, sdes->chunks[i]->n_item);
+          packet_log(("_rtcp_sdes_add_item: chunk(%d).items[%d]\n", sdes->chunks[i]->SRC, sdes->chunks[i]->n_item));
           sdes->chunks[i]->n_item++;
        }
     }
@@ -2806,7 +2821,7 @@
        chunk->n_item = 1;
        sdes->chunks[sdes->$head.count++] = chunk;
        
-       packet_log("_rtcp_sdes_add_item: new %dth chunk(%d).items[0]\n", sdes->$head.count, SRC);
+       packet_log(("_rtcp_sdes_add_item: new %dth chunk(%d).items[0]\n", sdes->$head.count, SRC));
     }
 
     return XRTP_OK;
@@ -2818,28 +2833,28 @@
  int _rtcp_unpack_sdes(xrtp_rtcp_compound_t * rtcp, uint8 ver, uint8 pad, uint8 count, uint16 len){
 
     int ret = XRTP_OK;
-    xrtp_rtcp_sdes_t * sdes = _rtcp_new_sdes(ver, pad, count, len);
-    if(!sdes){
-       return XRTP_EMEM;
-    }
-
-    xrtp_buffer_t * buf = rtcp->buffer;
-    
     uint32 SRC;
     uint8 id, vlen;
     uint chk_start, chk_pad;
     
     xrtp_rtcp_sdes_item_t * item = NULL;
         
-    int i;
+    int i = 0;
+    int end = 0;
+    xrtp_buffer_t * buf = rtcp->buffer;
+
+    xrtp_rtcp_sdes_t * sdes = _rtcp_new_sdes(ver, pad, count, len);
+
+	if(!sdes){
+       return XRTP_EMEM;
+    }
+    
     for(i=0; i<count; i++){
 
        chk_start = buffer_position(buf);
        
        /* Unpack a chunk */
        if(buffer_next_uint32(buf, &SRC) != sizeof(uint32)){ ret=XRTP_EFORMAT; }
-
-       int end = 0;
        
        while(!end){
           
@@ -2860,23 +2875,29 @@
           }else if(id == RTCP_SDES_PRIV){
           
              uint8 prelen;
+             char* prefix;
+             uint8 privlen;
+			 char *prival;
+
              if(buffer_next_uint8(buf, &vlen) != sizeof(uint8)){ ret=XRTP_EFORMAT; }
              if(buffer_next_uint8(buf, &prelen) != sizeof(uint8)){ ret=XRTP_EFORMAT; }
 
-             char * prefix = (char *)malloc(prelen);
+			 prefix = (char *)malloc(prelen);
              if(!prefix)  return XRTP_EMEM;
              if(buffer_next_data(buf, prefix, prelen) != prelen){ ret=XRTP_EFORMAT; }
 
-             uint8 privlen = vlen - prelen - sizeof(uint8);
-             char * prival = (char *)malloc(privlen);
+			 privlen = vlen - prelen - sizeof(uint8);
+             prival = (char *)malloc(privlen);
              if(buffer_next_data(buf, prival, privlen) != privlen){ ret=XRTP_EFORMAT; }
 
              item = _rtcp_sdes_new_priv_item(vlen, prelen, prefix, privlen, prival);
           
           }else{   /* id != RTCP_SDES_PRIV */
 
-             if(buffer_next_uint8(buf, &vlen) != sizeof(uint8)){ ret=XRTP_EFORMAT; }
-             char * val = (char *)malloc(vlen);
+             char * val;
+
+			 if(buffer_next_uint8(buf, &vlen) != sizeof(uint8)){ ret=XRTP_EFORMAT; }
+             val = (char *)malloc(vlen);
              if(buffer_next_data(buf, val, vlen) != vlen){ ret=XRTP_EFORMAT; }
 
              item = _rtcp_sdes_new_item(id, vlen, val);
@@ -2887,7 +2908,7 @@
     }
 
     rtcp->heads[rtcp->n_packet++] = (xrtp_rtcp_head_t *)sdes;
-    packet_log("_rtcp_unpack_sdes: Add %dth packet(SDES)\n", rtcp->n_packet);
+    packet_log(("_rtcp_unpack_sdes: Add %dth packet(SDES)\n", rtcp->n_packet));
     
     return ret;
  }
@@ -2900,7 +2921,15 @@
     int ret = XRTP_OK;
     uint pos_start;
     
+    int i;
     xrtp_buffer_t * buf = rtcp->buffer;
+    uint32 srcs[XRTP_MAX_RTCP_COUNT];
+    
+    uint8 wlen = 0;
+    char * why = NULL;
+	int len_body = 0;
+    xrtp_rtcp_bye_t * bye = NULL;
+    
     pos_start = buffer_position(buf);  /* exlude the bye head */
     
     /* No such thing, Wrong!
@@ -2908,18 +2937,12 @@
      * if(buffer_next_uint32(buf, &SSRC) != sizeof(uint32)){ ret=XRTP_EFORMAT; }
      */
       
-    int i;
-    uint32 srcs[count];
-    
     for(i=0; i<count; i++){
 
        if(buffer_next_uint32(buf, &srcs[i]) != sizeof(uint32)){ ret=XRTP_EFORMAT; }
     }
 
-    uint8 wlen = 0;
-    char * why = NULL;
-        
-    int len_body = buffer_position(buf) - pos_start;
+    len_body = buffer_position(buf) - pos_start;
     if(len_body < length*4){
 
        if(buffer_next_uint8(buf, &wlen) != sizeof(uint32)){ ret=XRTP_EFORMAT; }
@@ -2935,13 +2958,13 @@
        }
     }
 
-    xrtp_rtcp_bye_t * bye = rtcp_new_bye(rtcp, srcs, count, wlen, why);
+    bye = rtcp_new_bye(rtcp, srcs, count, wlen, why);
     if(!bye){
 
        if(why) free(why);
        return XRTP_FAIL;
     }
-    packet_log("_rtcp_unpack_bye: Add %dth packet(BYE)\n", rtcp->n_packet);
+    packet_log(("_rtcp_unpack_bye: Add %dth packet(BYE)\n", rtcp->n_packet));
 
     return ret;
  }
@@ -2954,27 +2977,30 @@
     int ret = XRTP_OK;
     
     uint32 SSRC, name;
+	int dlen = 0;
     xrtp_buffer_t * buf = rtcp->buffer;
+	char * data = NULL;
+	xrtp_rtcp_app_t * app = NULL;
     
     if(buffer_next_uint32(buf, &SSRC) != sizeof(uint32)){ ret=XRTP_EFORMAT; }
     if(buffer_next_uint32(buf, &name) != sizeof(uint32)){ ret=XRTP_EFORMAT; }
     
-    uint dlen = (length * 4) - 8;
+    dlen = (length * 4) - 8;
 
-    char * data = (char *)malloc(sizeof(char) * dlen);
+    data = (char *)malloc(sizeof(char) * dlen);
     if(!data){
 
        return XRTP_EMEM;
     }
     if(buffer_next_data(buf, data, dlen) != dlen){ ret=XRTP_EFORMAT; }
     
-    xrtp_rtcp_app_t * app = rtcp_new_app(rtcp, SSRC, count, name, dlen, data);
+    app = rtcp_new_app(rtcp, SSRC, count, name, dlen, data);
     if(!app){
 
        free(data);
        return XRTP_FAIL;
     }
-    packet_log("_rtcp_unpack_app: Add %dth packet(APP)\n", rtcp->n_packet);
+    packet_log(("_rtcp_unpack_app: Add %dth packet(APP)\n", rtcp->n_packet));
 
     return ret;
  }
@@ -2987,10 +3013,22 @@
     int ret = XRTP_OK;
     uint pos_start;
 
-    if(!rtcp->buffer)
-       return XRTP_INVALID;
-
     profile_handler_t *hand = rtcp->handler;
+
+    uint8 ver, padding, count, type;
+    uint16 length;
+    
+    int i;
+
+    uint32 dw, SRC, tlost, fseqn, jitter, lsrstamp, lsrdelay;
+    uint8 flost;
+
+	int len_pac = 0;
+
+    uint len_unscaned = 0;
+
+	if(!rtcp->buffer)
+       return XRTP_INVALID;
 
     /** Don't need, as allocation is assumed.
     
@@ -3008,9 +3046,6 @@
     pos_start = buffer_position(rtcp->buffer); /* Record the start point */
     
     /* Unpack RTCP Fixed head */
-    uint8 ver, padding, count, type;
-    uint16 length;
-    
     ret = rtcp_parse_head(rtcp, rtcp->first_head, &ver, &padding, &count, &type, &length);
     if(ret < XRTP_OK) return ret;
 
@@ -3018,10 +3053,11 @@
     if(type == RTCP_TYPE_SR){
        
        uint32 SSRC, hi_ntp, lo_ntp, rtp_stamp, npac, noct;
+		xrtp_rtcp_sr_t * sr = NULL;
 
-       packet_log("rtcp_unpack: Sender Report\n");
+       packet_log(("rtcp_unpack: Sender Report\n"));
        /* Create Sender Report */
-       xrtp_rtcp_sr_t * sr = _rtcp_new_sr_packet(ver, padding, count, length);
+       sr = _rtcp_new_sr_packet(ver, padding, count, length);
        if(!sr){
 
           /** Don't need, as abrove reason
@@ -3060,13 +3096,14 @@
     }else if(type == RTCP_TYPE_RR){  /* type == RTCP_TYPE_RR */
        
        uint32 SSRC;
+	   xrtp_rtcp_rr_t * rr = NULL;
        
-       packet_log("rtcp_unpack: Receiver Report\n");
+       packet_log(("rtcp_unpack: Receiver Report\n"));
        /* Unpack Receiver Report */
        if(buffer_next_uint32(rtcp->buffer, &SSRC) != sizeof(uint32)){ ret=XRTP_EFORMAT; }
 
        /* Create Sender Report */
-       xrtp_rtcp_rr_t * rr = _rtcp_new_rr_packet(ver, padding, count, length);
+       rr = _rtcp_new_rr_packet(ver, padding, count, length);
        if(!rr){
 
           /** Don't need, as abrove reason
@@ -3095,12 +3132,7 @@
 
     rtcp->n_packet = 1;
     /* Unpack Report Block */
-    int i;
-
-    uint32 dw, SRC, tlost, fseqn, jitter, lsrstamp, lsrdelay;
-    uint8 flost;
-
-    packet_log("rtcp_unpack: %d reports in rtcp\n", count);
+    packet_log(("rtcp_unpack: %d reports in rtcp\n", count));
     for(i=0; i<count; i++){
 
        if(buffer_next_uint32(rtcp->buffer, &SRC) != sizeof(uint32)){ ret=XRTP_EFORMAT; }
@@ -3117,7 +3149,7 @@
     }
 
     /* Unpack Report Extension by Profile Handler */
-    int len_pac = buffer_position(rtcp->buffer) - pos_start;
+    len_pac = buffer_position(rtcp->buffer) - pos_start;
     if(len_pac < (length+1)*4){
 
        if(hand && hand->parse_rtcp_ext){
@@ -3138,7 +3170,7 @@
     } */
     
     /* Unpack following RTCP Packet */
-    uint len_unscaned = buffer_datalen(rtcp->buffer) - buffer_position(rtcp->buffer);
+    len_unscaned = buffer_datalen(rtcp->buffer) - buffer_position(rtcp->buffer);
     
     i = 1;     /* scan for head#1 or forewhile */    
     while(len_unscaned > sizeof(uint32)){ /* More packet head to scan */
@@ -3150,28 +3182,28 @@
        switch(type){
 
           case(RTCP_TYPE_SDES):
-             packet_log("rtcp_unpack: unpack sdes\n");
+             packet_log(("rtcp_unpack: unpack sdes\n"));
              ret = _rtcp_unpack_sdes(rtcp, ver, padding, count, length);
              if(ret < XRTP_OK) return ret;
              break;
           case(RTCP_TYPE_BYE):
-             packet_log("rtcp_unpack: unpack bye\n");
+             packet_log(("rtcp_unpack: unpack bye\n"));
              ret = _rtcp_unpack_bye(rtcp, ver, padding, count, length);
              if(ret < XRTP_OK) return ret;
              break;
           case(RTCP_TYPE_APP):
-             packet_log("rtcp_unpack: unpack app\n");
+             packet_log(("rtcp_unpack: unpack app\n"));
              ret = _rtcp_unpack_app(rtcp, ver, padding, count, length);
              if(ret < XRTP_OK) return ret;
              break;
           default:
-             packet_log("rtcp_unpack: skip %d bytes\n", (length+1) * 4);
+             packet_log(("rtcp_unpack: skip %d bytes\n", (length+1) * 4));
              buffer_seek(rtcp->buffer, pos_start + (length+1) * 4); /* Skip unsupported packet */
        }
        
        /* Callback handler to handle RTCP Packet
        if(hand && hand->parse_rtcp_packet){
-          packet_log("rtcp_unpack: callback to handler\n");
+          packet_log(("rtcp_unpack: callback to handler\n"));
           ret = hand->parse_rtcp_packet(hand, rtcp, rtcp->heads[i], rtcp->session);
           if(ret < XRTP_OK) return ret;
        } */

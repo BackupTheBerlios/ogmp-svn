@@ -32,7 +32,7 @@
  #else
    const int pipe_log = 0;
  #endif
- #define pipe_log(fmt, args...)  do{if(pipe_log) printf(fmt, ##args);}while(0)
+ #define pipe_log(fmtargs)  do{if(pipe_log) printf fmtargs;}while(0)
 
  #define TIME_NEWER(x,y) (((x) - (y)) >> (HRTIME_BITS - 1))
 
@@ -43,7 +43,7 @@
     pipe = (packet_pipe_t *)malloc(sizeof(packet_pipe_t));    
     if(!pipe){
       
-       pipe_log("< pipe_new: Can't create pipe >\n");
+       pipe_log(("< pipe_new: Can't create pipe >\n"));
        return NULL;
     }
 
@@ -56,12 +56,12 @@
 
     pipe->session = ses;
     
-    pipe_log("pipe_new: ");
-    if(type == XRTP_RTP) pipe_log("rtp ");
-    if(type == XRTP_RTCP) pipe_log("rtcp ");
-    if(direct == XRTP_SEND) pipe_log("sending ");
-    if(direct == XRTP_RECEIVE) pipe_log("receiving ");
-    pipe_log("pipe[@%u] created\n", (int)(pipe));
+    pipe_log(("pipe_new: "));
+    if(type == XRTP_RTP) pipe_log(("rtp "));
+    if(type == XRTP_RTCP) pipe_log(("rtcp "));
+    if(direct == XRTP_SEND) pipe_log(("sending "));
+    if(direct == XRTP_RECEIVE) pipe_log(("receiving "));
+    pipe_log(("pipe[@%u] created\n", (int)(pipe)));
     
     return pipe;
  }
@@ -83,14 +83,14 @@
  
     if(pipe->num_step == PIPE_MAX_STEP){
       
-       pipe_log("< pipe_add:pipe max handler reached >\n");
+       pipe_log(("< pipe_add:pipe max handler reached >\n"));
        return NULL;
     }
 
     step = (pipe_step_t *)malloc(sizeof(pipe_step_t));
     if(!step){
       
-       pipe_log("< pipe_add: No enough memory to alloc pipe handler >\n");
+       pipe_log(("< pipe_add: No enough memory to alloc pipe handler >\n"));
        return NULL;
     }
 
@@ -107,8 +107,8 @@
     step->step_no = pipe->num_step;
     pipe->num_step++;
 
-    pipe_log("pipe_add: %d steps in pipe\n", pipe->num_step);
-    pipe_log("pipe_add: pipe->step[%d]->pipe = %u\n", step->step_no, (int)pipe->steps[step->step_no]->pipe);
+    pipe_log(("pipe_add: %d steps in pipe\n", pipe->num_step));
+    pipe_log(("pipe_add: pipe->step[%d]->pipe = %u\n", step->step_no, (int)pipe->steps[step->step_no]->pipe));
 
     return step;
  }
@@ -117,18 +117,20 @@
 
     pipe_step_t * step;
 
+    int i;
+
     if(pipe->num_step == PIPE_MAX_STEP){
-       pipe_log("< pipe_add: pipe max handler reached >\n");
+       pipe_log(("< pipe_add: pipe max handler reached >\n"));
        return NULL;
     }
 
     step = (pipe_step_t *)malloc(sizeof(pipe_step_t));
     if(!step){
-       pipe_log("< pipe_add_before: No enough memory to alloc pipe handler >\n");
+       pipe_log(("< pipe_add_before: No enough memory to alloc pipe handler >\n"));
        return NULL;
     }
 
-    bzero(step, sizeof(struct pipe_step_s));
+    memset(step, 0, sizeof(struct pipe_step_s));
     
     //handler->set_callback(handler, XRTP_HANDLER_CALLBACK_IDEL, pipe_callback_step_idel, step);
     step->handler = handler;
@@ -137,7 +139,6 @@
     step->pipe = pipe;
     step->enable = enable;
 
-    int i;
     for(i=pipe->num_step; i>0; i--){
 
         pipe->steps[i-1]->step_no++;
@@ -148,7 +149,7 @@
     pipe->steps[0] = step;
 
     pipe->num_step++;
-    pipe_log("pipe_add_before(): %d handler(s) in the pipe\n", pipe->num_step);
+    pipe_log(("pipe_add_before(): %d handler(s) in the pipe\n", pipe->num_step));
 
     return step;
  }
@@ -156,6 +157,9 @@
  pipe_step_t * pipe_replace(packet_pipe_t *pipe, char * oldid, profile_handler_t *handler){
 
     pipe_step_t * step, * oldstep = NULL;
+    profile_handler_t * hand = NULL;
+    profile_class_t * modu = NULL;
+    int i;
 
     /* Can't replace when pipe is busy */
     if(pipe->packets && queue_length(pipe->packets) > 0)
@@ -163,7 +167,7 @@
 
     step = (pipe_step_t *)malloc(sizeof(pipe_step_t));
     if(!step){
-       pipe_log("< pipe_add: No enough memory to alloc pipe handler >\n");
+       pipe_log(("< pipe_add: No enough memory to alloc pipe handler >\n"));
        return NULL;
     }
 
@@ -173,9 +177,6 @@
 
     step->pipe = pipe;
 
-    profile_handler_t * hand = NULL;
-    profile_class_t * modu = NULL;
-    int i;
     for(i=0; i<pipe->num_step; i++){
 
        hand = pipe->steps[i]->handler;
@@ -208,13 +209,13 @@
  int pipe_set_buffer(packet_pipe_t * pipe, int size, xrtp_hrtime_t timesize){
    
     if(pipe->packets){
-       pipe_log("< pipe_set_buffer: Change buffer size is not permit in this version >\n");
+       pipe_log(("< pipe_set_buffer: Change buffer size is not permit in this version >\n"));
        return XRTP_EPERMIT;
     }
     
     pipe->packets = queue_new(size);
     if(!pipe->packets){
-       pipe_log("< pipe_set_buffer: No enough memory to alloc packet buffer >\n");
+       pipe_log(("< pipe_set_buffer: No enough memory to alloc packet buffer >\n"));
        return XRTP_EMEM;
     }
     
@@ -233,7 +234,7 @@
        }
     }
     
-    pipe_log("pipe_first_step: no step found\n");
+    pipe_log(("pipe_first_step: no step found\n"));
     
     return -1;
  }
@@ -257,7 +258,7 @@
     xrtp_rtp_packet_t * rtp;
     xrtp_rtcp_compound_t * rtcp;
     
-    pipe_log("_pipe_step: step->pipe = %u, step->load->packet = %u\n", (int)step->pipe, (int)step->load->packet);
+    pipe_log(("_pipe_step: step->pipe = %u, step->load->packet = %u\n", (int)step->pipe, (int)step->load->packet));
     if(step->pipe->type == XRTP_RTP){
 
        rtp = (xrtp_rtp_packet_t *)(step->load->packet);
@@ -294,13 +295,12 @@
 
  int pipe_rtp_outgoing(packet_pipe_t * pipe, xrtp_rtp_packet_t * rtp){
 
-    pipe_log("pipe_rtp_outgoing: to be implemented\n");
+    pipe_log(("pipe_rtp_outgoing: to be implemented\n"));
     return XRTP_OK;
  }
  
  int pipe_rtcp_outgoing(packet_pipe_t * pipe, xrtp_rtcp_compound_t * rtcp){
 
-    pipe_log("pipe_rtcp_outgoing: pump out the rtcp directly\n");
     xrtp_session_t * ses = rtcp->session;
     xrtp_buffer_t * buf= rtcp_buffer(rtcp);
     char * data = buffer_data(buf);
@@ -308,31 +308,34 @@
     session_connect_t * conn = NULL;
 
     int i;
+
+    pipe_log(("pipe_rtcp_outgoing: pump out the rtcp directly\n"));
+
     for(i=0; i<ses->n_rtcp_out; i++){
 
        conn = ses->outgoing_rtcp[i];
        
-       pipe_log("pipe_rtcp_outgoing: sent to outgoing connect %d of %d\n", i, ses->n_rtcp_out);
+       pipe_log(("pipe_rtcp_outgoing: sent to outgoing connect %d of %d\n", i, ses->n_rtcp_out));
        connect_send(conn, data, datalen);
     }
 
     if(ses->join_to_rtcp_port){
 
-       pipe_log("pipe_rtcp_outgoing: Session[%d] has a join desire[%u] pending\n", session_id(ses), (int)(ses->join_to_rtcp_port));
+       pipe_log(("pipe_rtcp_outgoing: Session[%d] has a join desire[%u] pending\n", session_id(ses), (int)(ses->join_to_rtcp_port)));
        conn = connect_new(ses->rtcp_port, ses->join_to_rtcp_port);
        if(conn){
 
-          pipe_log("pipe_rtcp_outgoing: send to joining connect\n");
+          pipe_log(("pipe_rtcp_outgoing: send to joining connect\n"));
           connect_send(conn, data, datalen);
           connect_done(conn);
           
        }else{
 
-          pipe_log("pipe_rtcp_outgoing: Fail to conect\n");
+          pipe_log(("pipe_rtcp_outgoing: Fail to conect\n"));
        }
     }
     
-    pipe_log("pipe_rtcp_outgoing: sent to %d members\n", ses->n_rtcp_out);
+    pipe_log(("pipe_rtcp_outgoing: sent to %d members\n", ses->n_rtcp_out));
     return XRTP_OK;
  }
  
@@ -450,7 +453,7 @@
     
     *packet_bytes = 0;
     
-    pipe_log("pipe_pump: start proccess ...\n");
+    pipe_log(("pipe_pump: start proccess ...\n"));
     load = (pipe_load_t *)malloc(sizeof(struct pipe_load_s));
     if(!load){
 
@@ -466,7 +469,7 @@
     
     while( load->nextstep >= 0 ){
          
-       pipe_log("pipe_pump: in step[%d]\n", load->nextstep);
+       pipe_log(("pipe_pump: in step[%d]\n", load->nextstep));
        step = pipe->steps[load->nextstep];
 
        step->load = load;
@@ -492,19 +495,19 @@
     if(!pipe->stop && pipe->type == XRTP_RTP){  /* Produce the rtp packet successfully */
 
        /* return with the RTP packet for scheduling */
-       pipe_log("pipe_pump: rtp packet ready for scheduling\n");
+       pipe_log(("pipe_pump: rtp packet ready for scheduling\n"));
     }
 
     if(!pipe->stop && pipe->type == XRTP_RTCP){   /* Produce the rtcp packet successfully */
 
        /* return with the RTCP data for sending */
        /* Little confusion, may clarify these later */
-       pipe_log("pipe_pump: rtcp ready for sending\n");
+       pipe_log(("pipe_pump: rtcp ready for sending\n"));
     }
 
     if(pipe->stop){  /* pipe interupted, consume the packet */
        
-       pipe_log("< pipe_pump: Fail to produce the packet >\n");
+       pipe_log(("< pipe_pump: Fail to produce the packet >\n"));
        
        if(pipe->type == XRTP_RTP)
           rtp_packet_done((xrtp_rtp_packet_t*)pac);
@@ -525,7 +528,7 @@
     free(step->load);
     step->load = NULL;
 
-    pipe_log("pipe_pump: packet produced.\n");
+    pipe_log(("pipe_pump: packet produced.\n"));
     
     return XRTP_OK;
  }
@@ -537,7 +540,7 @@
    
     pipe_step_t * step = (pipe_step_t *)gen;
 
-    pipe_log("_pipe_callback_step_idel: Get a call from step@%d\n", (int)step);
+    pipe_log(("_pipe_callback_step_idel: Get a call from step@%d\n", (int)step));
 
     step->pipe->stop  = 1;
 
@@ -548,7 +551,7 @@
 
     pipe_step_t * step = (pipe_step_t *)gen;
 
-    pipe_log("_pipe_callback_step_unload: Get a call from step@%d\n", (int)step);
+    pipe_log(("_pipe_callback_step_unload: Get a call from step@%d\n", (int)step));
 
     step->load->packet  = NULL;
 
@@ -557,24 +560,24 @@
 
  int pipe_control(pipe_step_t* step, int type, void* *ret_callback, void* *ret_data){
 
-    pipe_log("pipe_get_step_callback: Get callback(%d)\n", type);
+    pipe_log(("pipe_get_step_callback: Get callback(%d)\n", type));
     
     if(step == NULL){
-       pipe_log("pipe_get_step_callback: The step is not given\n");
+       pipe_log(("pipe_get_step_callback: The step is not given\n"));
        return XRTP_EPARAM;
     }
 
     switch(type){
 
        case(PIPE_CALLBACK_STEP_IDEL):
-          pipe_log("pipe_get_step_callback: Found callback.step_idel(step@%d)\n", (int)step);
+          pipe_log(("pipe_get_step_callback: Found callback.step_idel(step@%d)\n", (int)step));
 
           *ret_callback = _pipe_callback_step_idel;
           *ret_data = step;
           break;
           
        case(PIPE_CALLBACK_STEP_UNLOAD):
-          pipe_log("pipe_get_step_callback: Found callback.step_unload(step@%d)\n", (int)step);
+          pipe_log(("pipe_get_step_callback: Found callback.step_unload(step@%d)\n", (int)step));
 
           *ret_callback = _pipe_callback_step_unload;
           *ret_data = step;

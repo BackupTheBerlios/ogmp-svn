@@ -27,7 +27,7 @@
 #else
    const int xrtp_log = 0;
 #endif
-#define xrtp_log(fmt, args...)  do{if(xrtp_log) printf(fmt, ##args);}while(0)
+#define xrtp_log(fmtargs)  do{if(xrtp_log) printf fmtargs;}while(0)
 
 module_catalog_t * module_catalog = NULL;
 
@@ -41,12 +41,14 @@ char * plugins_dir = "/home/hling/timedia-project/lib/xrtp";
 
 int xrtp_init(){
 
+   int nplug;
+
    module_catalog = catalog_new("xrtp_handler");
-   int nplug = catalog_scan_modules(module_catalog, XRTP_VERSION, plugins_dir);
+   nplug = catalog_scan_modules(module_catalog, XRTP_VERSION, plugins_dir);
 
    if(nplug < 0){
       
-      xrtp_log("xrtp_init: No modules found !\n");
+      xrtp_log(("xrtp_init: No modules found !\n"));
        
       catalog_done(module_catalog);
       module_catalog = NULL;
@@ -54,12 +56,12 @@ int xrtp_init(){
       return XRTP_FAIL;
    }
 
-   xrtp_log("xrtp_init: Found %d plugin(s).\n", nplug);
+   xrtp_log(("xrtp_init: Found %d plugin(s).\n", nplug));
 
    sessions = xrtp_list_new();
    if(!sessions){
 
-      xrtp_log("xrtp_init: Can't create session list !\n");
+      xrtp_log(("xrtp_init: Can't create session list !\n"));
 
       catalog_done(module_catalog);
       module_catalog = NULL;
@@ -71,7 +73,7 @@ int xrtp_init(){
    main_scheduler = sched_new();
    if(!main_scheduler){
 
-      xrtp_log("xrtp_init: Can't create session secheduler !\n");
+      xrtp_log(("xrtp_init: Can't create session secheduler !\n"));
 
       catalog_done(module_catalog);
       module_catalog = NULL;
@@ -81,7 +83,7 @@ int xrtp_init(){
       return XRTP_FAIL;
    }
         
-   xrtp_log("xrtp_init: libxrtp Initialized ...\n");
+   xrtp_log(("xrtp_init: libxrtp Initialized ...\n"));
     
    return XRTP_OK;
 }
