@@ -33,7 +33,9 @@
  typedef int32 xrtp_hrtime_t;  /* 1 nanosecond unit */
  typedef int32 xrtp_lrtime_t;  /* 1 millisecond unit */
 
- typedef struct xrtp_clock_s xrtp_clock_t;
+ #define xrtp_clock_s clock_s
+ #define xrtp_clock_t clock_t
+ typedef struct clock_s clock_t;
  
  typedef struct clock_timeout_s clock_timeout_t;
 
@@ -51,10 +53,10 @@
 
 /* new api */
 /* start timer at (0,0,0), time_begin will be replace by this */
-extern DECLSPEC xrtp_clock_t* 
+extern DECLSPEC clock_t* 
 time_start();
 extern DECLSPEC int 
-time_end(xrtp_clock_t * clock);
+time_end(clock_t * clock);
 
 /**
  * Adjust the clock forward if positive int, backward if negitive int or nochange if zero

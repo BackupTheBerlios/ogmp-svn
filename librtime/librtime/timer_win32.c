@@ -34,7 +34,7 @@
  #endif
  #define time_log(fmtargs)  do{if(timer_log) printf fmtargs;}while(0)
  
- struct xrtp_clock_s{
+ struct clock_s{
 
 	LARGE_INTEGER  frequency;
  
