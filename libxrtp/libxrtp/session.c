@@ -441,6 +441,7 @@ xrtp_session_t* session_new(xrtp_set_t* set, char *cname, int clen, char *ip, ui
 
 
 
+
 	ses->set = set;
     
     return ses;
@@ -565,6 +566,7 @@ int session_payload_type(xrtp_session_t *ses)
 }
 
 /**
+
  * Get the owner's media info of the session
  */
 void* session_mediainfo(xrtp_session_t *ses)
@@ -726,6 +728,7 @@ double session_determistic_interval(int members,
  
 /* RFC 3550 A.7 */
 xrtp_lrtime_t session_interval(int members,
+
                                int senders,
                                int rtcp_bw,
                                int we_sent,
@@ -899,6 +902,7 @@ int session_delete_member(xrtp_session_t * ses, member_state_t *mem)
 }
 
 member_state_t* session_member_state(xrtp_session_t * ses, uint32 src)
+
 {
     member_state_t * stat = xlist_find(ses->members, &src, session_match_member_src, &(ses->$member_list_block));
     return stat;
@@ -918,6 +922,7 @@ int session_member_update_by_rtp(member_state_t* mem, xrtp_rtp_packet_t* rtp)
 		session_log(("session_member_update_by_rtp: No need to update\n"));
         return XRTP_OK;
 	}
+
    
 	if(!session_update_seqno(mem, seqno))
 	{
@@ -1224,6 +1229,7 @@ xrtp_hrtime_t session_ts2hrt(xrtp_session_t * ses, uint32 ts)
 	 int delta_transit = 0;
 
      xthr_lock(mem->lock);
+
      
      transit = rtpts_local - rtpts_remote;
 	 session_log(("session_member_mapto_local_time: l[#%u] - r[#%u] = delay[%u]\n", rtpts_local, rtpts_remote, transit));
@@ -1286,6 +1292,7 @@ xrtp_hrtime_t session_ts2hrt(xrtp_session_t * ses, uint32 ts)
 
      mem->last_last_transit = mem->last_transit;
      mem->last_transit = transit;
+
 
      /* FIXME: Thershold should be adjustable */
 	 if(delta_transit > SPIKE_THRESHOLD)
@@ -1616,6 +1623,7 @@ int session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, u
 	mem = xlist_find(ses->members, cn, session_match_cname, &lu);
 	if(mem)
 	{
+
 		xthr_unlock(ses->members_lock);
 
 		/* info of the remote media to playback */
@@ -2288,22 +2296,17 @@ xrtp_media_t * session_new_media(xrtp_session_t * ses, uint8 profile_no, char *p
 
 		session_log(("session_new_media: [%s] - rtp[#%d] rtcp[#%d]\n", profile_type, rtp_portno, rtcp_portno));
 		session_log(("session_new_media: NOTE! New port pair allocation implement later\n"));
-		/*
-		if(rtp_portno == 0)
-		{
-			Allocate port pair from ports pool
-		}
-		*/
-		ses->rtp_port = port_new(ses->ip, (uint16)rtp_portno, RTP_PORT);
+
+        ses->rtp_port = port_new(ses->ip, (uint16)rtp_portno, RTP_PORT);
 		ses->rtcp_port = port_new(ses->ip, (uint16)rtcp_portno, RTCP_PORT);
     
 		if(!ses->rtp_port)
 		{
-			session_debug(("session_new_media: No rtp port[%d] available\n", ses->rtp_port));
+			session_debug(("session_new_media: RTP port[%d] not available\n", rtp_portno));
 		}
 		else if(!ses->rtcp_port)
 		{
-			session_debug(("session_new_media: No rtcp port[%d] available\n", ses->rtcp_port));
+			session_debug(("session_new_media: RTCP port[%d] not available\n", rtcp_portno));
 		}
 		else
 		{
@@ -2346,6 +2349,7 @@ session_media(xrtp_session_t *ses)
 /**
  * The middle process b/w import and export, order in addition
  * Can be compress module and crypo module, number of module less than MAX_PIPE_STEP
+
  * and be can enabled/disabled.
  */
 profile_handler_t * session_add_handler(xrtp_session_t *ses, char *id)
@@ -2816,6 +2820,7 @@ int session_cancel_rtp_sending(xrtp_session_t *ses, xrtp_hrtime_t ts)
 /* Return n bytes sent */
 int session_rtp_send_now(xrtp_session_t *ses)
 {
+
     int nbytes = 0;
 
     int bw_per_recvr = 0;   //bandwidth per member to receive media per period
@@ -2844,6 +2849,7 @@ int session_rtp_send_now(xrtp_session_t *ses)
         session_log(("session_rtp_send_now: rtp packet[%dB], bandwidth[%dB]\n", rtp_packet_bytes(rtp), bw_per_recvr));
     }
 	else
+
 
 	{
         time_spent(ses->clock, ses->$state.lrts_start_send, ses->$state.usec_start_send, 0, &lrt_passed, &us_passed, &ns_dummy);
