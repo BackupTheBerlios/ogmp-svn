@@ -1,0 +1,31 @@
+; i386-mingw32msvc-dlltool --base-file /tmp/ccQuRB3N.base --output-exp mingw/librtime.exp --dllname mingw/librtime.dll --output-def=mingw/librtime.def --exclude-symbol=DllMainCRTStartup@12 --def /tmp/ccvV3iUb.def --output-lib mingw/librtime.a
+EXPORTS
+	hrtime_now @ 1 ; 
+	hrtime_passed @ 2 ; 
+	hrtime_sleep @ 3 ; 
+	lrtime_now @ 4 ; 
+	lrtime_passed @ 5 ; 
+	lrtime_sleep @ 6 ; 
+	time_adjust @ 7 ; 
+	time_begin @ 8 ; 
+	time_end @ 9 ; 
+	time_now @ 10 ; 
+	time_passed @ 11 ; 
+	timer_log @ 12 DATA ; 
+	win32_time_now @ 13 ; 
+	xthr_cancel @ 14 ; 
+	xthr_cond_broadcast @ 15 ; 
+	xthr_cond_signal @ 16 ; 
+	xthr_cond_wait @ 17 ; 
+	xthr_cond_wait_timeout @ 18 ; 
+	xthr_done @ 19 ; 
+	xthr_done_cond @ 20 ; 
+	xthr_done_lock @ 21 ; 
+	xthr_lock @ 22 ; 
+	xthr_new @ 23 ; 
+	xthr_new_cond @ 24 ; 
+	xthr_new_lock @ 25 ; 
+	xthr_notify @ 26 ; 
+	xthr_unlock @ 27 ; 
+	xthr_wait @ 28 ; 
+	xthread_sdl_log @ 29 DATA ; 

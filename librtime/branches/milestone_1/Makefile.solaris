@@ -1,0 +1,55 @@
+# Make PortAudio for Linux
+# Updated 2001/08/25 Bill Eldridge bill@rfa.org
+# Updated 2001/10/16, philburk@softsynth.com, s/unix_oss/unix_oss/
+# Updated 2002/04/30 Bill Eldridge bill@rfa.org
+#     Made the libinstall and tests compile a bit cleaner
+
+# A pretty bare makefile, that figures out all the test files
+# and compiles them against the library in the pa_unix_oss directory.
+
+# Do "make all" and then when happy, "make libinstall"
+# (if not happy, "make clean")
+
+# The ldconfig stuff in libinstall is the wrong way to do it - 
+# someone tell me the right way, please
+
+# The dir which the librtime install to
+LIBINST = /usr/local/lib
+
+CC = gcc
+
+LIBS = -lpthread -lrt
+
+CFLAGS = -fPIC
+
+LIBFILES:= librtime/timer_posix.c librtime/xthread_sdl.c
+
+#all: sharedlib libinstall tests
+all: sharedlib test
+
+.c.o:
+	-gcc $(CFLAGS) -c $< -o $*.o
+
+.o:
+	-gcc $*.o -o $* $(LIBS)
+
+sharedlib:	librtime/timer_posix.c
+	$(CC) $(CFLAGS) -c librtime/timer_posix.c -o librtime/timer_posix.o
+	$(CC) $(CFLAGS) -c librtime/xthread_sdl.c -o librtime/xthread_sdl.o
+	$(CC) -shared librtime/timer_posix.o librtime/xthread_sdl.o -lSDL -o librtime/librtime.so
+
+installlib:	librtime/librtime.so
+	@cp -f ./librtime/librtime.so $(LIBINST)
+	@/sbin/ldconfig
+
+test:
+	$(CC) -I. -c librtime/t_time.c -o librtime/t_time.o
+	$(CC) -I. -c librtime/spu_text.c -o librtime/spu_text.o
+	$(CC) librtime/t_time.o librtime/spu_text.o -L./librtime -lrtime -o librtime/subtime
+
+clean:
+	-@rm -f librtime/*.o
+	-@rm -f librtime/*.so
+	-@rm -f librtime/subtime
+
+
