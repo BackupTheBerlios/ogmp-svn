@@ -149,146 +149,54 @@ int jcall_remove(eXosipua_t *jua, jcall_t *ca)
 
 int jcall_proceeding(eXosipua_t *jua, eXosip_event_t *je)
 {
-	jcall_t *ca;
-	int k;
-
 	/* event back to sipuac */
-	sipua_event_t sip_e;
-	sip_e.call_info = (sipua_set_t*)je->external_reference;
-	sip_e.type = SIPUA_EVENT_PROCEEDING;
+	sipua_call_event_t call_e;
 
-	for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
-    {
-		if (jua->jcalls[k].state != NOT_USED
-			&& jua->jcalls[k].cid==je->cid
-			&& jua->jcalls[k].did==je->did)
-		break;
-    }
-	if (k==MAX_NUMBER_OF_CALLS)
-    {
-		for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
-		{
-			if (jua->jcalls[k].state == NOT_USED)
-				break;
-		}
-		if (k==MAX_NUMBER_OF_CALLS)
-			return -1;
+	call_e.event.type = SIPUA_EVENT_PROCEEDING;
+	call_e.event.call_info = (sipua_set_t*)je->external_reference;
 
-		ca = &(jua->jcalls[k]);
-		memset(&(jua->jcalls[k]), 0, sizeof(jcall_t));
-      
-		ca->cid = je->cid;
-		ca->did = je->did;
-      
-		if (ca->did<1 && ca->cid<1)
-		{
-			exit(0);
-			return -1; /* not enough information for this event?? */
-		}
-    }
-
-	sip_e.lineno = k;
-
-	ca = &(jua->jcalls[k]);
-
-	osip_strncpy(ca->textinfo,   je->textinfo, 255);
-	osip_strncpy(ca->req_uri,    je->req_uri, 255);
-	//osip_strncpy(ca->local_uri,  je->local_uri, 255);
-	osip_strncpy(ca->remote_uri, je->remote_uri, 255);
-	osip_strncpy(ca->subject,    je->subject, 255);
-
-
-#if 0
-	if (ca->remote_sdp_audio_ip[0]=='\0')
-    {
-		osip_strncpy(ca->remote_sdp_audio_ip, je->remote_sdp_audio_ip, 49);
-		ca->remote_sdp_audio_port = je->remote_sdp_audio_port;
-		ca->payload = je->payload;
-		osip_strncpy(ca->payload_name, je->payload_name, 49);
-    }
-#endif
+	call_e.subject = je->subject;
+	call_e.textinfo = je->textinfo;
+    
+	call_e.req_uri = je->req_uri;
+	call_e.local_uri = je->local_uri;
+	call_e.remote_uri = je->remote_uri;
 
 	if (je->reason_phrase[0]!='\0')
     {
-		osip_strncpy(ca->reason_phrase, je->reason_phrase, 49);
-		ca->status_code = je->status_code;
+		call_e.reason_phrase = je->reason_phrase;
+		call_e.status_code = je->status_code;
     }
 
-	ca->state = je->type;
-
 	/* event notification */
-	jua->sipuas.notify_event(jua->sipuas.lisener, &sip_e);
+	jua->sipuas.notify_event(jua->sipuas.lisener, &call_e.event);
 
 	return 0;
 }
 
 int jcall_ringing(eXosipua_t *jua, eXosip_event_t *je)
 {
-	jcall_t *ca;
-	int k;
-
 	/* event back to sipuac */
-	sipua_event_t sip_e;
-	sip_e.call_info = (sipua_set_t*)je->external_reference;
-	sip_e.type = SIPUA_EVENT_RINGING;
+	sipua_call_event_t call_e;
 
-	for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
-    {
-		if (jua->jcalls[k].state != NOT_USED
-				&& jua->jcalls[k].cid==je->cid
-				&& jua->jcalls[k].did==je->did)
-			break;
-    }
+	call_e.event.type = SIPUA_EVENT_RINGING;
+	call_e.event.call_info = (sipua_set_t*)je->external_reference;
 
-	if (k==MAX_NUMBER_OF_CALLS)
-    {
-		for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
-		{
-			if (jua->jcalls[k].state == NOT_USED)
-			break;
-		}
-		if (k==MAX_NUMBER_OF_CALLS)
-			return -1;
-		ca = &(jua->jcalls[k]);
-		memset(&(jua->jcalls[k]), 0, sizeof(jcall_t));
-      
-		ca->cid = je->cid;
-		ca->did = je->did;
-      
-		if (ca->did<1 && ca->cid<1)
-		{
-			exit(0);
-			return -1; /* not enough information for this event?? */
-		}
-    }
+	call_e.subject = je->subject;
+	call_e.textinfo = je->textinfo;
+    
+	call_e.req_uri = je->req_uri;
+	call_e.local_uri = je->local_uri;
+	call_e.remote_uri = je->remote_uri;
 
-	sip_e.lineno = k;
-
-	ca = &(jua->jcalls[k]);
-	osip_strncpy(ca->textinfo,   je->textinfo, 255);
-	osip_strncpy(ca->req_uri,    je->req_uri, 255);
-	//osip_strncpy(ca->local_uri,  je->local_uri, 255);
-	osip_strncpy(ca->remote_uri, je->remote_uri, 255);
-	osip_strncpy(ca->subject,    je->subject, 255);
-/*
-	if (ca->remote_sdp_audio_ip[0]=='\0')
-    {
-		osip_strncpy(ca->remote_sdp_audio_ip, je->remote_sdp_audio_ip, 49);
-		ca->remote_sdp_audio_port = je->remote_sdp_audio_port;
-		ca->payload = je->payload;
-		osip_strncpy(ca->payload_name, je->payload_name, 49);
-    }
-*/
 	if (je->reason_phrase[0]!='\0')
     {
-		osip_strncpy(ca->reason_phrase, je->reason_phrase, 49);
-		ca->status_code = je->status_code;
+		call_e.reason_phrase = je->reason_phrase;
+		call_e.status_code = je->status_code;
     }
 
-	ca->state = je->type;
-
 	/* event notification */
-	jua->sipuas.notify_event(jua->sipuas.lisener, &sip_e);
+	jua->sipuas.notify_event(jua->sipuas.lisener, &call_e.event);
 
 	return 0;
 }

@@ -222,10 +222,12 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		}
 		case(SIPUA_EVENT_PROCEEDING):
 		{
+			printf("client_sipua_event: SIPUA_EVENT_PROCEEDING\n");
 			break;
 		}
 		case(SIPUA_EVENT_RINGING):
 		{	
+			printf("client_sipua_event: SIPUA_EVENT_RINGING\n");
 			break;
 		}
 		case(SIPUA_EVENT_ANSWERED):
@@ -239,6 +241,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			sdp_message_t *sdp_message;
 			char* sdp_body = (char*)e->content;
+
+			printf("client_sipua_event: SIPUA_EVENT_ANSWERED\n");
 
 			sdp_message_init(&sdp_message);
 
