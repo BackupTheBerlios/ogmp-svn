@@ -21,14 +21,14 @@
  *
  */
 
- #ifndef XRTP_SESSION_H
+#ifndef XRTP_SESSION_H
 
- #define XRTP_SESSION_H
+#define XRTP_SESSION_H
  
- #define MEMBER_MAXACTIVE 2
- #define XRTP_MAX_MTU_BYTES 65536
+#define MEMBER_MAXACTIVE 2
+#define XRTP_MAX_MTU_BYTES 65536
  
- typedef struct xrtp_session_s xrtp_session_t;
+typedef struct xrtp_session_s xrtp_session_t;
 
 #include <timedia/timer.h>
 #include <timedia/spinqueue.h>
@@ -361,6 +361,7 @@ typedef struct param_members_s{
     uint32 * srcs;
     uint32 n_src;
 
+
 } param_member_t;
 
 struct xrtp_session_s {
@@ -533,6 +534,7 @@ session_add_handler(xrtp_session_t * session, char * id);
  *   RTCP_RECEIVE
  */
 #define RTP_SEND 0
+
 #define RTCP_SEND 1
 #define RTP_RECEIVE 2
 #define RTCP_RECEIVE 3

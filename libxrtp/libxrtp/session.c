@@ -69,7 +69,7 @@
                mem->probation--;
                mem->max_seq = seq;
                if (mem->probation == 0) {
-                 
+               
                    session_init_seqno(mem, seq);
                    mem->received++;
                    /* a valid seqno */
@@ -890,6 +890,7 @@
 
      rtp->local_mapped = 1;
 
+
      session_log(("session_member_mapto_local_time: skew adjust is hrt[%d], play offset is htr[%d]\n", adj_skew, playout_offset));
      session_log(("session_member_mapto_local_time: local base play time is hrt[%d], adjust to htr[%d]\n", base_playout_time, rtp->hrt_local));
 
@@ -1026,6 +1027,7 @@
            if(rtcp_conn) connect_done(rtcp_conn);
 
            return NULL;
+
         }
 
     }else if(mem->valid || cname_len == 0){
@@ -1144,6 +1146,7 @@
        rtt = ntpts_now - lsr_stamp - lsr_delay;
     }
 
+
     /* Filter network condition and report to user:
      * Check packet lost and Network Jitter
      * if result over the limitation, report to user
@@ -1229,6 +1232,7 @@ int session_set_rtp_rate(xrtp_session_t *ses, int rate){
     return ses->period;
  }
  
+
  xrtp_hrtime_t session_rtp_delay(xrtp_session_t *ses){
 
     return ses->period * RTP_DELAY_FACTOR;
@@ -1664,6 +1668,7 @@ profile_handler_t * session_add_handler(xrtp_session_t * ses, char * id){
        case(CALLBACK_SESSION_HRT2MT):
            ses->$callbacks.hrtime_to_mediatime = call;
            ses->$callbacks.hrtime_to_mediatime_user = user;
+
            session_log(("session_set_callback: 'hrtime_to_mediatime' callback added\n"));
            break;
 

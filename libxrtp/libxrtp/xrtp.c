@@ -51,7 +51,7 @@ char * plugins_dir = ".";
 
 int xrtp_init(){
 
-   int nplug;
+   int nplug;  
 
    if(socket_init()!=OS_OK){
 
