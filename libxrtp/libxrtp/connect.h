@@ -15,26 +15,26 @@
  *                                                                         *
  ***************************************************************************/
 
-  typedef struct xrtp_port_s xrtp_port_t;
-  /*
+typedef struct xrtp_port_s xrtp_port_t;
+/*
   typedef struct port_param_s port_param_t;
   struct port_param_s{
 
      uint32 local_portno;
      char * local_addr_str;
   };
-  */
-  typedef struct session_connect_s session_connect_t;
+*/
+typedef struct session_connect_s session_connect_t;
   
-  typedef struct xrtp_teleport_s xrtp_teleport_t;
+typedef struct xrtp_teleport_s xrtp_teleport_t;
 
-  enum port_type_e { RTP_PORT, RTCP_PORT };
+enum port_type_e { RTP_PORT, RTCP_PORT };
   
-  session_connect_t * connect_new(xrtp_port_t * port, xrtp_teleport_t * tport);
+session_connect_t * connect_new(xrtp_port_t * port, xrtp_teleport_t * tport);
 
-  int connect_done(session_connect_t * conn);
+int connect_done(session_connect_t * conn);
 
-  int connect_io(session_connect_t * conn);
+int connect_io(session_connect_t * conn);
   
 extern DECLSPEC
 int 
@@ -65,17 +65,17 @@ extern DECLSPEC
 int 
 port_done(xrtp_port_t * port);
 
-  int port_set_session(xrtp_port_t * port, xrtp_session_t * session);
+int port_set_session(xrtp_port_t * port, xrtp_session_t * session);
 
-  int port_io(xrtp_port_t * port);
+int port_io(xrtp_port_t * port);
 
-  int port_match_io(xrtp_port_t * port, int io);
+int port_match_io(xrtp_port_t * port, int io);
   
-  int port_is_multicast(xrtp_port_t * port);
+int port_is_multicast(xrtp_port_t * port);
 
-  int port_poll(xrtp_port_t * port, rtime_t timeout_usec);
+int port_poll(xrtp_port_t * port, rtime_t timeout_usec);
   
-  int port_incoming(xrtp_port_t * port);
+int port_incoming(xrtp_port_t * port);
   
 extern DECLSPEC xrtp_teleport_t*
 teleport_new(char * addr, uint16 portno);
@@ -83,6 +83,6 @@ teleport_new(char * addr, uint16 portno);
 extern DECLSPEC int
 teleport_done(xrtp_teleport_t * tport);
 
-  char * teleport_name(xrtp_teleport_t * tport);
+char * teleport_name(xrtp_teleport_t * tport);
 
-  uint32 teleport_portno(xrtp_teleport_t * tport);
+uint32 teleport_portno(xrtp_teleport_t * tport);
