@@ -179,12 +179,27 @@ struct ogmp_setting_s
 	rtp_coding_t codings[MAX_NPAYLOAD_PRESET];
 };
 
-ogmp_client_t* client_new(user_profile_t* user, int portno, char* nettype, char* addrtype, char* firewall, char* proxy, int bandwidth);
-int client_config_rtp(void *conf, control_setting_t *setting);
-ogmp_setting_t* client_setting(media_control_t *control);
+extern DECLSPEC
+ogmp_ui_t* global_ui;
+
+extern DECLSPEC
+ogmp_ui_t* 
+client_new_ui(module_catalog_t* mod_cata, char* type);
+
+DECLSPEC
+int 
+client_config_rtp(void *conf, control_setting_t *setting);
+
+DECLSPEC
+ogmp_setting_t* 
+client_setting(media_control_t *control);
+
 int client_call(ogmp_client_t *client, char *regname);
 
-media_source_t* source_open(char* name, media_control_t* control, char* mode, void* extra);
+DECLSPEC
+media_source_t* 
+source_open(char* name, media_control_t* control, char* mode, void* extra);
+
 ogmp_setting_t* source_setting(media_control_t *control);
 
 #endif

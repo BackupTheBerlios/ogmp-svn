@@ -36,21 +36,45 @@ struct sipua_contact_s
 	char		*sip;
 };
 
-sipua_phonebook_t* sipua_new_book();
-int sipua_done_book(sipua_phonebook_t* book);
+DECLSPEC
+sipua_phonebook_t* 
+sipua_new_book();
 
-sipua_phonebook_t* sipua_load_book(char* bookloc);
-int sipua_save_book(sipua_phonebook_t* book, char* location);
+DECLSPEC
+int 
+sipua_done_book(sipua_phonebook_t* book);
 
-sipua_contact_t* sipua_new_contact(char* name, int nbytes, char* memo, int mbytes, char* sip);
-int sipua_contact(sipua_contact_t* contact, char** name, int* nbytes, char** memo, int* mbytes, char** sip);
+DECLSPEC
+sipua_phonebook_t* 
+sipua_load_book(char* bookloc);
 
-sipua_contact_t* sipua_pick_contact(sipua_phonebook_t* book, int pos);
+DECLSPEC
+int 
+sipua_save_book(sipua_phonebook_t* book, char* location);
 
-int sipua_add_contact(sipua_phonebook_t* book, sipua_contact_t* contact);
-int sipua_remove_contact(sipua_phonebook_t* book, sipua_contact_t* contact);
+DECLSPEC
+sipua_contact_t* 
+sipua_new_contact(char* name, int nbytes, char* memo, int mbytes, char* sip);
 
-xlist_t* sipua_contacts(sipua_phonebook_t* book);
+DECLSPEC
+int 
+sipua_contact(sipua_contact_t* contact, char** name, int* nbytes, char** memo, int* mbytes, char** sip);
+
+DECLSPEC
+sipua_contact_t* 
+sipua_pick_contact(sipua_phonebook_t* book, int pos);
+
+DECLSPEC
+int 
+sipua_add_contact(sipua_phonebook_t* book, sipua_contact_t* contact);
+
+DECLSPEC
+int 
+sipua_remove_contact(sipua_phonebook_t* book, sipua_contact_t* contact);
+
+DECLSPEC
+xlist_t* 
+sipua_contacts(sipua_phonebook_t* book);
 
 #define CNAME_MAXBYTES 256
 
@@ -103,13 +127,28 @@ struct user_s
 	int	tok_bytes;
 };
 
-int user_done(user_t* u);
-user_t* user_new(char* uid, int sz);
+DECLSPEC
+int 
+user_done(user_t* u);
 
-user_t* sipua_load_user(char* loc, char *uid, char* tok, int tsz);
-int sipua_save_user(user_t* user, char* loc, char* tok, int tsz);
+DECLSPEC
+user_t* 
+user_new(char* uid, int sz);
 
-int user_add_profile(user_t* user, char* fullname, int fbytes, char* book_loc, char* home, char* regname, int sec);
-int user_remove_profile(user_t* user, user_profile_t* prof);
+DECLSPEC
+user_t* 
+sipua_load_user(char* loc, char *uid, char* tok, int tsz);
+
+DECLSPEC
+int 
+sipua_save_user(user_t* user, char* loc, char* tok, int tsz);
+
+DECLSPEC
+int 
+user_add_profile(user_t* user, char* fullname, int fbytes, char* book_loc, char* home, char* regname, int sec);
+
+DECLSPEC
+int 
+user_remove_profile(user_t* user, user_profile_t* prof);
 
 #endif

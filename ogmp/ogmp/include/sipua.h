@@ -293,33 +293,50 @@ struct sipua_s
 sipua_t* sipua_new(sipua_uas_t *uas, void* event_lisener, int(*lisen)(void*,sipua_event_t*), int bandwidth, media_control_t* control);
 	
 /* User location : user@host or user@address */
-char* sipua_userloc(sipua_t* sipua, char* uid);
-int sipua_locate_user(sipua_t* sipua, user_t* user);
+DECLSPEC
+char* 
+sipua_userloc(sipua_t* sipua, char* uid);
+
+DECLSPEC
+int 
+sipua_locate_user(sipua_t* sipua, user_t* user);
 
 /* registration */
-int sipua_regist(sipua_t *sipua, user_profile_t *user, char *userloc);
-int sipua_unregist(sipua_t *sipua, user_profile_t *user);
+DECLSPEC
+int 
+sipua_regist(sipua_t *sipua, user_profile_t *user, char *userloc);
+
+DECLSPEC
+int 
+sipua_unregist(sipua_t *sipua, user_profile_t *user);
 
 /* create call with rtp sessions when establish a call */
-sipua_set_t* sipua_create_call(sipua_t *sipua, user_profile_t* user_prof, char* id, 
+sipua_set_t* 
+sipua_create_call(sipua_t *sipua, user_profile_t* user_prof, char* id, 
 							   char* subject, int sbyte, char* info, int ibyte,
 							   char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
 							   int nmedia, media_control_t* control, 
 							   rtp_coding_t codings[], int ncoding, int pt_pool[]);
 	
 /* generate sdp message when call out, no rtp session created */
-sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id, 
+DECLSPEC
+sipua_set_t* 
+sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id, 
 							   char* subject, int sbyte, char* info, int ibyte,
 							   char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
 							   int nmedia, media_control_t* control, int bw_budget,
 							   rtp_coding_t codings[], int ncoding, int pt_pool[]);
 
-sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof, 
+DECLSPEC
+sipua_set_t* 
+sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof, 
 								rtpcap_set_t* rtpcapset,
 								char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
 								int nmedia, media_control_t* control);
 
-int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char* mode, rtpcap_set_t* rtpcapset,
+DECLSPEC
+int 
+sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char* mode, rtpcap_set_t* rtpcapset,
 							   xlist_t* format_handlers, media_control_t* control, int pt_pool[]);
 
 int sipua_done_sip_session(void* gen);
@@ -334,13 +351,28 @@ int sipua_remove(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media);
 /* session description */
 int sipua_session_sdp(sipua_t *sipua, sipua_set_t* set, char** sdp);
 
-int sipua_call(sipua_t *ua, sipua_set_t* set, char *regname);
+DECLSPEC
+int 
+sipua_call(sipua_t *ua, sipua_set_t* set, char *regname);
 	
-int sipua_answer(sipua_t *ua, sipua_set_t* call, int reason);
-int sipua_options_call(sipua_t *ua, sipua_set_t* call);
-int sipua_info_call(sipua_t *ua, sipua_set_t* call, char *type, char *info);
+DECLSPEC
+int 
+sipua_answer(sipua_t *ua, sipua_set_t* call, int reason);
 
-int sipua_bye(sipua_t *ua, sipua_set_t* set);
-int sipua_recall(sipua_t *sipua, sipua_set_t* set);
+DECLSPEC
+int 
+sipua_options_call(sipua_t *ua, sipua_set_t* call);
+
+DECLSPEC
+int 
+sipua_info_call(sipua_t *ua, sipua_set_t* call, char *type, char *info);
+
+DECLSPEC
+int 
+sipua_bye(sipua_t *ua, sipua_set_t* set);
+
+DECLSPEC
+int 
+sipua_recall(sipua_t *sipua, sipua_set_t* set);
 
 #endif

@@ -159,35 +159,45 @@ struct media_transmit_s
    int (*remove_source)(media_transmit_t *trans, char *cname);
 };
 
-rtpcap_descript_t* rtp_capable_descript(int payload_no, 
-										char* nettype, char* addrtype, char *netaddr, 
-										uint media_port, uint control_port, char *mime, 
-										int clockrate, int coding_param, 
-										void *sdp_message);
+DECLSPEC
+rtpcap_descript_t* 
+rtp_capable_descript(int payload_no, 
+						char* nettype, char* addrtype, char *netaddr, 
+						uint media_port, uint control_port, char *mime, 
+						int clockrate, int coding_param, 
+						void *sdp_message);
 
 /**
  * Suppose in "a=rtpmap:96 G.729a/8000/1", rtpmap string would be "96 G.729a/8000/1"
  * parse it into rtpmapno=96; coding_type="G.729a"; clockrate=8000; coding_param=1
  */
-int sdp_parse_rtpmap(char *rtpmap, int *rtpmapno, char *coding_type, int *clockrate, int *coding_param);
+DECLSPEC
+int 
+sdp_parse_rtpmap(char *rtpmap, int *rtpmapno, char *coding_type, int *clockrate, int *coding_param);
 
 /**
  * convert rtp_capable_descript to sdp
  * return pos_media of sdp_message, see osip api for detail 
  */
-int rtp_capable_to_sdp(rtpcap_descript_t* rtpcap, sdp_message_t *sdp, int pos);
+DECLSPEC
+int 
+rtp_capable_to_sdp(rtpcap_descript_t* rtpcap, sdp_message_t *sdp, int pos);
 
 /**
  * convert sdp to rtp_capable_descript
  * return pos_media of sdp_message, see osip api for detail 
 int rtp_capable_from_sdp(rtpcap_descript_t* rtpcaps[], int max_cap, sdp_message_t *sdp);
  */
-rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp);
+DECLSPEC
+rtpcap_set_t* 
+rtp_capable_from_sdp(sdp_message_t *sdp);
 
 int rtp_capable_cname(rtpcap_set_t* set, char *cn, int bytes);
 
 rtpcap_descript_t* rtp_get_capable(rtpcap_set_t* set, char* mime);
 
-int rtp_capable_done_set(rtpcap_set_t* rtpcap_set);
+DECLSPEC
+int 
+rtp_capable_done_set(rtpcap_set_t* rtpcap_set);
 
 #endif

@@ -1,5 +1,5 @@
 /***************************************************************************
-                          ogmp_client.c
+                          ogmp_client.c - ogmp client starter
                              -------------------
     begin                : Tue Jul 20 2004
     copyright            : (C) 2004 by Heming
@@ -25,7 +25,7 @@
 
 #define OGMP_VERSION  1
 
-extern DECLSPEC ogmp_ui_t* global_ui = NULL;
+extern ogmp_ui_t* global_ui;
 
 #define CLIE_LOG
 
@@ -646,53 +646,7 @@ int client_answer(sipua_t *sipua, sipua_set_t* call, int reply)
 	return UA_OK;
 }
 
-int client_done_ui(void* gen)
-{
-    ogmp_ui_t* ui = (ogmp_ui_t*)gen;
-
-    ui->done(ui);
-    global_ui = NULL;
-
-    return UA_OK;
-}
-
-ogmp_ui_t* client_new_ui(module_catalog_t* mod_cata, char* type)
-{
-    ogmp_ui_t* ui = NULL;
-    
-    xlist_user_t lu;
-    xlist_t* uis  = xlist_new();
-    int found = 0;
-    
-    int nmod = catalog_create_modules (mod_cata, "ui", uis);
-    if(nmod)
-    {
-        ui = (ogmp_ui_t*)xlist_first(uis, &lu);
-        while(ui)
-        {
-            if(ui->match_type(ui, type))
-            {
-                xlist_remove_item(uis, ui);
-                found = 1;
-                break;
-            }
-
-            ui = xlist_next(uis, &lu);
-        }
-    }
-
-    xlist_done(uis, client_done_ui);
-
-    if(!found)
-        return NULL;
-
-    global_ui = ui;
-
-    
-    return ui;
-}
-
-sipua_t* client_new_sipua(sipua_uas_t* uas, module_catalog_t* mod_cata, int bandwidth)
+sipua_t* client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, int bandwidth)
 {
 	int nmod;
 	int nformat;
@@ -704,7 +658,7 @@ sipua_t* client_new_sipua(sipua_uas_t* uas, module_catalog_t* mod_cata, int band
 	client = xmalloc(sizeof(ogmp_client_t));
 	memset(client, 0, sizeof(ogmp_client_t));
 
-	client->ui = client_new_ui(mod_cata, "cursesui");
+	client->ui = client_new_ui(mod_cata, uitype);
     if(client->ui == NULL)
     {
         clie_log (("client_new: No cursesui module found!\n"));
@@ -732,8 +686,6 @@ sipua_t* client_new_sipua(sipua_uas_t* uas, module_catalog_t* mod_cata, int band
 
 	/* set sip client */
 	client->valid = 0;
-
-
 
 	/* player controler */
 	client->control->config(client->control, client->conf, mod_cata);
@@ -866,9 +818,12 @@ int main(int argc, char** argv)
     sipua_t* sipua = NULL;
 	sipua_uas_t* uas = NULL;
 	module_catalog_t *mod_cata = NULL;
-
-    sipua_load_user("heming", "heming", "hello", 5);
-    
+	/* phonebook loading test
+	{
+		sipua_load_user("heming", "heming", "hello", 5);
+		exit(0);
+	}
+	*/
 	clie_log (("main: modules in dir:'%s'\n", MOD_DIR));
 
 	mod_cata = catalog_new( "mediaformat" );
@@ -881,7 +836,7 @@ int main(int argc, char** argv)
     
 	if(uas && uas->init(uas, 5060, "IN", "IP4", NULL, NULL) >= UA_OK)
 	{
-		sipua = client_new_sipua(uas, mod_cata, 64*1024);
+		sipua = client_new("cursesui", uas, mod_cata, 64*1024);
 
         if(sipua)
             client_start(sipua);

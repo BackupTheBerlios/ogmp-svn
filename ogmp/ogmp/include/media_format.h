@@ -104,7 +104,9 @@ struct media_control_s
    int (*media_ports)(media_control_t* cont, char* mediatype, int* rtp_portno, int* rtcp_portno);
 };
 
-module_interface_t* new_media_control ();
+DECLSPEC
+module_interface_t* 
+new_media_control ();
 
 typedef struct capable_descript_s capable_descript_t;
 struct capable_descript_s
