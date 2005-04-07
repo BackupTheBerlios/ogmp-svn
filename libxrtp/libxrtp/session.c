@@ -974,7 +974,7 @@ int member_deliver_media_loop(void *gen)
       */      
 		xthr_lock(mem->delivery_lock);
 
-      hold = (media_hold_t*)xlist_first(mem->delivery_buffer, &lu);
+		hold = (media_hold_t*)xlist_first(mem->delivery_buffer, &lu);
 		if(!hold)
 		{
 			session_log(("member_deliver_media_loop: wait available media\n"));
@@ -995,7 +995,7 @@ int member_deliver_media_loop(void *gen)
       
 		us_sleep = us_play - us_now;
 
-      session_debug(("member_deliver_media_loop: recent seqno[%d], expect[%d]\n", hold->seqno, mem->expect_seqno));
+		session_debug(("member_deliver_media_loop: recent seqno[%d], expect[%d]\n", hold->seqno, mem->expect_seqno));
 
 		if((hold->seqno - mem->expect_seqno) <= 0 || us_sleep <= 0)
 		{
@@ -1452,7 +1452,6 @@ int session_member_synchronise(member_state_t *mem, uint32 ts_remote, uint32 hi_
 	
 	mem->nsec_last_sync = mem->nsec_sync;
 	mem->nsec_sync = ns;
-
 
 	xthr_unlock(mem->sync_lock);
 	
@@ -3498,17 +3497,13 @@ int session_start_reception(xrtp_session_t * ses)
     return XRTP_OK;
  }
 
-int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 timestamp)
+int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 timestamp, rtime_t ms_now, rtime_t us_now, rtime_t ns_now, uint32 hi_ntp, uint32 lo_ntp)
 {
    uint8 frac_lost; 
    uint32 total_lost;
    uint32 exseqno;
     
    uint32 lsr_delay = 0;
-
-   rtime_t ms_now;
-   rtime_t us_now;
-   rtime_t ns_dummy;
 
    /* Here is the implementation */
    member_state_t * self = ses->self;
@@ -3550,7 +3545,6 @@ int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 time
    }
 
    /* report peers */
-   time_rightnow(ses->clock, &ms_now, &us_now, &ns_dummy);
 
    /* Add SDES packet */
    if(self->cname)

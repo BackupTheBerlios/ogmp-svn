@@ -916,7 +916,7 @@ session_need_rtcp(xrtp_session_t *session);
  */
 extern DECLSPEC
 int 
-session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 timestamp);
+session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 timestamp, rtime_t ms, rtime_t us, rtime_t ns, uint32 hi_ntp, uint32 lo_ntp);
 
 int session_rtcp_to_send(xrtp_session_t *session);
 
