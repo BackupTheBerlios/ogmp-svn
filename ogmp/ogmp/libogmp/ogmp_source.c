@@ -85,7 +85,7 @@ int source_start (media_source_t *msrc)
 
 	if(osource->demuxing)
 	{
-		src_debug (("source_start: source already running\n"));
+		src_log (("source_start: source already running\n"));
 
 		return MP_OK;
 	}
