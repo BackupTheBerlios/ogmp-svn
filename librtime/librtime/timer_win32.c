@@ -361,9 +361,23 @@ int time_ntp(xrtp_clock_t * clock, uint32 *hintp, uint32 *lontp)
 	*hintp = time(NULL) + EPOCH_OFFSET;
 
     xthr_unlock(clock->lock);
-
 	
 	return OS_OK;
 }
 
+int time_sync(xrtp_clock_t * clock, rtime_t *msec, rtime_t *usec, rtime_t *nsec, uint32 *hintp, uint32 *lontp)
+{
+    xthr_lock(clock->lock);
+
+    *nsec = clock->hrtime_now(clock);
+    *usec = clock->microsec;
+	*msec = clock->millisec;
+    
+    *lontp = clock->subsec_ntp;
+	*hintp = time(NULL) + EPOCH_OFFSET;
+
+    xthr_unlock(clock->lock);
+	
+	return OS_OK;
+}
 /* =============== end ================= */

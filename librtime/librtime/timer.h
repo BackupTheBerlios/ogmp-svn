@@ -133,4 +133,8 @@ extern DECLSPEC
 int 
 time_ntp(xrtp_clock_t * clock, uint32 *hintp, uint32 *lontp);
 
+extern DECLSPEC
+int 
+time_sync(xrtp_clock_t * clock, rtime_t *msec, rtime_t *usec, rtime_t *nsec, uint32 *hintp, uint32 *lontp);
+
 #endif
