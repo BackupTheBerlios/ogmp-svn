@@ -28,8 +28,8 @@
  typedef struct sched_schedinfo_s sched_schedinfo_t;
  //typedef struct sched_rtcp_schedinfo_s sched_rtcp_schedinfo_t;
 
- struct session_sched_s{
-
+ struct session_sched_s
+ {
     int (*done)(session_sched_t * sched);
 
     int (*add)(session_sched_t * sched, xrtp_session_t * session);

@@ -51,7 +51,6 @@ typedef struct param_network_s
 } param_network_t;
 
 typedef struct profile_handler_s profile_handler_t;
-
  
 typedef struct profile_class_s profile_class_t;
 

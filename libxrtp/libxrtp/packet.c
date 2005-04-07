@@ -25,9 +25,8 @@
 #include "stdio.h"
 /*
 #define PACKET_LOG
-*/
 #define PACKET_DEBUG
-
+*/
 #ifdef PACKET_LOG
  #define packet_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -206,6 +205,7 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t *rtp, xrtp_rtp_payload_t *pay)
  int rtp_packet_validate(xrtp_rtp_packet_t * pac){
 
     pac->valid_to_get = 1;
+
 
 
     return XRTP_OK;
@@ -589,6 +589,7 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
 
     comp->connect = conn;
 
+
     comp->direct = dir;
 
     comp->valid_to_get = 0;
@@ -686,7 +687,7 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
 
     xrtp_rtcp_compound_t * rtcp = (xrtp_rtcp_compound_t *)xmalloc(sizeof(struct xrtp_rtcp_compound_s));
     if(!rtcp)
-	{
+	 {
        packet_log(("rtcp_sender_report_new: Can't allocate resource\n"));
        
        return NULL;
@@ -705,7 +706,7 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
 
     sr = (xrtp_rtcp_sr_t*)xmalloc(sizeof(struct xrtp_rtcp_sr_s));
     if(!sr)
-	{
+	 {
        packet_log(("rtcp_sender_report_new: Can't allocate resource for sender report packet\n"));
 
        xfree(rtcp->heads);
@@ -853,6 +854,7 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
     if(com->n_packet == com->max_packets)
     {
        packet_log(("rtcp_new_sdes: Maximum packet reached\n"));
+
        return NULL;
     }
     
@@ -2021,8 +2023,6 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
     *r_pnum = info->n_packet_sent;
     *r_onum = info->n_octet_sent;
 
-    packet_debug(("rtcp_sender_info: 3\n"));
-
     return XRTP_OK;
  }
 
@@ -2698,6 +2698,7 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
 
  int rtcp_pack_sdes(xrtp_rtcp_sdes_t * sdes, xrtp_buffer_t * buf)
  {
+
     int ret = rtcp_pack_head(&sdes->$head, buf);
         
     xrtp_rtcp_sdes_chunk_t * chk = NULL;
