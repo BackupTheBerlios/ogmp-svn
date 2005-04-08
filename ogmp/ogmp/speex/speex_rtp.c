@@ -672,16 +672,14 @@ int spxrtp_rtcp_out(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
    
    time_sync(session_clock(h->session), &ms, &us, &ns, &hi_ntp, &lo_ntp);
    
-   timestamp_now = h->timestamp_syncpoint + (uint32)((us - h->usec_send_syncpoint) / (rtp_media->clockrate / 1000000.0));
+   timestamp_now = h->timestamp_syncpoint + (uint32)((us - h->usec_send_syncpoint) / 1000000.0 * rtp_media->clockrate);
    
-	if(h->timestamp_syncpoint) /* not display another one, hack code */
-	{
-	spxrtp_debug(("audio/speex.spxrtp_rtcp_out: -----------------------------\n"));
+	spxrtp_debug(("audio/speex.spxrtp_rtcp_out: ---------------------------\n"));
 	spxrtp_debug(("audio/speex.spxrtp_rtcp_out: syncpoint ts[%d] ntp[%u:%u]\n", h->timestamp_syncpoint, hi_ntp, lo_ntp));
 	spxrtp_debug(("audio/speex.spxrtp_rtcp_out: rtcp ts[%d]  usec[%dus]\n", timestamp_now, us));
 	spxrtp_debug(("audio/speex.spxrtp_rtcp_out: -----------------------------\n"));
-	}
-   session_report(h->session, rtcp, timestamp_now, ms, us, ns, hi_ntp, lo_ntp);
+
+	session_report(h->session, rtcp, timestamp_now, ms, us, ns, hi_ntp, lo_ntp);
     
    /* Profile specified */
    if(!rtcp_pack(rtcp))

@@ -1,5 +1,5 @@
 /***************************************************************************
-                          vorbis_sender.h  -  Vorbis rtp stream
+                          dev_rtp.h  -  rtp device
                              -------------------
     begin                : Mon Jan 19 2004
     copyright            : (C) 2004 by Heming Ling
