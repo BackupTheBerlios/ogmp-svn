@@ -1830,6 +1830,8 @@ int session_move_member(xrtp_session_t *ses, xrtp_session_t *to_ses, member_stat
    xthr_lock(ses->members_lock);
 
    /* FIXME: xthr_lock(ses->senders_lock); */
+   xlist_remove_item(ses->members, mem);
+
    if(mem->we_sent && xlist_remove_item(ses->senders, mem) >= OS_OK)
          ses->n_sender--;
 
@@ -3456,7 +3458,6 @@ int session_start_reception(xrtp_session_t * ses)
     
 	 if(nmem > 1 || ses->join_to_rtcp_port)
 		 return 1;
-
     
 	 return 0;
  }
