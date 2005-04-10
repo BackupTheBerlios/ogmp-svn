@@ -25,6 +25,7 @@
 #include "xmalloc.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 /*
 #define XLIST_LOG
@@ -202,6 +203,7 @@ int xlist_addto_first(xlist_t * list, void * item){
    node->next = list->head;
    node->data = item;
 
+
    list->head = node;
    
    list->num++;
@@ -288,19 +290,19 @@ int xlist_add_once(xlist_t *list, void *data)
    return OS_OK;
 }
 
-int xlist_addonce_ascent(xlist_t * list, void * ndata, int cmp(void *, void *)){
-
+int xlist_addonce_ascent(xlist_t * list, void * ndata, int cmp(void *, void *))
+{
    int ret;
    xrtp_list_node_t * node = NULL;
    xrtp_list_node_t * curr = NULL;
    xrtp_list_node_t * prev = NULL;
 
-   if(list->num == 0){
-
+   if(list->num == 0)
+   {
       node = _xrtp_list_newnode();
       
-      if(!node){
-
+      if(!node)
+      {
          return OS_EMEM;
       }
       
@@ -311,50 +313,62 @@ int xlist_addonce_ascent(xlist_t * list, void * ndata, int cmp(void *, void *)){
       return OS_OK;
    }
    
-   xlist_log(("xrtp_list_add_ascent_once: adding item...\n"));
+   xlist_log(("xlist_addonce_ascent: adding item...\n"));
    
    curr = list->head;
    prev = NULL;
    
-   while(curr){
-
+   while(curr)
+   {
       ret = cmp(curr->data, ndata);
       
-      if( ret == 0 ){ /* match condition, no addition needed */
-
-          xlist_log(("< xrtp_list_add_ascent_once: Item exist, no addition >\n"));
+      if( ret == 0 ) /* match condition, no addition needed */
+      {
+          xlist_log(("< xlist_addonce_ascent: Item exist, no addition >\n"));
           return OS_OK;
-
-      }else if( ret > 0 ){
-      
+      }
+      else if( ret > 0 ) /* add previous to current node */
+      {
          node = _xrtp_list_newnode();
-         if(!node){
-            
+         if(!node)
+         {
             return OS_EMEM;
          }
-              
+
          node->data = ndata;
 
-         if(prev){
-
+         if(prev)
+         {
             node->next = prev->next;
             prev->next = node;
+         }
+         else
+         {
+            if(list->head)
+               node->next = list->head;
 
-         }else{
-
-            if(list->head)   node->next = list->head;
-
-             
             list->head = node;
          }
 
          list->num++;
-         xlist_log(("xrtp_list_add_ascent_once: Item added, total %d items\n", list->num));
+
+         return OS_OK;
       }
-      
+
       prev = curr;
       curr = curr->next;
    }
+
+   /* add to last */
+   node = _xrtp_list_newnode();
+   if(!node)
+      return OS_EMEM;
+
+   node->data = ndata;
+   node->next = NULL;
+   prev->next = node;
+
+   list->num++;
 
    return OS_OK;
 }
@@ -620,6 +634,7 @@ void * xrtp_list_remove_first(xrtp_list_t * list){return xlist_remove_first(list
 int xrtp_list_remove_item (xrtp_list_t * list, void *data) {return xlist_remove_item(list,data);}
 
 void * xrtp_list_remove(xrtp_list_t * list, void *item, int (*match)(void*, void*)){return xlist_remove(list,item,match);}
+
 
 
 
