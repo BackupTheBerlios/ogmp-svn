@@ -465,3 +465,20 @@ int time_now(xclock_t * clock, rtime_t *lrt, rtime_t *hrt){
 
     return OS_OK;
  }
+
+int time_sync(xrtp_clock_t * clock, rtime_t *msec, rtime_t *usec, rtime_t *nsec, uint32 *hintp, uint32 *lontp)
+{
+    xthr_lock(clock->lock);
+    
+    *nsec = clock->hrtime_now(clock);
+    *usec = clock->usec;
+    *msec = clock->msec;
+    
+    *lontp = clock->ntp_usec;
+    *hintp = time(NULL) + EPOCH_OFFSET;
+
+    xthr_unlock(clock->lock);
+
+    return OS_OK;
+}
+
