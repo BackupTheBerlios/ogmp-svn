@@ -28,7 +28,7 @@
 
 #define PA_SAMPLE_TYPE  paInt16
 
-#define DEFAULT_SAMPLE_FACTOR  16
+#define DEFAULT_SAMPLE_FACTOR  4
 
 #define DELAY_WHILE 1000
 
@@ -292,6 +292,7 @@ int pa_sample_type (int sample_bits) {
       case 16:
       
          pa_log(("pa_sample_type: 16 bits integer value\n"));
+
          return paInt16;
 
       case 32:

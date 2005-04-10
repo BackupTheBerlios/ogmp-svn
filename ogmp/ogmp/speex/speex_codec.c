@@ -30,7 +30,7 @@
 #endif
 
 #ifdef SPEEX_CODEC_DEBUG
- #define spxc_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
+ #define spxc_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else                
  #define spxc_debug(fmtargs)
 #endif

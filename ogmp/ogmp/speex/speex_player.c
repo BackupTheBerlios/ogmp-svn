@@ -83,6 +83,7 @@ int spxp_match_play_type (media_player_t * mp, char *play)
 	return 0;
 }
 
+#if 0
 int spxp_loop(void *gen)
 {
 	speex_decoder_t *dec = (speex_decoder_t*)gen;
@@ -90,23 +91,65 @@ int spxp_loop(void *gen)
 
 	media_frame_t * auf = NULL;
 
-    media_pipe_t *output = mp->device->pipe(mp->device);
+   media_pipe_t *output = mp->device->pipe(mp->device);
+	dec->stop = 0;
+	while(1)
+	{
+      xthr_lock(dec->pending_lock);
+
+	   if (dec->stop)
+      {
+         xthr_unlock(dec->pending_lock);
+	      break;
+      }
+
+	   auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
+      if(!auf)
+      {
+	      xthr_cond_wait(dec->packet_pending, dec->pending_lock);
+	      auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
+      }
+
+		xthr_unlock(dec->pending_lock);
+
+		output->put_frame(output, auf, auf->eots);
+	}
+
+	auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
+	while(auf)
+   {
+		output->recycle_frame (output, auf);
+	   auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
+   }
+
+	return MP_OK;
+}
+#endif
+
+int spxp_loop(void *gen)
+{
+	speex_decoder_t *dec = (speex_decoder_t*)gen;
+	media_player_t *mp = (media_player_t*)dec;
+
+	media_frame_t * auf = NULL;
+
+   media_pipe_t *output = mp->device->pipe(mp->device);
 	dec->stop = 0;
 	while(1)
 	{
 		xthr_lock(dec->pending_lock);
 
 		if (dec->stop)
-		{			
+		{
 			xthr_unlock(dec->pending_lock);
 			break;
 		}
 
-		if (xlist_size(dec->pending_queue) == 0) 
+		if (xlist_size(dec->pending_queue) == 0)
 		{
-			//vsend_log(("vsend_loop: no packet waiting, sleep!\n"));
+			//spxp_debug(("spxp_loop: no packet waiting, sleep!\n"));
 			xthr_cond_wait(dec->packet_pending, dec->pending_lock);
-			//vsend_log(("vsend_loop: wakeup! %d packets pending\n", xlist_size(vs->pending_queue)));
+			//spxp_debug(("spxp_loop: wakeup! %d packets pending\n", xlist_size(vs->pending_queue)));
 		}
 
 		/* sometime it's still empty, weired? */
@@ -130,7 +173,6 @@ int spxp_loop(void *gen)
 
 	return MP_OK;
 }
-
 
 int spxp_open_stream (media_player_t *mp, media_info_t *media_info)
 {
@@ -194,9 +236,7 @@ int spxp_close_stream (media_player_t * mp)
 
    speex_decoder_t *dec = (speex_decoder_t*)mp;
 
-   xthr_lock(dec->pending_lock);
    dec->stop = 1;
-   xthr_unlock(dec->pending_lock);
    
    xthr_cond_signal(dec->packet_pending);
 
@@ -258,12 +298,12 @@ int spxp_done(media_player_t *mp)
 int spxp_set_options (media_player_t * mp, char *opt, void *value)
 {
     if(!value)
-	{
+	 {
         spxp_debug(("vorbis_set_options: param 'value' is NULL point\n"));
         return MP_FAIL;
     }
 
-	{
+	 {
         spxp_log(("vorbis_set_options: the option is not supported\n"));
         return MP_EUNSUP;
     }
@@ -330,8 +370,6 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
    speex_decoder_t *dec = (speex_decoder_t *)mp;
    int sample_rate = ((media_info_t*)dec->speex_info)->sample_rate;
 
-   spxp_debug(("spxp_receive_next: samplestamp[%lld]\n", samplestamp));
-   
    if (!mp->device)
    {
       spxp_debug(("spxp_receive_next: No device to play vorbis audio\n"));
@@ -340,8 +378,6 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
 
    output = mp->device->pipe(mp->device);
 
-   spxp_debug(("spxp_receive_next: 1\n"));
-   
    /* decode and submit */
    auf = spxc_decode(dec->speex_info, spxf, output);
    if(!auf)
@@ -350,8 +386,6 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
       return MP_FAIL;
    }
 
-   spxp_debug(("spxp_receive_next: 2\n"));
-   
    if (!dec->receiving_media)
    {
       dec->ts_usec_now = 0;
@@ -365,6 +399,7 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
    }
    
    auf->ts = dec->ts_usec_now;
+   //spxp_debug(("spxs[%dts:%lld#:%llds]raw[%dus]--", spxf->ts, spxf->sno, samplestamp, auf->ts));
 
    if(last_packet)
 	   auf->eots = 1;
@@ -419,6 +454,7 @@ module_interface_t * media_new_player()
    
    mp->stop = spxp_stop;
    
+
    mp->receiver.match_type = spxp_match_type;
    mp->receiver.receive_media = spxp_receive_next;
 

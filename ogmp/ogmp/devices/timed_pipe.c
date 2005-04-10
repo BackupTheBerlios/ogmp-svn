@@ -33,7 +33,7 @@
 
 
 #ifdef PIPE_DEBUG
- #define pout_debug(fmtargs)  do{ui_print_log fmtargs;}while(0)
+ #define pout_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define pout_debug(fmtargs) 
 #endif
@@ -103,14 +103,13 @@ media_frame_t * pout_new_frame(media_pipe_t * mo, int bytes, char *data)
    found = xmalloc (sizeof(struct media_frame_s));
    if (!found)
    {
-      pout_debug (("pout_new_frame: no memory for more frame\n"));
+      pout_log (("pout_new_frame: no memory for more frame\n"));
       return NULL;
-   }
-   
+   }   
    raw = xmalloc (bytes);
    if (!raw)
    {
-      pout_debug (("pout_new_frame: no memory for media raw data\n"));
+      pout_log (("pout_new_frame: no memory for media raw data\n"));
       xfree(found);
       return NULL;
    }
@@ -214,7 +213,7 @@ int pout_put_frame (media_pipe_t *mp, media_frame_t *f, int last)
    
    nsample_total = pipe->nsample_write_left + pipe->nsample_read_left;
    /*
-   pout_log(("pout_put_frame: [@%dms] (+)%d, %dw + %dr = %d samples avail.\n"
+   pout_debug(("\r pout_put_frame:[@%dus] %dn+%dw+%dr:%d\n"
              , f->ts, f->nraw, pipe->nsample_write_left
              , pipe->nsample_read_left, nsample_total));
    */
@@ -229,7 +228,7 @@ int pout_put_frame (media_pipe_t *mp, media_frame_t *f, int last)
                , bufw->usec_in, pipe->usec_per_buf, f->ts, last));
       */
       if (last == MP_EOS)
-	  {
+	   {
          pout_log(("pout_put_frame: stream end received\n"));
          f->eos = 1;
       }
@@ -239,24 +238,24 @@ int pout_put_frame (media_pipe_t *mp, media_frame_t *f, int last)
    if ( (bufw->usec_in > pipe->usec_per_buf) || last == MP_EOS || pipe->prepick)
    {
       if(!pipe->buffered)
-	  {
+	   {
          pipe->eots = 0;         
          skip_recyc = 1; /* Actually nothing to recycle yet for first time */
          
          pipe->frame_read_now = bufw->frame_head;
 
-		 pipe->usec_prepick = time_usec_now(pipe->clock);
+		   pipe->usec_prepick = time_usec_now(pipe->clock);
 
-		 pipe->last_avg_usec_inbuf = 0;
-		 pipe->avg_usec_inbuf = 0;
-		 pipe->adjust_reset = 1;
+		   pipe->last_avg_usec_inbuf = 0;
+		   pipe->avg_usec_inbuf = 0;
+		   pipe->adjust_reset = 1;
          
-         pout_debug(("pout_put_frame: +++++++++++++ pick Buf#%d[%dus]  +++++++++\n", pipe->bufn_write, bufw->usec_in));
+         pout_debug(("\r pout_put_frame: +++++++++++++ put Buf#%d[%dus]  +++++++++\n", pipe->bufn_write, bufw->usec_in));
       }
 
       pipe->prepick = 0;  /* reset prepick signal */
 	  
-	  pipe->buffered = 1;   /* buffer available */
+	   pipe->buffered = 1;   /* buffer available */
 
       /* check if the last signal is ackno'd before trigger next one */
       //us_jump_start = time_usec_now(pipe->clock);
@@ -277,7 +276,7 @@ int pout_put_frame (media_pipe_t *mp, media_frame_t *f, int last)
 
       /* adjust buffer size */
       if (pipe->buffer_dyna_usec != 0)
-	  {
+	   {
          pout_log(("pout_put_frame: previous %dus, dyna refer size %dus\n"
                   , pipe->usec_per_buf, pipe->buffer_dyna_usec));
                   
@@ -312,7 +311,8 @@ int pout_prepick (timed_pipe_t *pipe)
       newhead = newhead->next;
    }
    
-   if (!ztail) return 0;
+   if (!ztail)
+      return 0;
    
    pipe->frame_read_now = nextbuf->frame_head;
 
@@ -340,7 +340,7 @@ int pout_prepick (timed_pipe_t *pipe)
 
    us_prepick_interval = time_usec_checkpass(pipe->clock, &pipe->usec_prepick);
    
-   pout_debug(("\n++++++[%dus]++++++ prepick Buf#%d[%dus] ++++++[%df/%df]++++++\n\n", us_prepick_interval, pipe->bufn_write, bufr->usec_in, pipe->n_freed_frame, pipe->n_frame));
+   pout_log(("\r\n++++++[%dus]++++++ prepick Buf#%d[%dus] ++++++[%df/%df]++++++\n\n", us_prepick_interval, pipe->bufn_write, bufr->usec_in, pipe->n_freed_frame, pipe->n_frame));
    
    return nsample_prepick;
 }
@@ -407,6 +407,7 @@ sample_buffer_t * pout_switch_buffer(timed_pipe_t *pipe)
       usec_delta = buf->usec_in - buf->usec_out;
 
       if (nsample_delta < 0)
+
 	  {
          nsample_delta = 0;
          usec_delta = 0;
@@ -492,48 +493,48 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
    if ( do_switch )
    {
       if (do_switch - 1 != pipe->bufn_read )
-	  {
+	   {
          bufr = pout_switch_buffer (pipe);
       }
-	  else
-	  {
+	   else
+	   {
          pout_log(("pout_pick_content: start playing\n"));
          //pipe->beat_start = time_usec_now(pipe->clock);
       }
 
-	  if(pipe->n_switch_per_adjustment > 0)
-	  {
-		  pipe->n_switch_per_adjustment--;
-	  }
-	  else if(pipe->avg_usec_inbuf != 0)
-	  {
-		  rtime_t us_adj;
-		  int nsamp_adj;
+	   if(pipe->n_switch_per_adjustment > 0)
+	   {
+		   pipe->n_switch_per_adjustment--;
+	   }
+	   else if(pipe->avg_usec_inbuf != 0)
+	   {
+		   rtime_t us_adj;
+		   int nsamp_adj;
 		  
-		  pipe->n_switch_per_adjustment = N_SWITCH_PER_ADJUSTMENT;
+		   pipe->n_switch_per_adjustment = N_SWITCH_PER_ADJUSTMENT;
 
-		  if(pipe->last_avg_usec_inbuf != 0)
-		  {
-			  us_adj = pipe->avg_usec_inbuf - pipe->last_avg_usec_inbuf;
-		  }
-		  else
-		  {
-			  pipe->last_avg_usec_inbuf = pipe->avg_usec_inbuf;
-			  us_adj = 0;
-		  }
+		   if(pipe->last_avg_usec_inbuf != 0)
+		   {
+			   us_adj = pipe->avg_usec_inbuf - pipe->last_avg_usec_inbuf;
+		   }
+		   else
+		   {
+			   pipe->last_avg_usec_inbuf = pipe->avg_usec_inbuf;
+			   us_adj = 0;
+		   }
 
 		  /* work out nsample to adjust */
 		  nsamp_adj = (int)((double)pipe->sample_rate/1000000*us_adj);
 
 		  pipe->nsample_shift = (nsamp_adj==0) ? 0 : pipe->nsample_adjust / nsamp_adj;
 		  
-		  pout_debug(("\nBuf#%d[%dus]avg[%dus]#adj[%dus:%dn/%dn]#frm[%df/%df:%dB]\n", pipe->bufn_read, bufr->usec_in, pipe->avg_usec_inbuf, us_adj, nsamp_adj, pipe->nsample_adjust, pipe->n_freed_frame, pipe->n_frame, pipe->bytes_allbuf));
+		  pout_log(("\nBuf#%d[%dus]avg[%dus]#adj[%dus:%dn/%dn]#frm[%df/%df:%dB]\n", pipe->bufn_read, bufr->usec_in, pipe->avg_usec_inbuf, us_adj, nsamp_adj, pipe->nsample_adjust, pipe->n_freed_frame, pipe->n_frame, pipe->bytes_allbuf));
 		  
 		  if(pipe->nsample_shift > 0)
-			  pout_debug(("more %d sample(1/%d) - %d pcm once\n", nsamp_adj, pipe->nsample_shift, nraw_once));
+			  pout_log(("more %d sample(1/%d) - %d pcm once\n", nsamp_adj, pipe->nsample_shift, nraw_once));
 
 		  if(pipe->nsample_shift < 0)
-			  pout_debug(("less %d sample(1/%d) - %d pcm once\n", -nsamp_adj, -pipe->nsample_shift, nraw_once));
+			  pout_log(("less %d sample(1/%d) - %d pcm once\n", -nsamp_adj, -pipe->nsample_shift, nraw_once));
 
 		  pipe->last_avg_usec_inbuf = pipe->avg_usec_inbuf;
 
@@ -545,7 +546,7 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
    /* finish handling switch signal */
    pipe->switch_buffer = 0;
 
-   /*   
+   /*
    adjust_period = pipe->frame_read_now->ts - pipe->lts_last;
 
    if (adjust_period != 0 && pipe->usec_to_adjust > 0)
@@ -566,16 +567,20 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
    */
 
    nraw_tofill = nraw_once;
+
+   int nloop = 0;
    
    while (nraw_tofill)
    {
       int shift_copy;
 
-	  if (pipe->frame_read_now->nraw_done == pipe->frame_read_now->nraw)
-	  {
+      nloop++;
+
+	   if (pipe->frame_read_now->nraw_done == pipe->frame_read_now->nraw)
+	   {
          /* timing measuring */
          if (pipe->frame_read_now->eots)
-		 {
+		   {
             /* the end of this timestamp */
             pipe->eots = 1;
             pipe->lts_last = pipe->frame_read_now->ts;
@@ -583,21 +588,19 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
             nsample_total = pipe->nsample_write_left + pipe->nsample_read_left;
             usec_inbuf = (int)((double)nsample_total / pipe->sample_rate * 1000000);
 
-            pout_log(("pout_pick_content: Total %d samples (%dus) in the buffer\n", nsample_total, usec_inbuf));
-            pout_log(("************************ END OF TIMESTAMP *********************\n\n"));
+            pout_log(("\r pout_pick_content: Total %d samples (%dus) in the buffer\n", nsample_total, usec_inbuf));
+            pout_log(("\r ************************ END OF TIMESTAMP *********************\n\n"));
          }
 
          if (pipe->lts_last != pipe->frame_read_now->ts && pipe->eots)
-		 {
+		   {
             /* the beginning of the next timestamp */
             pipe->eots = 0;            
-            
-            pout_log(("\n********************* BEGINNING OF TIMESTAMP ******************\n"));
          }
 
          /* finish when the stream ends */
          if (pipe->frame_read_now->eos)
-		 {
+		   {
             pout_log(("pout_pick_content: reach stream end\n"));
 
             memset((void*)out, 0, nraw_tofill * ai->channels_bytes);
@@ -609,55 +612,39 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
          pipe->last_played_frame = pipe->frame_read_now;
 
          if (pipe->frame_read_now->next != NULL)
-		 {
+		   {
             pipe->frame_read_now = pipe->frame_read_now->next;
-
-            if (pipe->frame_read_now == bufr->oldhead)
-			{
-               pout_log(("============================================================\n"));
-               pout_log(("(pout_pick_content: playout the transfer part, now play my own)\n\n"));
-            }
          }
-		 else
-		 {
+		   else
+		   {
             /* end of buffer */
             if (bufr->samples_in > bufr->samples_out)
-			{
-               pout_log(("\n"));
-               pout_log(("        >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"));
-               pout_log(("        >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"));
-               pout_log(("        >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"));
-               pout_log(("        >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"));
-               pout_log(("        >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"));
-               pout_log(("        >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"));
-               pout_log(("        >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"));
-               pout_log(("        (pout_pick_content: Sth. Wrong! %d/%d samples played only)\n\n"
+			   {
+               pout_debug(("\r xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n"));
+               pout_debug(("\r (pout_pick_content: Sth. Wrong! %d/%d samples played only)\n\n"
                         , bufr->samples_out, bufr->samples_in));
             }
             
-            if (pout_prepick(pipe) == 0)
-			{
+            if (pout_prepick(pipe) > 0)
+            {
+               pout_log(("pout_pick_content: prepicked\n"));
+            }
+            else
+			   {
                /* the buffer is overflowed, handle it */
                if (pipe->fillgap)
-			   {
-                  pout_log(("\n"));
-                  pout_log(("        0000000000000000000000000000000000000000000000000000000000000\n"));
-                  pout_log(("        0000000000000000000000000000000000000000000000000000000000000\n"));
-                  pout_log(("        0000000000000000000000000000000000000000000000000000000000000\n"));
-                  pout_log(("        0000000000000000000000000000000000000000000000000000000000000\n"));
-                  pout_log(("        0000000000000000000000000000000000000000000000000000000000000\n"));
-                  pout_log(("        0000000000000000000000000000000000000000000000000000000000000\n"));
-                  pout_log(("        0000000000000000000000000000000000000000000000000000000000000\n"));
-                  pout_log(("        (pout_pick_content: fill in %d sample gap with last sample)\n\n", nraw_tofill));
+			      {
+                  pout_debug(("\r 0000000000000000000000000000000000000000000000000000000000000\n"));
+                  pout_debug(("\r (pout_pick_content: fill in %d sample gap with last sample)\n\n", nraw_tofill));
 
                   for (i=0; i<nraw_tofill; i++)
-				  {
+				      {
                      memcpy(out, pipe->fillgap, ai->channels_bytes);
                      out += ai->channels_bytes;
                   }
                }
-			   else
-			   {
+			      else
+			      {
                   memset(out, 0, nraw_tofill * ai->channels_bytes);
                }
 
@@ -668,6 +655,7 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
                bufr->usec_mute += usec_mute;
                bufr->usec_out += pipe->usec_pulse - usec_mute;
 
+               pout_debug(("\r pout_pick_content: mute\n"));
                return 0;
 
             } /* if (pout_prepick(pipe) == 0) */
@@ -677,7 +665,7 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
       } /* if (frame_now->nraw_played == frame_now->nraw && nraw_tofill) */
 
       ncpy = pipe->frame_read_now->nraw - pipe->frame_read_now->nraw_done;
-
+      
       if (ncpy > nraw_tofill)
          ncpy = nraw_tofill;
       
@@ -694,7 +682,6 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
 		  shift_copy = pipe->nsample_shift;
 		  shift_copy++;
 	  }
-
 /*
 	  shift = ncpy - pipe->under_shift;
 	  while(shift > shift_copy)
@@ -722,7 +709,7 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
 	  {
 		  memcpy(out, in, shift * ai->channels_bytes); //output
 
-		  in = in + shift * ai->channels_bytes;
+        in = in + shift * ai->channels_bytes;
 		  out = out + shift * ai->channels_bytes;
 
 		  pipe->under_shift = shift;
@@ -733,10 +720,10 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
 	  in = in + ncpy * ai->channels_bytes;
 	  out = out + ncpy * ai->channels_bytes;
 
-      bufr->samples_out += ncpy;
-      nraw_tofill -= ncpy;
+     bufr->samples_out += ncpy;
+     nraw_tofill -= ncpy;
 
-      /* keep the last sample for a possible gap 
+     /* keep the last sample for a possible gap 
       if (pipe->fillgap)
 		  memcpy(pipe->fillgap, out - ai->channels_bytes, ai->channels_bytes);
 	  */
@@ -760,12 +747,12 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
 		  pipe->avg_usec_inbuf = usec_inbuf;
 	  else
 		  pipe->avg_usec_inbuf = (pipe->avg_usec_inbuf * 7 + usec_inbuf)/8;
-      
-      /*
-      pout_log(("pout_pick_content: [@%dms] (-)%d, %dw + %dr = %d samples left\n"
-          , pipe->frame_read_now->ts, ncpy, pipe->nsample_write_left
-          , pipe->nsample_read_left, nsample_total));
-      */
+        
+     pout_log(("\r pout_pick_content:[@%dus]@%x(%d>%d..%d/%d)-%d:%dw+%dr:%d...%d\n",
+          pipe->frame_read_now->ts, (int)pipe->frame_read_now,
+          nraw_tofill, nraw_once,
+          pipe->frame_read_now->nraw_done, pipe->frame_read_now->nraw,
+          ncpy, pipe->nsample_write_left, pipe->nsample_read_left, nsample_total, nloop));
       
    } /* while (nraw_tofill) */
 
@@ -870,6 +857,7 @@ int timed_pipe_set_usec (timed_pipe_t *pipe, int usec)
 
 /*
  * Create a new time armed pipe
+
  * - sample_rate: how many samples go through the pipe per second
  * - usec_pulse: samples are sent by group, named pulse within certain usecond.
  * - ms_min, ms_max: buffered/delayed samples are limited.

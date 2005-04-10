@@ -374,6 +374,7 @@ int spxs_init (media_player_t * mp, media_control_t *control, void* data)
 {
 	speex_sender_t *ss = (speex_sender_t*)mp;
 
+
 	ss->rtp_session = (xrtp_session_t*)data;
 
 	return MP_OK;
@@ -412,7 +413,6 @@ int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 sample
    /* varibles for samples counting */
    speex_info_t *spxinfo;
 
-   xclock_t *clock = session_clock(ss->rtp_session);
    /*
     * packetno from 0,1 is head (maybe more if has extra header), then increase by 1 to last packet
 	 * always granulepos[-1] in same spx file.
