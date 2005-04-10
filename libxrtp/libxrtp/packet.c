@@ -208,6 +208,7 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t *rtp, xrtp_rtp_payload_t *pay)
 
 
 
+
     return XRTP_OK;
  }
 
@@ -499,26 +500,25 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t *rtp, xrtp_rtp_payload_t *pay)
     return pac->$payload.len;
  }
 
- uint rtp_packet_dump_payload(xrtp_rtp_packet_t * rtp, char **r_payload){
-
-
+ uint rtp_packet_dump_payload(xrtp_rtp_packet_t * rtp, char **r_payload)
+ {
     uint len = rtp->$payload.len;
 
-    if(len == 0){
-
+    if(len == 0)
+    {
        *r_payload = NULL;
        return 0;
     }
 
-    if(rtp->direct == RTP_SEND){
-
+    if(rtp->direct == RTP_SEND)
+    {
         *r_payload = rtp->$payload.data;
-        
-    }else{
-      
+    }
+    else
+    {
         *r_payload = xmalloc(rtp->$payload.len);
-        if(!*r_payload){
-
+        if(!*r_payload)
+        {
             *r_payload = NULL;
             return 0;
         }
@@ -588,6 +588,7 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
     }
 
     comp->connect = conn;
+
 
 
     comp->direct = dir;
@@ -942,6 +943,7 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
     packet_log(("rtcp_add_sdes: %dB room\n", room));
 
     for(i=0; i<com->n_packet; i++)
+
     {
        if(com->heads[i]->type == RTCP_TYPE_SDES)
        {
@@ -1036,6 +1038,7 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
              memcpy(item->value, v, len);
 
              com->bytes += addlen;
+
 
              return XRTP_OK;
           }
@@ -2011,6 +2014,7 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
     {
         packet_debug(("rtcp_sender_info: Receiver Report\n"));
 
+
         return XRTP_EFORMAT;
     }
 
@@ -2448,6 +2452,7 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
 
     for(i=0; i<sr->$head.count; i++){
 
+
        rep = sr->reports[i];
        printf("<report SRC = %d>\n", rep->SRC);
        printf("<frac_lost = %d/>\n", rep->frac_lost);
@@ -2583,6 +2588,7 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
     printf("<version = %d/>\n", bye->$head.version);
     printf("<padding = %d/>\n", bye->$head.padding);
     printf("<num_src = %d/>\n", bye->$head.count);
+
     printf("<type = %d/>\n", bye->$head.type);
     printf("<length = %d/>\n\n", bye->$head.length);
 
@@ -3238,6 +3244,7 @@ xrtp_buffer_t * rtcp_pack(xrtp_rtcp_compound_t * com)
        //xfree(data);
        return XRTP_FAIL;
     }
+
 
     packet_log(("rtcp_unpack_app: Add %dth packet(APP)\n", rtcp->n_packet));
 
