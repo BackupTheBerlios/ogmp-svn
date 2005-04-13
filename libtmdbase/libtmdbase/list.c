@@ -27,13 +27,22 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
 /*
 #define XLIST_LOG
+#define XLIST_DEBUG
 */
+
 #ifdef XLIST_LOG
  #define xlist_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
  #define xlist_log(fmtargs)
+#endif
+
+#ifdef XLIST_DEBUG
+ #define xlist_debug(fmtargs)  do{printf fmtargs;}while(0)
+#else
+ #define xlist_debug(fmtargs)
 #endif
 
 int _xrtp_list_freenode(xrtp_list_node_t * node);
@@ -366,25 +375,29 @@ int xlist_addonce_ascent(xlist_t * list, void * ndata, int cmp(void *, void *))
 
    node->data = ndata;
    node->next = NULL;
-   prev->next = node;
+   if(prev)
+		prev->next = node;
+   else
+		list->head = node;
 
    list->num++;
 
    return OS_OK;
 }
 
-void * xlist_remove_first(xlist_t * list){
-  
-   xrtp_list_node_t * node;
+void * xlist_remove_first(xlist_t * list)
+{  
    void * data;
-
-   if(!list || list->num == 0) return NULL;
+   xrtp_list_node_t * node;
+	
+   if(!list || !list->head)
+   {
+	   return NULL;
+   }
 
    node = list->head;
    list->head = node->next;
    list->num--;
-
-   if(list->num==0)  xlist_log(("xlist_remove_first: list empty now\n"));
 
    data = node->data;
    _xrtp_list_freenode(node);
