@@ -40,12 +40,7 @@ extern ogmp_ui_t* global_ui;
  #define clie_debug(fmtargs)
 #endif
 
-#define SIPUA_MAX_RING 6
-
-
-
-
-
+#define SIPUA_MAX_RING 3
 
 #define MAX_CALL_BANDWIDTH  20480  /* in Bytes */
 
@@ -87,7 +82,7 @@ int client_call_ringing(void* gen)
 					client->nring--;
 
 					if(client->background_source)
-						client->sipua.answer(&client->sipua, call, SIPUA_STATUS_ANSWER, client->background_source);
+						client_queue(&client->sipua, call);
 
 					if(client->nring == 0)
 						break;
@@ -95,6 +90,7 @@ int client_call_ringing(void* gen)
 					continue;
 				}
 				
+
 				sipua_answer(&client->sipua, call, SIPUA_STATUS_RINGING, NULL);
 
 				call->ring_num--;
@@ -275,6 +271,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			sipua_set_t *call;
 
 
+
 			int lineno = e->lineno;
 
 			rtpcap_set_t* rtpcapset;
@@ -390,6 +387,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			int bw;
 
+
 			sipua_set_t *call = e->call_info; 
 			call->status = SIPUA_EVENT_ANSWERED;
 
@@ -424,6 +422,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			if(bw < 0)
 			{
 				sipua_answer(&client->sipua, call, SIPUA_STATUS_DECLINE, NULL);
+
 
 				break;
 			}
@@ -1063,6 +1062,7 @@ int client_set_conversation_start_callback (sipua_t *sipua, int(*callback)(void 
     return UA_OK;
 }
 
+
 int client_set_conversation_end_callback (sipua_t *sipua, int(*callback)(void *callback_user, int lineno), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
@@ -1075,6 +1075,7 @@ int client_set_conversation_end_callback (sipua_t *sipua, int(*callback)(void *c
 int client_set_bye_callback (sipua_t *sipua, int (*callback)(void *callback_user, int lineno, char *caller, char *reason), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
+
 
     client->on_bye = callback;
     client->user_on_bye = callback_user;

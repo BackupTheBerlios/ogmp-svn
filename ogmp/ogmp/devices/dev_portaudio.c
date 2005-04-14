@@ -28,7 +28,8 @@
 
 #define PA_SAMPLE_TYPE  paInt16
 
-#define DEFAULT_SAMPLE_FACTOR  4
+#define DEFAULT_SAMPLE_FACTOR  2
+#define DEFAULT_OUTPUT_NSAMPLE_PULSE  2048
 
 #define DELAY_WHILE 1000
 
@@ -199,6 +200,8 @@ static int pa_output_callback( void *inbuf, void *outbuf, unsigned long npcm_onc
 
    if (pa->dev.running == 0) pa->dev.running = 1;
    else 
+
+
    {
       /* time adjustment */
       pulse_us = time_usec_spent(pa->clock, pa->last_pick);
@@ -333,12 +336,13 @@ media_stream_t* pa_new_media_stream(media_device_t *dev, media_receiver_t* recvr
    }
    
    pa->ai_input = *ai;
-
-   nsp = pa->ai_input.info.sample_rate / pa->sample_factor;
-   
+   /*
+   nsp = pa->ai_input.info.sample_rate / pa->sample_factor;   
    nsample_pulse = 1;
    while (nsample_pulse * 2 <= nsp) 
 	   nsample_pulse *= 2;
+   */   
+   nsample_pulse = DEFAULT_NSAMPLE_PULSE;
    
    if(pa->ai_input.info.sample_rate > nsample_pulse)
       pa->input_usec_pulse = (int)(1000000 / (pa->ai_input.info.sample_rate / (double)nsample_pulse));
@@ -363,6 +367,7 @@ media_stream_t* pa_new_media_stream(media_device_t *dev, media_receiver_t* recvr
 						sample_type,		/* PaSampleFormat outputSampleFormat */
 						NULL,
 						pa->ai_input.info.sample_rate,
+
 						nsample_pulse,		/* unsigned long framesPerBuffer */
 						pa->nbuf_internal,	/* unsigned long numberOfBuffers */
 						0,					/* PaStreamFlags streamFlags: paDitherOff */
@@ -410,11 +415,11 @@ int pa_set_input_media(media_device_t *dev, media_receiver_t* recvr, media_info_
    pa->ai_input = *ai;
 
    nsp = pa->ai_input.info.sample_rate / pa->sample_factor;
-   
+
    nsample_pulse = 1;
-   while (nsample_pulse * 2 <= nsp) 
+   while (nsample_pulse * 2 <= nsp)
 	   nsample_pulse *= 2;
-   
+
    if(pa->ai_input.info.sample_rate > nsample_pulse)
       pa->input_usec_pulse = (int)(1000000 / (pa->ai_input.info.sample_rate / (double)nsample_pulse));
    else
@@ -465,7 +470,7 @@ int pa_set_output_media(media_device_t *dev, media_info_t *out_info)
 {
    portaudio_device_t *pa = (portaudio_device_t *)dev;
    
-   int nsp = 0;
+   /*int nsp = 0;*/
    int nsample_pulse = 0;
    int sample_type = 0;
 
@@ -473,6 +478,8 @@ int pa_set_output_media(media_device_t *dev, media_info_t *out_info)
    int pa_min_nbuf = 0;
 
    audio_info_t* ai = (audio_info_t*)out_info;
+
+
 
    if(!pa->online && pa_online (dev) < MP_OK)
    {
@@ -482,13 +489,20 @@ int pa_set_output_media(media_device_t *dev, media_info_t *out_info)
    }
    
    pa->ai_output = *ai;
-
-   nsp = pa->ai_output.info.sample_rate / pa->sample_factor;
    
+   /*
+   nsp = pa->ai_input.info.sample_rate / pa->sample_factor;
    nsample_pulse = 1;
-   while (nsample_pulse * 2 <= nsp) 
+   while (nsample_pulse * 2 <= nsp)
 	   nsample_pulse *= 2;
+   */
    
+   /* *
+    * It looks to set 2048 per pulse will get a more smooth audio out result
+    * for both 16000 and 8000 rate.
+    */
+   nsample_pulse = DEFAULT_OUTPUT_NSAMPLE_PULSE;
+
    if(pa->ai_output.info.sample_rate > nsample_pulse)
       pa->usec_pulse = (int)(1000000 / (pa->ai_output.info.sample_rate / (double)nsample_pulse));
 
@@ -656,8 +670,8 @@ int pa_setting (media_device_t * dev, control_setting_t *setting, module_catalog
    
    pa->sample_factor = 0;
    
-   if (setting) {
-
+   if (setting)
+   {
       pa_setting_t *pa_setting = (pa_setting_t *)setting;
       
       pa->time_match = pa_setting->time_match;
@@ -667,7 +681,8 @@ int pa_setting (media_device_t * dev, control_setting_t *setting, module_catalog
       pa->sample_factor = pa_setting->sample_factor;
    }
 
-   if(pa->sample_factor == 0) pa->sample_factor = DEFAULT_SAMPLE_FACTOR;
+   if(pa->sample_factor == 0)
+      pa->sample_factor = DEFAULT_SAMPLE_FACTOR;
    
    return MP_OK;
 }
@@ -725,6 +740,7 @@ module_interface_t* media_new_device () {
 
    /* test speed */
    delay = DELAY_WHILE;
+
 
 
    hz_start = time_nsec_now(pa->clock);
