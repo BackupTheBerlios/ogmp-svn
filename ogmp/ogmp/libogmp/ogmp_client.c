@@ -45,6 +45,8 @@ extern ogmp_ui_t* global_ui;
 #define MAX_CALL_BANDWIDTH  20480  /* in Bytes */
 
 /****************************************************************************************/
+int client_queue(sipua_t *sipua, sipua_set_t* call);
+
 int client_call_ringing(void* gen)
 {
 	int i;

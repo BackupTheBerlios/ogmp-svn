@@ -568,13 +568,9 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
 
    nraw_tofill = nraw_once;
 
-   int nloop = 0;
-   
    while (nraw_tofill)
    {
       int shift_copy;
-
-      nloop++;
 
 	   if (pipe->frame_read_now->nraw_done == pipe->frame_read_now->nraw)
 	   {
@@ -748,11 +744,11 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
 	  else
 		  pipe->avg_usec_inbuf = (pipe->avg_usec_inbuf * 7 + usec_inbuf)/8;
         
-     pout_log(("\r pout_pick_content:[@%dus]@%x(%d>%d..%d/%d)-%d:%dw+%dr:%d...%d\n",
+     pout_log(("\r pout_pick_content:[@%dus]@%x(%d>%d..%d/%d)-%d:%dw+%dr:%d\n",
           pipe->frame_read_now->ts, (int)pipe->frame_read_now,
           nraw_tofill, nraw_once,
           pipe->frame_read_now->nraw_done, pipe->frame_read_now->nraw,
-          ncpy, pipe->nsample_write_left, pipe->nsample_read_left, nsample_total, nloop));
+          ncpy, pipe->nsample_write_left, pipe->nsample_read_left, nsample_total));
       
    } /* while (nraw_tofill) */
 
