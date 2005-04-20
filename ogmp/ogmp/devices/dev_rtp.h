@@ -48,9 +48,11 @@ struct dev_rtp_s
 				uint16 rtp_portno, uint16 rtcp_portno,
 				uint8 profile_no, char *profile_mime, 
 				int clockrate, int coding_param,
-				int bw_budget);
+				int bw_budget, rtpcap_descript_t *rtpcap);
 
    media_pipe_t *frame_maker;
+
+   media_control_t *control;
 };
 
 typedef struct rtp_frame_s rtp_frame_t;

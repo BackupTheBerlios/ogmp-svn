@@ -42,6 +42,9 @@ extern ogmp_ui_t* global_ui;
 
 #define SIPUA_MAX_RING 3
 
+
+
+
 #define MAX_CALL_BANDWIDTH  20480  /* in Bytes */
 
 /****************************************************************************************/
@@ -92,7 +95,6 @@ int client_call_ringing(void* gen)
 					continue;
 				}
 				
-
 				sipua_answer(&client->sipua, call, SIPUA_STATUS_RINGING, NULL);
 
 				call->ring_num--;
@@ -220,7 +222,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			if(!user_prof->thread_register)
 				user_prof->thread_register = xthr_new(client_register_loop, user_prof, XTHREAD_NONEFLAGS);
 
-
          if(client->on_register)
             client->on_register(client->user_on_register, user_prof->reg_status, user_prof->reg_reason_phrase);
                 
@@ -272,9 +273,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
 			sipua_set_t *call;
 
-
-
-			int lineno = e->lineno;
+         int lineno = e->lineno;
 
 			rtpcap_set_t* rtpcapset;
 
@@ -389,17 +388,16 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			int bw;
 
-
-			sipua_set_t *call = e->call_info; 
-			call->status = SIPUA_EVENT_ANSWERED;
+         sipua_set_t *call = e->call_info; 
+			call->status = SIPUA_STATUS_ANSWER;
 
          /*
-		 printf("client_sipua_event: call[%s] answered\n", call->subject);
-		 printf("client_sipua_event: SDP\n");
-		 printf("------------------------\n");
-		 printf("%s", sdp_body);
-		 printf("------------------------\n");
-		 */
+		   printf("client_sipua_event: call[%s] answered\n", call->subject);
+		   printf("client_sipua_event: SDP\n");
+		   printf("------------------------\n");
+		   printf("%s", sdp_body);
+		   printf("------------------------\n");
+		   */
 
          sdp_message_init(&sdp_message);
 
@@ -425,8 +423,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			{
 				sipua_answer(&client->sipua, call, SIPUA_STATUS_DECLINE, NULL);
 
-
-				break;
+            break;
 			}
 
 			rtp_capable_done_set(rtpcapset);
@@ -440,10 +437,10 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
             source_associate_guests(client->background_source, call->rtp_format);
          }
-          */
-         
 
-			break;
+          */
+
+         break;
 		}
 		case(SIPUA_EVENT_ACK):
 		{
@@ -461,7 +458,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			/* Now create rtp sessions of the call */
 			bw = sipua_establish_call(sipua, call, "playback", call->rtpcapset,
-                                client->format_handlers, client->control, client->pt);
+                    client->format_handlers, client->control, client->pt);
 
 			if(bw < 0)
 			{
@@ -549,9 +546,8 @@ int sipua_done_sip_session(void* gen)
 	xstr_done_string(set->subject);
 	xstr_done_string(set->info);
 
-    xstr_done_string(set->proto);
-    xstr_done_string(set->from);
-
+   xstr_done_string(set->proto);
+   xstr_done_string(set->from);
 
 	set->rtp_format->done(set->rtp_format);
 	rtp_capable_done_set(set->rtpcapset);
@@ -562,23 +558,21 @@ int sipua_done_sip_session(void* gen)
 }
 
 int client_done_call(sipua_t* sipua, sipua_set_t* set)
-
 {
 	int i;
 	ogmp_client_t *ua = (ogmp_client_t*)sipua;
 
 	if(ua->sipua.incall != set)
-    {
+   {
 		for(i=0; i<MAX_SIPUA_LINES; i++)
-
-        {
+      {
 			if(ua->lines[i] == set)
 			{
 				ua->lines[i] = NULL;
 				break;
 			}
-        }
-    }
+      }
+   }
 	else
 	{
 		ua->sipua.incall = NULL;
@@ -742,6 +736,7 @@ int client_unregist(sipua_t *sipua, user_profile_t *user)
 
 	client->reg_profile = user;
 
+
 	if(user->thread_register)
 	{
 		user->enable = 0;
@@ -800,6 +795,7 @@ int client_busylines(sipua_t* sipua, int *busylines, int nlines)
     for(i=0; i<nlines; i++)
 		if(client->lines[i])
 			busylines[n++] = i;
+
 
 	xthr_unlock(client->lines_lock);
 
@@ -941,7 +937,10 @@ sipua_set_t* client_pick(sipua_t* sipua, int line)
 }
 
 int client_hold(sipua_t* sipua)
+
+
 {
+
 	int i;
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1064,7 +1063,6 @@ int client_set_conversation_start_callback (sipua_t *sipua, int(*callback)(void 
     return UA_OK;
 }
 
-
 int client_set_conversation_end_callback (sipua_t *sipua, int(*callback)(void *callback_user, int lineno), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
@@ -1077,6 +1075,7 @@ int client_set_conversation_end_callback (sipua_t *sipua, int(*callback)(void *c
 int client_set_bye_callback (sipua_t *sipua, int (*callback)(void *callback_user, int lineno, char *caller, char *reason), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
+
 
 
     client->on_bye = callback;
@@ -1098,6 +1097,7 @@ int client_unsubscribe_bandwidth(sipua_t *sipua, sipua_set_t* call)
    ogmp_client_t* client = (ogmp_client_t*)sipua;
 
    hold = call->bandwidth_hold;
+
    
    client->control->release_bandwidth(client->control, call->bandwidth_hold);
    call->bandwidth_hold = 0;

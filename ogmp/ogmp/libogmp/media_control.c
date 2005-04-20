@@ -222,11 +222,11 @@ int cont_add_device (media_control_t *cont, char *name, control_setting_call_t *
 
    xlist_addto_first(impl->setting_calls, item);
    xlist_addto_first(impl->devices, dev);
-
-   dev->start(dev, cont);
-
+   
+   dev->init(dev, cont);
+   
    return MP_OK;
-}
+}         
 
 int cont_match_device(void* t, void *p)
 {
@@ -241,11 +241,11 @@ int cont_match_device(void* t, void *p)
    return -1;
 }
 
-media_device_t* cont_find_device(media_control_t *cont, char *name)
+media_device_t* cont_find_device(media_control_t *cont, char *name, char* mode)
 {
    xlist_user_t lu;
    xlist_t *devs;
-
+   
    control_impl_t *impl = (control_impl_t*)cont;
 
    media_device_t *dev = xlist_find(impl->devices, name, cont_match_device, &lu);
@@ -266,9 +266,9 @@ media_device_t* cont_find_device(media_control_t *cont, char *name)
    dev = xlist_first(devs, &lu);
    while (dev)
    {
-      if (dev->match_type(dev, name))
-	  {
-         cont_log(("cont_find_device: found '%s' device\n", name));
+      if (dev->match_type(dev, name) && dev->match_mode(dev, mode))
+	   {
+         cont_log(("cont_find_device: found '%s/%s' device\n", name, mode));
 
          xlist_remove_item(devs, dev);
 
@@ -307,12 +307,10 @@ control_setting_t* cont_fetch_setting(media_control_t *cont, char *name, media_d
    if(!dev->new_setting)
    {
       cont_log(("cont_fetch_setting: No need to set device\n"));
-
       return NULL;
    }
    
-   item = xlist_find(impl->setting_calls, name, cont_match_call, &lu);
-   
+   item = xlist_find(impl->setting_calls, name, cont_match_call, &lu);   
    if(item)
    {
       setting = dev->new_setting(dev);
@@ -324,7 +322,6 @@ control_setting_t* cont_fetch_setting(media_control_t *cont, char *name, media_d
 		  return setting;
 
       cont_log(("cont_fetch_setting: no device setting\n"));
-
       setting->done(setting);
    }
 
@@ -371,12 +368,6 @@ media_player_t * cont_find_player (media_control_t *cont, char *mode, char *mime
 
    if(!player)
 	   return NULL;
-
-   if(player->set_device(player, cont, impl->catalog, extra) < MP_OK)
-   {
-	   player->done(player);
-	   return NULL;
-   }
 
    return player; 
 }
@@ -479,6 +470,7 @@ media_maker_t* cont_find_creater(media_control_t *cont, char *mime, media_info_t
 int cont_seek_millisec (media_control_t * cont, int msec)
 {
    control_impl_t *impl = (control_impl_t *)cont;
+
 
    impl->demuxing = 0;
    
@@ -593,6 +585,13 @@ int cont_reset_bandwidth(media_control_t * cont)
 	return impl->bandwidth;
 }
 
+xclock_t* cont_clock(media_control_t * cont)
+{
+	control_impl_t *impl = (control_impl_t *)cont;
+
+   return impl->clock;
+}
+
 module_interface_t* new_media_control()
 {
    media_control_t * cont;
@@ -609,8 +608,8 @@ module_interface_t* new_media_control()
    impl->clock = time_start();
 
    impl->devices = xlist_new();
-   if(!impl->devices){
-
+   if(!impl->devices)
+   {
       cont_debug (("media_new_control: No memory for devices\n"));
       xfree(impl);
       
@@ -619,8 +618,8 @@ module_interface_t* new_media_control()
 
    impl->setting_calls = xlist_new();
    
-   if(!impl->setting_calls){
-
+   if(!impl->setting_calls)
+   {
       cont_debug (("media_new_control: No memory for setting list\n"));
 	  
 	  xlist_done(impl->devices, cont_done_device);
@@ -648,7 +647,7 @@ module_interface_t* new_media_control()
    cont->set_format = cont_set_format;
    cont->seek_millisec = cont_seek_millisec;
    cont->demux_next = cont_demux_next;
-
+   
    cont->config = cont_config;
    cont->modules = cont_modules;
 
@@ -656,6 +655,7 @@ module_interface_t* new_media_control()
    cont->book_bandwidth = cont_book_bandwidth;
    cont->release_bandwidth = cont_release_bandwidth;
    cont->reset_bandwidth = cont_reset_bandwidth;
+   cont->clock = cont_clock;
 
    return cont;
 }

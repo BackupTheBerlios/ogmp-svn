@@ -45,6 +45,8 @@ int done_stream_handler(void *gen)
    handler->done(handler);
 
 
+
+
    return MP_OK;
 }
 
@@ -55,10 +57,12 @@ int ogm_done_format(media_format_t * mf)
 
    while (cur != NULL)
    {
+      media_player_t* player = (media_player_t*)cur->player;
+      
       next = cur->next;
       
-      if(cur->player)
-         cur->player->done(cur->player);
+      if(player)
+         player->done(player);
          
       xfree(((ogm_stream_t*)cur)->instate);
       xfree(cur);
@@ -137,7 +141,7 @@ media_player_t * ogm_stream_player(media_format_t * mf, int strmno)
   while (cur != NULL)
   {
     if ((((ogm_stream_t*)cur)->serial) == strmno)
-      return cur->player;
+      return (media_player_t*)cur->player;
       
     cur = cur->next;
   }
@@ -175,20 +179,24 @@ int ogm_new_all_player(media_format_t *mf, media_control_t* ctrl, char* mode, vo
 		if(!cur->player)
 		{
 			cur->playable = -1;
-
 			ogm_debug(("ogm_new_mime_player: No %s player\n", cur->media_info->mime));
 		}
-		else if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
-		{
+		else if(cur->player->set_device(cur->player, ctrl, ctrl->modules(ctrl), mode_param) < MP_OK)
+      {
+	      cur->player->done(cur->player);
+         cur->player = NULL;
 			cur->playable = -1;
-
+			ogm_debug(("ogm_new_mime_player: %s stream fail to set device\n", cur->media_info->mime));
+      }
+      else if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
+		{      
+			cur->playable = -1;
 			ogm_debug(("ogm_new_mime_player: open %s stream fail!\n", cur->media_info->mime));
 		}
 		else
 		{
 			cur->playable = 1;
 			c++;
-
 			ogm_log(("ogm_new_mime_player: %s stream ok\n", cur->media_info->mime));
 		}
 
@@ -212,10 +220,17 @@ media_player_t* ogm_new_stream_player(media_format_t *mf, int strmno, media_cont
 
          if(!cur->player)
 			{
-				ogm_debug(("ogm_new_mime_player: stream can't be played\n"));
+				ogm_debug(("ogm_new_stream_player: stream can't be played\n"));
 				cur->playable = -1;
 				return NULL;
 			}
+		   else if(cur->player->set_device(cur->player, ctrl, ctrl->modules(ctrl), mode_param) < MP_OK)
+         {
+	         cur->player->done(cur->player);
+            cur->player = NULL;
+			   cur->playable = -1;
+			   ogm_debug(("ogm_new_stream_player: %s stream fail to set device\n", cur->media_info->mime));
+         }
 
 			if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
 			{
@@ -225,7 +240,7 @@ media_player_t* ogm_new_stream_player(media_format_t *mf, int strmno, media_cont
          
 			cur->playable = 1;
 
-			ogm_log(("ogm_new_mime_player: player ok\n"));
+			ogm_log(("ogm_new_stream_player: player ok\n"));
 
 			return cur->player;
 		}
@@ -252,14 +267,21 @@ media_player_t * ogm_new_mime_player(media_format_t * mf, char * mime, media_con
 				cur->playable = -1;
 				return NULL;
 			}
-
-			if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
+		   else if(cur->player->set_device(cur->player, ctrl, ctrl->modules(ctrl), mode_param) < MP_OK)
+         {
+	         cur->player->done(cur->player);
+            cur->player = NULL;
+			   cur->playable = -1;
+			   ogm_debug(("ogm_new_mime_player: %s stream fail to set device\n", cur->media_info->mime));
+				return NULL;
+         }
+			else if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
 			{
 				cur->playable = -1;
 				return NULL;
-			}         
-         
-			cur->playable = 1;
+			}
+
+         cur->playable = 1;
 
 			ogm_log(("ogm_new_mime_player: player ok\n"));
 		}
@@ -290,7 +312,7 @@ int ogm_set_mime_player(media_format_t *mf, char *mime, media_player_t* player)
 		cur = cur->next;
 	}
 
-    ogm_log(("ogm_set_mime_player: stream '%s' not exist\n", mime));
+   ogm_log(("ogm_set_mime_player: stream '%s' not exist\n", mime));
    
 	return MP_FAIL;
 }
@@ -302,7 +324,7 @@ media_player_t * ogm_mime_player(media_format_t * mf, const char * mime)
    while (cur != NULL)
    {
       if (!strcmp(cur->mime, mime))
-	  {
+	   {
          return cur->player;
       }
     
@@ -319,14 +341,13 @@ media_stream_t * ogm_find_fourcc(media_format_t * mf, char *fourcc)
    while (cur != NULL)
    {
       if ( strncmp(cur->fourcc, fourcc, 4) )
-	  {
+	   {
          return cur;
       }
 
       cur = cur->next;
 
    }
-
 
    return NULL;
 }
@@ -379,6 +400,7 @@ int demux_ogm_flush_page(ogm_stream_t *stream, ogg_packet *op)
    while (ogg_stream_flush(&stream->outstate, &page))
    {
       page_data = xmalloc(page.header_len + page.body_len);
+
 
       if(!page_data)
 	  {
@@ -506,15 +528,12 @@ int ogm_support_type (media_format_t *mf, char *type, char *subtype)
 int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_stream_state *sstate, ogg_packet *packet)
 {
    //stream_header sth;
-
-
    xrtp_list_user_t $u;
    ogm_media_t *handler;
    
    media_format_t *mf = (media_format_t *)ogm;
 
    //copy_headers(&sth, (old_stream_header *)&(ogm->packet.packet[0]), ogm->packet.bytes);
-
    handler = (ogm_media_t*) xlist_first (mf->stream_handlers, &$u);
 
    while (handler)
@@ -530,7 +549,6 @@ int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_strea
 
    return MP_OK;
 }
-
 
 int ogm_open(media_format_t *mf, char *fname, media_control_t *ctrl)
 {

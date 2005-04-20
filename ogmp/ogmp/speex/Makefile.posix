@@ -13,9 +13,9 @@ INCLUDES = -I$(PREFIX)/include -I../include
 INSTDIR = $(PREFIX)/lib/$(PROGNAME)
 
 FILES = speex_player.c speex_config.c speex_codec.c ogm_speex.c speex_sender.c \
-			speex_rtp.c speex_sdp.c speex_config.c
+			speex_rtp.c speex_sdp.c speex_config.c speex_maker.c
 
-LIBFILES = ogm_speex.so speex_player.so speex_sender.so speex_rtp.so
+LIBFILES = ogm_speex.so speex_player.so speex_sender.so speex_rtp.so speex_maker.so
 
 CFLAGS = -Wall -fPIC
 
@@ -27,6 +27,7 @@ all:	 libs install
 libs: $(FILES:.c=.o)
 	gcc -shared $(LIBS) ogm_speex.o -o ogm_speex.so
 	gcc -shared $(LIBS) speex_player.o speex_codec.o  -o speex_player.so
+	gcc -shared $(LIBS) speex_maker.o speex_codec.o  -o speex_maker.so
 	gcc -shared $(LIBS) speex_sender.o speex_config.o speex_codec.o  -o speex_sender.so
 	gcc -shared $(LIBS) speex_rtp.o speex_sdp.o  speex_config.o -o speex_rtp.so
 

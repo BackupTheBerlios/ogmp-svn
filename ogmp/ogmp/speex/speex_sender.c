@@ -25,7 +25,8 @@
 
 #include <stdlib.h>
 
-#include "../devices/dev_rtp.h"
+/*#include "../devices/dev_rtp.h"*/
+#include "../format_rtp/rtp_format.h"
 
 #include "speex_info.h"
 
@@ -60,6 +61,8 @@ struct speex_sender_s
    struct media_transmit_s transmit;
 
    /*int (*callback_on_ready) (void *user, media_player_t *player);*/
+
+
    void *callback_on_ready_user;
    int (*callback_on_ready)();
 
@@ -298,9 +301,9 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
       getchar();
 
 		return MP_FAIL;
-	}
+	}       
 
-	dev = cont->find_device(cont, "rtp");
+	dev = cont->find_device(cont, "rtp", "output");
 	if(!dev)
 	{
 		spxs_debug(("spxs_set_device: No rtp device found\n"));
@@ -312,7 +315,7 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 
 	dev_rtp = (dev_rtp_t*)dev;
    
-	dev->start(dev, cont);
+	dev->start(dev, DEVICE_OUTPUT);
 
 	setting = cont->fetch_setting(cont, "rtp", dev);
 
@@ -349,7 +352,7 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 								(uint16)rtpcap->local_rtp_portno, (uint16)rtpcap->local_rtcp_portno,
 								rtpcap->profile_no, rtpcap->profile_mime,
 								rtpcap->clockrate, rtpcap->coding_param,
-								total_bw);
+								total_bw, rtpcap);
 
 	ss->rtp_media = session_media(ss->rtp_session);
 
@@ -370,12 +373,88 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 	return MP_OK;
 }
 
+int spxs_link_device(media_player_t *mp, media_control_t *cont, media_stream_t* strm, void* extra)
+{
+	control_setting_t *setting = NULL;
+ 
+	/* extra is cast to rtpcapset for rtp device */
+	rtpcap_set_t *rtpcapset = (rtpcap_set_t*)extra;
+	user_profile_t *user;
+
+	rtpcap_descript_t *rtpcap;
+
+	media_device_t *dev = NULL;
+
+	dev_rtp_t * dev_rtp = NULL;
+	rtp_setting_t *rtpset = NULL;
+	speex_setting_t *spxset = NULL;
+
+	speex_sender_t *ss = (speex_sender_t*)mp;
+   rtp_stream_t *rtpstrm = (rtp_stream_t*)strm;
+
+	int total_bw;
+
+	user = rtpcapset->user_profile;
+   
+	rtpcap = rtp_get_capable(rtpcapset, global_const.mime_type);
+	if(!rtpcap)
+	{
+		spxs_debug(("spxs_set_device: No speex capable found\n"));
+      
+		return MP_FAIL;
+	}
+
+	dev_rtp = rtpstrm->rtp_format->rtp_in;
+   dev = (media_device_t*)dev_rtp;
+   
+	setting = cont->fetch_setting(cont, "rtp", dev);
+	if(!setting)
+	{
+		spxs_debug(("spxs_set_device: Can't set rtp device properly\n"));
+		return MP_FAIL;
+	}
+
+	rtpset = (rtp_setting_t*)setting;
+
+	spxset = speex_setting(cont);
+
+
+	total_bw = cont->book_bandwidth(cont, 0);
+
+	ss->profile_no = rtpcap->profile_no;
+
+	ss->nettype = xstr_clone(user->user->nettype);
+	ss->addrtype = xstr_clone(user->user->addrtype);
+	ss->netaddr = xstr_clone(user->user->netaddr);
+
+	ss->rtp_port = rtpcap->local_rtp_portno;
+	ss->rtcp_port = rtpcap->local_rtcp_portno;
+
+	ss->cname = xstr_clone(user->cname);
+	ss->cnlen = strlen(user->cname)+1;
+
+   ss->rtp_session = rtpstrm->session;
+   ss->rtp_media = session_media(ss->rtp_session);
+
+	ss->rtp_media->set_parameter(ss->rtp_media, "ptime_max", (void*)spxset->ptime_max);
+	ss->rtp_media->set_parameter(ss->rtp_media, "penh", (void*)spxset->penh);
+	/*
+   session_set_callback(ss->rtp_session, CALLBACK_SESSION_MEMBER_UPDATE, spxs_on_member_update, ss);
+   */
+	mp->device = dev;
+
+	setting->done(setting);
+
+	spxs_debug(("spxs_set_device: mp->device@%x ok\n", (int)mp->device));
+
+	return MP_OK;
+}
+
 int spxs_init (media_player_t * mp, media_control_t *control, void* data)
 {
 	speex_sender_t *ss = (speex_sender_t*)mp;
 
-
-	ss->rtp_session = (xrtp_session_t*)data;
+   ss->rtp_session = (xrtp_session_t*)data;
 
 	return MP_OK;
 }
@@ -383,7 +462,7 @@ int spxs_init (media_player_t * mp, media_control_t *control, void* data)
 int spxs_stop (media_player_t *mp)
 {
    spxs_debug(("spxs_stop: to stop speex sender\n"));
-   mp->device->stop (mp->device);
+   mp->device->stop (mp->device, DEVICE_OUTPUT);
 
    return MP_OK;
 }
@@ -417,7 +496,6 @@ int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 sample
     * packetno from 0,1 is head (maybe more if has extra header), then increase by 1 to last packet
 	 * always granulepos[-1] in same spx file.
     */
-
    if (!mp->device)
    {
       spxs_debug(("spxs_receive_next: No device to send speex voice\n"));
@@ -512,6 +590,7 @@ module_interface_t * media_new_sender()
    mp = (media_player_t*)sender;
    mp->done = spxs_done;
    
+
    mp->media_type = spxs_media_type;
    mp->codec_type = spxs_codec_type;
 
@@ -522,11 +601,13 @@ module_interface_t * media_new_sender()
    
    mp->init = spxs_init;
 
+
    mp->open_stream = spxs_open_stream;
    mp->close_stream = spxs_close_stream;
    mp->set_options = spxs_set_options;
 
    mp->set_device = spxs_set_device;
+   mp->link_device = spxs_link_device;
 
    mp->capable = spxs_capable;
    mp->match_capable = spxs_match_capable;

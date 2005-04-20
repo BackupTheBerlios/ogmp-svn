@@ -21,9 +21,9 @@
 #include <timedia/ui.h>
 
 #include "speex_info.h"
-
+/*
 #define SPXSDP_LOG
-
+*/
 #ifdef SPXSDP_LOG
  #define spxsdp_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -142,8 +142,8 @@ int speex_info_from_sdp(media_info_t *info, int rtpmap_no, sdp_message_t *sdp, i
 	/* locate speex sdp */
 	pos_media = 0;
 
-    if(!sdp)
-        return -1;
+   if(!sdp)
+      return -1;
 
 	while (!sdp_message_endof_media (sdp, pos_media))
 	{
@@ -172,6 +172,7 @@ int speex_info_from_sdp(media_info_t *info, int rtpmap_no, sdp_message_t *sdp, i
 					if(0==strcmp(coding_type,"speex"))
 					{
 						spxinfo->audioinfo.info.sample_rate = clockrate;
+
 						spxinfo->audioinfo.channels = coding_param;
 
 						spxsdp_log(("speex_info_from_sdp: clockrate[%d] channels[%d]\n", clockrate, coding_param));
@@ -282,6 +283,7 @@ int speex_info_from_sdp(media_info_t *info, int rtpmap_no, sdp_message_t *sdp, i
 					if(*attr == '1')
 						spxinfo->penh = 1;
 				}
+            
 				/* attribute "mode=..."
 				attr = strstr(token, "mode");
 				if(attr)

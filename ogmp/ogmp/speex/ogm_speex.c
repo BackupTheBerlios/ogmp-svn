@@ -223,11 +223,12 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
 
 			ogm_speex_debug(("ogm_open_speex: speex info ok\n"));
 		} 
-		
-		if (spxinfo->head_packets < spxinfo->nheader)
+
+
+      if (spxinfo->head_packets < spxinfo->nheader)
 		{
 			/* Comment Header and Extra */
-            ogm_speex_log(("ogm_open_speex: Skip Comment and Extra Header\n"));
+         ogm_speex_log(("ogm_open_speex: Skip Comment and Extra Header\n"));
 		} 
 	}
 	
@@ -280,7 +281,7 @@ int ogm_process_speex(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page
 	}
    
 	return MP_OK;
-}
+}                       
 
 int ogm_done_speex (ogm_media_t * ogmm)
 {

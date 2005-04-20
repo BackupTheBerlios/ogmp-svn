@@ -91,7 +91,6 @@ rtpcap_descript_t* rtp_capable_descript(int payload_no,
 	if(!rtpcap)
 	{
 		rtpcap_log(("rtp_capable_descript: No memory\n"));
-
 		return NULL;
 	}
 	memset(rtpcap, 0, sizeof(rtpcap_descript_t));
@@ -304,8 +303,7 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 	rtpcapset->subject = xstr_clone(sdp_message_s_name_get(sdp));
 	rtpcapset->info = xstr_clone(sdp_message_i_info_get(sdp, -1));
 
-
-	addr = sdp_message_c_addr_get (sdp, -1, 0);
+   addr = sdp_message_c_addr_get (sdp, -1, 0);
 
 	if(0==strcmp(rtpcapset->nettype, "IN") && 0==strcmp(rtpcapset->addrtype, "IP4"))
 		sdp_parse_ipv4(addr, media_ip, MAX_IP_BYTES, &ttl);
@@ -322,8 +320,7 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 		char *p = rtpcapset->cname;
 		char *username;
 
-
-		username = sdp_message_o_username_get(sdp);
+      username = sdp_message_o_username_get(sdp);
 		if(username)
 		{
 			rtpcapset->username = xstr_clone(username);

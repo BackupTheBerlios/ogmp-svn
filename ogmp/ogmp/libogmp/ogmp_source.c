@@ -116,7 +116,6 @@ int source_stop (media_source_t *msrc)
 
    src_log (("source_stop: source stops ...\n"));
 
-
    {/*lock*/ xthr_lock(source->lock);}
 
    source->finish = 1;
@@ -227,8 +226,8 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
       src_debug(("source_open: mode not support!\n"));
       return NULL;
    }
-    
-	osource = xmalloc(sizeof(ogmp_source_t));
+
+   osource = xmalloc(sizeof(ogmp_source_t));
 	if(!osource)
    {
       src_debug(("source_open: no memory!\n"));
@@ -289,6 +288,7 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
 	{
 		if(0 == format->new_all_player(format, osource->control, "playback", mode_param))
 		{
+
 			source_done(msrc);
 			return NULL;
 		}
@@ -335,8 +335,7 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
  * Find sessions in the format which match cname and mimetype in source
  * Move_member_from_session_of(call->rtp_format) to_session_of(source->players);
  */
-int
-source_associate(media_source_t* msrc, media_format_t* rtp_fmt, char* cname)
+int source_associate(media_source_t* msrc, media_format_t* rtp_fmt, char* cname)
 {
    int i;
    media_player_t* player = NULL;

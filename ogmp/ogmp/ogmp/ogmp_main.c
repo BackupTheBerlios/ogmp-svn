@@ -20,7 +20,7 @@
 /* For standalone sipua */
 int main(int argc, char** argv)
 {
-    sipua_t* sipua = NULL;
+   sipua_t* sipua = NULL;
 	sipua_uas_t* uas = NULL;
 	module_catalog_t *mod_cata = NULL;
 

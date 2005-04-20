@@ -68,6 +68,8 @@ struct speex_encoder_s
 
    speex_info_t *speex_info;
 
+   xclock_t* clock;
+
    char* encoding_frame;			/* 20ms frame size */
    char* encoding_gap;
 

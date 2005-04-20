@@ -20,10 +20,10 @@
 #include <timedia/ui.h>
 
 #include "dev_rtp.h"
-
+/*
 #define RTPDEV_LOG
 #define RTPDEV_DEBUG
-
+*/
 #ifdef RTPDEV_LOG
  #define rtpdev_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
@@ -192,13 +192,11 @@ int rtp_set_callbacks (xrtp_session_t *ses, rtp_callback_t *cbs, int ncbs)
  */
 xrtp_session_t* rtp_session(dev_rtp_t *rtp,
 							module_catalog_t *cata, media_control_t *ctrl,
-
 							char *cname, int cnlen,
 							char *nettype, char *addrtype, char *netaddr,
 							uint16 rtp_portno, uint16 rtcp_portno,
-							
 							uint8 profile_no, char *profile_mime, int clockrate, int coding_param,
-							int bw_budget)
+							int bw_budget, rtpcap_descript_t *rtpcap)
 {
    xrtp_session_t *ses = NULL;
    xrtp_media_t *rtp_media;
@@ -210,7 +208,6 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
    if(!ses)
    {
 		ses = session_new(rtp->session_set, cname, cnlen, netaddr, rtp_portno, rtcp_portno, cata, ctrl, SESSION_DUPLEX);
-
 		if(!ses)
 		{
 			return NULL;
@@ -227,10 +224,10 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
 		else
 		{
 			rtpdev_debug(("rtp_session: session[%s:%s][%d] exceed the bandwidth[%d]\n", cname, profile_mime, session_bandwidth(ses), bw_budget));
-
-			exit(1);
 		}
    }
+
+   ses->self->mediainfo = rtp_media->info(rtp_media, rtpcap);
 
    return ses;
 }
@@ -246,12 +243,31 @@ int rtp_setting (media_device_t *dev, control_setting_t *setting, module_catalog
 /**
  * libxrtp initilized
  */
-int rtp_start (media_device_t * dev, media_control_t *ctrl)
+int rtp_init (media_device_t * dev, media_control_t *ctrl)
+{
+   dev_rtp_t *rdev = (dev_rtp_t*)dev;
+
+   /* Realised the xrtp lib */
+   rdev->session_set = xrtp_init(ctrl->modules(ctrl));
+   if(!rdev->session_set)
+	   return MP_FAIL;
+
+   rdev->control = ctrl;
+
+   rtpdev_log(("rtp.rtp_init: Initialized...\n"));
+
+   return MP_OK;
+}
+
+/**
+ * libxrtp initilized
+ */
+int rtp_start (media_device_t * dev, int mode)
 {
    dev_rtp_t *rdev = (dev_rtp_t*)dev;
    
    /* Realised the xrtp lib */
-   rdev->session_set = xrtp_init(ctrl->modules(ctrl));
+   rdev->session_set = xrtp_init(rdev->control->modules(rdev->control));
      
    if(!rdev->session_set) 
 	   return MP_FAIL;
@@ -264,7 +280,7 @@ int rtp_start (media_device_t * dev, media_control_t *ctrl)
 /**
  * libxrtp finialized
  */
-int rtp_stop (media_device_t * dev)
+int rtp_stop (media_device_t * dev, int mode)
 {
 	return MP_OK;
 }
@@ -290,12 +306,24 @@ int rtp_match_type(media_device_t *dev, char *type)
    return 0;
 }
 
+int rtp_match_mode(media_device_t *dev, char *mode)
+{
+   rtpdev_log(("portaudio.pa_match_type: I am input/output device\n"));
+
+   if( !strcmp("output", mode) ) return 1;
+   if( !strcmp("input", mode) ) return 1;
+   if( !strcmp("inout", mode) ) return 1;
+
+   return 0;
+}
+
 int rtp_done (media_device_t *dev)
 {
    dev_rtp_t *rtp = (dev_rtp_t *)dev;
 
    if(!dev)
    {
+
       rtpdev_debug(("rtp.rtp_done: NULL dev\n"));
       return MP_OK;
    }
@@ -310,10 +338,11 @@ int rtp_done (media_device_t *dev)
 	
    xfree(rtp);
 
+
    return MP_OK;
 }
 
-module_interface_t * rtp_new ()
+module_interface_t * rtp_new()
 {
    media_device_t * dev;
 
@@ -334,6 +363,7 @@ module_interface_t * rtp_new ()
 
    dev->pipe = rtp_out_pipe;
 
+   dev->init = rtp_init;
    dev->start = rtp_start;
    dev->stop = rtp_stop;
 
@@ -344,6 +374,8 @@ module_interface_t * rtp_new ()
    dev->setting = rtp_setting;
 
    dev->match_type = rtp_match_type;
+   dev->match_mode = rtp_match_mode;
+
 
    return dev;
 }

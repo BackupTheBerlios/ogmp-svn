@@ -33,10 +33,6 @@
 
 char newcall_inputs[3][LINE_MAX];
 
-
-
-
-
 editline_t *newcall_edit[3];
 int cursor_newcall = 0;
 
@@ -243,12 +239,10 @@ int window_new_call_run_command(gui_t* gui, int c)
 		default:
 		{
 			if(editline_append(newcall_edit[cursor_newcall], (char*)&c, 1) == 0)
-            {
+         {
 				beep();
-	
-
-                return -1;
-            }
+            return -1;
+         }
 		}
 	}
 

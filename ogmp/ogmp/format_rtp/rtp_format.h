@@ -40,7 +40,7 @@ struct rtp_stream_s
    xrtp_session_t			*session;
    int						bandwidth;
 
-   rtp_format_t				*rtp_format;
+   rtp_format_t			*rtp_format;
 };
 
 struct rtp_format_s
@@ -63,6 +63,7 @@ struct rtp_format_s
 	 * All other player recieve remote media for each member.
 	 */
 	dev_rtp_t *rtp_in;
+   
 	int millisec;
 	int bandwidth;
 };

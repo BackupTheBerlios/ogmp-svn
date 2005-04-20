@@ -18,11 +18,13 @@
 #include "media_format.h"
 
 typedef struct pa_setting_s pa_setting_t;
-struct pa_setting_s {
-
+struct pa_setting_s
+{
    struct control_setting_s setting;
    
    int time_match;
    int sample_factor;    /* the factor b/w sample rate & nsample_pulse, power of 2 */
    int nbuf_internal;    /* PortAudio Internal Buffer number, for performance tuning */
+   
+   int inbuf_n;          /* input buffer number */
 };

@@ -167,10 +167,12 @@ int spxp_loop(void *gen)
 	}
 
 	auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
-
 	while(auf)
+   {
 		output->recycle_frame (output, auf);
-
+	   auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
+   }
+   
 	return MP_OK;
 }
 
@@ -256,8 +258,8 @@ int spxp_stop (media_player_t *mp)
 
    spxp_close_stream(mp);
 
-   mp->device->stop(mp->device);
-
+   mp->device->stop(mp->device, DEVICE_OUTPUT);
+   
    ((speex_decoder_t*)mp)->receiving_media = 0;
 
    return MP_OK;
@@ -329,7 +331,7 @@ int spxp_set_device(media_player_t* mp, media_control_t* cont, module_catalog_t*
    
    spxp_log(("spxp_set_device: need audio device\n"));
 
-   dev = cont->find_device(cont, "audio_out");
+   dev = cont->find_device(cont, "audio", "output");
    
    if(!dev) 
 	   return MP_FAIL;
@@ -347,6 +349,12 @@ int spxp_set_device(media_player_t* mp, media_control_t* cont, module_catalog_t*
    mp->device = dev;
 
    return MP_OK;
+}
+
+int spxp_link_device(media_player_t *mp, media_control_t *cont, media_stream_t* strm, void* extra)
+{
+	spxp_log(("spxp_link_device: Not implemented\n"));
+   return MP_EIMPL;
 }
 
 int spxp_match_type(media_receiver_t *recvr, char *mime, char *fourcc)
@@ -451,6 +459,7 @@ module_interface_t * media_new_player()
    mp->set_options = spxp_set_options;
 
    mp->set_device = spxp_set_device;
+   mp->link_device = spxp_link_device;
    
    mp->stop = spxp_stop;
    

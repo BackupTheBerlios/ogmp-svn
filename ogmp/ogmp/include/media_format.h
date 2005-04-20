@@ -22,6 +22,7 @@
 #include <timedia/os.h>
 #include <timedia/config.h>
 #include <timedia/catalog.h>
+#include <timedia/timer.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,6 +42,9 @@
 #define MP_AUDIO 'a'
 #define MP_VIDEO 'v'
 #define MP_TEXT  't'
+
+#define DEVICE_INPUT  0x01
+#define DEVICE_OUTPUT 0x10
 
 #define MIME_MAXLEN  31
 
@@ -80,7 +84,7 @@ struct media_control_s
    media_maker_t* (*find_creater)(media_control_t *cont, char *name, media_info_t* minfo);
 
    int (*add_device)(media_control_t *cont, char *name, control_setting_call_t *call, void*user);
-   media_device_t* (*find_device)(media_control_t *cont, char *name);
+   media_device_t* (*find_device)(media_control_t *cont, char *name, char *mode);
 
    control_setting_t* (*fetch_setting)(media_control_t *cont, char *name, media_device_t *dev);
 
@@ -102,11 +106,12 @@ struct media_control_s
 
    /* media ports management */
    int (*media_ports)(media_control_t* cont, char* mediatype, int* rtp_portno, int* rtcp_portno);
+
+   xclock_t* (*clock)(media_control_t* cont);
 };
 
 DECLSPEC
-module_interface_t* 
-new_media_control ();
+module_interface_t* new_media_control ();
 
 typedef struct capable_descript_s capable_descript_t;
 struct capable_descript_s
@@ -200,6 +205,7 @@ struct media_info_s
 	int sample_rate;
 	int sample_bits;
 	int sample_byteorder;
+   int sampling_constant;
 	int bps;
 
 	int coding_parameter;
@@ -236,6 +242,8 @@ struct media_stream_s
 	media_stream_t *next;
    
 	media_maker_t *maker;
+   
+	//media_receiver_t *player;
 	media_player_t *player;
 };
 
@@ -292,9 +300,10 @@ struct media_device_s
    
    media_pipe_t* (*pipe) (media_device_t *dev);
 
-   int (*start) (media_device_t * dev, media_control_t *ctrl);
-   
-   int (*stop) (media_device_t * dev);
+   int (*init) (media_device_t * dev, media_control_t *ctrl);
+   int (*start) (media_device_t * dev, int mode);   
+   int (*stop) (media_device_t * dev, int mode);
+
 
    media_stream_t* (*new_media_stream) (media_device_t* dev, media_receiver_t *mr, media_info_t *media_info);
 
@@ -306,6 +315,8 @@ struct media_device_s
    control_setting_t* (*new_setting) (media_device_t * dev);
    
    int (*match_type) (media_device_t *dev, char *type);
+
+   int (*match_mode) (media_device_t *dev, char *mode);
 
    int (*done) (media_device_t * dev);
 };
@@ -325,7 +336,10 @@ struct media_maker_s
 	
    int (*done) (media_maker_t *mm);
    
-   media_stream_t* (*new_media_stream) (media_maker_t *mm, media_device_t* dev, media_player_t* player, media_info_t *media_info);
+   int (*start) (media_maker_t *mm);
+   int (*stop) (media_maker_t *mm);
+   
+   media_stream_t* (*new_media_stream) (media_maker_t *mm, media_control_t* control, media_device_t* dev, media_receiver_t* player, media_info_t *media_info);
 };
 
 struct media_player_s
@@ -350,7 +364,9 @@ struct media_player_s
    int (*set_callback) (media_player_t * playa, int type, int(*call)(), void *user);
 
    int (*set_options) (media_player_t * playa, char *opt, void *value);
+
    int (*set_device) (media_player_t * mp, media_control_t *control, module_catalog_t *cata, void* extra);
+   int (*link_device) (media_player_t * mp, media_control_t *control, media_stream_t *stream, void* extra);
 
    media_pipe_t* (*pipe) (media_player_t * playa);
 

@@ -22,15 +22,13 @@
 #include <string.h>
 /*
 #define PIPE_LOG
-*/
 #define PIPE_DEBUG
-
+*/
 #ifdef PIPE_LOG
  #define pout_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pout_log(fmtargs)  
 #endif
-
 
 #ifdef PIPE_DEBUG
  #define pout_debug(fmtargs)  do{printf fmtargs;}while(0)
@@ -41,6 +39,7 @@
 #define USEC_JUMP 100
 
 #define DEFAULT_USEC_PER_BUF  1000000  /* 1s */
+
 #define MIN_USEC_BUFFER       10000     /* 10ms */
 
 #define MUTE_VALUE 0
@@ -390,6 +389,7 @@ sample_buffer_t * pout_switch_buffer(timed_pipe_t *pipe)
       if (pipe->frame_read_now->nraw_done == pipe->frame_read_now->nraw)
 	  {
          pipe->last_played_frame = pipe->frame_read_now;
+
          pipe->frame_read_now = pipe->frame_read_now->next;
       }
       
@@ -604,6 +604,7 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
             return 1; /* end */
          }
        
+
          /* to next frame */
          pipe->last_played_frame = pipe->frame_read_now;
 
@@ -851,9 +852,9 @@ int timed_pipe_set_usec (timed_pipe_t *pipe, int usec)
    return MP_OK;
 }
 
-/*
+/* *
  * Create a new time armed pipe
-
+ *
  * - sample_rate: how many samples go through the pipe per second
  * - usec_pulse: samples are sent by group, named pulse within certain usecond.
  * - ms_min, ms_max: buffered/delayed samples are limited.

@@ -126,8 +126,6 @@ int window_sessions_list_print(gui_t* gui, int wid)
 	nincall = 1;
 
 	/* Show all lines */
-
-
 	ocui->sipua->lock_lines(ocui->sipua);
 
 	nbusy = ocui->sipua->busylines(ocui->sipua, busylines, MAX_SIPUA_LINES);
@@ -152,9 +150,6 @@ int window_sessions_list_print(gui_t* gui, int wid)
 	
 	for(line = view; line < nbusy; line++)
     {
-
-
-
 		call = ocui->sipua->line(ocui->sipua, busylines[line]);
 
 		switch(call->status)
@@ -433,8 +428,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 		{
 			int n = 0;
 
-
-			call = ocui->sipua->pick(ocui->sipua, calllist_line);
+         call = ocui->sipua->pick(ocui->sipua, calllist_line);
 			if (!call) 
 			{ 
 				beep(); 

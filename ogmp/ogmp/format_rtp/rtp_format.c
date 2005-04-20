@@ -23,10 +23,10 @@
 
 #define CATALOG_VERSION  0x0001
 #define DIRNAME_MAXLEN  128
-
+/*
 #define RTP_LOG
 #define RTP_DEBUG
-
+*/
 #ifdef RTP_LOG
  #define rtp_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
@@ -178,8 +178,6 @@ media_player_t * rtp_mime_player(media_format_t * mf, const char * mime)
       cur = cur->next;
 
 
-
-
    }                                                  
 
    return NULL;
@@ -265,7 +263,7 @@ int rtp_support_type (media_format_t *mf, char *type, char *subtype)
 {
 	if(!strcmp(type, "mime") && !strcmp(subtype, "application/sdp"))
 	{
-		printf("rtp_support_type: support mime:application/sdp\n");
+		rtp_log(("rtp_support_type: support mime:application/sdp\n"));
 		return 1;
 	}
 
@@ -299,11 +297,9 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 	unsigned char stype;
 	rtp_stream_t *strm;
 
+   rtp_setting_t *rset = NULL;
 
-	rtp_setting_t *rset = NULL;
-
-
-	int rtp_portno, rtcp_portno;
+   int rtp_portno, rtcp_portno;
 
 	module_catalog_t *cata = ctrl->modules(ctrl);
 
@@ -359,7 +355,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 									rset->default_rtp_portno, rset->default_rtcp_portno,
 									rtpcap->profile_no, rtpcap->profile_mime, 
 									rtpcap->clockrate, rtpcap->coding_param,
-									bw_budget);
+									bw_budget, rtpcap);
 
 	if(!strm->session)
 	{
@@ -394,8 +390,8 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 		remote_netaddr = rtpcapset->netaddr;
 	}
 	
-	printf("rtp_open_stream: for %s:(%u|%u)\n", rtpcapset->cname, rtpcap->rtp_portno, rtpcap->rtcp_portno);
-	printf("rtp_open_stream: mime[%s] pt[%d]\n", rtpcap->profile_mime, rtpcap->profile_no);
+	rtp_log(("rtp_open_stream: for %s:(%u|%u)\n", rtpcapset->cname, rtpcap->rtp_portno, rtpcap->rtcp_portno));
+	rtp_log(("rtp_open_stream: mime[%s] pt[%d]\n", rtpcap->profile_mime, rtpcap->profile_no));
 	
 	session_add_cname(strm->session, rtpcapset->cname, strlen(rtpcapset->cname), remote_netaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno, rtpcap, ctrl);
 	
@@ -407,7 +403,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 
 	session_set_callback(strm->session, CALLBACK_SESSION_MEMBER_UPDATE, rtp_stream_on_member_update, strm);
 
-	printf("rtp_open_stream: stream opened, bandwidth[%d]\n", strm->bandwidth);
+	rtp_log(("rtp_open_stream: stream opened, bandwidth[%d]\n", strm->bandwidth));
 
 	return strm;
 }
@@ -431,7 +427,7 @@ int rtp_open_capables(media_format_t *mf, rtpcap_set_t *rtpcapset, media_control
    rtp_format_t *rtp = (rtp_format_t *)mf;
 
    rtp_log(("rtp_open_capables: open %d capables\n", xlist_size(rtpcapset->rtpcaps)));
-
+   
    if(strlen(mode) >= MAX_MODEBYTES)
    {
 	   rtp_log(("rtp_open_capables: mode unacceptable\n"));
@@ -441,9 +437,9 @@ int rtp_open_capables(media_format_t *mf, rtpcap_set_t *rtpcapset, media_control
    strcpy(mf->default_mode, mode);
    mf->control = ctrl;
 
-   rtp->rtp_in = (dev_rtp_t*)ctrl->find_device(ctrl, "rtp");
+   rtp->rtp_in = (dev_rtp_t*)ctrl->find_device(ctrl, "rtp", "input");
 
-	printf("rtp_open_capables: bandwidth[%d]\n", bandwidth);
+	rtp_log(("rtp_open_capables: bandwidth[%d]\n", bandwidth));
 
    rtpcap = xlist_first(rtpcapset->rtpcaps, &u);
    while(rtpcap)
@@ -453,12 +449,12 @@ int rtp_open_capables(media_format_t *mf, rtpcap_set_t *rtpcapset, media_control
 			strm = rtp_open_stream(rtp, sno++, rtpcap, ctrl, mode, bandwidth, rtpcapset);
 			if(strm)
 			{
-				printf("rtp_open_capables: stream bandwidth[%d]\n", strm->bandwidth);
+				rtp_log(("rtp_open_capables: stream bandwidth[%d]\n", strm->bandwidth));
 				bandwidth -= strm->bandwidth;
 			}
 	   }
 	   else
-			printf("rtp_open_capables: mime[%s] disabled\n", rtpcap->profile_mime);
+			rtp_log(("rtp_open_capables: mime[%s] disabled\n", rtpcap->profile_mime));
 	   
 	   rtpcap = xlist_next(rtpcapset->rtpcaps, &u);
    }
@@ -530,6 +526,7 @@ int rtp_players(media_format_t * mf, char *type, media_player_t* players[], int 
 
   while (cur != NULL)
   {
+
     if(cur->player->match_play_type(cur->player, type))
 	{
 		/* playtype match */
@@ -702,6 +699,7 @@ module_interface_t * media_new_format()
       return NULL;
    }
 
+
    memset(rtp, 0, sizeof(struct rtp_format_s));
 
    rtp->open_capables = rtp_open_capables;
@@ -723,6 +721,7 @@ module_interface_t * media_new_format()
    mf->find_stream = rtp_find_stream;
    mf->find_mime = rtp_find_mime;
    mf->find_fourcc = rtp_find_fourcc;
+
 
    mf->set_control = rtp_set_control;
 
