@@ -269,7 +269,7 @@ module_interface_t * catalog_new_module (module_catalog_t *cata, char *label)
 	return NULL;
 }
 
-/*
+/**
  * Create all modules from source, return numbers of module created
  */
 int catalog_create_modules(module_catalog_t *cata, char *label, xrtp_list_t *list)
@@ -287,14 +287,14 @@ int catalog_create_modules(module_catalog_t *cata, char *label, xrtp_list_t *lis
 	  module_interface_t * iface;
 
       if (!strcmp(label, minfo->loadin->label))
-	  {
+	   {
          iface = minfo->loadin->init();
 
          if (iface)
-            xrtp_list_add_first(list, iface);
+            xlist_addto_first(list, iface);
       }
 
-      minfo = (module_info_t *)xrtp_list_next(cata->infos, u);
+      minfo = (module_info_t *)xlist_next(cata->infos, u);
    }
 
    xrtp_list_freeuser(u);

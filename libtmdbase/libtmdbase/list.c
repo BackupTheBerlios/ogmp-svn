@@ -212,7 +212,6 @@ int xlist_addto_first(xlist_t * list, void * item){
    node->next = list->head;
    node->data = item;
 
-
    list->head = node;
    
    list->num++;
@@ -295,6 +294,7 @@ int xlist_add_once(xlist_t *list, void *data)
    list->num++;
 
    xlist_log(("xlist_add_once: add new item\n"));
+
 
    return OS_OK;
 }
@@ -653,6 +653,7 @@ void * xrtp_list_remove(xrtp_list_t * list, void *item, int (*match)(void*, void
 
 int xrtp_list_delete_if(xrtp_list_t * list, void * cdata, int(*condition)(void*, void*), int(*free_item)(void*))
 {return xlist_delete_if(list, cdata, condition, free_item);}
+
 
 void * xrtp_list_find(xrtp_list_t * list, void * data, int (*match)(void*, void*), xrtp_list_user_t *u)
 {return xlist_find(list,data,match,u);}
