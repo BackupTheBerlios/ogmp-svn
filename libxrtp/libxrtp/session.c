@@ -29,9 +29,8 @@
 #define BUDGET_PERIOD_MSEC	1000  /* reset budget when large than one second */
 /*
 #define SESSION_LOG
-*/
 #define SESSION_DEBUG
-
+*/
 #ifdef SESSION_LOG
  #define session_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -340,6 +339,10 @@ int session_set_mode(xrtp_session_t * ses, int mode)
 
     return XRTP_OK;
 
+
+
+
+
 fail:
    if(ses->rtp_send_pipe) pipe_done(ses->rtp_send_pipe);
    if(ses->rtcp_send_pipe) pipe_done(ses->rtcp_send_pipe);
@@ -512,6 +515,7 @@ int session_allow_anonymous(xrtp_session_t * ses, int allow)
 }
 
 /**
+
  * Get session rtp and rtcp ports
  */
 int session_ports(xrtp_session_t * ses, xrtp_port_t **r_rtp, xrtp_port_t **r_rtcp)
@@ -592,6 +596,7 @@ xclock_t* session_clock(xrtp_session_t *session)
 }
 
 /**
+
  * Set bandwidth for this session, REMEMBER: multiuser need share the bandwidth!!!
  */
 int session_set_bandwidth(xrtp_session_t * ses, int total_bw, int rtp_bw)
@@ -773,6 +778,7 @@ int session_join(xrtp_session_t * ses, xrtp_teleport_t * rtp_port, xrtp_teleport
 
 int session_match_member_src(void * tar, void * pat)
 {
+
     member_state_t *stat = (member_state_t *)tar;
     uint32 *src = (uint32 *)pat;
 
@@ -996,6 +1002,7 @@ int member_deliver_media_loop(void *gen)
 		us_sleep = us_play - us_now;
 
 		if((hold->seqno - mem->expect_seqno) <= 0 || us_sleep <= 0)
+
 		{
 		   xlist_remove_first(mem->delivery_buffer);
          
@@ -1083,6 +1090,7 @@ int session_member_hold_media(member_state_t * mem, void *media, int bytes, uint
 
 	if(mem->misorder)
 		xthr_cond_signal(mem->wait_seqno);
+
 
 	xthr_cond_signal(mem->wait_media_available);
 
@@ -1200,6 +1208,7 @@ int session_member_connects(member_state_t * mem, session_connect_t **rtp_conn, 
 int session_quit(xrtp_session_t * ses, int immidiately)
 {
     ses->bye_mode = 1;
+
 
     if((immidiately = 1)) /* Always immidiately quit */
 	 {     
@@ -1411,6 +1420,7 @@ int session_member_synchronise(member_state_t *mem, uint32 ts_remote, uint32 hi_
 	/* refer point in advance */
 	xthr_lock(mem->sync_lock);
 
+
 	timestamp_tosync = mem->timestamp_last_sync + (uint32)((us - mem->usec_last_sync) / 1000000.0 * clockrate);
 
    /* make sure playing always beyond sync point */
@@ -1528,7 +1538,6 @@ int session_issue_mediainfo(xrtp_session_t *ses, void *minfo, int signum)
    
 		ses->self->mediainfo = minfo;
 		ses->self->minfo_signum = signum;
-
 	}
 
    xthr_lock(ses->renew_level_lock);
@@ -1574,6 +1583,7 @@ void* session_member_player(member_state_t *mem)
 void* session_member_set_player(member_state_t *mem, void *player)
 {
 	void *ex = mem->media_player;
+
 
 
 	if(mem->media_player != player)
@@ -1653,50 +1663,50 @@ int session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, u
 		return XRTP_OK;
 	}
 
-    mem = (member_state_t *)xmalloc(sizeof(struct member_state_s));
-    if(!mem)
+   mem = (member_state_t *)xmalloc(sizeof(struct member_state_s));
+   if(!mem)
 	{
 		session_debug(("session_new_member: No memory for member\n"));
 		xthr_unlock(ses->members_lock);
 		return XRTP_FAIL;
-    }
+   }
     
-    memset(mem, 0, sizeof(struct member_state_s));
+   memset(mem, 0, sizeof(struct member_state_s));
 
-    mem->lock = xthr_new_lock();
-    if(!mem->lock)
+   mem->lock = xthr_new_lock();
+   if(!mem->lock)
 	{
-        xfree(mem);
+      xfree(mem);
 		xthr_unlock(ses->members_lock);
 		return XRTP_FAIL;
-    }
+   }
     
 	/* mem ssrc is just set by incoming rtcp packet 
 	 * if ssrc == 0, means the member is not verified 
 	 */
-    mem->ssrc = 0;
-    mem->session = ses;
-    mem->user_info = userinfo;
+   mem->ssrc = 0;
+   mem->session = ses;
+   mem->user_info = userinfo;
 
 	/* recieve MIN_SEQUENTIAL rtp before became official member */
 	mem->probation = MIN_SEQUENTIAL;
     
-    mem->delivery_buffer = xlist_new();
-    if(!mem->delivery_buffer)
+   mem->delivery_buffer = xlist_new();
+   if(!mem->delivery_buffer)
 	{
-        xthr_done_lock(mem->lock);
+      xthr_done_lock(mem->lock);
 		xfree(mem);
 
 		xthr_unlock(ses->members_lock);
 		return XRTP_FAIL;
-    }
+   }
     
 	mem->delivery_lock = xthr_new_lock();
 	mem->sync_lock = xthr_new_lock();
 	mem->wait_seqno = xthr_new_cond(XTHREAD_NONEFLAGS);
 	mem->wait_media_available = xthr_new_cond(XTHREAD_NONEFLAGS);
     
-    xrtp_list_add_first(ses->members, mem);
+   xrtp_list_add_first(ses->members, mem);
 
 	nmem = xlist_size(ses->members);
 
@@ -1705,7 +1715,6 @@ int session_add_cname(xrtp_session_t * ses, char *cn, int cnlen, char *ipaddr, u
 
 	/* used to verify the incoming */
 	mem->rtp_port = teleport_new(ipaddr, rtp_portno);
-
 	mem->rtcp_port = teleport_new(ipaddr, rtcp_portno);
 
 	mem->rtp_connect = connect_new(ses->rtp_port, mem->rtp_port);
@@ -1918,7 +1927,6 @@ int session_add_member(xrtp_session_t* ses, member_state_t* mem)
 }
 
 member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_compound_t * rtcp)
-
 {
    uint32 ssrc = rtcp_sender(rtcp);
 
@@ -1980,7 +1988,6 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 
 		mem = xlist_find(ses->members, cname, session_match_cname, &lu);
 	}
-
 
    if(!mem)
 	{
@@ -2224,6 +2231,7 @@ int session_member_check_report(member_state_t *mem, uint8 frac_lost, uint32 int
 	if(mem == mem->session->self)
 	{
        /* ntp_now - lsr_stamp - lsr_delay */
+
        uint32 hi_ntp = 0, lo_ntp = 0, ntpts_now;
 
        if(ses->$callbacks.ntp)
@@ -2346,7 +2354,6 @@ xrtp_lrtime_t session_rtcp_delay(xrtp_session_t *ses)
 }
 
 int session_count_rtcp(xrtp_session_t * ses, xrtp_rtcp_compound_t * rtcp)
-
 {
     if(!ses->n_rtcp_recv)
 	{
@@ -2358,7 +2365,6 @@ int session_count_rtcp(xrtp_session_t * ses, xrtp_rtcp_compound_t * rtcp)
     }
     
     ses->n_rtcp_recv++;
-
 
     return XRTP_OK;
 }
@@ -2377,7 +2383,6 @@ int session_done_module(void *gen)
     profile_class_t * mod = (profile_class_t *)gen;
 
     mod->done(mod);
-
 
     return OS_OK;
 }
@@ -2440,7 +2445,6 @@ int session_new_sdp(module_catalog_t* cata, char* nettype, char* addrtype, char*
 	 * Need a default portmap table!
 	 */
 	bw = media->new_sdp(media, nettype, addrtype, netaddr, default_rtp_portno, default_rtcp_portno, pt, clockrate, coding_param, bw_budget, control, sdp_info, NULL);
-
 		
 	modu->done_handler(prof);
 	modu->done(modu);
@@ -2451,7 +2455,6 @@ int session_new_sdp(module_catalog_t* cata, char* nettype, char* addrtype, char*
 
 int session_mediainfo_sdp(xrtp_session_t* ses, char* nettype, char* addrtype, char* netaddr, int* default_rtp_portno, int* default_rtcp_portno, char* mime, int bw_budget, void* control, void* sdp_info, void* mediainfo)
 {
-
 	xrtp_media_t* media = NULL;
 	int bw;
     
@@ -2469,7 +2472,6 @@ xrtp_media_t * session_new_media(xrtp_session_t * ses, uint8 profile_no, char *p
 {
 	profile_class_t * modu = NULL;    
 	profile_handler_t * med = NULL;
-
 
 	xrtp_list_user_t $lu; 
 	xrtp_list_t *list = NULL;
@@ -2631,7 +2633,6 @@ xrtp_media_t * session_new_media(xrtp_session_t * ses, uint8 profile_no, char *p
 	/* verify the payload type */
 	ses->$state.profile_no = profile_no;
 
-
 	return ses->media;
 }
 
@@ -2771,6 +2772,8 @@ profile_handler_t * session_add_handler(xrtp_session_t *ses, char *id)
            ses->$callbacks.appinfo_recieved = call;
            ses->$callbacks.appinfo_recieved_user = user;
            session_log(("session_set_callback: 'appinfo_recieved' callback added\n"));
+
+
            break;
 
        case(CALLBACK_SESSION_MEMBER_APPLY):
@@ -2783,6 +2786,7 @@ profile_handler_t * session_add_handler(xrtp_session_t *ses, char *id)
            ses->$callbacks.member_update = call;
            ses->$callbacks.member_update_user = user;
            session_log(("session_set_callback: 'member_update' callback added\n"));
+
            break;
 
        case(CALLBACK_SESSION_MEMBER_CONNECTS):
@@ -2934,6 +2938,9 @@ int session_member_bandwidth(xrtp_session_t * ses)
 }
 
 
+
+
+
 int32 session_receiver_rtp_bw_left(xrtp_session_t * ses)
 {
     if(port_is_multicast(ses->rtp_port) || ses->n_member-1 == 0)
@@ -3065,6 +3072,7 @@ int session_rtp_to_send(xrtp_session_t *ses, rtime_t usec_deadline, int last_pac
     }                             
 
     if(pump_ret < XRTP_OK)
+
 	{
        session_debug(("session_rtp_to_send: Fail to produce packet\n"));
        rtp_packet_done(rtp);
@@ -3240,6 +3248,8 @@ int session_rtp_to_receive(xrtp_session_t *ses)
        session_log(("session_rtp_to_receive: incoming packet lost\n"));
 
        return XRTP_FAIL;
+
+
 	}
 
 	datalen = connect_receive(in, &pdata, &packet_header_bytes, &ms_arrival, &us_arrival, &ns_arrival);
@@ -3390,6 +3400,8 @@ int session_start_reception(xrtp_session_t * ses)
 
         {
             mem->we_sent = 0;
+
+
             session_delete_sender(ses, mem);
             ses->n_sender--;
         }
@@ -3448,6 +3460,7 @@ int session_start_reception(xrtp_session_t * ses)
     }
     
     return mem;
+
  }
 
  int session_need_rtcp(xrtp_session_t *ses)

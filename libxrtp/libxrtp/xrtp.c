@@ -26,10 +26,10 @@
 #ifndef MODDIR
 #define MODDIR "module"
 #endif
-
+/*
 #define XRTP_LOG
 #define XRTP_DEBUG
- 
+*/
 #ifdef XRTP_LOG
  #define xrtp_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
