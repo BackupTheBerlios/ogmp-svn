@@ -175,6 +175,7 @@ int pa_input_loop(void *gen)
 		rtime_t us_left;
 		
       inputbuf = &pa->inbuf[pa->inbuf_r];
+      npcm_left = inputbuf->npcm_write;
       
 		if(inputbuf->npcm_write == 0)
 		{
@@ -188,15 +189,22 @@ int pa_input_loop(void *gen)
       while(inputbuf->npcm_read < inputbuf->npcm_write)
       {
 		   auf.nraw = pa->input_npcm_once;
+         auf.samplestamp = inputbuf->stamp;
          
+         if(npcm_left < pa->input_npcm_once)
+            auf.eots = 0;
+         else
+            auf.eots = 1;
+
          memcpy(auf_raw, &inputbuf->pcm[inputbuf->nbyte_read], nbyte_need);
 		   auf.bytes = pa->input_nbyte_once;
          
 		   //pa->receiver->receive_media(pa->receiver, &auf, (int64)(pa->inbuf[pa->inbuf_r].stamp * 1000000), 0);
-		   pa_debug(("pa_input_loop: Input %d/%d bytes\n", inputbuf->npcm_read, inputbuf->npcm_write));
 
          memset(&inputbuf->pcm[inputbuf->nbyte_read], 0, nbyte_need);
          inputbuf->npcm_read += npcm_need;
+         
+		   pa_debug(("pa_input_loop: Input %d/%d bytes\n", inputbuf->npcm_read, inputbuf->npcm_write));
 
          npcm_left = inputbuf->npcm_write - inputbuf->npcm_read;
          if(npcm_left < pa->input_npcm_once)
@@ -210,6 +218,7 @@ int pa_input_loop(void *gen)
             nbyte_need = pa->input_nbyte_once - nbyte_left;
 
             inputbuf->npcm_read = inputbuf->npcm_write;
+            npcm_left = 0;
          }
          else
          {
