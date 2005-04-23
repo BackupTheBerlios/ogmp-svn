@@ -1,5 +1,5 @@
 /***************************************************************************
-                   speex_creater.c - Generate voice from audio_in device
+                   speex_maker.c - Generate voice from audio_in device
                              -------------------
     begin                : Tue Jan 20 2004
     copyright            : (C) 2004 by Heming Ling
@@ -21,19 +21,19 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define SPXR_LOG
-#define SPXR_DEBUG
+#define SPXMK_LOG
+#define SPXMK_DEBUG
 
-#ifdef SPXR_LOG
- #define spxr_log(fmtargs)  do{printf fmtargs;}while(0)
+#ifdef SPXMK_LOG
+ #define spxmk_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
- #define spxr_log(fmtargs)
+ #define spxmk_log(fmtargs)
 #endif
 
-#ifdef SPXR_DEBUG
- #define spxr_debug(fmtargs)  do{printf fmtargs;}while(0)
+#ifdef SPXMK_DEBUG
+ #define spxmk_debug(fmtargs)  do{printf fmtargs;}while(0)
 #else
- #define spxr_debug(fmtargs)
+ #define spxmk_debug(fmtargs)
 #endif
 
 #define MAX_FRAME_BYTES 2000
@@ -46,26 +46,24 @@ struct global_const_s
 
 } global_const = {"audio", "audio/speex", "local"};
 
-int spxr_match_type (media_receiver_t * mr, char *mime, char *fourcc)
+int spxmk_match_type(media_receiver_t * mr, char *mime, char *fourcc)
 {
     /* FIXME: due to no strncasecmp on win32 mime is case sensitive */
 	if (mime && strncmp(mime, "audio/speex", 11) == 0)
 	{
-		spxr_log(("speex_match_type: mime = 'audio/speex'\n"));
+		spxmk_log(("speex_match_type: mime = 'audio/speex'\n"));
 		return 1;
 	}
    
 	return 0;
 }
 
-int spxr_receive_media (media_receiver_t *mr, void *mf, int64 samplestamp, int last_packet)
+int spxmk_receive_media (media_receiver_t *mr, media_frame_t * auf, int64 samplestamp, int last_packet)
 {
 	int spx_bytes;
 	char *spx_frame;
 
-	media_frame_t *auf = (media_frame_t*)mf;
 	speex_encoder_t *enc = (speex_encoder_t *)mr;
-	int sample_rate = ((media_info_t*)enc->speex_info)->sample_rate;
 
 	int delta = enc->encoding_nsample_expect - enc->encoding_nsample_buffered;
 	int sample_bytes = auf->bytes/auf->nraw;
@@ -139,7 +137,7 @@ int spxr_receive_media (media_receiver_t *mr, void *mf, int64 samplestamp, int l
 	return MP_OK;
 }
 
-int spxr_done(media_maker_t *maker)
+int spxmk_done(media_maker_t *maker)
 {
 	speex_encoder_t *enc = (speex_encoder_t *)maker;
 
@@ -155,11 +153,11 @@ int spxr_done(media_maker_t *maker)
 	return MP_OK;
 }
 
-media_stream_t* spxr_new_media_stream(media_maker_t* maker, media_device_t* dev, media_player_t* player, media_info_t* minfo)
+media_stream_t* spxmk_new_media_stream(media_maker_t* maker, media_control_t* control, media_device_t* dev, media_receiver_t* receiver, media_info_t* minfo)
 {
 	int ret;
 	media_stream_t* strm;
-
+ 
 	speex_encoder_t *enc = (speex_encoder_t *)maker;
 
 	int rate;
@@ -185,10 +183,12 @@ media_stream_t* spxr_new_media_stream(media_maker_t* maker, media_device_t* dev,
 	if(!strm)
 		return NULL;
 	
+	spxinfo->audioinfo.info.sample_bits = SPEEX_SAMPLE_BITS;
+
 	ret = dev->set_input_media(dev, &maker->receiver, minfo);
 	if (ret < MP_OK)
 	{
-		spxr_log (("spxr_new_stream: speex stream fail to open\n"));
+		spxmk_log (("spxmk_new_media_stream: speex stream fail to open\n"));
 		xfree(strm);
 		return NULL;
 	}
@@ -196,18 +196,20 @@ media_stream_t* spxr_new_media_stream(media_maker_t* maker, media_device_t* dev,
 	memset(strm, 0, sizeof(media_stream_t));
 
 	strm->maker = maker;
-	strm->player = player;
-	enc->media_stream = strm;
-
+	strm->player = (media_player_t*)receiver;
+ 
+   enc->media_stream = strm;
 	enc->speex_info = spxinfo;
+   
+   enc->clock = control->clock(control);
 
 	spxinfo->est = speex_encoder_init(spxinfo->spxmode);
-
+ 
 	/* Set the quality to 8 (15 kbps) 
-	spxinfo->quality=8;
-	*/
+	 * spxinfo->quality=8;
+	 */
 	if(spxinfo->vbr && spxinfo->vbr_quality >= 0.0 && spxinfo->vbr_quality <= 10.0)
-	{
+	{     
 		speex_encoder_ctl(spxinfo->est, SPEEX_SET_VBR, &spxinfo->vbr);
 		speex_encoder_ctl(spxinfo->est, SPEEX_SET_QUALITY, &spxinfo->vbr_quality);
 	}
@@ -221,7 +223,7 @@ media_stream_t* spxr_new_media_stream(media_maker_t* maker, media_device_t* dev,
 
 	if(spxinfo->complexity)
 		speex_encoder_ctl(spxinfo->est, SPEEX_SET_COMPLEXITY, &spxinfo->complexity);
-
+  
 	/* Initialization of the structure that holds the bits */
 	speex_bits_init(&spxinfo->bits);
 
@@ -234,6 +236,7 @@ media_stream_t* spxr_new_media_stream(media_maker_t* maker, media_device_t* dev,
 	enc->nsample_per_group = enc->nframe_group * enc->speex_info->nsample_per_frame;
 
 	enc->lookahead = 0;
+   
 	speex_encoder_ctl(spxinfo->est, SPEEX_GET_LOOKAHEAD, &enc->lookahead);
    
 	if (enc->speex_info->denoise || enc->speex_info->agc)
@@ -241,32 +244,57 @@ media_stream_t* spxr_new_media_stream(media_maker_t* maker, media_device_t* dev,
 		spxinfo->preprocess = speex_preprocess_state_init(frame_size, rate);
 		speex_preprocess_ctl(spxinfo->preprocess, SPEEX_PREPROCESS_SET_DENOISE, &enc->speex_info->denoise);
 		speex_preprocess_ctl(spxinfo->preprocess, SPEEX_PREPROCESS_SET_AGC, &enc->speex_info->agc);
-		enc->lookahead += frame_size;
+
+      enc->lookahead += frame_size;
 	}
 
 	enc->encoding_frame = xmalloc(frame_bytes);
 	enc->encoding_nsample_expect = frame_size;
 	enc->encoding_gap = enc->encoding_frame;
-	
+
+   enc->input_device = dev;
+   
 	return strm;
 }
 
-module_interface_t* media_new_receiver()
+int spxmk_start(media_maker_t *maker)
+{
+	speex_encoder_t *enc = (speex_encoder_t *)maker;
+
+   enc->input_device->start(enc->input_device, DEVICE_INPUT);
+   
+   return MP_OK;
+}
+
+int spxmk_stop(media_maker_t *maker)
+{
+	speex_encoder_t *enc = (speex_encoder_t *)maker;
+   
+   enc->input_device->stop(enc->input_device, DEVICE_INPUT);
+
+   return MP_OK;
+}                   
+
+module_interface_t* media_new_maker()
 {
    speex_encoder_t *enc = xmalloc(sizeof(struct speex_encoder_s));
    if(!enc)
    {
-      spxr_debug(("vorbis_new_player: No memory to allocate\n"));
+      spxmk_debug(("vorbis_new_player: No memory to allocate\n"));
       return NULL;
    }
 
    memset(enc, 0, sizeof(struct speex_encoder_s));
 
-   enc->maker.done = spxr_done;
-   enc->maker.new_media_stream = spxr_new_media_stream;
+   enc->maker.done = spxmk_done;
+   enc->maker.new_media_stream = spxmk_new_media_stream;
 
-   enc->maker.receiver.match_type = spxr_match_type;
-   enc->maker.receiver.receive_media = spxr_receive_media;
+   enc->maker.receiver.match_type = spxmk_match_type;
+
+   enc->maker.start = spxmk_start;
+   enc->maker.stop = spxmk_stop;
+   
+   enc->maker.receiver.receive_media = spxmk_receive_media;
    
    return enc;
 }
@@ -282,6 +310,6 @@ extern DECLSPEC module_loadin_t mediaformat =
    000001,         /* Minimum version of lib API supportted by the module */
    000001,         /* Maximum version of lib API supportted by the module */
 
-   media_new_receiver   /* Module initializer */
+   media_new_maker   /* Module initializer */
 };
                    
