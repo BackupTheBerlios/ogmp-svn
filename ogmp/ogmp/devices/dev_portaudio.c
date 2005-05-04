@@ -94,8 +94,6 @@ typedef struct portaudio_device_s
    int sample_factor;
    int usec_pulse;
 
-
-
    int online;
 
    xrtp_clock_t *clock;

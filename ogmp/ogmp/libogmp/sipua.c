@@ -379,6 +379,8 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 		sdp_message_free(sdp_info.sdp_message);
 
 
+
+
       xfree(set);
 
 		return NULL;
@@ -649,7 +651,7 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
    /* create a input source */
    if(call->status == SIPUA_STATUS_ANSWER)
       sipua_new_inputs(sipua, call, rtpcapset, control);
-
+   
 	ua_log(("sipua_create_call: call[%s] established\n", rtpcapset->subject));
 
 	return bw;
@@ -756,6 +758,7 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_set_t* call, int bw_budget, media_con
          {
             if(strcmp(mediatype, mediatypes[j]) == 0)
             {
+
                rtp_portno = rtp_ports[j];
                rtcp_portno = rtcp_ports[j];
 
@@ -889,22 +892,20 @@ int sipua_session_sdp(sipua_t *sipua, sipua_set_t* set, char** sdp_body)
 
 	return UA_OK;
 }
-#endif
+#endif    
 
 
 int sipua_regist(sipua_t *sipua, user_profile_t *user, char *userloc)
 {
-	int ret;
+   int ret;
 
-    ret = sipua->uas->regist(sipua->uas, userloc, user->registrar, user->regname, user->seconds);
+   ret = sipua->uas->regist(sipua->uas, &user->regno, userloc, user->registrar, user->regname, user->seconds);
 
 	if(ret < UA_OK)
 		user->reg_status = SIPUA_STATUS_REG_FAIL;
 	else
-
 	{
 		user->cname = userloc;
-
 		user->reg_status = SIPUA_STATUS_REG_DOING;
 	}
 
@@ -942,7 +943,6 @@ int sipua_unregist(sipua_t *sipua, user_profile_t *user)
 
 int sipua_call(sipua_t *sipua, sipua_set_t* call, char *callee, char *sdp_body) 
 {
-
 	int ret;
 
 	if(sipua->incall)
@@ -962,6 +962,7 @@ int sipua_call(sipua_t *sipua, sipua_set_t* call, char *callee, char *sdp_body)
    }
    
    sipua->incall = call;
+
 
 	return UA_OK;
 }

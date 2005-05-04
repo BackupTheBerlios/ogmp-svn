@@ -87,10 +87,12 @@ struct user_profile_s
 	int fbyte;
 
 	char* regname;		/* sip name notation */
+   char* realm;      /* pointer to regname realm part */
 	
 	int seconds;		/* lifetime */
 	
 	char* registrar;
+   int regno;  /* for register fallback */
 
 	char* cname;		/* username@netaddr */
 

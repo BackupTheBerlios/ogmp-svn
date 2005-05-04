@@ -864,6 +864,11 @@ user_t* sipua_load_user_file(FILE* f, char* uid, char* tok, int tsz)
 			start = pc+1;
 
 			u->regname = xstr_clone(start);
+         
+         u->realm = u->regname;
+         while(*u->realm != '@')
+            u->realm++;
+         u->realm++;
 
 			nitem++;
 		}
@@ -946,6 +951,7 @@ int user_done_profile(void* gen)
 	
 	if(prof->reg_server)
 		xfree(prof->reg_server);
+
 
 	
 	if(prof->book_location) xfree(prof->book_location);

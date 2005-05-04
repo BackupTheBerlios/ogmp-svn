@@ -220,10 +220,10 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
          ogm_speex_debug(("ogm_open_speex: samples/frame[%d]; frames/packet[%d]\n", spxinfo->nsample_per_frame, spxinfo->nframe_per_packet));
          ogm_speex_debug(("ogm_open_speex: headers[%d]\n", spxinfo->nheader));
          ogm_speex_debug(("ogm_open_speex: mode[%d]\n", spxinfo->mode));
+         ogm_speex_debug(("ogm_open_speex: mime[%s]\n", spxinfo->audioinfo.info.mime));
 
 			ogm_speex_debug(("ogm_open_speex: speex info ok\n"));
 		} 
-
 
       if (spxinfo->head_packets < spxinfo->nheader)
 		{

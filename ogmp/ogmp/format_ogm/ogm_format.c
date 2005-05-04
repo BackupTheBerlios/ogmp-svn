@@ -44,9 +44,6 @@ int done_stream_handler(void *gen)
 
    handler->done(handler);
 
-
-
-
    return MP_OK;
 }
 
@@ -179,25 +176,25 @@ int ogm_new_all_player(media_format_t *mf, media_control_t* ctrl, char* mode, vo
 		if(!cur->player)
 		{
 			cur->playable = -1;
-			ogm_debug(("ogm_new_mime_player: No %s player\n", cur->media_info->mime));
+			ogm_debug(("ogm_new_all_player: No %s player\n", cur->media_info->mime));
 		}
 		else if(cur->player->set_device(cur->player, ctrl, ctrl->modules(ctrl), mode_param) < MP_OK)
       {
 	      cur->player->done(cur->player);
          cur->player = NULL;
 			cur->playable = -1;
-			ogm_debug(("ogm_new_mime_player: %s stream fail to set device\n", cur->media_info->mime));
+			ogm_debug(("ogm_new_all_player: %s stream fail to set device\n", cur->media_info->mime));
       }
       else if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
 		{      
 			cur->playable = -1;
-			ogm_debug(("ogm_new_mime_player: open %s stream fail!\n", cur->media_info->mime));
+			ogm_debug(("ogm_new_all_player: open %s stream fail!\n", cur->media_info->mime));
 		}
 		else
 		{
 			cur->playable = 1;
 			c++;
-			ogm_log(("ogm_new_mime_player: %s stream ok\n", cur->media_info->mime));
+			ogm_log(("ogm_new_all_player: %s stream ok\n", cur->media_info->mime));
 		}
 
 		cur = cur->next;
@@ -214,6 +211,7 @@ media_player_t* ogm_new_stream_player(media_format_t *mf, int strmno, media_cont
 	{
 		ogm_stream_t* ogm_strm = (ogm_stream_t*)cur;
       
+
 		if (ogm_strm->serial == strmno)
 		{
 			cur->player = ctrl->find_player(ctrl, mode, cur->media_info->mime, cur->media_info->fourcc, mode_param);

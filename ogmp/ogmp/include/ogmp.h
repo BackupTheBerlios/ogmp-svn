@@ -124,7 +124,6 @@ struct ogmp_client_s
 
 	xthr_cond_t* wait_unregistered;
 
-
 	/* below is sipua related */
 	user_profile_t* reg_profile;
 
@@ -132,7 +131,6 @@ struct ogmp_client_s
 
 	uint16 default_rtp_portno;
 	uint16 default_rtcp_portno;
-
 
 	int pt[MAX_PAYLOAD_TYPE];
 
@@ -167,6 +165,9 @@ struct ogmp_client_s
 
 	int (*on_bye)(void *user_on_bye, int lineno, char *caller, char *reason);
    void *user_on_bye;
+
+	int (*on_authenticate)(void *user_on_authenticate, char *realm, char* username, char** user_id, char** user_password, char** ha1);
+   void *user_on_authenticate;
 };
 
 struct ogmp_source_s
@@ -231,7 +232,7 @@ extern ogmp_ui_t* global_ui;
 
 extern DECLSPEC
 sipua_t*
-client_new(char *uitype, sipua_uas_t* uas, module_catalog_t* mod_cata, int bandwidth);
+client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_catalog_t* mod_cata, int bandwidth);
 
 extern DECLSPEC
 int

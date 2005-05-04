@@ -326,9 +326,10 @@ int window_profiles_run_command(gui_t* gui, int c)
 
 			if(prof)
 			{
-				if(prof->reg_status == SIPUA_STATUS_REG_OK)
+            if(prof->reg_status == SIPUA_STATUS_REG_OK)
 					break;
 				
+            prof->regno = -1;
 				ocui->sipua->regist(ocui->sipua, prof, ocui->user->userloc);
 			}
 
@@ -373,9 +374,10 @@ int window_profiles_run_command(gui_t* gui, int c)
 
 			if(prof && user_profile != prof)
 			{
-				if(prof->reg_status != SIPUA_STATUS_REG_OK)
+            if(prof->reg_status != SIPUA_STATUS_REG_OK)
 					break;
 				
+            prof->regno = -1;
 				ocui->sipua->unregist(ocui->sipua, prof);
 			}
 			else
@@ -404,13 +406,16 @@ int window_profiles_run_command(gui_t* gui, int c)
 
 			if(prof)
 			{
-				if(prof->reg_status == SIPUA_STATUS_REG_OK)
+            if(prof->reg_status == SIPUA_STATUS_REG_OK)
 					ocui->sipua->set_profile(ocui->sipua, prof);
 				else
+            {
+               prof->regno = -1;
 					ocui->sipua->regist(ocui->sipua, prof, ocui->user->userloc);
+            }
 			}
 
-			break;
+			break;          
 		}
 		default:
 		{

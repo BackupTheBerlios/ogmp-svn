@@ -31,6 +31,7 @@
 #define UA_REJECT	-2
 #define UA_IGNORE	-3
 #define UA_BUSY     -4
+#define UA_EIMPL     -5
 
 #define MAX_CN_BYTES 256 /* max value in rtcp */
 #define MAX_IP_LEN   64  /* may enough for ipv6 ? */
@@ -75,6 +76,9 @@
 #define SIPUA_STATUS_REJECT		480
 #define SIPUA_STATUS_BUSY		486
 #define SIPUA_STATUS_DECLINE	603
+
+#define SIP_CODE_UNAUTHORIZED  401
+#define SIP_CODE_PROXY_UNAUTHORIZED 407
 
 #include "phonebook.h"
 
@@ -212,6 +216,13 @@ struct sipua_net_s
 	char proxy[MAX_IP_BYTES];
 };
 
+typedef struct sipua_auth_s sipua_auth_t;
+struct sipua_auth_s
+{
+   char* username;
+   char* realm;
+};
+
 struct sipua_uas_s
 {
 	int portno;
@@ -222,6 +233,8 @@ struct sipua_uas_s
 	char netaddr[MAX_IP_BYTES];
 	char firewall[MAX_IP_BYTES];
 	char proxy[MAX_IP_BYTES];
+
+   xlist_t *auth_list;
 
 	void* lisener;
 
@@ -239,12 +252,16 @@ struct sipua_uas_s
 
 	int (*set_listener)(sipua_uas_t* uas, void* listener, int(*event_notify)(void*, sipua_event_t*));
 
-
 	int (*add_coding)(sipua_uas_t* uas, int pt, int rtp_portno, int rtcp_portno, char* mime, int clockrate, int param);
 	
 	int (*clear_coding)(sipua_uas_t* uas);
 	
-	int (*regist)(sipua_uas_t* uas, char *userloc, char *registrar, char *regname, int seconds);
+   int (*set_authentication_info)(sipua_uas_t* uas, char *username, char *userid, char*passwd, char *hal, char *realm);
+   int (*clear_authentication_info)(sipua_uas_t* uas, char *username, char *realm);
+   int (*has_authentication_info)(sipua_uas_t* uas, char *username, char *realm);
+
+   /* regno is for re-register the previous one */
+   int (*regist)(sipua_uas_t* uas, int *regno, char *userloc, char *registrar, char *regname, int seconds);
 	
 	int (*unregist)(sipua_uas_t* uas, char *userloc, char *registrar, char *regname);
  	
@@ -261,6 +278,7 @@ sipua_uas_t* sipua_uas(int portno, char* nettype, char* addrtype, char* firewall
 struct sipua_s
 {
 	sipua_uas_t* uas;
+   char *proxy_realm;
 
 	sipua_set_t* incall;  /* The call in conversation */
 	
@@ -271,7 +289,6 @@ struct sipua_s
 
 	char* (*userloc)(sipua_t* sipua, char* uid);
 	int (*locate_user)(sipua_t* sipua, user_t* user);
-
 
 	int (*set_profile)(sipua_t* sipua, user_profile_t* prof);
 	user_profile_t* (*profile)(sipua_t* sipua);
@@ -288,7 +305,7 @@ struct sipua_s
 	 * conversation media
 	 * return new bandwidth, <0 fail 
 	int (*add)(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media, int bandwidth);
- 	int (*remove)(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media);
+	int (*remove)(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media);
 	 */
 
  	/* lines management */
@@ -303,8 +320,8 @@ struct sipua_s
  	sipua_set_t* (*line)(sipua_t* sipua, int line);
 
 	/* switch current call session */
- 	sipua_set_t* (*pick)(sipua_t* sipua, int line);
- 	int (*hold)(sipua_t* sipua);
+	sipua_set_t* (*pick)(sipua_t* sipua, int line);
+	int (*hold)(sipua_t* sipua);
 
 	/**
 	 * Set the default media playing when call in queue or on hold:
@@ -339,6 +356,7 @@ struct sipua_s
 
     /* Set callbacks */
     int (*set_register_callback)(sipua_t *sipua, int(*callback)(void*callback_user,int result,char*reason), void* callback_user);
+    int (*set_authentication_callback)(sipua_t *sipua, int(*callback)(void*callback_user, char* realm, char* username, char** user_id, char** user_password, char** ha1), void* callback_user);
     int (*set_newcall_callback)(sipua_t *sipua, int(*callback)(void*callback_user,int lineno,char *caller,char *subject,char *info), void* callback_user);
     int (*set_conversation_start_callback)(sipua_t *sipua, int(*callback)(void *callback_user, int lineno), void* callback_user);
     int (*set_conversation_end_callback)(sipua_t *sipua, int(*callback)(void *callback_user, int lineno), void* callback_user);
@@ -371,6 +389,7 @@ sipua_unregist(sipua_t *sipua, user_profile_t *user);
 /* create call with rtp sessions when establish a call */
 sipua_set_t* 
 sipua_create_call(sipua_t *sipua, user_profile_t* user_prof, char* id, 
+
                   char* subject, int sbyte, char* info, int ibyte,
                   char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
                   int nmedia, media_control_t* control, 

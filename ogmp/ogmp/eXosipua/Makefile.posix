@@ -13,8 +13,8 @@ INCLUDES = -I$(PREFIX)/include -I.. -I../include
 
 INSTDIR = $(PREFIX)/lib/$(PROGNAME)
 
-FILES = eXosipua.c jcalls.c jinsubscriptions.c jsubscriptions.c
-OBJFILES = eXosipua.o jcalls.o jinsubscriptions.o jsubscriptions.o
+FILES = eXosipua.c jcalls.c jinsubscriptions.c jsubscriptions.c jauth.c
+OBJFILES = eXosipua.o jcalls.o jinsubscriptions.o jsubscriptions.o jauth.o
 
 LIBFILES = eXosipua.so
 

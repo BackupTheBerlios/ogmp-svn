@@ -28,11 +28,18 @@
 #include <timedia/ui.h>
 
 #define JUA_LOG
+#define JUA_DEBUG
 
 #ifdef JUA_LOG
  #define jua_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define jua_log(fmtargs)
+#endif
+
+#ifdef JUA_DEBUG
+ #define jua_debug(fmtargs)  do{printf fmtargs;}while(0)
+#else
+ #define jua_debug(fmtargs)
 #endif
 
 #define JUA_INTERVAL_MSEC 1000
@@ -621,7 +628,7 @@ int uas_address(sipua_uas_t* sipuas, char* *nettype, char* *addrtype, char* *net
 {
 	sipua_uas_t* uas = (sipua_uas_t*)sipuas;
 
-    *nettype = uas->nettype;
+   *nettype = uas->nettype;
 	*addrtype = uas->addrtype;
 	*netaddr = uas->netaddr;
 
@@ -631,6 +638,9 @@ int uas_address(sipua_uas_t* sipuas, char* *nettype, char* *addrtype, char* *net
 int uas_set_lisener(sipua_uas_t* sipuas, void* lisener, int(*notify_event)(void*, sipua_event_t*))
 {
 	sipua_uas_t* uas = (sipua_uas_t*)sipuas;
+
+
+
 
 
 	uas->lisener = lisener;
@@ -689,10 +699,81 @@ int uas_clear_coding(sipua_uas_t* sipuas)
 	return UA_OK;
 }
 
-int uas_regist(sipua_uas_t *sipuas, char *loc, char *registrar, char *id, int seconds)
+sipua_auth_t *uas_new_auth(char* username, char *realm)
+{
+   sipua_auth_t *auth = xmalloc(sizeof(sipua_auth_t));
+   if(auth)
+   {
+      auth->username = xstr_clone(username);
+      auth->realm = xstr_clone(realm);
+   }
+
+   return auth;
+}
+
+int uas_done_auth(void* gen)
+{
+   sipua_auth_t *auth = (sipua_auth_t*)gen;
+   
+   xfree(auth->username);
+   xfree(auth->realm);
+   xfree(auth);
+
+   return UA_OK;
+}
+
+int uas_match_auth(void *pat, void *tar)
+{
+   sipua_auth_t *p_auth = (sipua_auth_t *)pat;
+   sipua_auth_t *t_auth = (sipua_auth_t *)tar;
+
+   if(0==strcmp(p_auth->username, t_auth->username) && 0==strcmp(p_auth->realm, t_auth->realm))
+      return 0;
+
+   return -1;
+}
+
+int uas_set_authentication_info(sipua_uas_t *sipuas, char *username, char *userid, char*passwd, char *ha1, char *realm)
+{
+   xlist_user_t lu;
+   
+   sipua_auth_t *new_auth;
+   sipua_auth_t auth = {username, realm};
+
+   if(xlist_find(sipuas->auth_list, &auth, uas_match_auth, &lu))
+      return UA_OK;
+
+   new_auth = uas_new_auth(username, realm);
+   if(new_auth)
+   {
+      xlist_addto_first(sipuas->auth_list, new_auth);
+      
+      if(eXosip_add_authentication_info(username, userid, passwd, ha1, realm) == 0)
+         return UA_OK;
+   }
+   
+   return UA_FAIL;
+}
+
+int uas_clear_authentication_info(sipua_uas_t *sipuas, char *username, char *realm)
+{
+   return UA_EIMPL;
+}
+
+int uas_has_authentication_info(sipua_uas_t *sipuas, char *username, char *realm)
+{
+   xlist_user_t lu;
+   sipua_auth_t auth = {username, realm};
+
+   if(xlist_find(sipuas->auth_list, &auth, uas_match_auth, &lu))
+      return 1;
+
+   return 0;
+}
+
+int uas_regist(sipua_uas_t *sipuas, int *regno, char *loc, char *registrar, char *id, int seconds)
 {
 	int ret;
-	int regno = -1;
 
 	eXosipua_t *jua = (eXosipua_t*)sipuas;
 
@@ -705,22 +786,26 @@ int uas_regist(sipua_uas_t *sipuas, char *loc, char *registrar, char *id, int se
 	strcpy(p, "sip:");
 	p += 4;
 	strcpy(p, loc);
-    while(*p) p++;
-    snprintf(p, 12, ":%d", sipuas->portno);
+   while(*p)
+      p++;
+
+   snprintf(p, 12, ":%d", sipuas->portno);
 
 	jua_log(("uas_regist: %s on %s within %ds\n", id, registrar, seconds));
 
 	eXosip_lock();
 
-	regno = eXosip_register_init(id, registrar, siploc);
+   if(*regno < 0)
+   {
+      *regno = eXosip_register_init(id, registrar, siploc);
+	   if (*regno < 0)
+	   {
+		   eXosip_unlock();
+		   return UA_FAIL;
+	   }
+   }
 
-	if (regno < 0)
-	{
-		eXosip_unlock();
-		return UA_FAIL;
-	}
-
-	ret = eXosip_register(regno, seconds);
+	ret = eXosip_register(*regno, seconds);
 
 	eXosip_unlock();
 
@@ -863,6 +948,7 @@ int uas_answer(sipua_uas_t* uas, sipua_set_t* call, int reply, char* reply_type,
 
 int uas_bye(sipua_uas_t* uas, sipua_set_t* call)
 {
+
     /*
     eXosipua_t *jua = (eXosipua_t*)uas;
 	*/
@@ -888,6 +974,7 @@ int uas_init(sipua_uas_t* uas, int sip_port, char* nettype, char* addrtype, char
 	if(strcmp(nettype, "IN") != 0)
 	{
 		jua_log(("sipua_uas: Current, Only IP networking supported\n"));
+
 		return UA_FAIL;
 	}
 
@@ -911,6 +998,7 @@ int uas_init(sipua_uas_t* uas, int sip_port, char* nettype, char* addrtype, char
 	if (uas->netaddr[0]=='\0')
     {
 		jua_log(("sipua_uas: No ethernet interface found!\n"));
+
 		jua_log(("sipua_uas: using ip[127.0.0.1] (debug mode)!\n"));
 
 		strcpy(uas->netaddr, "127.0.0.1");
@@ -959,10 +1047,17 @@ module_interface_t* sipua_new_server()
 	memset(jua, 0, sizeof(eXosipua_t));
 
 	uas = (sipua_uas_t*)jua;
+   uas->auth_list = xlist_new();
+   if(!uas->auth_list)
+   {
+      xfree(jua);
+      jua_debug(("sipua_new_server: No memory for Authorization list\n"));
+      return NULL;
+   }
 
 	uas->match_type = uas_match_type;
 
-    uas->init = uas_init;
+   uas->init = uas_init;
 	uas->done = uas_done;
     
 	uas->start = uas_start;
@@ -977,6 +1072,10 @@ module_interface_t* sipua_new_server()
 
 	uas->set_listener = uas_set_lisener;
 
+	uas->set_authentication_info = uas_set_authentication_info;
+	uas->clear_authentication_info = uas_clear_authentication_info;
+	uas->has_authentication_info = uas_has_authentication_info;
+   
 	uas->regist = uas_regist;
 	uas->unregist = uas_unregist;
 
@@ -995,7 +1094,7 @@ module_interface_t* sipua_new_server()
 extern DECLSPEC module_loadin_t mediaformat =
 {
    "uas",   /* Label */
-
+   
    000001,         /* Plugin version */
    000001,         /* Minimum version of lib API supportted by the module */
    000001,         /* Maximum version of lib API supportted by the module */
