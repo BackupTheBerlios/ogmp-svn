@@ -172,6 +172,25 @@ void * xlist_current(xlist_t * list, xlist_user_t * u)
       return NULL;
 }
 
+void* xlist_at(xlist_t *list, int index)
+{
+   int n = 0;
+   xrtp_list_node_t * node;
+   
+   if(!list || list->num == 0)
+      return NULL;
+
+   node = list->head;
+   
+   while(n != index || node)
+   {
+      n++;
+      node = node->next;
+   }
+
+   return node;
+}
+
 int xlist_size(xlist_t * list){
    return list->num;
 }
@@ -294,7 +313,6 @@ int xlist_add_once(xlist_t *list, void *data)
    list->num++;
 
    xlist_log(("xlist_add_once: add new item\n"));
-
 
    return OS_OK;
 }
@@ -523,8 +541,8 @@ int xlist_delete_if(xlist_t * list, void * cdata, int(*condition)(void*, void*),
    return OS_OK;
 }
 
-void * xlist_find(xlist_t * list, void * data, int (*match)(void*, void*), xlist_user_t * u){
-
+void * xlist_find(xlist_t * list, void * data, int (*match)(void*, void*), xlist_user_t * u)
+{
    if(!list || list->num == 0)
 
       return NULL;
@@ -653,6 +671,7 @@ void * xrtp_list_remove(xrtp_list_t * list, void *item, int (*match)(void*, void
 
 int xrtp_list_delete_if(xrtp_list_t * list, void * cdata, int(*condition)(void*, void*), int(*free_item)(void*))
 {return xlist_delete_if(list, cdata, condition, free_item);}
+
 
 
 void * xrtp_list_find(xrtp_list_t * list, void * data, int (*match)(void*, void*), xrtp_list_user_t *u)

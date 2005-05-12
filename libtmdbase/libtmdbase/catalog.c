@@ -153,28 +153,28 @@ int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* pat
       sprintf(entname, "%s/%s", path, entry->d_name);
 
       if(stat(entname, &entinfo) == -1)
-	  {
+      {
          catalog_log(("catalog_scan_modules: Fail to get (%s) info\n", entname));
          xfree(entname);
          continue;
       }
 
-      switch(entinfo.st_mode & S_IFMT){
-
+      switch(entinfo.st_mode & S_IFMT)
+      {
          case S_IFDIR: continue;
 
-         case S_IFREG: {
-
+         case S_IFREG:
+         {
             lib = modu_dlopen(entname, XRTP_DLFLAGS);
             if(lib != NULL)
-			{
+            {
                catalog_log(("catalog_scan_modules: Check module (%s)\n", entname));
 
                loadin = (module_loadin_t *)modu_dlsym(lib, catalog->module_type);
                if(loadin)
-			   {
+               {
                   if(ver > loadin->max_api || ver < loadin->min_api)
-				  {
+                  {
                      catalog_log(("< catalog_scan_modules: Module (%s) version not match >\n", entname));
                      modu_dlclose(lib);
                      continue;
@@ -190,8 +190,8 @@ int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* pat
                   xlist_addto_first(catalog->infos, minfo);
                }
             }
-			else
-			{
+            else
+            {
                catalog_log(("catalog_scan_modules: Loading [%s] error[%s]\n", entname, modu_dlerror()));
             }
          }

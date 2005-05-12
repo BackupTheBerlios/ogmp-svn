@@ -57,6 +57,7 @@ struct xlist_s
 };
 
 
+
 typedef struct xlist_user_s xlist_user_t;
 
 struct xlist_user_s
@@ -75,6 +76,7 @@ extern DECLSPEC int xlist_done_user(xlist_user_t *user);
 extern DECLSPEC void * xlist_first(xlist_t *list, xlist_user_t *u);
 extern DECLSPEC void * xlist_next(xlist_t * list, xlist_user_t * u);
 extern DECLSPEC void * xlist_current(xlist_t * list, xlist_user_t * u);
+extern DECLSPEC void * xlist_at(xlist_t *list, int index);
 extern DECLSPEC int xlist_size(xlist_t * list);
 extern DECLSPEC int xlist_addto_first(xlist_t * list, void * data);
 extern DECLSPEC int xlist_addto_last(xlist_t * list, void * data);
