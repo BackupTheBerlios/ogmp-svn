@@ -19,7 +19,7 @@
 
 #define RTP_FORMAT_H
 
-#include "../devices/dev_rtp.h"
+#include "dev_rtp.h"
 
 #include <stdio.h>
 #include <timedia/timer.h>

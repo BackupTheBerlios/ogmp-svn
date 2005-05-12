@@ -29,9 +29,6 @@
  #define pbk_log(fmtargs)
 #endif
 
-#define UA_OK		0
-#define UA_FAIL		-1
-
 struct sipua_phonebook_s
 {
 	char *storage_location;		/* the storage location, maybe a URL extension */
@@ -630,7 +627,7 @@ int sipua_get_line(char* ln, int len, char* buf, int* bsize, int* i, FILE* f)
  * if ok, return current buf pos;
  * if failure, return -1
  */
-int sipua_verify_user_file(FILE* f, char* uid, char* tok, int tsz, char *buf, int *bsize)
+int sipua_verify_user_file(FILE* f, const char* uid, const char* tok, int tsz, char *buf, int *bsize)
 {
 	int bi;
 	
@@ -755,7 +752,7 @@ int sipua_save_user(user_t* user, char* loc, char* tok, int tsz)
 	return UA_OK;
 }
 
-user_t* sipua_load_user_file(FILE* f, char* uid, char* tok, int tsz)
+user_t* sipua_load_user_file(FILE* f, const char* uid, const char* tok, int tsz)
 {
 	char buf[256];
 
@@ -790,7 +787,6 @@ user_t* sipua_load_user_file(FILE* f, char* uid, char* tok, int tsz)
 		xfree(user);
 		return NULL;
 	}
-
 
 	user->uid = xstr_clone(uid);
 
@@ -906,10 +902,10 @@ user_t* sipua_load_user_file(FILE* f, char* uid, char* tok, int tsz)
 	return user;
 }
 
-user_t* sipua_load_user(char* loc, char *uid, char* tok, int tsz)
+user_t* sipua_load_user(const char* loc, const char *uid, const char* tok, int tsz)
 {
 	FILE* f;
-	user_t *user;
+	user_t *user;      
 
 	f = fopen(loc, "r");
 	if (f==NULL)
@@ -920,8 +916,7 @@ user_t* sipua_load_user(char* loc, char *uid, char* tok, int tsz)
 	}
 
 	/* load locally currently */
-	user = sipua_load_user_file(f, uid, tok, tsz);
-	
+	user = sipua_load_user_file(f, uid, tok, tsz);	
 
 	if(user)
 	{
@@ -1063,6 +1058,30 @@ int user_remove_profile(user_t* user, user_profile_t* prof)
 	user->modified = 1;
 
 	return xlist_size(user->profiles);
+}
+
+int user_profile_number(user_t* user)
+{
+   return xlist_size(user->profiles);
+}
+
+int user_profile(user_t* user, int num, char** fullname, int* fbytes, char** regname)
+{
+   user_profile_t *prof = (user_profile_t*)xlist_at(user->profiles, num);
+   if(!prof)
+   {
+      *fullname = NULL;
+      *fbytes = 0;
+      *regname = NULL;
+
+      return UA_INVALID;
+   }
+
+   *fullname = prof->fullname;
+   *fbytes = prof->fbyte;
+   *regname = prof->regname;
+
+   return UA_OK;
 }
 
 int user_done(user_t* u)

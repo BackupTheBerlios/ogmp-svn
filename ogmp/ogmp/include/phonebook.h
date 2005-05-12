@@ -21,6 +21,14 @@
 #include <timedia/list.h>
 #include <timedia/xthread.h>
 
+#define UA_OK		0
+#define UA_FAIL		-1
+#define UA_REJECT	-2
+#define UA_IGNORE	-3
+#define UA_BUSY     -4
+#define UA_EIMPL     -5
+#define UA_INVALID     -6
+
 typedef struct user_s user_t;
 typedef struct user_profile_s user_profile_t;
 typedef struct sipua_phonebook_s sipua_phonebook_t;
@@ -144,7 +152,7 @@ user_new(char* uid, int sz);
 
 extern DECLSPEC
 user_t* 
-sipua_load_user(char* loc, char *uid, char* tok, int tsz);
+sipua_load_user(const char* loc, const char* uid, const char* tok, int tsz);
 
 extern DECLSPEC
 int 
@@ -161,5 +169,11 @@ user_set_profile(user_t* user, user_profile_t* profile, char* fullname, int fbyt
 extern DECLSPEC
 int 
 user_remove_profile(user_t* user, user_profile_t* prof);
+
+extern DECLSPEC
+int user_profile_number(user_t* user);
+
+extern DECLSPEC
+int user_profile(user_t* user, int num, char** fullname, int* fbytes, char** regname);
 
 #endif

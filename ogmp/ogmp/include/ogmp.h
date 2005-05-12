@@ -18,6 +18,10 @@
 #ifndef OGMP_H
 #define OGMP_H
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 #include "media_format.h"
 
 #include <timedia/timer.h>
@@ -47,6 +51,8 @@
 
 #define OGMP_VERSION  1
 
+#define OGMP_VERSION_STRING  "0.1.0"
+
 #ifndef MOD_DIR
  #define MOD_DIR "."
 #endif
@@ -55,8 +61,8 @@
  #define MED_DIR "samples"
 #endif
 
-#define COMMAND_TYPE_GOON			0
-#define COMMAND_TYPE_EXIT			1
+#define COMMAND_TYPE_GOON		0
+#define COMMAND_TYPE_EXIT		1
 #define COMMAND_TYPE_REGISTER		2
 #define COMMAND_TYPE_UNREGISTER		3
 
@@ -157,10 +163,10 @@ struct ogmp_client_s
 	int (*on_newcall)(void *user_on_newcall, int lineno, char *caller, char *subject, char *info);
    void *user_on_newcall;
 
-   int (*on_conversation_start)(void *user_on_conversation_start, int lineno);
+   int (*on_conversation_start)(void *user_on_conversation_start, int lineno,char *caller,char *subject,char *info);
    void *user_on_conversation_start;
 
-   int (*on_conversation_end)(void *user_on_conversation_end, int lineno);
+   int (*on_conversation_end)(void *user_on_conversation_end, int lineno,char *caller,char *subject,char *info);
    void *user_on_conversation_end;
 
 	int (*on_bye)(void *user_on_bye, int lineno, char *caller, char *reason);
@@ -247,5 +253,9 @@ client_new_uas(module_catalog_t* mod_cata, char* type);
  ******************/
 extern DECLSPEC
 config_t* client_load_config(sipua_t *sipua, char* confile);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

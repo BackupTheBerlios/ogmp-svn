@@ -22,16 +22,9 @@
 #include <timedia/xstring.h>
 #include <xrtp/xrtp.h>
 
-#include "format_rtp/rtp_format.h"
-#include "devices/dev_rtp.h"
-#include "eXosipua/eXutils.h"
-
-#define UA_OK		0
-#define UA_FAIL		-1
-#define UA_REJECT	-2
-#define UA_IGNORE	-3
-#define UA_BUSY     -4
-#define UA_EIMPL     -5
+#include "rtp_format.h"
+#include "dev_rtp.h"
+#include "eXutils.h"
 
 #define MAX_CN_BYTES 256 /* max value in rtcp */
 #define MAX_IP_LEN   64  /* may enough for ipv6 ? */
@@ -298,7 +291,7 @@ struct sipua_s
 	int (*unregist)(sipua_t *sipua, user_profile_t *user);
 
 	/* call */
-	sipua_set_t* (*new_call)(sipua_t* sipua, char* subject, int sbytes, char *desc, int dbytes);
+	sipua_set_t* (*new_call)(sipua_t* sipua, const char* subject, int sbytes, const char *desc, int dbytes);
 	int (*done_call)(sipua_t *sipua, sipua_set_t* set);
  	
 	/**
@@ -311,6 +304,8 @@ struct sipua_s
  	/* lines management */
  	int (*lock_lines)(sipua_t* sipua);
  	int (*unlock_lines)(sipua_t* sipua);
+
+
 
 	int (*lines)(sipua_t* sipua, int *nbusy);
  	int (*busylines)(sipua_t* sipua, int *busylines, int nlines);
@@ -358,8 +353,8 @@ struct sipua_s
     int (*set_register_callback)(sipua_t *sipua, int(*callback)(void*callback_user,int result,char*reason), void* callback_user);
     int (*set_authentication_callback)(sipua_t *sipua, int(*callback)(void*callback_user, char* realm, char* username, char** user_id, char** user_password, char** ha1), void* callback_user);
     int (*set_newcall_callback)(sipua_t *sipua, int(*callback)(void*callback_user,int lineno,char *caller,char *subject,char *info), void* callback_user);
-    int (*set_conversation_start_callback)(sipua_t *sipua, int(*callback)(void *callback_user, int lineno), void* callback_user);
-    int (*set_conversation_end_callback)(sipua_t *sipua, int(*callback)(void *callback_user, int lineno), void* callback_user);
+    int (*set_conversation_start_callback)(sipua_t *sipua, int(*callback)(void *callback_user, int lineno,char *caller,char *subject,char *info), void* callback_user);
+    int (*set_conversation_end_callback)(sipua_t *sipua, int(*callback)(void *callback_user,int lineno,char *caller,char *subject,char *info), void* callback_user);
     int (*set_bye_callback)(sipua_t *sipua, int (*callback)(void *callback_user, int lineno, char *caller, char *reason), void* callback_user);
 
     int (*subscribe_bandwidth)(sipua_t *sipua, sipua_set_t *call);

@@ -15,7 +15,7 @@
  *                                                                         *
  ***************************************************************************/
  
-#include "format_rtp/rtp_format.h"
+#include "rtp_format.h"
 
 #include "ogmp.h"
 
@@ -41,7 +41,6 @@ extern ogmp_ui_t* global_ui;
 #endif
 
 #define SIPUA_MAX_RING 3
-
 
 
 #define MAX_CALL_BANDWIDTH  20480  /* in Bytes */
@@ -173,6 +172,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		case(SIPUA_EVENT_UNREGISTRATION_SUCCEEDED):
 		{
 
+
 			sipua_reg_event_t *reg_e = (sipua_reg_event_t*)e;
 
 			user_profile_t* user_prof = client->reg_profile;
@@ -255,6 +255,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
             if(0 == sipua->uas->has_authentication_info(sipua->uas, user_prof->username, sipua->proxy_realm))
             {
                if(client->on_authenticate)
+
                   client->on_authenticate(client->user_on_authenticate, sipua->proxy_realm, user_prof->username, &userid, &passwd, &ha1);
                
                sipua->uas->set_authentication_info(sipua->uas, user_prof->username, userid, passwd, ha1, sipua->proxy_realm);
@@ -445,6 +446,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				sdp_message_free(sdp_message);
 				
 				break;
+
 			}
 
 
@@ -681,7 +683,7 @@ sipua_set_t* client_find_call(sipua_t* sipua, char* id, char* username, char* ne
 	return ua->lines[i];
 }
 
-sipua_set_t* client_new_call(sipua_t* sipua, char* subject, int sbytes, char *desc, int dbytes)
+sipua_set_t* client_new_call(sipua_t* sipua, const char* subject, int sbytes, const char *desc, int dbytes)
 {
 	sipua_setting_t *setting;
 	sipua_set_t* call;
@@ -723,6 +725,7 @@ char* client_set_call_source(sipua_t* sipua, sipua_set_t* call, media_source_t* 
       printf("client_set_call_source: sdp\n");
 
 		call->renew_body = sdp;
+
 	}
 
 
@@ -838,6 +841,7 @@ int client_busylines(sipua_t* sipua, int *busylines, int nlines)
 
 	xthr_unlock(client->lines_lock);
 
+
 	return n;
 }
 
@@ -863,6 +867,7 @@ media_source_t* client_open_source(sipua_t* sipua, char* name, char* mode, void*
 	return source_open(name, client->control, mode, param);
 }
 
+
 int client_close_source(sipua_t* sipua, media_source_t* src)
 {
     /*
@@ -882,6 +887,7 @@ media_source_t* client_set_background_source(sipua_t* sipua, char* name, char *s
 	}
 
 	if(client->background_source)
+
    {
       client->background_source->stop(client->background_source);
       client->background_source->done(client->background_source);
@@ -1045,6 +1051,7 @@ int client_answer(sipua_t *sipua, sipua_set_t* call, int reply, media_source_t* 
 
 int client_queue(sipua_t *sipua, sipua_set_t* call)
 {
+
    char *sdp;
 
    ogmp_client_t *client = (ogmp_client_t*)sipua;
@@ -1100,21 +1107,23 @@ int client_set_newcall_callback (sipua_t *sipua, int(*callback)(void*callback_us
     return UA_OK;
 }
 
-int client_set_conversation_start_callback (sipua_t *sipua, int(*callback)(void *callback_user, int lineno), void* callback_user)
+int client_set_conversation_start_callback (sipua_t *sipua, int(*callback)(void *callback_user,int lineno,char *caller,char *subject,char *info), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
     client->on_conversation_start = callback;
     client->user_on_conversation_start = callback_user;
+    
     return UA_OK;
 }
 
-int client_set_conversation_end_callback (sipua_t *sipua, int(*callback)(void *callback_user, int lineno), void* callback_user)
+int client_set_conversation_end_callback (sipua_t *sipua, int(*callback)(void *callback_user,int lineno,char *caller,char *subject,char *info), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
     client->on_conversation_end = callback;
     client->user_on_conversation_end = callback_user;
+    
     return UA_OK;
 }
 
@@ -1143,7 +1152,6 @@ int client_unsubscribe_bandwidth(sipua_t *sipua, sipua_set_t* call)
    ogmp_client_t* client = (ogmp_client_t*)sipua;
 
    hold = call->bandwidth_hold;
-
    
    client->control->release_bandwidth(client->control, call->bandwidth_hold);
    call->bandwidth_hold = 0;
@@ -1223,6 +1231,8 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_ca
    sipua->proxy_realm = xstr_clone(proxy_realm);
 
 	sipua->done = sipua_done;
+
+
 
 	sipua->userloc = sipua_userloc;
 	sipua->locate_user = sipua_locate_user;
