@@ -30,8 +30,8 @@
 
 /*
 #define XLIST_LOG
-#define XLIST_DEBUG
 */
+#define XLIST_DEBUG
 
 #ifdef XLIST_LOG
  #define xlist_log(fmtargs)  do{printf fmtargs;}while(0)
@@ -175,20 +175,23 @@ void * xlist_current(xlist_t * list, xlist_user_t * u)
 void* xlist_at(xlist_t *list, int index)
 {
    int n = 0;
-   xrtp_list_node_t * node;
+   xlist_node_t * node;
    
-   if(!list || list->num == 0)
+   if(!list || list->num == 0 || index < 0)
       return NULL;
 
    node = list->head;
    
-   while(n != index || node)
+   while(node)
    {
+      if(n == index)
+         return node->data;
+         
       n++;
       node = node->next;
    }
 
-   return node;
+   return NULL;
 }
 
 int xlist_size(xlist_t * list){
