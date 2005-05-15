@@ -305,8 +305,6 @@ struct sipua_s
  	int (*lock_lines)(sipua_t* sipua);
  	int (*unlock_lines)(sipua_t* sipua);
 
-
-
 	int (*lines)(sipua_t* sipua, int *nbusy);
  	int (*busylines)(sipua_t* sipua, int *busylines, int nlines);
 

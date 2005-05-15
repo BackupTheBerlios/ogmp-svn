@@ -22,6 +22,8 @@
 #include <timedia/xstring.h>
 #include <timedia/ui.h>
 
+#define PBK_LOG
+
 #ifdef PBK_LOG
  #include <stdio.h>
  #define pbk_log(fmtargs)  do{printf fmtargs;}while(0)
@@ -1074,6 +1076,7 @@ int user_profile(user_t* user, int num, char** fullname, int* fbytes, char** reg
       *fbytes = 0;
       *regname = NULL;
 
+      pbk_log(("phonebook.user_profile: no profile found!\n"));
       return UA_INVALID;
    }
 
