@@ -138,6 +138,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->reason_phrase, je->remote_uri);
 	  
             josua_printf(buf);
+
             */
 
 
@@ -733,7 +734,7 @@ int uas_match_auth(void *pat, void *tar)
    return -1;
 }
 
-int uas_set_authentication_info(sipua_uas_t *sipuas, char *username, char *userid, char*passwd, char *ha1, char *realm)
+int uas_set_authentication_info(sipua_uas_t *sipuas, char *username, char *userid, char*passwd, char *realm)
 {
    xlist_user_t lu;
    
@@ -748,7 +749,12 @@ int uas_set_authentication_info(sipua_uas_t *sipuas, char *username, char *useri
    {
       xlist_addto_first(sipuas->auth_list, new_auth);
       
-      if(eXosip_add_authentication_info(username, userid, passwd, ha1, realm) == 0)
+      /* Dunno what ha1 is for ?     
+       * int eXosip_add_authentication_info(const char *username, const char *userid,
+		 *	                                 const char *passwd, const char *ha1,
+		 *	                                 const char *realm);
+       */
+      if(eXosip_add_authentication_info(username, userid, passwd, NULL, realm) == 0)
          return UA_OK;
    }
    
@@ -924,6 +930,7 @@ int uas_invite(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_
 int uas_accept(sipua_uas_t* uas, int lineno)
 {
 	eXosipua_t *jua = (eXosipua_t*)uas;
+
 	
 	jua->ncall++;
 	
@@ -1000,6 +1007,7 @@ int uas_init(sipua_uas_t* uas, int sip_port, char* nettype, char* addrtype, char
 		jua_log(("sipua_uas: No ethernet interface found!\n"));
 
 		jua_log(("sipua_uas: using ip[127.0.0.1] (debug mode)!\n"));
+
 
 		strcpy(uas->netaddr, "127.0.0.1");
     }

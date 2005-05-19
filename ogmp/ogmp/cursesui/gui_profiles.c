@@ -347,7 +347,7 @@ int window_profiles_run_command(gui_t* gui, int c)
 			if(user->tok)
 			{
 				/* tok prompt gui */
-				sipua_save_user(user, user->loc, user->tok, user->tok_bytes);
+				sipua_save_user(user, user->tok, user->tok_bytes);
 			}
 
 			break;
@@ -363,6 +363,7 @@ int window_profiles_run_command(gui_t* gui, int c)
 
 			k = 0;
 			prof = (user_profile_t*)xlist_first(profiles, &lu);
+
 			while(prof)
 			{
 				if(k == cursor_profiles_pos)

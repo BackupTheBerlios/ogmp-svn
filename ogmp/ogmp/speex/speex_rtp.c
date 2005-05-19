@@ -15,7 +15,7 @@
  *                                                                         *
  ***************************************************************************/
  
-#include "../devices/dev_rtp.h"
+#include "dev_rtp.h"
 #include "speex_info.h"
 
 #include <timedia/xmalloc.h>
@@ -309,6 +309,7 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 	   rtp_packet_done(rtp);
 
 	   return XRTP_CONSUMED;
+
    }
 
    /* calculate play timestamp */
@@ -430,6 +431,7 @@ int spxrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp)
 
    rtp_packet_set_payload(rtp, profile->payload_buf);
    /*
+
    vrtp_log(("audio/speex.vrtp_rtp_out: payload[%u] (%d bytes)\n", profile->timestamp_send, buffer_datalen(profile->payload_buf)));
    */
    if(!rtp_pack(rtp))
@@ -1500,6 +1502,7 @@ xrtp_media_t* rtp_speex(profile_handler_t *handler, int clockrate, int coding_pa
 			{
 				xlist_done(profile->packets, NULL);
 				xfree(profile->speex_media);
+
 				profile->speex_media = NULL;
 
 				return NULL;
@@ -1600,6 +1603,7 @@ int spxrtp_done_handler(profile_handler_t * h)
 
 	return XRTP_OK;
 }
+
 
 /**
  * Methods for module initializing

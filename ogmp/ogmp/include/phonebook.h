@@ -21,6 +21,9 @@
 #include <timedia/list.h>
 #include <timedia/xthread.h>
 
+#define SIPUA_STATUS_ENABLE		1
+#define SIPUA_STATUS_DISABLE	   0
+
 #define UA_OK		0
 #define UA_FAIL		-1
 #define UA_REJECT	-2
@@ -37,6 +40,8 @@ typedef struct sipua_contact_s sipua_contact_t;
 struct sipua_contact_s
 {
 	char		*name;
+
+
 	int			nbytes;
 
 	char		*memo;
@@ -120,7 +125,9 @@ struct user_profile_s
 	int enable;
 
 	int seconds_left;
-	
+
+   int auth;  /* indicate an authentication is carry on or not */
+
 	xthread_t* thread_register;
 };
 
@@ -148,7 +155,7 @@ user_done(user_t* u);
 
 extern DECLSPEC
 user_t* 
-user_new(char* uid, int sz);
+user_new(const char* uid, int sz);
 
 extern DECLSPEC
 user_t* 
@@ -156,11 +163,11 @@ sipua_load_user(const char* loc, const char* uid, const char* tok, int tsz);
 
 extern DECLSPEC
 int 
-sipua_save_user(user_t* user, char* loc, char* tok, int tsz);
+sipua_save_user(user_t* user, const char* tok, int tsz);
 
 extern DECLSPEC
 user_profile_t*
-user_add_profile(user_t* user, char* fullname, int fbytes, char* book_loc, char* home, char* regname, int sec);
+user_add_profile(user_t* user, const char* fullname, int fbytes, const char* book_loc, const char* home, const char* regname, int sec);
 
 extern DECLSPEC
 int 
@@ -171,9 +178,28 @@ int
 user_remove_profile(user_t* user, user_profile_t* prof);
 
 extern DECLSPEC
+int
+user_remove_profile_by_number(user_t* user, int profile_no);
+
+extern DECLSPEC
 int user_profile_number(user_t* user);
 
 extern DECLSPEC
 int user_profile(user_t* user, int num, char** fullname, int* fbytes, char** regname);
+
+extern DECLSPEC
+int user_profile_enabled(user_t* user, int num);
+
+extern DECLSPEC
+int user_profile_authencate(user_t* user, int num, char* authid, int abytes, char* passwd, int pbytes);
+
+extern DECLSPEC
+int user_modified(user_t* user);
+
+extern DECLSPEC
+char* user_location(user_t* user);
+
+extern DECLSPEC
+char* user_id(user_t* user);
 
 #endif

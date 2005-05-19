@@ -230,12 +230,9 @@ int window_login_run_command(gui_t* gui, int c)
 		{
 			if(uid[0] && pwd[0] && loc[0] && !ocui->user)
 			{
-            ocui->user = sipua_load_user(loc, uid, pwd, strlen(pwd));
-
+            ocui->user = ocui->sipua->load_userdata(ocui->sipua, loc, uid, pwd, strlen(pwd));
             if(ocui->user)
 				{
-					ocui->sipua->locate_user(ocui->sipua, ocui->user);
-					
 					gui_show_window(gui, GUI_PROFILES, GUI_LOGIN);
 				}
 			}

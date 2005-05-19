@@ -381,6 +381,9 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 
 
 
+
+
+
       xfree(set);
 
 		return NULL;
@@ -498,6 +501,7 @@ media_maker_t* sipua_open_device(char* devname, char* devmode, media_control_t* 
    if(!dev)
    {
       ua_debug(("source_open_device: No %s found\n\n", devname));
+
 	   return NULL;
    }
 
@@ -649,7 +653,7 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
 	call->bandwidth_need = bw;
 
    /* create a input source */
-   if(call->status == SIPUA_STATUS_ANSWER)
+   if(call->status == SIP_STATUS_CODE_OK)
       sipua_new_inputs(sipua, call, rtpcapset, control);
    
 	ua_log(("sipua_create_call: call[%s] established\n", rtpcapset->subject));
@@ -668,7 +672,7 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_set_t* call, int bw_budget, media_con
 	rtpcap_sdp_t sdp_info;
 
    int pt;   
-
+   
 	char tmp[16];
 	char tmp2[16];
 
@@ -678,7 +682,7 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_set_t* call, int bw_budget, media_con
    media_stream_t *src_strm;
 
 	sipua->uas->address(sipua->uas, &nettype, &addrtype, &netaddr);
-
+ 
 	/*sipua->uas->clear_coding(sipua->uas);*/
 
 	/* generate sdp message */
@@ -894,7 +898,6 @@ int sipua_session_sdp(sipua_t *sipua, sipua_set_t* set, char** sdp_body)
 }
 #endif    
 
-
 int sipua_regist(sipua_t *sipua, user_profile_t *user, char *userloc)
 {
    int ret;
@@ -961,6 +964,7 @@ int sipua_call(sipua_t *sipua, sipua_set_t* call, char *callee, char *sdp_body)
 		return ret;
    }
    
+
    sipua->incall = call;
 
 
@@ -983,6 +987,7 @@ int sipua_info_call(sipua_t *ua, sipua_set_t* call, char *type, char *info)
 	ua_log(("sipua_info_call: FIXME - yet to implement\n"));
 
 	return UA_OK;
+
 }
 
 int sipua_bye(sipua_t *sipua, sipua_set_t* set)

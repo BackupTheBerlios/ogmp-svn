@@ -152,8 +152,6 @@ void curseson()
 }
 
 void cursesoff()
-
-
 {
 	if (cursesareon) 
 	{
@@ -240,6 +238,7 @@ josua_print_command(char **commands, int ypos, int xpos)
 	mvaddnstr(ypos, xpos+3, buf, maxlen);
       
 	len = strlen("Back");
+
 	if(maxlen < len)
 		maxlen = len;
 
@@ -395,8 +394,6 @@ int gui_next_view(ogmp_curses_t* ocui)
 }
 
 int gui_previous_view(ogmp_curses_t* ocui)
-
-
 {
 	int i = 0;
 
@@ -529,7 +526,6 @@ gui_event_t* gui_event(ogmp_ui_t* ogui)
     
     ge = xlist_remove_first(ocui->event_queue);
     
-
     xthr_unlock(ocui->event_queue_lock);
 
     return ge;
@@ -610,7 +606,6 @@ int gui_activate_window(gui_t* gui, int wid)
 {
 	ogmp_curses_t* ocui = gui->topui;
 
-
 	ocui->active_gui->on_off = GUI_OFF;
 
 	ocui->active_gui = ocui->gui_windows[wid];
@@ -679,23 +674,23 @@ gui_show(ui_t* ui)
 
 	ocui->quit = 0;
 	while(!ocui->quit)
-    {
+   {
 		int key;
 
-        if (ocui->active_gui->gui_key_pressed)
+      if (ocui->active_gui->gui_key_pressed)
             key = ocui->active_gui->gui_key_pressed(ocui->active_gui);
-        else
+      else
             key = gui_key_pressed(ocui);
         
-        if (key != -1)
+      if (key != -1)
 			gui_run_command(ocui, key);
 
 		gui_e = gui_event(ogui);
 
-        if(!gui_e) continue;
+      if(!gui_e) continue;
 
-        if(gui_e->event_id == GUI_EVENTID_MYOWN)
-        {
+      if(gui_e->event_id == GUI_EVENTID_MYOWN)
+      {
             /* gui own event */
             if(gui_e->gui->event == NULL || gui_e->gui->event(gui_e->gui, gui_e) != GUI_EVENT_END)
                 gui_done_event(gui_e);
@@ -818,7 +813,6 @@ int gui_print_log(ui_t* ui, char *buf)
 	xthr_lock(log_lock);
 
 	p = buf;
-
 
 	if(log_nline > 0)
 		ln = (log_lnn + 1) % log_maxline;

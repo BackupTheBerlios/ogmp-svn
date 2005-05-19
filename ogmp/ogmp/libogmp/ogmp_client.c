@@ -93,7 +93,7 @@ int client_call_ringing(void* gen)
 					continue;
 				}
 				
-				sipua_answer(&client->sipua, call, SIPUA_STATUS_RINGING, NULL);
+				sipua_answer(&client->sipua, call, SIP_STATUS_CODE_RINGING, NULL);
 
 				call->ring_num--;
 			}
@@ -166,13 +166,14 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 	ogmp_client_t *client = (ogmp_client_t*)lisener;
 
+   int isreg = 0;
+   
 	switch(e->type)
 	{
 		case(SIPUA_EVENT_REGISTRATION_SUCCEEDED):
+         isreg = 1;
 		case(SIPUA_EVENT_UNREGISTRATION_SUCCEEDED):
 		{
-
-
 			sipua_reg_event_t *reg_e = (sipua_reg_event_t*)e;
 
 			user_profile_t* user_prof = client->reg_profile;
@@ -196,6 +197,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				client->sipua.user_profile = client->reg_profile;
 
 				user_prof->reg_status = SIPUA_STATUS_REG_OK;
+				user_prof->online_status = SIPUA_STATUS_ENABLE;
 			}
 
 			if(user_prof->reg_status == SIPUA_STATUS_UNREG_DOING)
@@ -204,6 +206,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
             user_prof->reg_server = NULL;
 
 			   user_prof->reg_status = SIPUA_STATUS_NORMAL;
+				user_prof->online_status = SIPUA_STATUS_DISABLE;
          }
 
 			/* registering transaction completed */
@@ -227,13 +230,14 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				user_prof->thread_register = xthr_new(client_register_loop, user_prof, XTHREAD_NONEFLAGS);
 
          if(client->on_register)
-            client->on_register(client->user_on_register, user_prof->reg_status, user_prof->reg_reason_phrase);
+            client->on_register(client->user_on_register, reg_e->status_code, user_prof->reg_reason_phrase, isreg);
                 
          //client->ogui->ui.beep(&client->ogui->ui);
 
 			break;
 		}
 		case(SIPUA_EVENT_REGISTRATION_FAILURE):
+         isreg = 1;
 		case(SIPUA_EVENT_UNREGISTRATION_FAILURE):
 		{
 			char buf[100];
@@ -248,39 +252,42 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			clie_log(("client_sipua_event: %s\n", buf));
          
-         if(reg_e->status_code == SIP_CODE_PROXY_UNAUTHORIZED)
+         if(reg_e->status_code == SIP_STATUS_CODE_PROXYAUTHENTICATIONREQUIRED)
          {
-            char *userid, *passwd, *ha1;
+            char *userid, *passwd;
 
             if(0 == sipua->uas->has_authentication_info(sipua->uas, user_prof->username, sipua->proxy_realm))
             {
-               if(client->on_authenticate)
-
-                  client->on_authenticate(client->user_on_authenticate, sipua->proxy_realm, user_prof->username, &userid, &passwd, &ha1);
+               user_prof->auth = 0;
                
-               sipua->uas->set_authentication_info(sipua->uas, user_prof->username, userid, passwd, ha1, sipua->proxy_realm);
+               if(client->on_authenticate)
+                  client->on_authenticate(client->user_on_authenticate, sipua->proxy_realm, user_prof, &userid, &passwd);
             }
             
-			   client_regist(sipua, user_prof, user_prof->cname);
-            
-            break;
+            if(user_prof->auth)
+            {
+			      client_regist(sipua, user_prof, user_prof->cname);
+               break;
+            }
          }
 
-         if(reg_e->status_code == SIP_CODE_UNAUTHORIZED)
+         if(reg_e->status_code == SIP_STATUS_CODE_UNAUTHORIZED)
          {
-            char *userid = NULL, *passwd = NULL, *ha1 = NULL;
+            char *userid = NULL, *passwd = NULL;
 
             if(0 == sipua->uas->has_authentication_info(sipua->uas, user_prof->username, user_prof->realm))
             {    
-               if(client->on_authenticate)
-                  client->on_authenticate(client->user_on_authenticate, sipua->proxy_realm, user_prof->username, &userid, &passwd, &ha1);
+               user_prof->auth = 0;
 
-               sipua->uas->set_authentication_info(sipua->uas, user_prof->username, userid, passwd, ha1, user_prof->realm);
+               if(client->on_authenticate)
+                  client->on_authenticate(client->user_on_authenticate, user_prof->realm, user_prof, &userid, &passwd);
             }
 
-			   client_regist(sipua, user_prof, user_prof->cname);
-
-            break;
+            if(user_prof->auth)
+            {
+			      client_regist(sipua, user_prof, user_prof->cname);
+               break;
+            }
          }
 
          if(user_prof->reg_status == SIPUA_STATUS_REG_DOING)
@@ -289,19 +296,23 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			if(user_prof->reg_status == SIPUA_STATUS_UNREG_DOING)
             user_prof->reg_status = SIPUA_STATUS_UNREG_FAIL;
 
-			if(user_prof->reg_reason_phrase) 
+			if(user_prof->reg_reason_phrase)
+         { 
 				xfree(user_prof->reg_reason_phrase);
+            user_prof->reg_reason_phrase = NULL;
+         }
                 
-			user_prof->reg_reason_phrase = xstr_clone(reg_e->server_info);
+         if(reg_e->server_info)
+            user_prof->reg_reason_phrase = xstr_clone(reg_e->server_info);
 
 			/* registering transaction completed */
 			client->reg_profile = NULL;
          user_prof->regno = -1;
 
          if(client->on_register)
-            client->on_register(client->user_on_register, user_prof->reg_status, user_prof->reg_reason_phrase);
+            client->on_register(client->user_on_register, reg_e->status_code, user_prof->reg_reason_phrase, isreg);
 
-			break;
+			break;  
 		}
 		case(SIPUA_EVENT_NEW_CALL):
 		{
@@ -326,6 +337,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			{
 				clie_log(("\nsipua_event: fail to parse sdp\n"));
 				sdp_message_free(sdp_message);
+
 				
 				return UA_FAIL;
 			}
@@ -427,7 +439,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 
          sipua_set_t *call = e->call_info; 
-			call->status = SIPUA_STATUS_ANSWER;
+			call->status = SIP_STATUS_CODE_OK;
 
          /*
 		   printf("client_sipua_event: call[%s] answered\n", call->subject);
@@ -449,7 +461,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			}
 
-
 			/* capable answered by callee */
 			rtpcapset = rtp_capable_from_sdp(sdp_message);
 
@@ -461,7 +472,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
                                     client->format_handlers, client->control, client->pt);
 			if(bw < 0)
 			{
-				sipua_answer(&client->sipua, call, SIPUA_STATUS_DECLINE, NULL);
+				sipua_answer(&client->sipua, call, SIP_STATUS_CODE_DECLINE, NULL);
 
             break;
 			}
@@ -477,7 +488,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
             source_associate_guests(client->background_source, call->rtp_format);
          }
-
           */
 
          break;
@@ -502,7 +512,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			if(bw < 0)
 			{
-				sipua_answer(&client->sipua, call, SIPUA_STATUS_REJECT, NULL);
+				sipua_answer(&client->sipua, call, SIP_STATUS_CODE_TEMPORARILYUNAVAILABLE, NULL);
 				break;
 			}
 
@@ -577,6 +587,7 @@ int sipua_done_sip_session(void* gen)
 	
 	if(set->setid.nettype) xfree(set->setid.nettype);
 
+
 	if(set->setid.addrtype) xfree(set->setid.addrtype);
 	if(set->setid.netaddr) xfree(set->setid.netaddr);
 
@@ -588,6 +599,7 @@ int sipua_done_sip_session(void* gen)
 
    xstr_done_string(set->proto);
    xstr_done_string(set->from);
+
 
 	set->rtp_format->done(set->rtp_format);
 	rtp_capable_done_set(set->rtpcapset);
@@ -644,6 +656,19 @@ int sipua_done(sipua_t *sipua)
 	xfree(ua);
 
 	return UA_OK;
+}
+
+user_t* client_load_userdata (sipua_t* sipua, const char* loc, const char* uid, const char* tok, const int tsz)
+{
+	ogmp_client_t* clie = (ogmp_client_t*)sipua;
+   
+   clie->user = sipua_load_user (loc, uid, tok, tsz);
+   if(clie->user)
+   {
+      sipua_locate_user(sipua, clie->user);
+   }
+
+   return clie->user;
 }
 
 /* NOTE! if match, return ZERO, otherwise -1 */
@@ -725,9 +750,7 @@ char* client_set_call_source(sipua_t* sipua, sipua_set_t* call, media_source_t* 
       printf("client_set_call_source: sdp\n");
 
 		call->renew_body = sdp;
-
 	}
-
 
 	return sdp;
 }
@@ -746,6 +769,23 @@ user_profile_t* client_profile(sipua_t* sipua)
 	return sipua->user_profile;
 }
 
+/*FIXME: how about unicode authentication data*/
+int client_authenticate(sipua_t *sipua, int profile_no, const char* realm, const char *auth_id, int authbytes, const char* passwd, int pwdbytes)
+{
+	ogmp_client_t *ua = (ogmp_client_t*)sipua;
+
+   user_profile_t *prof = (user_profile_t*)xlist_at(ua->user->profiles, profile_no);
+   if(!prof)
+      return UA_FAIL;
+
+   if(sipua->uas->set_authentication_info(sipua->uas, prof->username, auth_id, passwd, realm) < UA_OK)
+      prof->auth = 0;
+   else
+      prof->auth = 1;
+
+   return UA_OK;
+}
+
 int client_regist(sipua_t *sipua, user_profile_t *user, char *userloc)
 {
 	int ret;
@@ -759,6 +799,7 @@ int client_regist(sipua_t *sipua, user_profile_t *user, char *userloc)
 	}
 
 	client->reg_profile = user;
+
 
 	ret = sipua_regist(sipua, user, userloc);
 
@@ -793,6 +834,62 @@ int client_unregist(sipua_t *sipua, user_profile_t *user)
 	return ret;
 }
 
+int client_register_profile (sipua_t *sipua, int profile_no)
+{
+	ogmp_client_t *client = (ogmp_client_t*)sipua;
+   
+   if(!client->user)
+   {
+	   clie_debug(("client_register_profile: no user\n"));
+      return UA_FAIL;
+   }   
+   user_profile_t *prof = (user_profile_t*)xlist_at(client->user->profiles, profile_no);
+   if(!prof)
+   {
+	   clie_debug(("client_register_profile: no profile\n"));
+      return UA_FAIL;
+   }
+   if(prof->reg_status != SIPUA_STATUS_NORMAL)
+   {
+	   clie_debug(("client_register_profile: busy\n"));
+      return UA_BUSY;
+   }
+   
+   prof->regno = -1;
+   sipua->regist(sipua, prof, client->user->userloc);
+   
+	clie_debug(("client_register_profile: registering ...\n"));
+   
+   return UA_OK;
+}
+
+int client_unregister_profile (sipua_t *sipua, int profile_no)
+
+{
+	ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+   if(!client->user)
+      return UA_FAIL;
+
+   user_profile_t *prof = (user_profile_t*)xlist_at(client->user->profiles, profile_no);
+
+   if(!prof)
+      return UA_FAIL;
+      
+   if(prof->reg_status != SIPUA_STATUS_REG_OK)
+      return UA_BUSY;
+
+   if(prof == sipua->profile(sipua))
+      return UA_REJECT;
+
+   prof->regno = -1;
+   sipua->regist(sipua, prof, client->user->userloc);
+
+	clie_debug(("client_unregister_profile: unregistering ...\n"));
+
+   return UA_OK;
+}
+
 /* lines management */
 int client_lock_lines(sipua_t* sipua)
 {
@@ -809,7 +906,6 @@ int client_unlock_lines(sipua_t* sipua)
 
 	xthr_unlock(client->lines_lock);
 
-
 	return UA_OK;
 }
 
@@ -825,6 +921,7 @@ int client_lines(sipua_t* sipua, int *nbusy)
 	return MAX_SIPUA_LINES;
 }
 
+
 int client_busylines(sipua_t* sipua, int *busylines, int nlines)
 {
 	int i;
@@ -838,9 +935,7 @@ int client_busylines(sipua_t* sipua, int *busylines, int nlines)
 		if(client->lines[i])
 			busylines[n++] = i;
 
-
 	xthr_unlock(client->lines_lock);
-
 
 	return n;
 }
@@ -945,6 +1040,7 @@ int client_attach_source(sipua_t* sipua, sipua_set_t* call, transmit_source_t* t
 			/* The default media net address */
 
 			tsrc->add_destinate(tsrc, rtpcap->profile_mime, cname, 
+
 								call->rtpcapset->nettype, 
 								call->rtpcapset->addrtype, 
 								call->rtpcapset->netaddr, 
@@ -995,6 +1091,7 @@ int client_hold(sipua_t* sipua)
 			break;
 
 	client->lines[i] = client->sipua.incall;
+
 	client->sipua.incall->status = SIPUA_EVENT_ONHOLD;
 
 	client->sipua.incall = NULL;
@@ -1010,7 +1107,7 @@ int client_answer(sipua_t *sipua, sipua_set_t* call, int reply, media_source_t* 
 
 	switch(reply)
 	{        
-		case SIPUA_STATUS_ANSWER:
+		case SIP_STATUS_CODE_OK:
 		{
 		   /**
           * Answer the call with new sdp, if source available.
@@ -1067,7 +1164,7 @@ int client_queue(sipua_t *sipua, sipua_set_t* call)
 
    call->status = SIPUA_STATUS_QUEUE;
    
-   sipua_answer(&client->sipua, call, SIPUA_STATUS_ANSWER, sdp);
+   sipua_answer(&client->sipua, call, SIP_STATUS_CODE_OK, sdp);
 
    xstr_done_string(sdp);
    
@@ -1078,7 +1175,7 @@ int client_queue(sipua_t *sipua, sipua_set_t* call)
  *  Set Callbacks for SIPUA  *
  *****************************/
 
-int client_set_register_callback (sipua_t *sipua, int(*callback)(void*callback_user,int result,char*reason), void* callback_user)
+int client_set_register_callback (sipua_t *sipua, int(*callback)(void*callback_user,int result,char*reason,int isreg), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1088,7 +1185,7 @@ int client_set_register_callback (sipua_t *sipua, int(*callback)(void*callback_u
     return UA_OK;
 }
 
-int client_set_authentication_callback (sipua_t *sipua, int(*callback)(void*callback_user, char* realm, char* username, char** user_id, char** user_password, char** ha1), void* callback_user)
+int client_set_authentication_callback (sipua_t *sipua, int(*callback)(void*callback_user, char* realm, user_profile_t* profile, char** user_id, char** user_password), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1232,16 +1329,19 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_ca
 
 	sipua->done = sipua_done;
 
-
-
 	sipua->userloc = sipua_userloc;
 	sipua->locate_user = sipua_locate_user;
 
+	sipua->load_userdata = client_load_userdata;
+   
 	sipua->set_profile = client_set_profile;
 	sipua->profile = client_profile;
 
 	sipua->regist = client_regist;
 	sipua->unregist = client_unregist;
+
+	sipua->register_profile = client_register_profile;
+	sipua->unregister_profile = client_unregister_profile;
 
 	sipua->new_call = client_new_call;
 	sipua->done_call = client_done_call;
@@ -1286,6 +1386,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_ca
    sipua->set_authentication_callback = client_set_authentication_callback;
    sipua->set_newcall_callback = client_set_newcall_callback;
    sipua->set_conversation_start_callback = client_set_conversation_start_callback;
+
    sipua->set_conversation_end_callback = client_set_conversation_end_callback;
    sipua->set_bye_callback = client_set_bye_callback;
 

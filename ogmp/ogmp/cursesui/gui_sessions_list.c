@@ -96,11 +96,11 @@ int window_sessions_list_print(gui_t* gui, int wid)
 				strcpy(status, "Global Fail"); break;
 			case SIPUA_EVENT_ONHOLD:
 				strcpy(status, "On hold"); break;
-			case SIPUA_STATUS_REJECT:
+			case SIP_STATUS_CODE_TEMPORARILYUNAVAILABLE:
 				strcpy(status, "Rejected"); break;
-			case SIPUA_STATUS_BUSY:
+			case SIP_STATUS_CODE_BUSYHERE:
 				strcpy(status, "Busy"); break;
-			case SIPUA_STATUS_DECLINE:
+			case SIP_STATUS_CODE_DECLINE:
 				strcpy(status, "Declined"); break;
 			default:
 				strcpy(status, "Unknown");
@@ -126,6 +126,7 @@ int window_sessions_list_print(gui_t* gui, int wid)
 	nincall = 1;
 
 	/* Show all lines */
+
 	ocui->sipua->lock_lines(ocui->sipua);
 
 	nbusy = ocui->sipua->busylines(ocui->sipua, busylines, MAX_SIPUA_LINES);
@@ -170,11 +171,11 @@ int window_sessions_list_print(gui_t* gui, int wid)
 				strcpy(status, "Global Fail"); break;
 			case SIPUA_EVENT_ONHOLD:
 				strcpy(status, "On hold"); break;
-			case SIPUA_STATUS_REJECT:
+			case SIP_STATUS_CODE_TEMPORARILYUNAVAILABLE:
 				strcpy(status, "Rejected"); break;
-			case SIPUA_STATUS_BUSY:
+			case SIP_STATUS_CODE_BUSYHERE:
 				strcpy(status, "Busy"); break;
-			case SIPUA_STATUS_DECLINE:
+			case SIP_STATUS_CODE_DECLINE:
 				strcpy(status, "Declined"); break;
 			case SIPUA_EVENT_ACK:
 				strcpy(status, "Established"); break;
@@ -347,7 +348,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 				break; 
 			}
 
-         ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_ANSWER, NULL);
+         ocui->sipua->answer(ocui->sipua, call, SIP_STATUS_CODE_OK, NULL);
 
 			break;
 		}
@@ -375,7 +376,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 				break; 
 			}
 
-			ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_REJECT, NULL);
+			ocui->sipua->answer(ocui->sipua, call, SIP_STATUS_CODE_TEMPORARILYUNAVAILABLE, NULL);
 
 			while(busylines[n] != calllist_line) 
 				n++;
@@ -405,7 +406,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 				break; 
 			}
 
-			ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_DECLINE, NULL);
+			ocui->sipua->answer(ocui->sipua, call, SIP_STATUS_CODE_DECLINE, NULL);
 			
 			while(busylines[n] != calllist_line) 
 				n++;
@@ -435,7 +436,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 				break; 
 			}
 
-			ocui->sipua->answer(ocui->sipua, call, SIPUA_STATUS_BUSY, NULL);
+			ocui->sipua->answer(ocui->sipua, call, SIP_STATUS_CODE_BUSYHERE, NULL);
 			
 			while(busylines[n] != calllist_line) 
 				n++;

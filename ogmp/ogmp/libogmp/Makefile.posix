@@ -9,12 +9,15 @@ CC = gcc
 INCLUDES = -I$(PREFIX)/include -I.. -I../include
 LIBS = -L$(PREFIX)/lib -ltmdbase -lrtime -lxrtp -losip2
 
+LIBFILE = $(SRCDIR)/libxrtp.so
+
 INSTDIR = $(PREFIX)/lib
 
 SRCFILES = media_control.c ogmp_source.c ogmp_ui.c ogmp_config.c \
 				sipua.c rtp_cap.c phonebook.c ogmp_client.c
 
-SRCHEAD = media_format.h ogmp.h sipua.h rtp_cap.h phonebook.h
+SRCHEAD = media_format.h ogmp.h sipua.h rtp_cap.h phonebook.h \
+				format_rtp.h dev_rtp.h
 
 OBJFILES = media_control.o ogmp_source.o ogmp_ui.o ogmp_config.o \
 				sipua.o rtp_cap.o phonebook.o ogmp_client.o
@@ -33,6 +36,13 @@ libs: $(SRCFILES:.c=.o)
 
 install: $(LIBFILES)
 	-@cp -f $(LIBFILES) $(INSTDIR)
+
+install-lib: $(LIBFILES)
+	@cp -f $(SRCHEAD) $(INSTDIR)/$(PROGNAME)
+
+uninstall-lib:
+	@rm -rf $(INSTDIR)/$(PROGNAME)
+	@rm -rf $(INSTDIR)/$(LIBFILES)
 
 uninstall:
 	-@rm -f $(INSTDIR)/$(LIBFILES)

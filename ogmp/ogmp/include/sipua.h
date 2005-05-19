@@ -34,44 +34,84 @@
 #define MAX_SIPUA_LINES		8
 #define MAX_SIPUA_MEDIA		4
 
-#define SIPUA_EVENT_SUCCEED						0
+#define SIPUA_EVENT_SUCCEED						   0
 #define SIPUA_EVENT_REGISTRATION_SUCCEEDED		1
-#define SIPUA_EVENT_UNREGISTRATION_SUCCEEDED	2
+#define SIPUA_EVENT_UNREGISTRATION_SUCCEEDED	   2
 
 #define SIPUA_EVENT_NEW_CALL					3
-#define SIPUA_EVENT_PROCEEDING					4
-#define SIPUA_EVENT_RINGING						5
+#define SIPUA_EVENT_PROCEEDING				4
+#define SIPUA_EVENT_RINGING					5
 #define SIPUA_EVENT_ANSWERED					6
-#define SIPUA_EVENT_REDIRECTED					7
-#define SIPUA_EVENT_CALL_CLOSED					8
+#define SIPUA_EVENT_REDIRECTED				7
+#define SIPUA_EVENT_CALL_CLOSED				8
 #define SIPUA_EVENT_ONHOLD						9
-#define SIPUA_EVENT_OFFHOLD						10
+#define SIPUA_EVENT_OFFHOLD					10
 #define SIPUA_EVENT_ACK							11
 
 #define SIPUA_EVENT_REGISTRATION_FAILURE		-1
-#define SIPUA_EVENT_UNREGISTRATION_FAILURE		-2
+#define SIPUA_EVENT_UNREGISTRATION_FAILURE	-2
 #define SIPUA_EVENT_REQUESTFAILURE				-3
 #define SIPUA_EVENT_SERVERFAILURE				-4
 #define SIPUA_EVENT_GLOBALFAILURE				-5
 
 #define SIPUA_STATUS_UNKNOWN				-1
-#define SIPUA_STATUS_NORMAL					0
-#define SIPUA_STATUS_REG_OK					1
+#define SIPUA_STATUS_NORMAL				0
+#define SIPUA_STATUS_REG_OK				1
 #define SIPUA_STATUS_REG_FAIL				2
-#define SIPUA_STATUS_UNREG_FAIL				3
-#define SIPUA_STATUS_REG_DOING				4
+#define SIPUA_STATUS_UNREG_FAIL			3
+#define SIPUA_STATUS_REG_DOING			4
 #define SIPUA_STATUS_UNREG_DOING			5
 #define SIPUA_STATUS_QUEUE			      6
 #define SIPUA_STATUS_SERVE    			7
 
-#define SIPUA_STATUS_RINGING	180
-#define SIPUA_STATUS_ANSWER		200
-#define SIPUA_STATUS_REJECT		480
-#define SIPUA_STATUS_BUSY		486
-#define SIPUA_STATUS_DECLINE	603
+#define SIP_STATUS_CODE_TRYING	100
+#define SIP_STATUS_CODE_RINGING	180
+#define SIP_STATUS_CODE_FORAWRD	181
+#define SIP_STATUS_CODE_QUEUE	   182
 
-#define SIP_CODE_UNAUTHORIZED  401
-#define SIP_CODE_PROXY_UNAUTHORIZED 407
+#define SIP_STATUS_CODE_OK    	      200
+
+#define SIP_STATUS_CODE_MULTIPLECHOICES         300
+#define SIP_STATUS_CODE_MOVEDPERMANENTLY        301
+#define SIP_STATUS_CODE_MOVEDTEMPORARILY        302
+#define SIP_STATUS_CODE_USEPROXY                305
+#define SIP_STATUS_CODE_ALTERNATIVESERVICE      380
+
+#define SIP_STATUS_CODE_BADREQUEST                    400
+#define SIP_STATUS_CODE_UNAUTHORIZED                  401
+#define SIP_STATUS_CODE_PAYMENTREQUIRED               402
+#define SIP_STATUS_CODE_FORBIDDEN                     403
+#define SIP_STATUS_CODE_NOTFOUND                      404
+#define SIP_STATUS_CODE_METHODNOTALLOWED              405
+#define SIP_STATUS_CODE_NOTACCEPTABLE                 406
+#define SIP_STATUS_CODE_PROXYAUTHENTICATIONREQUIRED   407
+#define SIP_STATUS_CODE_REQUESTTIMEOUT                408
+#define SIP_STATUS_CODE_CONFLICT                      409
+#define SIP_STATUS_CODE_GONE                          410
+#define SIP_STATUS_CODE_LENGTHREQUIRED                411
+#define SIP_STATUS_CODE_REQUESTENTITYTOOLARGE         413
+#define SIP_STATUS_CODE_REQUESTURITOOLONG             414
+#define SIP_STATUS_CODE_UNSUPPORTEDMEDIATYPE          415
+#define SIP_STATUS_CODE_BADEXTENSION                  420
+#define SIP_STATUS_CODE_TEMPORARILYUNAVAILABLE        480
+#define SIP_STATUS_CODE_TRANSACTIONDOESNOTEXIST       481
+#define SIP_STATUS_CODE_LOOPDETECTED                  482
+#define SIP_STATUS_CODE_TOOMANYHOPS                   483
+#define SIP_STATUS_CODE_ADDRESSINCOMPLETE             484
+#define SIP_STATUS_CODE_AMBIGUOUS                     485
+#define SIP_STATUS_CODE_BUSYHERE	                     486
+
+#define SIP_STATUS_CODE_SERVERINTERNALERROR	   500
+#define SIP_STATUS_CODE_NOTIMPLEMENTED	         501
+#define SIP_STATUS_CODE_BADGATEWAY	            502
+#define SIP_STATUS_CODE_SERVICEUNAVAILABLE      503
+#define SIP_STATUS_CODE_GATEWAYTIMEOUT	         504
+#define SIP_STATUS_CODE_VERSIONNOTSUPPORTED	   505
+
+#define SIP_STATUS_CODE_BUSYEVERYWHERE	               600
+#define SIP_STATUS_CODE_DECLINE	                     603
+#define SIP_STATUS_CODE_DOESNOTEXISTANTWHERE	         604
+#define SIP_STATUS_CODE_GLOBALNOTACCEPTABLE	         606
 
 #include "phonebook.h"
 
@@ -249,7 +289,7 @@ struct sipua_uas_s
 	
 	int (*clear_coding)(sipua_uas_t* uas);
 	
-   int (*set_authentication_info)(sipua_uas_t* uas, char *username, char *userid, char*passwd, char *hal, char *realm);
+   int (*set_authentication_info)(sipua_uas_t* uas, char *username, char *userid, char*passwd, char *realm);
    int (*clear_authentication_info)(sipua_uas_t* uas, char *username, char *realm);
    int (*has_authentication_info)(sipua_uas_t* uas, char *username, char *realm);
 
@@ -282,13 +322,20 @@ struct sipua_s
 
 	char* (*userloc)(sipua_t* sipua, char* uid);
 	int (*locate_user)(sipua_t* sipua, user_t* user);
+   
+	user_t* (*load_userdata)(sipua_t* sipua, const char* loc, const char* uid, const char* tok, const int tsz);
 
 	int (*set_profile)(sipua_t* sipua, user_profile_t* prof);
 	user_profile_t* (*profile)(sipua_t* sipua);
 
+	int (*authenticate)(sipua_t *sipua, int profile_no, const char* realm, const char *auth_id, int authbytes, const char* passwd, int pwdbytes);
+   
 	/* registration */
-	int (*regist)(sipua_t *sipua, user_profile_t *user, char *userloc);
-	int (*unregist)(sipua_t *sipua, user_profile_t *user);
+	int (*regist) (sipua_t *sipua, user_profile_t *user, char *userloc);
+	int (*unregist) (sipua_t *sipua, user_profile_t *user);
+   
+   int (*register_profile) (sipua_t *sipua, int profile_no);
+   int (*unregister_profile) (sipua_t *sipua, int profile_no);
 
 	/* call */
 	sipua_set_t* (*new_call)(sipua_t* sipua, const char* subject, int sbytes, const char *desc, int dbytes);
@@ -348,8 +395,8 @@ struct sipua_s
 	char* (*set_call_source)(sipua_t *sipua, sipua_set_t* set, media_source_t* source);
 
     /* Set callbacks */
-    int (*set_register_callback)(sipua_t *sipua, int(*callback)(void*callback_user,int result,char*reason), void* callback_user);
-    int (*set_authentication_callback)(sipua_t *sipua, int(*callback)(void*callback_user, char* realm, char* username, char** user_id, char** user_password, char** ha1), void* callback_user);
+    int (*set_register_callback)(sipua_t *sipua, int(*callback)(void*callback_user,int statuscode,char*reason,int isreg), void* callback_user);
+    int (*set_authentication_callback)(sipua_t *sipua, int(*callback)(void*callback_user, char* realm, user_profile_t* profile, char** user_id, char** user_password), void* callback_user);
     int (*set_newcall_callback)(sipua_t *sipua, int(*callback)(void*callback_user,int lineno,char *caller,char *subject,char *info), void* callback_user);
     int (*set_conversation_start_callback)(sipua_t *sipua, int(*callback)(void *callback_user, int lineno,char *caller,char *subject,char *info), void* callback_user);
     int (*set_conversation_end_callback)(sipua_t *sipua, int(*callback)(void *callback_user,int lineno,char *caller,char *subject,char *info), void* callback_user);

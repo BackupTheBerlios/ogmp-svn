@@ -437,6 +437,10 @@ sipua_contact_t* sipua_new_contact(char* name, int nbytes, char* memo, int mbyte
 	return contact;
 }
 
+
+
+
+
 int sipua_contact(sipua_contact_t* contact, char** name, int* nbytes, char** memo, int* mbytes, char** sip)
 {
 	*name = contact->name;
@@ -456,6 +460,7 @@ sipua_contact_t* sipua_pick_contact(sipua_phonebook_t* book, int pos)
 	while(i < pos && contact)
 	{
 		contact = xlist_next(book->contacts, &u);
+
 		i++;
 	}
 
@@ -688,6 +693,7 @@ int sipua_verify_user_file(FILE* f, const char* uid, const char* tok, int tsz, c
 		{
 
 			return 0;
+
 		}
 
 		tok0 = xmalloc(tsz);
@@ -718,19 +724,19 @@ int sipua_verify_user_file(FILE* f, const char* uid, const char* tok, int tsz, c
 	return veri;
 }
 
-int sipua_save_user(user_t* user, char* loc, char* tok, int tsz)
+int sipua_save_user(user_t* user, const char* tok, int tsz)
 {
 	FILE* f;
 
 	char buf[256];
 	int bsize = 256;
 
-	f = fopen(loc, "r");
+   f = fopen(user->loc, "r");
 	if(f)
 	{
 		if(sipua_verify_user_file(f, user->uid, tok, tsz, buf, &bsize) == -1)
 		{
-			pbk_log(("sipua_save_user: Unauthrized operation to '%s' denied !\n", loc));
+			pbk_log(("sipua_save_user: Unauthrized operation to '%s' denied !\n", user->loc));
 			
 			return UA_FAIL;
 		}
@@ -738,11 +744,11 @@ int sipua_save_user(user_t* user, char* loc, char* tok, int tsz)
 		fclose(f);
 	}
 
-	f = fopen(loc, "w");
+	f = fopen(user->loc, "w");
 
 	if (f==NULL)
 	{
-		pbk_log(("sipua_save_user: can not open '%s'\n", loc));
+		pbk_log(("sipua_save_user: can not open '%s'\n", user->loc));
 		return UA_FAIL;
 	}
 
@@ -912,6 +918,7 @@ user_t* sipua_load_user(const char* loc, const char *uid, const char* tok, int t
 	f = fopen(loc, "r");
 	if (f==NULL)
 	{
+
 		pbk_log(("sipua_load_user: can not open '%s'\n", loc));
 
 		return NULL;
@@ -948,8 +955,6 @@ int user_done_profile(void* gen)
 	
 	if(prof->reg_server)
 		xfree(prof->reg_server);
-
-
 	
 	if(prof->book_location) xfree(prof->book_location);
 
@@ -966,12 +971,16 @@ int user_done_profile(void* gen)
  * reg_seconds
  * book_loc
  */
-user_profile_t* user_add_profile(user_t* user, char* fullname, int fbytes, char* book_loc, char* home, char* regname, int sec)
+user_profile_t* user_add_profile(user_t* user, const char* fullname, int fbytes, const char* book_loc, const char* home, const char* regname, int sec)
 {
 	user_profile_t* prof = xmalloc(sizeof(user_profile_t));
 
 	if(!prof)
-        return NULL;
+   {
+      pbk_log(("user_add_profile: no memory for profile"));
+
+      return NULL;
+   }
 
 	memset(prof, 0, sizeof(user_profile_t));
 
@@ -993,6 +1002,8 @@ user_profile_t* user_add_profile(user_t* user, char* fullname, int fbytes, char*
 	if(xlist_addto_first(user->profiles, prof) >= OS_OK)
 		user->modified = 1;
 
+   pbk_log(("user_add_profile: added"));
+
 	return prof;
 }
 
@@ -1006,6 +1017,7 @@ int user_set_profile(user_t* user, user_profile_t* prof, char* fullname, int fby
 	else
 	{
 		strncpy(prof->fullname, fullname, fbytes);
+
 		prof->fullname[fbytes] = '\0';
 	}
 	
@@ -1062,6 +1074,25 @@ int user_remove_profile(user_t* user, user_profile_t* prof)
 	return xlist_size(user->profiles);
 }
 
+int user_remove_profile_by_number(user_t* user, int profile_no)
+{
+   user_profile_t *prof;
+
+   prof = (user_profile_t*)xlist_at(user->profiles, profile_no);
+   if(prof)
+   {
+      if(prof->online_status != SIPUA_STATUS_DISABLE)
+         return UA_BUSY;
+
+      if(user_remove_profile(user, prof) < 0)
+         return UA_FAIL;
+
+      return UA_OK;
+   }
+
+   return UA_FAIL;
+}
+
 int user_profile_number(user_t* user)
 {
    return xlist_size(user->profiles);
@@ -1087,6 +1118,40 @@ int user_profile(user_t* user, int num, char** fullname, int* fbytes, char** reg
    return UA_OK;
 }
 
+int user_profile_enabled(user_t* user, int num)
+{
+   user_profile_t *prof = (user_profile_t*)xlist_at(user->profiles, num);
+   if(!prof)
+      return SIPUA_STATUS_DISABLE;
+
+   return prof->online_status;
+}
+
+int user_profile_authencate(user_t* user, int num, char* authid, int abytes, char* passwd, int pbytes)
+{
+   user_profile_t *prof = (user_profile_t*)xlist_at(user->profiles, num);
+   if(!prof)
+      return UA_FAIL;
+
+   
+   return UA_OK;
+}
+
+int user_modified(user_t* user)
+{
+   return user->modified;
+}
+
+char* user_location(user_t* user)
+{
+   return user->userloc;
+}
+
+char* user_id(user_t* user)
+{
+   return user->uid;
+}
+
 int user_done(user_t* u)
 {
 	if(u->loc)
@@ -1106,7 +1171,7 @@ int user_done(user_t* u)
 	return UA_OK;
 }
 
-user_t* user_new(char* uid, int sz)
+user_t* user_new(const char* uid, int sz)
 {
 	user_t* u;
     

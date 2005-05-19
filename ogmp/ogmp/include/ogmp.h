@@ -132,6 +132,7 @@ struct ogmp_client_s
 
 	/* below is sipua related */
 	user_profile_t* reg_profile;
+   user_t *user;
 
 	int expire_sec; /* registration expired seconds, time() */
 
@@ -157,13 +158,14 @@ struct ogmp_client_s
 	xthr_lock_t *nring_lock;
     
 	/* callbacks */
-	int (*on_register)(void *user_on_register, int result, char *reason);
+	int (*on_register)(void *user_on_register, int result, char *reason, int isreg);
    void *user_on_register;
 
 	int (*on_newcall)(void *user_on_newcall, int lineno, char *caller, char *subject, char *info);
    void *user_on_newcall;
 
    int (*on_conversation_start)(void *user_on_conversation_start, int lineno,char *caller,char *subject,char *info);
+
    void *user_on_conversation_start;
 
    int (*on_conversation_end)(void *user_on_conversation_end, int lineno,char *caller,char *subject,char *info);
@@ -172,7 +174,7 @@ struct ogmp_client_s
 	int (*on_bye)(void *user_on_bye, int lineno, char *caller, char *reason);
    void *user_on_bye;
 
-	int (*on_authenticate)(void *user_on_authenticate, char *realm, char* username, char** user_id, char** user_password, char** ha1);
+	int (*on_authenticate)(void *user_on_authenticate, char *realm, user_profile_t* profile, char** user_id, char** user_password);
    void *user_on_authenticate;
 };
 
@@ -247,6 +249,7 @@ client_start(sipua_t* sipua);
 extern DECLSPEC
 sipua_uas_t*
 client_new_uas(module_catalog_t* mod_cata, char* type);
+
 
 /******************
  * Ogmp Configure *

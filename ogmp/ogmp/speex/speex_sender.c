@@ -25,8 +25,8 @@
 
 #include <stdlib.h>
 
-/*#include "../devices/dev_rtp.h"*/
-#include "../format_rtp/rtp_format.h"
+/*#include "dev_rtp.h"*/
+#include "rtp_format.h"
 
 #include "speex_info.h"
 
@@ -61,6 +61,7 @@ struct speex_sender_s
    struct media_transmit_s transmit;
 
    /*int (*callback_on_ready) (void *user, media_player_t *player);*/
+
 
 
    void *callback_on_ready_user;
@@ -600,6 +601,7 @@ module_interface_t * media_new_sender()
    mp->match_play_type = spxs_match_play_type;
    
    mp->init = spxs_init;
+
 
 
    mp->open_stream = spxs_open_stream;
