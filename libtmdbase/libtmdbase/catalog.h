@@ -86,7 +86,7 @@ extern DECLSPEC int catalog_done(module_catalog_t *catalog);
  *   The number of available plugins, or
  *   Minus value for error.
  */
-extern DECLSPEC int catalog_scan_modules(module_catalog_t *catalog, unsigned int ver, char *dir);
+extern DECLSPEC int catalog_scan_modules(module_catalog_t *catalog, unsigned int ver, const char *dir);
 
 /*
  * Dispose all the handler info in the catalog, reset the catalog.

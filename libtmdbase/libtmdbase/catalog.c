@@ -120,7 +120,7 @@ int catalog_free(module_catalog_t *cata){
    return OS_OK;
 }
 
-int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, char* path)
+int catalog_scan_modules (module_catalog_t* catalog, unsigned int ver, const char* path)
 {
    int num_plugin;
 
