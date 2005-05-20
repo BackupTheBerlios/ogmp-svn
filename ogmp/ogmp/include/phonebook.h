@@ -40,12 +40,10 @@ typedef struct sipua_contact_s sipua_contact_t;
 struct sipua_contact_s
 {
 	char		*name;
-
-
-	int			nbytes;
+	int		nbytes;
 
 	char		*memo;
-	int			mbytes;
+	int		mbytes;
 
 	char		*sip;
 };
@@ -184,6 +182,10 @@ user_remove_profile_by_number(user_t* user, int profile_no);
 extern DECLSPEC
 int user_profile_number(user_t* user);
 
+/* get the profile index that has the same regname */
+extern DECLSPEC
+int user_profile_index(user_t* user, const char* regname);
+
 extern DECLSPEC
 int user_profile(user_t* user, int num, char** fullname, int* fbytes, char** regname);
 
@@ -191,7 +193,22 @@ extern DECLSPEC
 int user_profile_enabled(user_t* user, int num);
 
 extern DECLSPEC
-int user_profile_authencate(user_t* user, int num, char* authid, int abytes, char* passwd, int pbytes);
+int user_profile_enabled(user_t* user, int num);
+
+extern DECLSPEC
+int user_profile_add_contact(user_t* user, int num, const char* regname, const char* name, int nbytes, const char* memo, int mbytes);
+
+extern DECLSPEC
+int user_profile_delete_contact(user_t* user, int num, const char* regname);
+
+extern DECLSPEC
+int user_profile_contact_number(user_t* user, int num);
+
+extern DECLSPEC
+int user_profile_contact_index(user_t* user, int num, const char* regname);
+
+extern DECLSPEC
+int user_profile_contact(user_t* user, int profile_no, int contact_no, char** regname, char** name, int* nbytes, char** memo, int* mbytes);
 
 extern DECLSPEC
 int user_modified(user_t* user);

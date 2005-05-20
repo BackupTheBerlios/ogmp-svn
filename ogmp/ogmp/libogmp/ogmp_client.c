@@ -230,7 +230,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				user_prof->thread_register = xthr_new(client_register_loop, user_prof, XTHREAD_NONEFLAGS);
 
          if(client->on_register)
-            client->on_register(client->user_on_register, reg_e->status_code, user_prof->reg_reason_phrase, isreg);
+            client->on_register(client->user_on_register, reg_e->status_code, user_prof->regname, isreg);
                 
          //client->ogui->ui.beep(&client->ogui->ui);
 
@@ -239,6 +239,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		case(SIPUA_EVENT_REGISTRATION_FAILURE):
          isreg = 1;
 		case(SIPUA_EVENT_UNREGISTRATION_FAILURE):
+
 		{
 			char buf[100];
 
@@ -291,10 +292,10 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
          }
 
          if(user_prof->reg_status == SIPUA_STATUS_REG_DOING)
-            user_prof->reg_status = SIPUA_STATUS_REG_FAIL;
+            user_prof->reg_status = SIPUA_STATUS_NORMAL;
                 
 			if(user_prof->reg_status == SIPUA_STATUS_UNREG_DOING)
-            user_prof->reg_status = SIPUA_STATUS_UNREG_FAIL;
+            user_prof->reg_status = SIPUA_STATUS_REG_OK;
 
 			if(user_prof->reg_reason_phrase)
          { 
@@ -310,7 +311,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
          user_prof->regno = -1;
 
          if(client->on_register)
-            client->on_register(client->user_on_register, reg_e->status_code, user_prof->reg_reason_phrase, isreg);
+            client->on_register(client->user_on_register, reg_e->status_code, user_prof->regname, isreg);
 
 			break;  
 		}
@@ -450,6 +451,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		   */
 
          sdp_message_init(&sdp_message);
+
 
 			if (sdp_message_parse(sdp_message, sdp_body) != 0)
 			{
@@ -632,6 +634,7 @@ int client_done_call(sipua_t* sipua, sipua_set_t* set)
 
 	ua->control->release_bandwidth(ua->control, set->bandwidth_need);
 
+
    return sipua_done_sip_session(set);
 }
 
@@ -748,6 +751,7 @@ char* client_set_call_source(sipua_t* sipua, sipua_set_t* call, media_source_t* 
       printf("client_set_call_source: sdp\n");
       printf("%s\n", sdp);
       printf("client_set_call_source: sdp\n");
+
 
 		call->renew_body = sdp;
 	}
@@ -1401,6 +1405,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_ca
 int client_start(sipua_t* sipua)
 {
 	ogmp_client_t *clie = (ogmp_client_t*)sipua;
+
 
 	clie->ogui->ui.show(&clie->ogui->ui);
 

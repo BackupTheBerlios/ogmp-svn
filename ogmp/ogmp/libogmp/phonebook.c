@@ -437,10 +437,6 @@ sipua_contact_t* sipua_new_contact(char* name, int nbytes, char* memo, int mbyte
 	return contact;
 }
 
-
-
-
-
 int sipua_contact(sipua_contact_t* contact, char** name, int* nbytes, char** memo, int* mbytes, char** sip)
 {
 	*name = contact->name;
@@ -485,6 +481,29 @@ int sipua_remove_contact(sipua_phonebook_t* book, sipua_contact_t* contact)
 	book->modified = 1;
 
 	return xlist_size(book->contacts);
+}
+
+int sipua_match_contact_id(void* t, void* p)
+{
+   sipua_contact_t* target = (sipua_contact_t*)t;
+   char* patern = (char*)p;
+
+   return strcmp(target->sip, patern);  /* if 0, match */
+}
+
+int sipua_remove_contact_id(sipua_phonebook_t* book, const char* regname)
+{
+   int m;
+   int n = xlist_size(book->contacts);
+
+   if(xlist_delete_if(book->contacts, regname, sipua_match_contact_id, sipua_done_contact) < OS_OK)
+		return -1;
+
+   m = xlist_size(book->contacts);   
+   if(n != m)
+      book->modified = 1;
+
+	return m;
 }
 
 xlist_t* sipua_contacts(sipua_phonebook_t* book)
@@ -917,6 +936,7 @@ user_t* sipua_load_user(const char* loc, const char *uid, const char* tok, int t
 
 	f = fopen(loc, "r");
 	if (f==NULL)
+
 	{
 
 		pbk_log(("sipua_load_user: can not open '%s'\n", loc));
@@ -1098,6 +1118,24 @@ int user_profile_number(user_t* user)
    return xlist_size(user->profiles);
 }
 
+int user_profile_index(user_t* user, const char* regname)
+{
+   xlist_user_t lu;
+   int n = 0;
+   
+   user_profile_t *prof = (user_profile_t*)xlist_first(user->profiles, &lu);
+   while(prof)
+   {
+      if(strcmp(regname, prof->regname) == 0)
+         return n;
+         
+      n++;
+      prof = (user_profile_t*)xlist_next(user->profiles, &lu);
+   }
+
+   return -1;
+}
+
 int user_profile(user_t* user, int num, char** fullname, int* fbytes, char** regname)
 {
    user_profile_t *prof = (user_profile_t*)xlist_at(user->profiles, num);
@@ -1127,13 +1165,86 @@ int user_profile_enabled(user_t* user, int num)
    return prof->online_status;
 }
 
-int user_profile_authencate(user_t* user, int num, char* authid, int abytes, char* passwd, int pbytes)
+int user_profile_add_contact(user_t* user, int profile_no, const char* regname,
+                              const char* name, int nbytes,
+                              const char* memo, int mbytes)
 {
-   user_profile_t *prof = (user_profile_t*)xlist_at(user->profiles, num);
+   sipua_contact_t* contact;
+   
+   user_profile_t *prof = (user_profile_t*)xlist_at(user->profiles, profile_no);
    if(!prof)
       return UA_FAIL;
 
+   contact = sipua_new_contact(name, nbytes, memo, mbytes, regname);
    
+   if(!contact)
+      return UA_FAIL;
+
+   if(sipua_add_contact(prof->phonebook, contact) < 0)
+      return UA_FAIL;
+
+   return UA_OK;
+}
+
+int user_profile_delete_contact(user_t* user, int profile_no, const char* regname)
+{
+   user_profile_t *prof = (user_profile_t*)xlist_at(user->profiles, profile_no);
+   if(!prof)
+      return UA_FAIL;
+
+   if(sipua_remove_contact_id(prof->phonebook, regname) < 0)
+      return UA_FAIL;
+
+   return UA_OK;
+}
+
+int user_profile_contact_number(user_t* user, int profile_no)
+{
+   user_profile_t *prof = (user_profile_t*)xlist_at(user->profiles, profile_no);
+   if(!prof || !prof->phonebook)
+      return 0;
+
+   return xlist_size(prof->phonebook->contacts);
+}
+
+int user_profile_contact_index(user_t* user, int profile_no, const char* regname)
+{
+   xlist_user_t lu;
+   int n = 0;
+
+   user_profile_t *prof = (user_profile_t*)xlist_at(user->profiles, profile_no);
+   if(!prof || !prof->phonebook)
+      return -1;
+
+   sipua_contact_t *contact = (sipua_contact_t*)xlist_first(prof->phonebook->contacts, &lu);
+   while(contact)
+   {
+      if(strcmp(regname, contact->sip) == 0)
+         return n;
+
+      n++;
+      contact = (sipua_contact_t*)xlist_next(prof->phonebook->contacts, &lu);
+   }
+
+   return -1;
+}
+
+int user_profile_contact(user_t* user, int profile_no, int contact_no, char** regname, char** name, int* nbytes, char** memo, int* mbytes)
+{
+   user_profile_t *prof = (user_profile_t*)xlist_at(user->profiles, profile_no);
+   if(!prof || !prof->phonebook)
+      return UA_FAIL;
+
+   sipua_contact_t *contact = (sipua_contact_t*)xlist_at(prof->phonebook->contacts, contact_no);
+   if(!contact)
+      return UA_FAIL;
+
+   *regname = contact->sip;
+   *name = contact->name;
+   *nbytes = contact->nbytes;
+   *memo = contact->memo;
+   *mbytes = contact->mbytes;
+
    return UA_OK;
 }
 
