@@ -161,7 +161,7 @@ sipua_load_user(const char* loc, const char* uid, const char* tok, int tsz);
 
 extern DECLSPEC
 int 
-sipua_save_user(user_t* user, const char* tok, int tsz);
+sipua_save_user(user_t* user, const char* dataloc, const char* tok, int tsz);
 
 extern DECLSPEC
 user_profile_t*

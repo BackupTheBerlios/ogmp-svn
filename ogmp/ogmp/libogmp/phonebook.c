@@ -530,6 +530,8 @@ int sipua_save_user_file(user_t* user, FILE* f, char* tok, int tsz)
 	user_profile_t* prof;
 	xlist_user_t lu;
 
+	fwrite("version=1\n", 1, strlen("version=1\n"), f);
+
 	fwrite("uid=", 1, strlen("uid="), f);
 	fwrite(user->uid, 1, strlen(user->uid), f);
 
@@ -570,6 +572,8 @@ int sipua_save_user_file(user_t* user, FILE* f, char* tok, int tsz)
 		prof = (user_profile_t*)xlist_next(user->profiles, &lu);
 	}
 
+	fwrite("\n", 1, strlen("\n"), f);
+
 	return UA_OK; /* ok */
 }
 
@@ -603,48 +607,56 @@ int sipua_get_line(char* ln, int len, char* buf, int* bsize, int* i, FILE* f)
 	int n=0, eof=0;
 	int nr;
 
-	if(*i == *bsize)
-	{
-		*bsize = fread(buf, 1, *bsize, f);
-		*i = 0;
-
-		if(*bsize == 0)
-			return -1;
-	}
-
-	while(buf[*i] != '\n')
+   if(*i == *bsize)
+   {
+      *i = 0;
+      
+      if(feof(f))
+         return -1;
+         
+      nr = fread(buf, 1, *bsize, f);
+      
+      if(nr == *bsize)
+	      *bsize = nr;
+	   else
+      {
+			/* last block extra opt */
+			buf[nr] = '\0';
+			*bsize = nr+1;
+	   }
+   }
+   
+   while(buf[*i] != '\n' && buf[*i] != '\0' && *i < *bsize)
 	{
 		ln[n++] = buf[*i];
 		(*i)++;
+   }
 
-		if(*i == *bsize) 
-		{
-			nr = fread(buf, 1, *bsize, f);
-			*i = 0;
+   if(*i == *bsize) 
+	{
+      *i = 0;
+         
+      if(feof(f))
+	      *bsize = 0;
+      else
+      {      
+	      nr = fread(buf, 1, *bsize, f);
 
-			if(nr == 0)
-			{
-				*bsize = 0;
-				eof = 1;
-				break;
-			}
-
-			if(nr < *bsize)
-			{
+	      if(nr == *bsize)
+	         *bsize = nr;
+	      else
+	      {
 				/* last block extra opt */
-				buf[nr] = '\n';
+				buf[nr] = '\0';
 				*bsize = nr+1;
-			}
-			else
-				*bsize = nr;
-		}
+	      }
+      }
 	}
-
-	if(eof)
-		return -1;
 
 	ln[n] = '\0';
 	(*i)++;
+
+   pbk_log(("sipua_get_line: line[%s].%d\n", ln, n));
 
 	return n;
 }
@@ -653,7 +665,7 @@ int sipua_get_line(char* ln, int len, char* buf, int* bsize, int* i, FILE* f)
  * if ok, return current buf pos;
  * if failure, return -1
  */
-int sipua_verify_user_file(FILE* f, const char* uid, const char* tok, int tsz, char *buf, int *bsize)
+int sipua_verify_user_file(FILE* f, const char* uid, const char* tok, int tsz, char *buf, int *bsize, int *version)
 {
 	int bi;
 	
@@ -669,11 +681,36 @@ int sipua_verify_user_file(FILE* f, const char* uid, const char* tok, int tsz, c
 
 	bi = *bsize;
     
+	/* verify version */
 	len = sipua_get_line(line, 128, buf, bsize, &bi, f);
+	if(len < 9 || 0 != strncmp(line, "version=", 8))
+   {
+      pbk_log(("sipua_verify_user_file: wrong format 1\n"));
+		return -1;
+   }
+	else
+	{
+		start = line;
+
+		while(*start != '=')
+			start++;
+
+		start++;
+		*version = strtol(start, NULL, 0);
+      if(*version <= 0)
+      {
+         pbk_log(("sipua_verify_user_file: wrong version(v%d)\n", *version));
+         return -1;
+      }
+	}
 
 	/* check uid */
+	len = sipua_get_line(line, 128, buf, bsize, &bi, f);
 	if(len < 4 || 0 != strncmp(line, "uid=", 4))
-		return 0;
+   {
+      pbk_log(("sipua_verify_user_file: wrong format 2\n"));
+		return -1;
+   }
 	else
 	{
 		start = line;
@@ -687,21 +724,24 @@ int sipua_verify_user_file(FILE* f, const char* uid, const char* tok, int tsz, c
 			end++;
 
 		if(0 != strcmp(start, uid))
-			return 0;
+      {
+         pbk_log(("sipua_verify_user_file: wrong user\n"));
+			return -1;
+      }
 	}
 
 	/* verify token */
 	len = sipua_get_line(line, 128, buf, bsize, &bi, f);
-	pc = line;
-
-	if(len < 4 || 0 != strncmp(pc, "tok[", 4))
+	if(len < 6 || 0 != strncmp(line, "tok[", 4))
 	{
-		return 0;
+      pbk_log(("sipua_verify_user_file: wrong format 3, len[%d]line[%s]\n", len, line));
+		return -1;
 	}
 	else
 	{
 		int n, sz;
-
+      
+	   pc = line;
 		while(*pc != '[')
 			pc++;
 
@@ -709,11 +749,7 @@ int sipua_verify_user_file(FILE* f, const char* uid, const char* tok, int tsz, c
 		sz = strtol(start, &end, 10);
 
 		if(tsz != sz)
-		{
-
-			return 0;
-
-		}
+			return -1;
 
 		tok0 = xmalloc(tsz);
 
@@ -736,40 +772,53 @@ int sipua_verify_user_file(FILE* f, const char* uid, const char* tok, int tsz, c
 
 		if(memcmp(tok0, tok, tsz) == 0)
 			veri = bi;
+      else
+         pbk_log(("sipua_verify_user_file: wrong token\n"));
 	}
-
 	xfree(tok0);
-
+   
 	return veri;
 }
 
-int sipua_save_user(user_t* user, const char* tok, int tsz)
+int sipua_save_user(user_t* user, const char* dataloc, const char* tok, int tsz)
 {
 	FILE* f;
+   const char* fname;
 
 	char buf[256];
 	int bsize = 256;
+   int version;
 
-   f = fopen(user->loc, "r");
-	if(f)
-	{
-		if(sipua_verify_user_file(f, user->uid, tok, tsz, buf, &bsize) == -1)
-		{
-			pbk_log(("sipua_save_user: Unauthrized operation to '%s' denied !\n", user->loc));
-			
-			return UA_FAIL;
-		}
+   if(dataloc)
+   {
+	   f = fopen(dataloc, "w");
+      fname = dataloc;
+   }
+   else
+   {
+      f = fopen(user->loc, "r");
+	   if(f)
+	   {
+		   if(sipua_verify_user_file(f, user->uid, tok, tsz, buf, &bsize, &version) == -1)
+		   {
+			   pbk_log(("sipua_save_user: Unauthrized operation to '%s' denied !\n", user->loc));
+			   return UA_FAIL;
+		   }
 
-		fclose(f);
-	}
-
-	f = fopen(user->loc, "w");
-
+		   fclose(f);
+	   }
+      
+	   f = fopen(user->loc, "w");
+      fname = user->loc;
+   }
+   
 	if (f==NULL)
 	{
-		pbk_log(("sipua_save_user: can not open '%s'\n", user->loc));
+		pbk_log(("sipua_save_user: can not open '%s'\n", fname));
 		return UA_FAIL;
 	}
+
+   pbk_log(("sipua_save_user: save to [%s]\n", fname));
 
 	if(sipua_save_user_file(user, f, tok, tsz) >= UA_OK)
 		user->modified = 0;
@@ -785,6 +834,7 @@ user_t* sipua_load_user_file(FILE* f, const char* uid, const char* tok, int tsz)
 
 	int bsize = 256;
 	int bi;
+   int ver;
 	
 	char line[128];
 	char *start, *end;
@@ -796,8 +846,7 @@ user_t* sipua_load_user_file(FILE* f, const char* uid, const char* tok, int tsz)
 
 	user_t* user = NULL;
 
-	bi = sipua_verify_user_file(f, uid, tok, tsz, buf, &bsize);
-
+	bi = sipua_verify_user_file(f, uid, tok, tsz, buf, &bsize, &ver);
 	if(bi == -1)
 		return NULL;
 	
@@ -826,7 +875,7 @@ user_t* sipua_load_user_file(FILE* f, const char* uid, const char* tok, int tsz)
 			break;
 
 		pc = line;
-	
+
 		if(len > 9 && 0==strncmp(pc, "fullname[", 9))
 		{
 			int n;
@@ -837,7 +886,7 @@ user_t* sipua_load_user_file(FILE* f, const char* uid, const char* tok, int tsz)
 			memset(u, 0, sizeof(user_profile_t));
 
 			u->user = user;
-			
+
 			while(*pc != '[')
 				pc++;
 
@@ -863,7 +912,7 @@ user_t* sipua_load_user_file(FILE* f, const char* uid, const char* tok, int tsz)
 			}
 
 			u->fullname[u->fbyte] = '\0';
-		
+
 			u->username = user->uid;
 
 			nitem++;
@@ -887,7 +936,7 @@ user_t* sipua_load_user_file(FILE* f, const char* uid, const char* tok, int tsz)
 			start = pc+1;
 
 			u->regname = xstr_clone(start);
-         
+
          u->realm = u->regname;
          while(*u->realm != '@')
             u->realm++;
@@ -934,13 +983,12 @@ user_t* sipua_load_user(const char* loc, const char *uid, const char* tok, int t
 	FILE* f;
 	user_t *user;      
 
+	pbk_log(("sipua_load_user: open '%s'\n", loc));
+   
 	f = fopen(loc, "r");
 	if (f==NULL)
-
 	{
-
 		pbk_log(("sipua_load_user: can not open '%s'\n", loc));
-
 		return NULL;
 	}
 
@@ -1268,7 +1316,6 @@ int user_done(user_t* u)
 	if(u->loc)
 	{
 		xfree(u->loc);
-
 		xlist_done(u->profiles, user_done_profile);
 	}
 
@@ -1286,8 +1333,6 @@ user_t* user_new(const char* uid, int sz)
 {
 	user_t* u;
     
-    printf("user_new: 1");
-    
 	u = xmalloc(sizeof(user_t));
 	if(u)
 	{
@@ -1295,7 +1340,7 @@ user_t* user_new(const char* uid, int sz)
         
 		u->uid = xstr_nclone(uid, sz);
 	}
-    else
+   else
         printf("user_new: MALLOC ERROR!!");
 
 	return u;
