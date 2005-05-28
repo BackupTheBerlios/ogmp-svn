@@ -234,6 +234,7 @@ int xlist_addto_first(xlist_t * list, void * item){
    node->next = list->head;
    node->data = item;
 
+
    list->head = node;
    
    list->num++;
@@ -503,6 +504,48 @@ void * xlist_remove(xrtp_list_t * list, void *data, int (*match)(void*, void*)){
    return NULL;
 }
 
+int xlist_delete_at(xlist_t *list, int index, int(*freer)(void*))
+{
+   int n = 0;
+   xlist_node_t * node;
+   xlist_node_t * prev = NULL;
+
+   if(!list || list->num == 0 || index < 0)
+      return OS_FAIL;
+
+   node = list->head;
+   if(index == 0)
+   {
+      list->head = node->next;
+      list->num--;
+      
+      freer(node->data);      
+      xfree(node);
+      return OS_OK;
+   }
+   
+   while(node)
+   {
+      if(n == index)
+      {
+         prev->next = node->next;
+         list->num--;
+         
+         freer(node->data);
+         xfree(node);
+         
+         return OS_OK;
+      }
+      
+      n++;
+
+      prev = node;
+      node = node->next;
+   }
+
+   return OS_FAIL;
+}
+
 int xlist_delete_if(xlist_t * list, void * cdata, int(*condition)(void*, void*), int(*free_item)(void*)){
 
    void * data;
@@ -669,13 +712,8 @@ int xrtp_list_remove_item (xrtp_list_t * list, void *data) {return xlist_remove_
 
 void * xrtp_list_remove(xrtp_list_t * list, void *item, int (*match)(void*, void*)){return xlist_remove(list,item,match);}
 
-
-
-
 int xrtp_list_delete_if(xrtp_list_t * list, void * cdata, int(*condition)(void*, void*), int(*free_item)(void*))
 {return xlist_delete_if(list, cdata, condition, free_item);}
-
-
 
 void * xrtp_list_find(xrtp_list_t * list, void * data, int (*match)(void*, void*), xrtp_list_user_t *u)
 {return xlist_find(list,data,match,u);}
