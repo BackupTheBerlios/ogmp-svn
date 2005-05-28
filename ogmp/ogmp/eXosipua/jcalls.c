@@ -165,10 +165,10 @@ int jcall_proceeding(eXosipua_t *jua, eXosip_event_t *je)
 	call_e.remote_uri = je->remote_uri;
 
 	if (je->reason_phrase[0]!='\0')
-    {
+   {
 		call_e.reason_phrase = je->reason_phrase;
 		call_e.status_code = je->status_code;
-    }
+   }
 
 	je->jc->c_ack_sdp = 0;
 
@@ -187,6 +187,7 @@ int jcall_ringing(eXosipua_t *jua, eXosip_event_t *je)
 	call_e.event.call_info = (sipua_set_t*)je->external_reference;
 
 	call_e.subject = je->subject;
+
 
 	call_e.textinfo = je->textinfo;
     
@@ -211,6 +212,7 @@ int jcall_ringing(eXosipua_t *jua, eXosip_event_t *je)
 int jcall_answered(eXosipua_t *jua, eXosip_event_t *je)
 {
 	sipua_call_event_t call_e;
+
 
 	/* event back to sipuac */
 	memset(&call_e, 0, sizeof(sipua_call_event_t));
@@ -446,6 +448,7 @@ int jcall_closed(eXosipua_t *jua, eXosip_event_t *je)
 	sipua_event_t sip_e;
 	sip_e.call_info = (sipua_set_t*)je->external_reference;
 	sip_e.type = SIPUA_EVENT_CALL_CLOSED;
+
 
   for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
     {

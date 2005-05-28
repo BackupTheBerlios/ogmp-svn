@@ -42,6 +42,8 @@ struct sipua_phonebook_s
 
 	xlist_t* contacts;
 	int modified;
+
+   user_t* user;
 };
 
 char* sipua_next_nchar (sipua_phonebook_t* book, FILE* f, int n)
@@ -190,6 +192,10 @@ int sipua_next_name (sipua_phonebook_t* book, FILE* f, sipua_contact_t* c)
 	start = sipua_next_nchar(book, f, 2);
 
 	c->name = xmalloc(c->nbytes);
+
+
+
+
 	sipua_read_nchar(book, f, c->name, c->nbytes);
 
 	return UA_OK;
@@ -305,7 +311,7 @@ int sipua_load_file(sipua_phonebook_t* book, FILE* f)
 	return xlist_size(book->contacts); /* ok */
 }
 
-sipua_phonebook_t* sipua_new_book()
+sipua_phonebook_t* sipua_new_book(user_t* user)
 {
 	sipua_phonebook_t* book = xmalloc(sizeof(sipua_phonebook_t));
 	if(!book)
@@ -316,6 +322,7 @@ sipua_phonebook_t* sipua_new_book()
 	memset(book, 0, sizeof(sipua_phonebook_t));
 
 	book->contacts = xlist_new();
+   book->user = user;
 
 	return book;
 }
@@ -432,11 +439,12 @@ sipua_contact_t* sipua_new_contact(char* name, int nbytes, char* memo, int mbyte
 	contact->memo[mbytes] = '\0';
 	contact->mbytes = mbytes;
 
+
+
 	contact->sip = xstr_clone(sip);
 
 	return contact;
 }
-
 
 int sipua_contact(sipua_contact_t* contact, char** name, int* nbytes, char** memo, int* mbytes, char** sip)
 {
@@ -457,7 +465,6 @@ sipua_contact_t* sipua_pick_contact(sipua_phonebook_t* book, int pos)
 	while(i < pos && contact)
 	{
 		contact = xlist_next(book->contacts, &u);
-
 		i++;
 	}
 
@@ -466,10 +473,11 @@ sipua_contact_t* sipua_pick_contact(sipua_phonebook_t* book, int pos)
 
 int sipua_add_contact(sipua_phonebook_t* book, sipua_contact_t* contact)
 {
-	if(xlist_addto_first(book->contacts, contact) < OS_OK)
+	if(xlist_addto_last(book->contacts, contact) < OS_OK)
 		return -1;
 
 	book->modified = 1;
+   book->user->modified = 1;
 
 	return xlist_size(book->contacts);
 }
@@ -480,6 +488,8 @@ int sipua_remove_contact(sipua_phonebook_t* book, sipua_contact_t* contact)
 		return -1;
 
 	book->modified = 1;
+
+
 
 	return xlist_size(book->contacts);
 }
@@ -492,18 +502,28 @@ int sipua_match_contact_id(void* t, void* p)
    return strcmp(target->sip, patern);  /* if 0, match */
 }
 
-int sipua_remove_contact_id(sipua_phonebook_t* book, const char* regname)
+int sipua_delete_contact_id(sipua_phonebook_t* book, const char* regname)
 {
    int m;
    int n = xlist_size(book->contacts);
 
    if(xlist_delete_if(book->contacts, regname, sipua_match_contact_id, sipua_done_contact) < OS_OK)
+   {
+      pbk_log(("sipua_delete_contact_id: no contact[%s] deleted\n", regname));
 		return -1;
+   }
+   
+   pbk_log(("sipua_delete_contact_id: contact[%s]\n", regname));
 
    m = xlist_size(book->contacts);   
    if(n != m)
-      book->modified = 1;
+   {
+      pbk_log(("sipua_delete_contact_id: no contact[%s] deleted\n", regname));
 
+      book->modified = 1;
+      book->user->modified = 1;
+   }
+   
 	return m;
 }
 
@@ -555,6 +575,7 @@ int sipua_save_user_file_v1(user_t* user, FILE* f, char* tok, int tsz)
 		*/
 		fwrite("\nreg.home=", 1, strlen("\nreg.home="), f);
 		fwrite(prof->registrar, 1, strlen(prof->registrar), f);
+
 
 		fwrite("\nreg.name=", 1, strlen("\nreg.name="), f);
 		fwrite(prof->regname, 1, strlen(prof->regname), f);
@@ -663,8 +684,6 @@ int sipua_save_user_file_v2(user_t* user, FILE* f, char* tok, int tsz)
          snprintf(str, 63, "profile.ref=%i\n", pindex);
 	      fwrite(str, 1, strlen(str), f);
          
-         pbk_log(("sipua_save_user_file_v2: book[%s]->contacts@%x\n", prof->regname, (int)book->contacts));
-
          snprintf(str, 63, "number=%i\n", xlist_size(book->contacts));
 	      fwrite(str, 1, strlen(str), f);
 
@@ -729,6 +748,7 @@ int sipua_get_line(char* ln, int len, char* buf, int* bsize, int* i, FILE* f)
 
    if(*i == *bsize)
    {
+
       *i = 0;
       
       if(feof(f))
@@ -938,6 +958,7 @@ int sipua_save_user(user_t* user, const char* dataloc, const char* tok, int tsz)
 	if (f==NULL)
 	{
 		pbk_log(("sipua_save_user: can not open '%s'\n", fname));
+
 		return UA_FAIL;
 	}
 
@@ -1018,6 +1039,7 @@ user_t* sipua_load_user_file_v0(FILE* f, const char* uid, const char* tok, int t
 			u->fbyte = strtol(start, &end, 10);
 			u->fullname = xmalloc(u->fbyte+1);
 
+
 			while(*end != '=')
 				end++;
 
@@ -1062,6 +1084,7 @@ user_t* sipua_load_user_file_v0(FILE* f, const char* uid, const char* tok, int t
 			u->regname = xstr_clone(start);
 
          u->realm = u->regname;
+
          while(*u->realm != '@')
             u->realm++;
          u->realm++;
@@ -1079,6 +1102,7 @@ user_t* sipua_load_user_file_v0(FILE* f, const char* uid, const char* tok, int t
 			u->seconds = strtol(start, &end, 10);
 
 			nitem++;
+
 		}
 		else if(len >= 19 && 0==strncmp(pc, "phonebook.location=", 19))
 		{
@@ -1095,7 +1119,7 @@ user_t* sipua_load_user_file_v0(FILE* f, const char* uid, const char* tok, int t
 		if(nitem < 5)
 			continue;
 
-		xlist_addto_first(user->profiles, u);
+		xlist_addto_last(user->profiles, u);
 		nitem = 0;
 	}
 
@@ -1114,6 +1138,7 @@ user_t* sipua_load_user_file_v1(FILE* f, const char* uid, char* buf, int *bsize,
 
 	user_t* user = NULL;
 
+
 	user = xmalloc(sizeof(user_t));
 	if(!user)
 	{
@@ -1129,6 +1154,7 @@ user_t* sipua_load_user_file_v1(FILE* f, const char* uid, char* buf, int *bsize,
 	}
 
 	user->uid = xstr_clone(uid);
+
 
 	while(1)
 	{
@@ -1161,6 +1187,7 @@ user_t* sipua_load_user_file_v1(FILE* f, const char* uid, char* buf, int *bsize,
 			while(*end != '=')
 				end++;
 
+
 			start = end+1;
 
 			n = len-(start-line);
@@ -1235,7 +1262,7 @@ user_t* sipua_load_user_file_v1(FILE* f, const char* uid, char* buf, int *bsize,
 		if(nitem < 5)
 			continue;
 
-		xlist_addto_first(user->profiles, u);
+		xlist_addto_last(user->profiles, u);
 		nitem = 0;
 	}
 
@@ -1348,7 +1375,7 @@ user_t* sipua_load_user_file_v2(FILE* f, const char* uid, char* buf, int *bsize,
 			{
 				strncpy(u->fullname, start, n);
 
-				len = sipua_load_nchar(u->fullname+n, u->fbyte-n, buf, &bsize, &bi, f);
+				len = sipua_load_nchar(u->fullname+n, u->fbyte-n, buf, bsize, bi, f);
 			}
 
 			u->fullname[u->fbyte] = '\0';
@@ -1446,6 +1473,7 @@ user_t* sipua_load_user_file_v2(FILE* f, const char* uid, char* buf, int *bsize,
          
          len = sipua_get_line(line, 128, buf, bsize, bi, f);
          if(len < 12 || 0!=strncmp(line, "profile.ref=", 7))
+
          {
             nbook--;
             continue;
@@ -1468,7 +1496,7 @@ user_t* sipua_load_user_file_v2(FILE* f, const char* uid, char* buf, int *bsize,
 
          pbk_log(("sipua_load_user_file_v2: phonebook[%s]\n", prof->regname));
 
-         prof->phonebook = sipua_new_book();
+         prof->phonebook = sipua_new_book(user);
          if(!prof->phonebook)
             return user;
          
@@ -1480,6 +1508,7 @@ user_t* sipua_load_user_file_v2(FILE* f, const char* uid, char* buf, int *bsize,
 				   pc++;
 
 			   start = pc+1;
+
 
             ncontact = strtol(start, &end, 10);
          }
@@ -1530,6 +1559,7 @@ user_t* sipua_load_user_file_v2(FILE* f, const char* uid, char* buf, int *bsize,
 			      contact->name[contact->nbytes] = '\0';
                pbk_log(("sipua_load_user_file_v2: contact.name[%s]\n", contact->name));
 
+
 			      nitem++;
 		      }
             else if(len > 4 && 0==strncmp(pc, "memo[", 4))
@@ -1557,7 +1587,7 @@ user_t* sipua_load_user_file_v2(FILE* f, const char* uid, char* buf, int *bsize,
 			      {
 				      strncpy(contact->memo, start, n);
 
-				      len = sipua_load_nchar(contact->memo+n, contact->mbytes-n, buf, &bsize, &bi, f);
+				      len = sipua_load_nchar(contact->memo+n, contact->mbytes-n, buf, bsize, bi, f);
 			      }
 
 			      contact->memo[contact->mbytes] = '\0';
@@ -1704,10 +1734,10 @@ user_profile_t* user_add_profile(user_t* user, const char* fullname, int fbytes,
 	if(book_loc)
 		prof->book_location = xstr_clone(book_loc);
 
-	if(xlist_addto_first(user->profiles, prof) >= OS_OK)
+	if(xlist_addto_last(user->profiles, prof) >= OS_OK)
 		user->modified = 1;
 
-   pbk_log(("user_add_profile: added"));
+   pbk_log(("user_add_profile: added\n"));
 
 	return prof;
 }
@@ -1805,6 +1835,7 @@ int user_profile_number(user_t* user)
 }
 
 int user_profile_index(user_t* user, const char* regname)
+
 {
    xlist_user_t lu;
    int n = 0;
@@ -1826,6 +1857,7 @@ int user_profile(user_t* user, int num, char** fullname, int* fbytes, char** reg
 {
    user_profile_t *prof = (user_profile_t*)xlist_at(user->profiles, num);
    if(!prof)
+
    {
       *fullname = NULL;
       *fbytes = 0;
@@ -1867,27 +1899,45 @@ int user_profile_add_contact(user_t* user, int profile_no, const char* regname,
    if(!contact)
       return UA_FAIL;
 
-   if(sipua_add_contact(prof->phonebook, contact) < 0)
+   if(!prof->phonebook)
+      prof->phonebook = sipua_new_book(user);
+      
+   if(!prof->phonebook || sipua_add_contact(prof->phonebook, contact) < 0)
       return UA_FAIL;
 
    return UA_OK;
 }
 
-int user_profile_delete_contact(user_t* user, int profile_no, const char* regname)
+int user_profile_delete_contact(user_t* user, int profile_index, int contact_index)
 {
-   user_profile_t *prof = (user_profile_t*)xlist_at(user->profiles, profile_no);
+   user_profile_t *prof;
+
+   prof = (user_profile_t*)xlist_at(user->profiles, profile_index);
    if(!prof)
+   {
+      pbk_log(("user_profile_delete_contact: no profile[#%i]\n", profile_index));
+      return UA_FAIL;
+   }
+   
+   if(!prof->phonebook || !prof->phonebook->contacts)
+   {
+      pbk_log(("user_profile_delete_contact: [%s] has no phonebook\n", prof->regname));
+      return UA_OK;
+   }
+
+   if(xlist_delete_at(prof->phonebook->contacts, contact_index, sipua_done_contact) < OS_FAIL)
       return UA_FAIL;
 
-   if(sipua_remove_contact_id(prof->phonebook, regname) < 0)
-      return UA_FAIL;
-
+   prof->phonebook->modified = 1;
+   user->modified = 1;
+   
    return UA_OK;
 }
 
 int user_profile_contact_number(user_t* user, int profile_no)
 {
    user_profile_t *prof = (user_profile_t*)xlist_at(user->profiles, profile_no);
+
    if(!prof || !prof->phonebook)
       return 0;
 

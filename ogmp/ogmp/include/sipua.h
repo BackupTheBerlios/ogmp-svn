@@ -275,7 +275,7 @@ struct sipua_uas_s
 
 	int (*match_type)(sipua_uas_t* uas, char *type);
 
-   int (*init)(sipua_uas_t* uas, int portno, char* nettype, char* addrtype, char* firewall, char* proxy);
+   int (*init)(sipua_uas_t* uas, int portno, const char* nettype, const char* addrtype, const char* firewall, const char* proxy);
 	int (*done)(sipua_uas_t* uas);
 
    int (*start)(sipua_uas_t* uas);
@@ -300,7 +300,7 @@ struct sipua_uas_s
  	
 	int (*accept)(sipua_uas_t* uas, int lineno);
 
-	int (*invite)(sipua_uas_t* uas, char *regname, sipua_set_t* call, char* sdp_body, int bytes);
+	int (*invite)(sipua_uas_t* uas, const char *regname, sipua_set_t* call, char* sdp_body, int bytes);
 	int (*answer)(sipua_uas_t* uas, sipua_set_t* call, int reply, char* reply_type, char* reply_body);
 	int (*bye)(sipua_uas_t* uas, sipua_set_t* call);
 };
@@ -383,7 +383,7 @@ struct sipua_s
 	/* session description */
 	int (*session_sdp)(sipua_t *sipua, sipua_set_t* set, char** sdp);
 
-	int (*call)(sipua_t *ua, sipua_set_t* set, char *regname, char* sdp_body);
+	int (*call)(sipua_t *ua, sipua_set_t* set, const char *regname, char* sdp_body);
 	int (*answer)(sipua_t *ua, sipua_set_t* call, int reason, media_source_t* source);
    
 	int (*queue)(sipua_t *ua, sipua_set_t* call);
@@ -478,7 +478,7 @@ int sipua_session_sdp(sipua_t *sipua, sipua_set_t* set, char** sdp);
 DECLSPEC
 int 
 
-sipua_call(sipua_t *ua, sipua_set_t* set, char *regname, char *sdp_body);
+sipua_call(sipua_t *ua, sipua_set_t* set, const char *regname, char *sdp_body);
 	
 DECLSPEC
 int 

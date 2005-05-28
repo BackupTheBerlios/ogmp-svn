@@ -167,7 +167,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 	ogmp_client_t *client = (ogmp_client_t*)lisener;
 
    int isreg = 0;
-   
+
 	switch(e->type)
 	{
 		case(SIPUA_EVENT_REGISTRATION_SUCCEEDED):
@@ -239,7 +239,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		case(SIPUA_EVENT_REGISTRATION_FAILURE):
          isreg = 1;
 		case(SIPUA_EVENT_UNREGISTRATION_FAILURE):
-
 		{
 			char buf[100];
 
@@ -250,7 +249,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
             break;
                 
          snprintf(buf, 99, "Register %s Error[%i]: %s", reg_e->server, reg_e->status_code, reg_e->server_info);
-
 			clie_log(("client_sipua_event: %s\n", buf));
          
          if(reg_e->status_code == SIP_STATUS_CODE_PROXYAUTHENTICATIONREQUIRED)
@@ -276,12 +274,14 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
          {
             char *userid = NULL, *passwd = NULL;
 
-            if(0 == sipua->uas->has_authentication_info(sipua->uas, user_prof->username, user_prof->realm))
+            if(!sipua->uas->has_authentication_info(sipua->uas, user_prof->username, user_prof->realm))
             {    
                user_prof->auth = 0;
 
                if(client->on_authenticate)
+               {
                   client->on_authenticate(client->user_on_authenticate, user_prof->realm, user_prof, &userid, &passwd);
+               }
             }
 
             if(user_prof->auth)
@@ -339,8 +339,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				clie_log(("\nsipua_event: fail to parse sdp\n"));
 				sdp_message_free(sdp_message);
 
-				
-				return UA_FAIL;
+            return UA_FAIL;
 			}
 
 			rtpcapset = rtp_capable_from_sdp(sdp_message);
@@ -362,8 +361,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			call_e->event.call_info = call;
 
-
-			call->cid = call_e->cid;
+         call->cid = call_e->cid;
 
 			call->did = call_e->did;
 			call->rtpcapset = rtpcapset;
@@ -416,6 +414,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		case(SIPUA_EVENT_PROCEEDING):
 		{
 			sipua_set_t *call = e->call_info;
+         sipua_call_event_t *call_e = (sipua_call_event_t*)e;         
+         clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
 
 			call->status = SIPUA_EVENT_PROCEEDING;
 
@@ -424,6 +424,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		case(SIPUA_EVENT_RINGING):
 		{	
 			sipua_set_t *call = e->call_info;
+         sipua_call_event_t *call_e = (sipua_call_event_t*)e;
+         clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
 
 			call->status = SIPUA_EVENT_RINGING;
 
@@ -435,9 +437,10 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			rtpcap_set_t* rtpcapset;
 			sdp_message_t *sdp_message;
 			char* sdp_body = (char*)e->content;
-
 			int bw;
-
+         
+         sipua_call_event_t *call_e = (sipua_call_event_t*)e;
+         clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
 
          sipua_set_t *call = e->call_info; 
 			call->status = SIP_STATUS_CODE_OK;
@@ -451,7 +454,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		   */
 
          sdp_message_init(&sdp_message);
-
 
 			if (sdp_message_parse(sdp_message, sdp_body) != 0)
 			{
@@ -485,6 +487,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
           * Find sessions in the format which match cname and mimetype in source
           * Move_member_from_session_of(call->rtp_format) to_session_of(source->players);
          if(call->status == SIPUA_STATUS_QUEUE && client->background_source)
+
          {
             sipua->unsubscribe_bandwidth(sipua, call);
 
@@ -496,7 +499,9 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		}
 		case(SIPUA_EVENT_ACK):
 		{
-            int bw;
+         int bw;
+         sipua_call_event_t *call_e = (sipua_call_event_t*)e;
+         clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
 
 			sipua_set_t *call = e->call_info;
             
@@ -535,8 +540,9 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		}
 		case(SIPUA_EVENT_REQUESTFAILURE):
 		{
-			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
 			sipua_set_t *call = e->call_info;
+			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
+         clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
 
 			client->ogui->ui.beep(&client->ogui->ui);
 			printf("client_sipua_event: SIPUA_EVENT_REQUESTFAILURE\n");
@@ -550,8 +556,9 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		}
 		case(SIPUA_EVENT_SERVERFAILURE):
 		{
-			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
 			sipua_set_t *call = e->call_info;
+			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
+         clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
 
 			client->ogui->ui.beep(&client->ogui->ui);
 			printf("client_sipua_event: SIPUA_EVENT_SERVERFAILURE\n");
@@ -565,8 +572,9 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		}
 		case(SIPUA_EVENT_GLOBALFAILURE):
 		{
-			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
 			sipua_set_t *call = e->call_info;
+			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
+         clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
 
 			client->ogui->ui.beep(&client->ogui->ui);
 			printf("client_sipua_event: SIPUA_EVENT_GLOBALFAILURE\n");
@@ -660,6 +668,7 @@ int sipua_done(sipua_t *sipua)
 
 	return UA_OK;
 }
+
 
 user_t* client_load_userdata (sipua_t* sipua, const char* loc, const char* uid, const char* tok, const int tsz)
 {
@@ -790,22 +799,18 @@ int client_authenticate(sipua_t *sipua, int profile_no, const char* realm, const
    return UA_OK;
 }
 
-int client_regist(sipua_t *sipua, user_profile_t *user, char *userloc)
+int client_regist(sipua_t *sipua, user_profile_t *prof, char *userloc)
 {
 	int ret;
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
 	/* before start, check if already have a register transaction */
-	if(client->reg_profile)
-
-	{
+	if(client->reg_profile && client->reg_profile != prof)
 		return UA_FAIL;
-	}
 
-	client->reg_profile = user;
+	client->reg_profile = prof;
 
-
-	ret = sipua_regist(sipua, user, userloc);
+	ret = sipua_regist(sipua, prof, userloc);
 
 	if(ret < UA_OK)
       client->reg_profile = NULL;
@@ -868,7 +873,6 @@ int client_register_profile (sipua_t *sipua, int profile_no)
 }
 
 int client_unregister_profile (sipua_t *sipua, int profile_no)
-
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -887,7 +891,7 @@ int client_unregister_profile (sipua_t *sipua, int profile_no)
       return UA_REJECT;
 
    prof->regno = -1;
-   sipua->regist(sipua, prof, client->user->userloc);
+   sipua->unregist(sipua, prof);
 
 	clie_debug(("client_unregister_profile: unregistering ...\n"));
 
@@ -924,7 +928,6 @@ int client_lines(sipua_t* sipua, int *nbusy)
 
 	return MAX_SIPUA_LINES;
 }
-
 
 int client_busylines(sipua_t* sipua, int *busylines, int nlines)
 {
@@ -1007,6 +1010,7 @@ media_source_t* client_set_background_source(sipua_t* sipua, char* name, char *s
 
 		np.subject = client->background_source_subject;
 		np.info = client->background_source_info;
+
 		np.user_profile = client->sipua.user_profile;
 
 		client->background_source = source_open(name, client->control, "netcast", &np);		
@@ -1042,6 +1046,7 @@ int client_attach_source(sipua_t* sipua, sipua_set_t* call, transmit_source_t* t
 		else
 		{
 			/* The default media net address */
+
 
 			tsrc->add_destinate(tsrc, rtpcap->profile_mime, cname, 
 
@@ -1090,6 +1095,7 @@ int client_hold(sipua_t* sipua)
 	if(!client->sipua.incall)
 		return -1;
 
+
 	for(i=0; i<MAX_SIPUA_LINES; i++)
 		if(!client->lines[i])
 			break;
@@ -1127,6 +1133,7 @@ int client_answer(sipua_t *sipua, sipua_set_t* call, int reply, media_source_t* 
             source_associate_guests(source, call->rtp_format);
 
             sipua_answer(&client->sipua, call, reply, sdp);
+
 
             xstr_done_string(sdp);
          }
@@ -1205,6 +1212,7 @@ int client_set_newcall_callback (sipua_t *sipua, int(*callback)(void*callback_us
 
     client->on_newcall = callback;
     client->user_on_newcall = callback_user;
+    
     return UA_OK;
 }
 
@@ -1231,8 +1239,6 @@ int client_set_conversation_end_callback (sipua_t *sipua, int(*callback)(void *c
 int client_set_bye_callback (sipua_t *sipua, int (*callback)(void *callback_user, int lineno, char *caller, char *reason), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
-
-
 
     client->on_bye = callback;
     client->user_on_bye = callback_user;
@@ -1341,6 +1347,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_ca
 	sipua->set_profile = client_set_profile;
 	sipua->profile = client_profile;
 
+	sipua->authenticate = client_authenticate;
 	sipua->regist = client_regist;
 	sipua->unregist = client_unregist;
 

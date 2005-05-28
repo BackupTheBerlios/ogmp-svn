@@ -70,7 +70,7 @@ int jua_process_event(eXosipua_t *jua)
 	eXosip_event_t *je;
 
 	for (;;)
-    {
+   {
 		char buf[100];
 
 		je = eXosip_event_wait(0,50);
@@ -80,10 +80,11 @@ int jua_process_event(eXosipua_t *jua)
       
 		counter++;
 
+      jua_log(("jua_process_event: je->status_code[%d]\n", je->status_code));
+
 		if (je->type==EXOSIP_CALL_NEW)
 		{
 			/* Gain more info in this way
-			
 			if(je->jd->d_200Ok)
 			{
 				osip_contact_t *contact;
@@ -98,7 +99,7 @@ int jua_process_event(eXosipua_t *jua)
 						....
 				}
 			}
-            */
+         */
 
 			jcall_new(jua, je);
 		}
@@ -116,7 +117,7 @@ int jua_process_event(eXosipua_t *jua)
 		}
 		else if (je->type==EXOSIP_CALL_ACK)
 		{
-            jcall_ack(jua, je);
+          jcall_ack(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_PROCEEDING)
 		{
@@ -137,12 +138,10 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-            josua_printf(buf);
+         josua_printf(buf);
+         */
 
-            */
-
-
-			jcall_ringing(jua, je);
+         jcall_ringing(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_REDIRECTED)
 		{
@@ -160,6 +159,9 @@ int jua_process_event(eXosipua_t *jua)
 		{
 		    /*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
+
+
+
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  		
@@ -204,6 +206,7 @@ int jua_process_event(eXosipua_t *jua)
 			jcall_closed(jua, je);
 		}
 		else if (je->type==EXOSIP_CALL_HOLD)
+
 		{
 			/*
 			snprintf(buf, 99, "<- (%i %i) INVITE (On Hold) from: %s",
@@ -220,8 +223,8 @@ int jua_process_event(eXosipua_t *jua)
 			snprintf(buf, 99, "<- (%i %i) INVITE (Off Hold) from: %s",
 					je->cid, je->did, je->remote_uri);
 	  
-            josua_printf(buf);
-            */
+         josua_printf(buf);
+         */
 
 			jcall_offhold(jua, je);
 		}
@@ -245,6 +248,7 @@ int jua_process_event(eXosipua_t *jua)
 			How to retrieve exactly returned expiration seconds
 			eXosip now has not implement retrieving server expires);
 			*/
+
 			jr = eXosip_event_get_reginfo(je);
 
 			reg_e.seconds_expires = jr->r_reg_period;
@@ -282,6 +286,7 @@ int jua_process_event(eXosipua_t *jua)
 			reg_e.server = je->req_uri;
 
 			reg_e.event.from = je->req_uri;
+
 			reg_e.event.content = NULL;
 			reg_e.event.call_info = NULL;
 
@@ -523,6 +528,7 @@ int jua_process_event(eXosipua_t *jua)
 					je->reason_phrase, je->remote_uri);
 	  
             josua_printf(buf);
+
             */
 			jsubscription_globalfailure(jua, je);
 		}
@@ -862,7 +868,7 @@ int uas_unregist(sipua_uas_t *sipuas, char *userloc, char *registrar, char *id)
 	return UA_OK;
 }
 
-int uas_invite(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_body, int sdp_bytes)
+int uas_invite(sipua_uas_t *sipuas, const char *to, sipua_set_t* call_info, char* sdp_body, int sdp_bytes)
 {
 	eXosipua_t *jua = (eXosipua_t*)sipuas;
     
@@ -889,22 +895,23 @@ int uas_invite(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_
 		return UA_FAIL;
 	}
 
-	if(jua->sipuas.proxy[0]=='\0')
-		proxy = NULL;
-	else
+	if(jua->sipuas.proxy[0]!='\0')
+   {
 		proxy = jua->sipuas.proxy;
+   }
+	else
+   {
+      proxy = call_info->user_prof->registrar;
+   }
 
 	sprintf(sdp_size,"%i", sdp_bytes);
 
-   /*
    printf("uas_invite: [%s] from %s to %s, proxy[%s]\n", call_info->subject, from, to, proxy);
 	printf("\n-------Initiate SDP [%d bytes]--------\n", sdp_bytes);
 	printf("Callid[%s]\n", call_info->setid.id);
 	printf("----------------------------------------\n");
 	printf("%s", sdp_body);
 	printf("----------------------------------------\n");
-	exit(1);
-   */
 
 	if (eXosip_build_initial_invite(&invite, to, from, proxy, call_info->subject) != 0)
 		return UA_FAIL;
@@ -912,10 +919,11 @@ int uas_invite(sipua_uas_t *sipuas, char *to, sipua_set_t* call_info, char* sdp_
 	/* sdp content of the call */
 	osip_message_set_content_type(invite, "application/sdp");
 	osip_message_set_content_length(invite, sdp_size);
-	osip_message_set_body(invite, sdp_body);
+	osip_message_set_body(invite, sdp_body, sdp_bytes);
 
 	eXosip_lock();
 
+	printf("uas_invite: call\n");
 	ret = eXosip_initiate_call(invite, call_info, NULL/*negotiation_reference*/, NULL/*local_audio_port*/);
 
 	eXosip_unlock();
@@ -955,9 +963,8 @@ int uas_answer(sipua_uas_t* uas, sipua_set_t* call, int reply, char* reply_type,
 
 int uas_bye(sipua_uas_t* uas, sipua_set_t* call)
 {
-
-    /*
-    eXosipua_t *jua = (eXosipua_t*)uas;
+   /*
+   eXosipua_t *jua = (eXosipua_t*)uas;
 	*/
 	if(eXosip_terminate_call(call->cid, call->did) == 0)
 		return UA_OK;
@@ -973,9 +980,8 @@ int uas_match_type(sipua_uas_t* uas, char *type)
 	return 0;
 }
 
-int uas_init(sipua_uas_t* uas, int sip_port, char* nettype, char* addrtype, char* firewall, char* proxy)
+int uas_init(sipua_uas_t* uas, int sip_port, const char* nettype, const char* addrtype, const char* firewall, const char* proxy)
 {
-
 	int ip_family;
 
 	if(strcmp(nettype, "IN") != 0)
@@ -1003,14 +1009,14 @@ int uas_init(sipua_uas_t* uas, int sip_port, char* nettype, char* addrtype, char
 
 	eXosip_guess_ip_for_via(ip_family, uas->netaddr, 63);
 	if (uas->netaddr[0]=='\0')
-    {
+   {
 		jua_log(("sipua_uas: No ethernet interface found!\n"));
 
 		jua_log(("sipua_uas: using ip[127.0.0.1] (debug mode)!\n"));
 
 
 		strcpy(uas->netaddr, "127.0.0.1");
-    }
+   }
 	else
 	{
 		jua_log(("sipua_uas: local address[%s]\n", uas->netaddr));
@@ -1020,11 +1026,21 @@ int uas_init(sipua_uas_t* uas, int sip_port, char* nettype, char* addrtype, char
 	strcpy(uas->addrtype, addrtype);
 
 	if(firewall)
+   {
 		strcpy(uas->firewall, firewall);
-
+      eXosip_set_firewallip(firewall);
+		jua_log(("sipua_uas: firewall[%s]\n", firewall));
+   }
+   
 	if(proxy)
+   {
 		strcpy(uas->proxy, proxy);
-
+		jua_log(("sipua_uas: proxy[%s]\n", proxy));
+   }
+   else
+   {
+		jua_log(("sipua_uas: proxy depend on user profile\n"));
+   }
 
 	uas->portno = sip_port;
 	

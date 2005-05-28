@@ -347,7 +347,7 @@ int window_profiles_run_command(gui_t* gui, int c)
 			if(user->tok)
 			{
 				/* tok prompt gui */
-				sipua_save_user(user, user->tok, user->tok_bytes);
+				sipua_save_user(user, NULL, user->tok, user->tok_bytes);
 			}
 
 			break;
@@ -454,6 +454,7 @@ int window_profiles_done(gui_t* gui)
 gui_t gui_window_profiles =
 {
 	GUI_OFF,
+
 	0,
 	-999,
 	10,

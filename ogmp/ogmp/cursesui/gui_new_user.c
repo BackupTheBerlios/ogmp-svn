@@ -17,7 +17,7 @@
  * License along with dpkg; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-
+ 
 #include "gui_new_user.h"
 
 #include "editor.h"
@@ -34,6 +34,8 @@ char loc[128];
 
 char* inputs[3];
 editline_t *edit[3];
+
+
 
 
 
@@ -245,7 +247,7 @@ int window_new_user_run_command(gui_t* gui, int c)
 			{
 				ocui->user = user_new(uid, strlen(uid));
 
-				if(sipua_save_user(ocui->user, pwd, strlen(pwd)) < UA_OK)
+				if(sipua_save_user(ocui->user, loc, pwd, strlen(pwd)) < UA_OK)
 					ocui->message = xstr_clone("Fail to create new user!");
 				else
 					ocui->message = xstr_clone("New user created.");

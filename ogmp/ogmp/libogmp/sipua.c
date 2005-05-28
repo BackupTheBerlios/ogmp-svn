@@ -384,6 +384,8 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 
 
 
+
+
       xfree(set);
 
 		return NULL;
@@ -566,6 +568,7 @@ int sipua_new_inputs(sipua_t* sipua, sipua_set_t* call, rtpcap_set_t* rtpcapset,
          mediatype[i] = minfo->mime[i];
          i++;
       }
+
       mediatype[i] = '\0';
 
       strm->player = control->find_player(control, "netcast", minfo->mime, minfo->fourcc, call->rtpcapset);
@@ -684,6 +687,7 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_set_t* call, int bw_budget, media_con
 	sipua->uas->address(sipua->uas, &nettype, &addrtype, &netaddr);
  
 	/*sipua->uas->clear_coding(sipua->uas);*/
+
 
 	/* generate sdp message */
 	sdp_info.sdp_media_pos = 0;
@@ -804,6 +808,7 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_set_t* call, int bw_budget, media_con
 	}
 
 	sdp_message_to_str (sdp_info.sdp_message, &sdp_body);
+
 
 	/* if free here, posix dore dump ??? win32 ok !!!
     sdp_message_free(sdp_info.sdp_message);
@@ -944,12 +949,12 @@ int sipua_unregist(sipua_t *sipua, user_profile_t *user)
 	return ret;
 }
 
-int sipua_call(sipua_t *sipua, sipua_set_t* call, char *callee, char *sdp_body) 
+int sipua_call(sipua_t *sipua, sipua_set_t* call, const char *callee, char *sdp_body) 
 {
 	int ret;
 
 	if(sipua->incall)
-    {
+    {                     
         ua_log(("sipua_connect: You are in call, can not make a new call\n"));
         return UA_BUSY;
     }
@@ -963,10 +968,8 @@ int sipua_call(sipua_t *sipua, sipua_set_t* call, char *callee, char *sdp_body)
 	   ua_debug(("sipua_call: Call from [%s] to [%s] fail\n", call->user_prof->regname, callee));
 		return ret;
    }
-   
 
    sipua->incall = call;
-
 
 	return UA_OK;
 }

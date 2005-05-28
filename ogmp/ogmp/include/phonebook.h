@@ -99,7 +99,7 @@ struct user_profile_s
 
 	char* regname;		/* sip name notation */
    char* realm;      /* pointer to regname realm part */
-	
+
 	int seconds;		/* lifetime */
 	
 	char* registrar;
@@ -199,7 +199,7 @@ extern DECLSPEC
 int user_profile_add_contact(user_t* user, int num, const char* regname, const char* name, int nbytes, const char* memo, int mbytes);
 
 extern DECLSPEC
-int user_profile_delete_contact(user_t* user, int num, const char* regname);
+int user_profile_delete_contact(user_t* user, int profile_index, int contact_index);
 
 extern DECLSPEC
 int user_profile_contact_number(user_t* user, int num);
