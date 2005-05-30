@@ -162,6 +162,7 @@ int jua_process_event(eXosipua_t *jua)
 
 
 
+
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  		
@@ -283,6 +284,7 @@ int jua_process_event(eXosipua_t *jua)
 			reg_e.event.type = SIPUA_EVENT_REGISTRATION_FAILURE;
 			reg_e.status_code = je->status_code;
 			reg_e.server_info = je->reason_phrase;
+
 			reg_e.server = je->req_uri;
 
 			reg_e.event.from = je->req_uri;
@@ -868,6 +870,40 @@ int uas_unregist(sipua_uas_t *sipuas, char *userloc, char *registrar, char *id)
 	return UA_OK;
 }
 
+/* Set loose route if not set in route url */
+char* uas_check_route(const char *url)
+{
+	int err;
+	osip_uri_param_t *lr_param=NULL;
+	osip_route_t *rt=NULL;
+	char *route=NULL;
+   
+	if (url!=NULL && strlen(url)>0)
+   {
+		osip_route_init(&rt);
+		err=osip_route_parse(rt,url);
+		if (err<0)
+      {
+			osip_route_free(rt);
+			return NULL;
+		}
+
+      /* check if the lr parameter is set , if not add it */
+		osip_uri_uparam_get_byname(rt->url, "lr", &lr_param);
+	  	if (lr_param==NULL)
+      {
+			osip_uri_uparam_add(rt->url,osip_strdup("lr"),NULL);
+			osip_route_to_str(rt,&route);
+         
+         return route;
+		}
+
+      return xstr_clone(url);
+	}
+
+   return NULL;
+}
+
 int uas_invite(sipua_uas_t *sipuas, const char *to, sipua_set_t* call_info, char* sdp_body, int sdp_bytes)
 {
 	eXosipua_t *jua = (eXosipua_t*)sipuas;
@@ -897,11 +933,11 @@ int uas_invite(sipua_uas_t *sipuas, const char *to, sipua_set_t* call_info, char
 
 	if(jua->sipuas.proxy[0]!='\0')
    {
-		proxy = jua->sipuas.proxy;
+		proxy = uas_check_route(jua->sipuas.proxy);
    }
 	else
    {
-      proxy = call_info->user_prof->registrar;
+      proxy = uas_check_route(call_info->user_prof->registrar);
    }
 
 	sprintf(sdp_size,"%i", sdp_bytes);
@@ -928,6 +964,9 @@ int uas_invite(sipua_uas_t *sipuas, const char *to, sipua_set_t* call_info, char
 
 	eXosip_unlock();
 	
+   if(proxy)
+      osip_free(proxy);
+   
 	/*When to free it ???
 	osip_message_free(invite);
 	*/
