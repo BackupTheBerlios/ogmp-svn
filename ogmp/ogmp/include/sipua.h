@@ -146,6 +146,13 @@ struct sipua_setid_s
 };
 
 typedef struct sipua_set_s sipua_set_t;
+typedef struct sipua_auth_s sipua_auth_t;
+
+struct sipua_auth_s
+{
+   char* username;
+   char* realm;
+};
 
 struct sipua_set_s
 {
@@ -231,6 +238,8 @@ struct sipua_call_event_s
 	char *req_uri;
 	char *remote_uri;
 	char *local_uri;
+
+   char *auth_realm;
 };
 
 #define MAX_NETTYPE_BYTES 8
@@ -247,13 +256,6 @@ struct sipua_net_s
 	char netaddr[MAX_IP_BYTES];
 	char firewall[MAX_IP_BYTES];
 	char proxy[MAX_IP_BYTES];
-};
-
-typedef struct sipua_auth_s sipua_auth_t;
-struct sipua_auth_s
-{
-   char* username;
-   char* realm;
 };
 
 struct sipua_uas_s
@@ -303,6 +305,8 @@ struct sipua_uas_s
 	int (*invite)(sipua_uas_t* uas, const char *regname, sipua_set_t* call, char* sdp_body, int bytes);
 	int (*answer)(sipua_uas_t* uas, sipua_set_t* call, int reply, char* reply_type, char* reply_body);
 	int (*bye)(sipua_uas_t* uas, sipua_set_t* call);
+   
+	int (*retry)(sipua_uas_t* uas, sipua_set_t* call);
 };
 
 extern DECLSPEC
@@ -315,6 +319,7 @@ struct sipua_s
 
 	sipua_set_t* incall;  /* The call in conversation */
 	
+
 	user_profile_t* user_profile;
    config_t* config;
 
@@ -397,6 +402,7 @@ struct sipua_s
     /* Set callbacks */
     int (*set_register_callback)(sipua_t *sipua, int(*callback)(void*callback_user,int statuscode,char*reason,int isreg), void* callback_user);
     int (*set_authentication_callback)(sipua_t *sipua, int(*callback)(void*callback_user, char* realm, user_profile_t* profile, char** user_id, char** user_password), void* callback_user);
+    int (*set_progress_callback)(sipua_t *sipua, int(*callback)(void*callback_user,sipua_set_t *call,int statuscode), void* callback_user);
     int (*set_newcall_callback)(sipua_t *sipua, int(*callback)(void*callback_user,int lineno,char *caller,char *subject,char *info), void* callback_user);
     int (*set_conversation_start_callback)(sipua_t *sipua, int(*callback)(void *callback_user, int lineno,char *caller,char *subject,char *info), void* callback_user);
     int (*set_conversation_end_callback)(sipua_t *sipua, int(*callback)(void *callback_user,int lineno,char *caller,char *subject,char *info), void* callback_user);
@@ -477,9 +483,12 @@ int sipua_session_sdp(sipua_t *sipua, sipua_set_t* set, char** sdp);
 
 DECLSPEC
 int 
-
 sipua_call(sipua_t *ua, sipua_set_t* set, const char *regname, char *sdp_body);
 	
+DECLSPEC
+int
+sipua_retry_call(sipua_t *ua, sipua_set_t* call);
+
 DECLSPEC
 int 
 sipua_answer(sipua_t *ua, sipua_set_t* call, int reason, char* sdp_body);

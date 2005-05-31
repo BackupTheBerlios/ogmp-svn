@@ -25,7 +25,6 @@
 #include "eXosip2.h"
 
 int jcall_init(eXosipua_t *jua)
-
 {
 	int k;
 	for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
@@ -189,6 +188,7 @@ int jcall_ringing(eXosipua_t *jua, eXosip_event_t *je)
 	call_e.subject = je->subject;
 
 
+
 	call_e.textinfo = je->textinfo;
     
 	call_e.req_uri = je->req_uri;
@@ -212,7 +212,6 @@ int jcall_ringing(eXosipua_t *jua, eXosip_event_t *je)
 int jcall_answered(eXosipua_t *jua, eXosip_event_t *je)
 {
 	sipua_call_event_t call_e;
-
 
 	/* event back to sipuac */
 	memset(&call_e, 0, sizeof(sipua_call_event_t));
@@ -343,13 +342,44 @@ int jcall_redirected(eXosipua_t *jua, eXosip_event_t *je)
 	return 0;
 }
 
-int jcall_requestfailure(eXosipua_t *jua, eXosip_event_t *je)
+char* jcall_dequota_copy(char *quota)
+{
+   char *start;
+   char *end;
+   
+   start = quota;
+   
+   while(*start == ' ' || *start == '\t' || *start == '\n') start++;
+
+   if(*start != '\"')
+   {
+      return xstr_clone(quota);
+   }
+
+   start++;
+   end = start;
+   
+   while(*end && *end != '\"')
+      end++;
+
+   return xstr_nclone(start, end-start);
+}
+
+int jcall_requestfailure(eXosipua_t *jua, eXosip_event_t *je, osip_message_t *message)
 {
 	/* event back to sipuac */
 	sipua_call_event_t call_e;
+   
+   call_e.auth_realm = NULL;
 
 	call_e.event.type = SIPUA_EVENT_REQUESTFAILURE;
 	call_e.event.call_info = (sipua_set_t*)je->external_reference;
+
+	call_e.cid = je->cid;
+	call_e.did = je->did;
+   
+	call_e.event.call_info->cid = je->cid;
+	call_e.event.call_info->did = je->did;
 
 	call_e.subject = je->subject;
 	call_e.textinfo = je->textinfo;
@@ -359,18 +389,32 @@ int jcall_requestfailure(eXosipua_t *jua, eXosip_event_t *je)
 	call_e.remote_uri = je->remote_uri;
 
 	if (je->reason_phrase[0]!='\0')
-    {
+   {
 		call_e.reason_phrase = je->reason_phrase;
 		call_e.status_code = je->status_code;
-    }
+   }
 	else
-    {
+   {
 		call_e.reason_phrase = NULL;
 		call_e.status_code = SIPUA_STATUS_UNKNOWN;
-    }
+   }
+
+   if(je->status_code == SIP_STATUS_CODE_PROXYAUTHENTICATIONREQUIRED && message)
+   {
+      osip_proxy_authenticate_t *proxy_auth;
+
+	   proxy_auth = (osip_proxy_authenticate_t*)osip_list_get(message->proxy_authenticates,0);
+      call_e.auth_realm = jcall_dequota_copy(osip_proxy_authenticate_get_realm(proxy_auth));
+   }
 
 	/* event notification */
 	jua->sipuas.notify_event(jua->sipuas.lisener, &call_e.event);
+
+   if(call_e.auth_realm)
+   {
+      xfree(call_e.auth_realm);
+      call_e.auth_realm = NULL;
+   }
 
 	return 0;
 }
@@ -448,6 +492,7 @@ int jcall_closed(eXosipua_t *jua, eXosip_event_t *je)
 	sipua_event_t sip_e;
 	sip_e.call_info = (sipua_set_t*)je->external_reference;
 	sip_e.type = SIPUA_EVENT_CALL_CLOSED;
+
 
 
   for (k=0;k<MAX_NUMBER_OF_CALLS;k++)

@@ -86,7 +86,7 @@ int jcall_ack(eXosipua_t *jua, eXosip_event_t *je);
 int jcall_proceeding(eXosipua_t *jua, eXosip_event_t *je);
 int jcall_ringing(eXosipua_t *jua, eXosip_event_t *je);
 int jcall_redirected(eXosipua_t *jua, eXosip_event_t *je);
-int jcall_requestfailure(eXosipua_t *jua, eXosip_event_t *je);
+int jcall_requestfailure(eXosipua_t *jua, eXosip_event_t *je, osip_message_t *mesg);
 int jcall_serverfailure(eXosipua_t *jua, eXosip_event_t *je);
 int jcall_globalfailure(eXosipua_t *jua, eXosip_event_t *je);
 

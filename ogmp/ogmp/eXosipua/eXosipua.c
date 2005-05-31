@@ -60,6 +60,21 @@ static int jua_check_url(char *url)
 	return 0;
 }
 
+/* Get SIP message of the call leg */
+osip_message_t *jua_call_message(eXosipua_t *jua, eXosip_event_t *je)
+{
+	eXosip_call_t *call = NULL;
+
+	eXosip_call_find(je->cid, &call);
+	if(!call)
+   {
+      jua_log(("jua_call_message: no call\n"));
+      return NULL;
+   }
+   
+	return call->c_out_tr->last_response;
+}
+
 /**
  * Processing the events, return the number of event happened.
  */
@@ -157,19 +172,9 @@ int jua_process_event(eXosipua_t *jua)
 		}
 		else if (je->type==EXOSIP_CALL_REQUESTFAILURE)
 		{
-		    /*
-			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
-
-
-
-
-					je->cid, je->did, je->status_code,
-					je->reason_phrase, je->remote_uri);
-	  		
-            josua_printf(buf);
-            */
-
-			jcall_requestfailure(jua, je);
+         osip_message_t *message = jua_call_message(jua, je);
+         
+			jcall_requestfailure(jua, je, message);
 		}
 		else if (je->type==EXOSIP_CALL_SERVERFAILURE)
 		{
@@ -178,8 +183,8 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-            josua_printf(buf);
-            */
+         josua_printf(buf);
+          */
 
 			jcall_serverfailure(jua, je);
 		}
@@ -232,12 +237,13 @@ int jua_process_event(eXosipua_t *jua)
 		else if (je->type==EXOSIP_REGISTRATION_SUCCESS)
 		{
 			sipua_reg_event_t reg_e;
+         
 			eXosip_reg_t *jr;
+         osip_message_t *message = NULL;
 
 			reg_e.event.call_info = NULL;
 
-
-			reg_e.event.type = SIPUA_EVENT_REGISTRATION_SUCCEEDED;
+         reg_e.event.type = SIPUA_EVENT_REGISTRATION_SUCCEEDED;
 			reg_e.status_code = je->status_code;	/* eg: 200*/
 			reg_e.server_info = je->reason_phrase;  /* eg: OK */
 			reg_e.server = je->req_uri;				/* eg: sip:registrar.domain */
@@ -249,10 +255,28 @@ int jua_process_event(eXosipua_t *jua)
 			How to retrieve exactly returned expiration seconds
 			eXosip now has not implement retrieving server expires);
 			*/
+         message = jua_call_message(jua, je);
+         if(message)
+         {
+            osip_contact_t  *contact = NULL;
+            osip_message_get_contact(message, 0, &contact);
 
-			jr = eXosip_event_get_reginfo(je);
-
-			reg_e.seconds_expires = jr->r_reg_period;
+            if(contact)
+            {
+               char* expires = NULL;
+               
+               osip_contact_param_get_byname(contact,"expires",&expires);
+               if(expires)
+               {
+                  reg_e.seconds_expires = strtol(expires, NULL, 10);
+               }
+            }
+         }                                                                
+         else
+         {
+			   jr = eXosip_event_get_reginfo(je);
+			   reg_e.seconds_expires = jr->r_reg_period;
+         }
 
 			/*
 			snprintf(buf, 99, "<- (%i) [%i %s] %s for REGISTER %s",
@@ -510,8 +534,6 @@ int jua_process_event(eXosipua_t *jua)
             josua_printf(buf);
             */
 			jsubscription_requestfailure(jua, je);
-
-
 		}
 		else if (je->type==EXOSIP_SUBSCRIPTION_SERVERFAILURE)
 		{
@@ -648,11 +670,7 @@ int uas_set_lisener(sipua_uas_t* sipuas, void* lisener, int(*notify_event)(void*
 {
 	sipua_uas_t* uas = (sipua_uas_t*)sipuas;
 
-
-
-
-
-	uas->lisener = lisener;
+   uas->lisener = lisener;
 
 	uas->notify_event = notify_event;
 	
@@ -712,7 +730,7 @@ sipua_auth_t *uas_new_auth(char* username, char *realm)
 {
    sipua_auth_t *auth = xmalloc(sizeof(sipua_auth_t));
    if(auth)
-   {
+   {              
       auth->username = xstr_clone(username);
       auth->realm = xstr_clone(realm);
    }
@@ -757,11 +775,6 @@ int uas_set_authentication_info(sipua_uas_t *sipuas, char *username, char *useri
    {
       xlist_addto_first(sipuas->auth_list, new_auth);
       
-      /* Dunno what ha1 is for ?     
-       * int eXosip_add_authentication_info(const char *username, const char *userid,
-		 *	                                 const char *passwd, const char *ha1,
-		 *	                                 const char *realm);
-       */
       if(eXosip_add_authentication_info(username, userid, passwd, NULL, realm) == 0)
          return UA_OK;
    }
@@ -885,6 +898,7 @@ char* uas_check_route(const char *url)
 		if (err<0)
       {
 			osip_route_free(rt);
+
 			return NULL;
 		}
 
@@ -904,13 +918,22 @@ char* uas_check_route(const char *url)
    return NULL;
 }
 
+int uas_retry_call(sipua_uas_t *sipuas, sipua_set_t* call)
+{
+	eXosip_lock();
+	eXosip_retry_call(call->cid);
+	eXosip_unlock();
+
+   return UA_OK;
+}
+               
 int uas_invite(sipua_uas_t *sipuas, const char *to, sipua_set_t* call_info, char* sdp_body, int sdp_bytes)
 {
 	eXosipua_t *jua = (eXosipua_t*)sipuas;
     
 	osip_message_t *invite;
 	char sdp_size[8];
-	char* proxy;
+	char* proxy = NULL;
 
 	int ret;
 
@@ -935,10 +958,12 @@ int uas_invite(sipua_uas_t *sipuas, const char *to, sipua_set_t* call_info, char
    {
 		proxy = uas_check_route(jua->sipuas.proxy);
    }
+#if 0
 	else
    {
       proxy = uas_check_route(call_info->user_prof->registrar);
    }
+#endif
 
 	sprintf(sdp_size,"%i", sdp_bytes);
 
@@ -978,11 +1003,93 @@ int uas_accept(sipua_uas_t* uas, int lineno)
 {
 	eXosipua_t *jua = (eXosipua_t*)uas;
 
-	
-	jua->ncall++;
+   jua->ncall++;
 	
 	return UA_OK;
 }
+
+#if 0
+int eXosip_reinvite_with_authentication (struct eXosip_call_t *jc)
+{
+    struct eXosip_call_t *jcc;
+#ifdef SM
+    char *locip;
+#else
+    char locip[50];
+#endif
+	osip_message_t * cloneinvite;
+  	osip_event_t *sipevent;
+  	osip_transaction_t *transaction;
+	int osip_cseq_num,length;
+    osip_via_t *via;
+    char *tmp;
+    int i;
+
+	osip_message_clone (jc->c_out_tr->orig_request, &cloneinvite);
+	osip_cseq_num = osip_atoi(jc->c_out_tr->orig_request->cseq->number);
+	length   = strlen(jc->c_out_tr->orig_request->cseq->number);
+	tmp    = (char *)osip_malloc(90*sizeof(char));
+	via   = (osip_via_t *) osip_list_get (cloneinvite->vias, 0);
+
+	osip_list_remove(cloneinvite->vias, 0);
+	osip_via_free(via);
+
+#ifdef SM
+	eXosip_get_localip_for(cloneinvite->req_uri->host,&locip);
+#else
+	eXosip_guess_ip_for_via(eXosip.ip_family, locip, 49);
+#endif
+
+	if (eXosip.ip_family==AF_INET6) {
+		sprintf(tmp, "SIP/2.0/UDP [%s]:%s;branch=z9hG4bK%u", locip,
+		      eXosip.localport, via_branch_new_random());
+	} else {
+		sprintf(tmp, "SIP/2.0/UDP %s:%s;branch=z9hG4bK%u", locip,
+		      eXosip.localport, via_branch_new_random());
+	}
+#ifdef SM
+	osip_free(locip);
+#endif
+	osip_via_init(&via);
+	osip_via_parse(via, tmp);
+	osip_list_add(cloneinvite->vias, via, 0);
+	osip_free(tmp);
+
+	osip_cseq_num++;
+	osip_free(cloneinvite->cseq->number);
+	cloneinvite->cseq->number = (char*)osip_malloc(length + 2);
+	sprintf(cloneinvite->cseq->number, "%i", osip_cseq_num);
+
+	eXosip_add_authentication_information(cloneinvite,
+jc->c_out_tr->last_response);
+    cloneinvite->message_property = 0;
+
+    eXosip_call_init(&jcc);
+    i = osip_transaction_init(&transaction,
+		       ICT,
+		       eXosip.j_osip,
+		       cloneinvite);
+    if (i!=0)
+    {
+      eXosip_call_free(jc);
+      osip_message_free(cloneinvite);
+      return -1;
+    }
+    jcc->c_out_tr = transaction;
+    sipevent = osip_new_outgoing_sipmessage(cloneinvite);
+    sipevent->transactionid =  transaction->transactionid;
+    osip_transaction_set_your_instance(transaction, __eXosip_new_jinfo(jcc,
+NULL, NULL, NULL));
+    osip_transaction_add_event(transaction, sipevent);
+
+    jcc->external_reference = 0;
+    ADD_ELEMENT(eXosip.j_calls, jcc);
+
+    eXosip_update(); /* fixed? */
+    __eXosip_wakeup();
+	return 0;
+}
+#endif
 
 int uas_answer(sipua_uas_t* uas, sipua_set_t* call, int reply, char* reply_type, char* reply_body)
 {
@@ -1052,6 +1159,7 @@ int uas_init(sipua_uas_t* uas, int sip_port, const char* nettype, const char* ad
 		jua_log(("sipua_uas: No ethernet interface found!\n"));
 
 		jua_log(("sipua_uas: using ip[127.0.0.1] (debug mode)!\n"));
+
 
 
 		strcpy(uas->netaddr, "127.0.0.1");
@@ -1148,8 +1256,11 @@ module_interface_t* sipua_new_server()
 	uas->answer = uas_answer;
 	uas->bye = uas_bye;
 
+   uas->retry = uas_retry_call;
+
 	return uas;
 }
+
 
 /**
  * Loadin Infomation Block

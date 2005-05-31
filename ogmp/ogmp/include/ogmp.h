@@ -161,11 +161,13 @@ struct ogmp_client_s
 	int (*on_register)(void *user_on_register, int result, char *reason, int isreg);
    void *user_on_register;
 
+	int (*on_progress)(void *user_on_progress, sipua_set_t *call, int result);
+   void *user_on_progress;
+
 	int (*on_newcall)(void *user_on_newcall, int lineno, char *caller, char *subject, char *info);
    void *user_on_newcall;
 
    int (*on_conversation_start)(void *user_on_conversation_start, int lineno,char *caller,char *subject,char *info);
-
    void *user_on_conversation_start;
 
    int (*on_conversation_end)(void *user_on_conversation_end, int lineno,char *caller,char *subject,char *info);

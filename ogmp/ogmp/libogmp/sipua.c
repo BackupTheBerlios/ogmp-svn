@@ -386,6 +386,7 @@ sipua_set_t* sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof,
 
 
 
+
       xfree(set);
 
 		return NULL;
@@ -947,6 +948,11 @@ int sipua_unregist(sipua_t *sipua, user_profile_t *user)
 	xfree(siploc);
 
 	return ret;
+}
+
+int sipua_retry_call(sipua_t *ua, sipua_set_t* call)
+{
+   return ua->uas->retry(ua->uas, call);
 }
 
 int sipua_call(sipua_t *sipua, sipua_set_t* call, const char *callee, char *sdp_body) 

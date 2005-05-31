@@ -214,6 +214,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
          user_prof->regno = -1;
 
 			/* Should be exact expire seconds returned by registrary*/
+			clie_log(("client_sipua_event: expired in %d seconds\n", reg_e->seconds_expires));
 			user_prof->seconds_left = reg_e->seconds_expires;
 			if(reg_e->seconds_expires == 0)
 			{
@@ -224,6 +225,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			user_prof->sipua = client;
 			user_prof->enable = 1;
+
 
 			/* Create a register thread */
 			if(!user_prof->thread_register)
@@ -279,9 +281,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
                user_prof->auth = 0;
 
                if(client->on_authenticate)
-               {
                   client->on_authenticate(client->user_on_authenticate, user_prof->realm, user_prof, &userid, &passwd);
-               }
             }
 
             if(user_prof->auth)
@@ -542,15 +542,42 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		{
 			sipua_set_t *call = e->call_info;
 			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
+         user_profile_t *user_prof = call->user_prof;
+         
          clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
 
 			client->ogui->ui.beep(&client->ogui->ui);
-			printf("client_sipua_event: SIPUA_EVENT_REQUESTFAILURE\n");
+         
+			clie_debug(("client_sipua_event: SIPUA_EVENT_REQUESTFAILURE\n"));
 
 			if(call_e->status_code == SIPUA_STATUS_UNKNOWN)
 				call->status = SIPUA_EVENT_REQUESTFAILURE;
 			else
 				call->status = call_e->status_code;
+
+         if(call_e->status_code == SIP_STATUS_CODE_PROXYAUTHENTICATIONREQUIRED)
+         {
+            char *userid, *passwd;
+
+            clie_log(("client_sipua_event: realm[%s] requires authentication\n", call_e->auth_realm));
+
+            user_prof->auth = 0;
+
+            if(sipua->uas->has_authentication_info(sipua->uas, user_prof->username, call_e->auth_realm))
+            {
+               user_prof->auth = 1;
+            }
+            else if(client->on_authenticate)
+                  client->on_authenticate(client->user_on_authenticate, sipua->proxy_realm, user_prof, &userid, &passwd);
+
+            if(user_prof->auth)
+            {               
+               sipua_retry_call(sipua, call);
+               break;
+            }
+         }
+         else if(client->on_progress)
+            client->on_progress(client->user_on_progress, call, call_e->status_code);
 
 			break;
 		}
@@ -769,6 +796,7 @@ char* client_set_call_source(sipua_t* sipua, sipua_set_t* call, media_source_t* 
 }
 
 int client_set_profile(sipua_t* sipua, user_profile_t* prof)
+
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1075,6 +1103,7 @@ sipua_set_t* client_pick(sipua_t* sipua, int line)
     if(client->sipua.incall)
 	{
 		client->lines[line]->status = SIPUA_EVENT_ONHOLD;
+
 		return client->lines[line];
 	}
 
@@ -1193,6 +1222,16 @@ int client_set_register_callback (sipua_t *sipua, int(*callback)(void*callback_u
     client->on_register = callback;
     client->user_on_register = callback_user;
     
+    return UA_OK;
+}
+
+int client_set_progress_callback (sipua_t *sipua, int(*callback)(void*callback_user, sipua_set_t *call, int result), void* callback_user)
+{
+    ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+    client->on_progress = callback;
+    client->user_on_progress = callback_user;
+
     return UA_OK;
 }
 
@@ -1365,6 +1404,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_ca
 	sipua->lines = client_lines;
  	sipua->busylines = client_busylines;
  	/* current call session */
+
 	sipua->session = client_session;
  	sipua->line = client_line;
 
@@ -1395,6 +1435,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_ca
    /* Set Callbacks */    
    sipua->set_register_callback = client_set_register_callback;
    sipua->set_authentication_callback = client_set_authentication_callback;
+   sipua->set_progress_callback = client_set_progress_callback;
    sipua->set_newcall_callback = client_set_newcall_callback;
    sipua->set_conversation_start_callback = client_set_conversation_start_callback;
 
