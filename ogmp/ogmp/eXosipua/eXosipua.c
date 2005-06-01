@@ -263,13 +263,12 @@ int jua_process_event(eXosipua_t *jua)
 
             if(contact)
             {
-               char* expires = NULL;
+               osip_uri_param_t *expires = NULL;
                
-               osip_contact_param_get_byname(contact,"expires",&expires);
+               osip_contact_param_get_byname(contact, "expires", &expires);
+
                if(expires)
-               {
-                  reg_e.seconds_expires = strtol(expires, NULL, 10);
-               }
+                  reg_e.seconds_expires = strtol(expires->gvalue, NULL, 10);
             }
          }                                                                
          else
@@ -670,7 +669,7 @@ int uas_set_lisener(sipua_uas_t* sipuas, void* lisener, int(*notify_event)(void*
 {
 	sipua_uas_t* uas = (sipua_uas_t*)sipuas;
 
-   uas->lisener = lisener;
+	uas->lisener = lisener;
 
 	uas->notify_event = notify_event;
 	

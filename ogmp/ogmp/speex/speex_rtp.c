@@ -280,12 +280,12 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
             rtp->connect = NULL; /* Dump the connect from rtcp packet */
 
             if(spxh->session->$callbacks.member_connects)
-			   {
+			{
                spxh->session->$callbacks.member_connects(spxh->session->$callbacks.member_connects_user, src, &rtp_conn, &rtcp_conn);
                session_member_set_connects(sender, rtp_conn, rtcp_conn);
             }
-			   else
-			   {
+			else
+			{
                rtcp_conn = connect_rtp_to_rtcp(rtp->connect); /* For RFC1889 static port allocation: rtcp port = rtp port + 1 */
                session_member_set_connects(sender, rtp->connect, rtcp_conn);
             }
@@ -338,6 +338,23 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 
 			return XRTP_CONSUMED;
 	   }
+
+		/* Create mode */
+		if(spxinfo->audioinfo.info.sample_rate < 6000 || spxinfo->audioinfo.info.sample_rate > 48000)
+		{
+			sender->media_playable = -1;
+
+			spxrtp_debug(("audio/speex.spxrtp_rtp_in: device is not available\n"));
+			rtp_packet_done(rtp);
+
+			return XRTP_CONSUMED;
+		}
+		else if(spxinfo->audioinfo.info.sample_rate <= 12500)
+			spxinfo->spxmode = speex_lib_get_mode(SPEEX_MODEID_NB);
+		else if(spxinfo->audioinfo.info.sample_rate <= 25000)
+			spxinfo->spxmode = speex_lib_get_mode(SPEEX_MODEID_WB);
+		else if(spxinfo->audioinfo.info.sample_rate <= 48000)
+			spxinfo->spxmode = speex_lib_get_mode(SPEEX_MODEID_UWB);
 
 	   {
 		   int ret;
@@ -573,7 +590,7 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 				ctrl = (media_control_t*)session_media_control(profile->session);
 				player = ctrl->find_player(ctrl, "playback", SPEEX_MIME, "", NULL);
 		      if(player->set_device(player, ctrl, ctrl->modules(ctrl), NULL) < MP_OK)
-            {
+				{
 					sender->media_playable = -1;
 					player->done(player);
 
@@ -581,7 +598,25 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 					rtcp_compound_done(rtcp);
 
 					return XRTP_CONSUMED;
-            }
+				}
+
+				/* Create mode */
+				if(spxinfo->audioinfo.info.sample_rate < 6000 || spxinfo->audioinfo.info.sample_rate > 48000)
+				{
+					sender->media_playable = -1;
+					player->done(player);
+
+					spxrtp_debug(("audio/speex.spxrtp_rtp_in: device is not available\n"));
+					rtcp_compound_done(rtcp);
+
+					return XRTP_CONSUMED;
+				}
+				else if(spxinfo->audioinfo.info.sample_rate <= 12500)
+					spxinfo->spxmode = speex_lib_get_mode(SPEEX_MODEID_NB);
+				else if(spxinfo->audioinfo.info.sample_rate <= 25000)
+					spxinfo->spxmode = speex_lib_get_mode(SPEEX_MODEID_WB);
+				else if(spxinfo->audioinfo.info.sample_rate <= 48000)
+					spxinfo->spxmode = speex_lib_get_mode(SPEEX_MODEID_UWB);
 
 				ret = player->open_stream(player, (media_info_t*)spxinfo);
 				if( ret < MP_OK)

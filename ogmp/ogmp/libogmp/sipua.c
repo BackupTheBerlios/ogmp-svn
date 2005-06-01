@@ -626,7 +626,6 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
 
 			bw = rtpfmt->open_capables(format, rtpcapset, control, mode, call->bandwidth_need);
 			if(bw > 0)
-
 			{
 				call->rtp_format = format;
 			}
@@ -656,10 +655,10 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
 
 	call->bandwidth_need = bw;
 
-   /* create a input source */
-   if(call->status == SIP_STATUS_CODE_OK)
-      sipua_new_inputs(sipua, call, rtpcapset, control);
-   
+	/* create a input source */
+	if(call->status == SIP_STATUS_CODE_OK)
+	   sipua_new_inputs(sipua, call, rtpcapset, control);
+
 	ua_log(("sipua_create_call: call[%s] established\n", rtpcapset->subject));
 
 	return bw;

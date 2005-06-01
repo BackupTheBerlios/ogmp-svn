@@ -83,7 +83,6 @@ int spxp_match_play_type (media_player_t * mp, char *play)
 	return 0;
 }
 
-#if 0
 int spxp_loop(void *gen)
 {
 	speex_decoder_t *dec = (speex_decoder_t*)gen;
@@ -91,49 +90,7 @@ int spxp_loop(void *gen)
 
 	media_frame_t * auf = NULL;
 
-   media_pipe_t *output = mp->device->pipe(mp->device);
-	dec->stop = 0;
-	while(1)
-	{
-      xthr_lock(dec->pending_lock);
-
-	   if (dec->stop)
-      {
-         xthr_unlock(dec->pending_lock);
-	      break;
-      }
-
-	   auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
-      if(!auf)
-      {
-	      xthr_cond_wait(dec->packet_pending, dec->pending_lock);
-	      auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
-      }
-
-		xthr_unlock(dec->pending_lock);
-
-		output->put_frame(output, auf, auf->eots);
-	}
-
-	auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
-	while(auf)
-   {
-		output->recycle_frame (output, auf);
-	   auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
-   }
-
-	return MP_OK;
-}
-#endif
-
-int spxp_loop(void *gen)
-{
-	speex_decoder_t *dec = (speex_decoder_t*)gen;
-	media_player_t *mp = (media_player_t*)dec;
-
-	media_frame_t * auf = NULL;
-
-   media_pipe_t *output = mp->device->pipe(mp->device);
+	media_pipe_t *output = mp->device->pipe(mp->device);
 	dec->stop = 0;
 	while(1)
 	{
@@ -168,10 +125,10 @@ int spxp_loop(void *gen)
 
 	auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
 	while(auf)
-   {
+	{
 		output->recycle_frame (output, auf);
-	   auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
-   }
+		auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
+	}
    
 	return MP_OK;
 }
@@ -212,7 +169,7 @@ int spxp_open_stream (media_player_t *mp, media_info_t *media_info)
 	spxinfo->dst = speex_decoder_init(spxinfo->spxmode);
 	if (!spxinfo->dst)
 	{
-		spxp_log(("speex_open_header: Decoder initialization failed.\n"));
+		spxp_debug(("speex_open_header: Decoder initialization failed.\n"));
 		return MP_FAIL;
 	}
 			
@@ -227,7 +184,7 @@ int spxp_open_stream (media_player_t *mp, media_info_t *media_info)
 
 	dec->thread = xthr_new(spxp_loop, dec, XTHREAD_NONEFLAGS);
    
-	spxp_log (("spxp_open_stream: speex stream opened\n"));
+	spxp_debug(("spxp_open_stream: speex stream opened\n"));
 
 	return ret;
 }

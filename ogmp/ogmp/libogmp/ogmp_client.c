@@ -434,15 +434,16 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		case(SIPUA_EVENT_ANSWERED):
 		{
 			/* Caller establishs call when callee is answered */
+			sipua_set_t *call;
 			rtpcap_set_t* rtpcapset;
 			sdp_message_t *sdp_message;
 			char* sdp_body = (char*)e->content;
 			int bw;
          
-         sipua_call_event_t *call_e = (sipua_call_event_t*)e;
-         clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
+			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
+			clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
 
-         sipua_set_t *call = e->call_info; 
+			call = e->call_info; 
 			call->status = SIP_STATUS_CODE_OK;
 
          /*
@@ -500,10 +501,11 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		case(SIPUA_EVENT_ACK):
 		{
          int bw;
+		 sipua_set_t *call;
          sipua_call_event_t *call_e = (sipua_call_event_t*)e;
          clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
 
-			sipua_set_t *call = e->call_info;
+		 call = e->call_info;
             
          if(call->status == SIPUA_EVENT_ONHOLD)
 			{
@@ -873,6 +875,7 @@ int client_unregist(sipua_t *sipua, user_profile_t *user)
 
 int client_register_profile (sipua_t *sipua, int profile_no)
 {
+	user_profile_t *prof;
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
    
    if(!client->user)
@@ -880,7 +883,8 @@ int client_register_profile (sipua_t *sipua, int profile_no)
 	   clie_debug(("client_register_profile: no user\n"));
       return UA_FAIL;
    }   
-   user_profile_t *prof = (user_profile_t*)xlist_at(client->user->profiles, profile_no);
+   
+   prof = (user_profile_t*)xlist_at(client->user->profiles, profile_no);
    if(!prof)
    {
 	   clie_debug(("client_register_profile: no profile\n"));
@@ -902,13 +906,13 @@ int client_register_profile (sipua_t *sipua, int profile_no)
 
 int client_unregister_profile (sipua_t *sipua, int profile_no)
 {
+	user_profile_t *prof;
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
    if(!client->user)
       return UA_FAIL;
 
-   user_profile_t *prof = (user_profile_t*)xlist_at(client->user->profiles, profile_no);
-
+   prof = (user_profile_t*)xlist_at(client->user->profiles, profile_no);
    if(!prof)
       return UA_FAIL;
       

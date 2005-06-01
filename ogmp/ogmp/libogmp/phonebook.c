@@ -599,7 +599,7 @@ int sipua_save_user_file_v1(user_t* user, FILE* f, char* tok, int tsz)
 	return UA_OK; /* ok */
 }
 
-int sipua_save_user_file_v2(user_t* user, FILE* f, char* tok, int tsz)
+int sipua_save_user_file_v2(user_t* user, FILE* f, const char* tok, int tsz)
 {
 	char str[64];
    int pindex = 0;
@@ -1199,7 +1199,7 @@ user_t* sipua_load_user_file_v1(FILE* f, const char* uid, char* buf, int *bsize,
 			{
 				strncpy(u->fullname, start, n);
 
-				len = sipua_load_nchar(u->fullname+n, u->fbyte-n, buf, &bsize, &bi, f);
+				len = sipua_load_nchar(u->fullname+n, u->fbyte-n, buf, bsize, bi, f);
 			}
 
 			u->fullname[u->fbyte] = '\0';
@@ -1269,11 +1269,11 @@ user_t* sipua_load_user_file_v1(FILE* f, const char* uid, char* buf, int *bsize,
 	return user;
 }
 
-int sipua_get_section(char* title, char* ln, int len, char* buf, int* bsize, int* bi, FILE* f)
+int sipua_get_section(char* title, char* ln, int n, char* buf, int* bsize, int* bi, FILE* f)
 {
    int len;
 
-   len = sipua_get_line(ln, len, buf, bsize, bi, f);
+   len = sipua_get_line(ln, n, buf, bsize, bi, f);
    while(len >= 0)
    {
       if(len > 0 && 0==strcmp(title, ln))
@@ -1946,6 +1946,7 @@ int user_profile_contact_number(user_t* user, int profile_no)
 
 int user_profile_contact_index(user_t* user, int profile_no, const char* regname)
 {
+	sipua_contact_t *contact;
    xlist_user_t lu;
    int n = 0;
 
@@ -1953,10 +1954,9 @@ int user_profile_contact_index(user_t* user, int profile_no, const char* regname
    if(!prof || !prof->phonebook)
       return -1;
 
-   sipua_contact_t *contact = (sipua_contact_t*)xlist_first(prof->phonebook->contacts, &lu);
+   contact = (sipua_contact_t*)xlist_first(prof->phonebook->contacts, &lu);
    while(contact)
    {
-
       if(strcmp(regname, contact->sip) == 0)
          return n;
 
@@ -1969,11 +1969,12 @@ int user_profile_contact_index(user_t* user, int profile_no, const char* regname
 
 int user_profile_contact(user_t* user, int profile_no, int contact_no, char** regname, char** name, int* nbytes, char** memo, int* mbytes)
 {
+	sipua_contact_t *contact;
    user_profile_t *prof = (user_profile_t*)xlist_at(user->profiles, profile_no);
    if(!prof || !prof->phonebook)
       return UA_FAIL;
 
-   sipua_contact_t *contact = (sipua_contact_t*)xlist_at(prof->phonebook->contacts, contact_no);
+   contact = (sipua_contact_t*)xlist_at(prof->phonebook->contacts, contact_no);
    if(!contact)
       return UA_FAIL;
 

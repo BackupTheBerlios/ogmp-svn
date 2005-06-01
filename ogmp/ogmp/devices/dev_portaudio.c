@@ -56,7 +56,7 @@
 typedef struct pa_input_s pa_input_t;
 struct pa_input_s
 {
-	PaTimestamp stamp;
+	int64 stamp;
 	int npcm_write;
    int npcm_read;
    int nbyte_read;
@@ -107,6 +107,7 @@ typedef struct portaudio_device_s
    
    int input_npcm_once;
    int input_nbyte_once;
+   int64 input_samplestamp;
    
 } portaudio_device_t;
 
@@ -116,6 +117,8 @@ static int pa_input_callback( void *inbuf, void *outbuf, unsigned long npcm_in,
    int next;
    portaudio_device_t* pa = (portaudio_device_t*)udata;
 
+   pa->input_samplestamp += npcm_in;
+   
    next = (pa->inbuf_w+1) % pa->inbuf_n;
    if(next == pa->inbuf_r)
    {
@@ -125,7 +128,7 @@ static int pa_input_callback( void *inbuf, void *outbuf, unsigned long npcm_in,
    
    memcpy(pa->inbuf[pa->inbuf_w].pcm, inbuf, npcm_in);
    
-   pa->inbuf[pa->inbuf_w].stamp = intime;
+   pa->inbuf[pa->inbuf_w].stamp = pa->input_samplestamp;
    pa->inbuf[pa->inbuf_w].npcm_write = npcm_in;
 
    pa->inbuf_w = next;
@@ -137,13 +140,13 @@ int pa_input_loop(void *gen)
 {
 	int err;
 	int sample_bytes;
-   pa_input_t* inputbuf;
+	pa_input_t* inputbuf;
    
 	media_frame_t auf;
 	portaudio_device_t* pa = (portaudio_device_t*)gen;
 
-   int npcm_need, npcm_left, nbyte_need;
-   char *auf_raw;
+	int npcm_need, npcm_left, nbyte_need;
+	char *auf_raw;
 
 	if (!pa->receiver) return MP_FAIL;
    
@@ -161,20 +164,20 @@ int pa_input_loop(void *gen)
 	sample_bytes = pa->ai_input.info.sample_bits / OS_BYTE_BITS;
 	pa_debug(("pa_input_loop: PortAudio started, %d bytes/sample\n\n", sample_bytes));
    
-   auf.raw = (char*)xmalloc(pa->input_nbyte_once);
+	auf.raw = (char*)xmalloc(pa->input_nbyte_once);
    
 	pa->input_stop = 0;
    
-   npcm_need = pa->input_npcm_once;
-   nbyte_need = pa->input_nbyte_once;
-   auf_raw = auf.raw;
+	npcm_need = pa->input_npcm_once;
+	nbyte_need = pa->input_nbyte_once;
+	auf_raw = auf.raw;
    
 	while(!pa->input_stop)
 	{
 		rtime_t us_left;
 		
-      inputbuf = &pa->inbuf[pa->inbuf_r];
-      npcm_left = inputbuf->npcm_write;
+		inputbuf = &pa->inbuf[pa->inbuf_r];
+		npcm_left = inputbuf->npcm_write;
       
 		if(inputbuf->npcm_write == 0)
 		{
@@ -183,52 +186,53 @@ int pa_input_loop(void *gen)
 			continue;
 		}
       
-      inputbuf->npcm_read = 0;
+		inputbuf->npcm_read = 0;
       
-      while(inputbuf->npcm_read < inputbuf->npcm_write)
-      {
-		   auf.nraw = pa->input_npcm_once;
-         auf.samplestamp = inputbuf->stamp;
+		while(inputbuf->npcm_read < inputbuf->npcm_write)
+		{
+			auf.nraw = pa->input_npcm_once;
+			auf.samplestamp = inputbuf->stamp;
          
-         if(npcm_left < pa->input_npcm_once)
-            auf.eots = 0;
-         else
-            auf.eots = 1;
+			if(npcm_left < pa->input_npcm_once)
+				auf.eots = 0;
+			else
+				auf.eots = 1;
 
-         memcpy(auf_raw, &inputbuf->pcm[inputbuf->nbyte_read], nbyte_need);
-		   auf.bytes = pa->input_nbyte_once;
+			memcpy(auf_raw, &inputbuf->pcm[inputbuf->nbyte_read], nbyte_need);
+			auf.bytes = pa->input_nbyte_once;
          
-		   //pa->receiver->receive_media(pa->receiver, &auf, (int64)(pa->inbuf[pa->inbuf_r].stamp * 1000000), 0);
+			//pa->receiver->receive_media(pa->receiver, &auf, (int64)(pa->inbuf[pa->inbuf_r].stamp * 1000000), 0);
 
-         memset(&inputbuf->pcm[inputbuf->nbyte_read], 0, nbyte_need);
-         inputbuf->npcm_read += npcm_need;
+			memset(&inputbuf->pcm[inputbuf->nbyte_read], 0, nbyte_need);
+			inputbuf->npcm_read += npcm_need;
          
-		   pa_debug(("pa_input_loop: Input %d/%d bytes\n", inputbuf->npcm_read, inputbuf->npcm_write));
+			//pa_debug(("pa_input_loop: Input %d/%d bytes\n", inputbuf->npcm_read, inputbuf->npcm_write));
 
-         npcm_left = inputbuf->npcm_write - inputbuf->npcm_read;
-         if(npcm_left < pa->input_npcm_once)
-         {
-            int nbyte_left = npcm_left * pa->ai_input.channels_bytes;
+			npcm_left = inputbuf->npcm_write - inputbuf->npcm_read;
+			if(npcm_left < pa->input_npcm_once)
+			{
+				int nbyte_left = npcm_left * pa->ai_input.channels_bytes;
             
-            memcpy(auf_raw, &inputbuf->pcm[inputbuf->nbyte_read], nbyte_left);
-            auf_raw += nbyte_left;
+				memcpy(auf_raw, &inputbuf->pcm[inputbuf->nbyte_read], nbyte_left);
+				auf_raw += nbyte_left;
             
-            npcm_need = pa->input_npcm_once - npcm_left;
-            nbyte_need = pa->input_nbyte_once - nbyte_left;
+				npcm_need = pa->input_npcm_once - npcm_left;
+				nbyte_need = pa->input_nbyte_once - nbyte_left;
 
-            inputbuf->npcm_read = inputbuf->npcm_write;
-            npcm_left = 0;
-         }
-         else
-         {
-            auf_raw = auf.raw;
-            npcm_need = pa->input_npcm_once;
-            nbyte_need = pa->input_nbyte_once;
-         }
-      }
+				inputbuf->npcm_read = inputbuf->npcm_write;
+				npcm_left = 0;
+			}
+			else
+			{
+				auf_raw = auf.raw;
+				npcm_need = pa->input_npcm_once;
+				nbyte_need = pa->input_nbyte_once;
+			}
+		}
 
-      inputbuf->npcm_write = 0;
-      pa->inbuf_r = (pa->inbuf_r + 1) % pa->inbuf_n;
+		inputbuf->npcm_write = 0;
+
+		pa->inbuf_r = (pa->inbuf_r + 1) % pa->inbuf_n;
 	}
 
 	auf.bytes = 0;
@@ -260,8 +264,6 @@ static int pa_output_callback( void *inbuf, void *outbuf, unsigned long npcm_onc
    int pick_us_start;
    int ret;
    int pick_us;
-
-   pa_log(("pa_output_callback: 1\n"));
 
    pick_us_start = time_usec_now(pa->clock);
    ret = pa->out->pick_content(pa->out, (media_info_t*)&pa->ai_output, outbuf, npcm_once);
@@ -463,6 +465,8 @@ media_stream_t* pa_new_media_stream(media_device_t *dev, media_receiver_t* recvr
 int pa_make_inbuf(portaudio_device_t *pa, int nsample_pulse)
 {
    int i;
+
+   pa->input_samplestamp = 0;
    pa->inbuf = xmalloc(sizeof(pa_input_t) * pa->inbuf_n);
    memset(pa->inbuf, 0, sizeof(pa_input_t) * pa->inbuf_n);
 
@@ -618,7 +622,7 @@ int pa_set_output_media(media_device_t *dev, media_info_t *out_info)
    pa->out = timed_pipe_new(pa->ai_output.info.sample_rate, pa->usec_pulse);
          
    sample_type = pa_sample_type(pa->ai_output.info.sample_bits);
-   
+   	
    err = Pa_OpenDefaultStream
                   (  &pa->pa_outstream
                      , 0                        /* no input channels */
@@ -641,7 +645,7 @@ int pa_set_output_media(media_device_t *dev, media_info_t *out_info)
 
 	pa_min_nbuf = Pa_GetMinNumBuffers (nsample_pulse, pa->ai_output.info.sample_rate);
 
-	pa_log(("\n[pa_set_output_media: stream opened, PortAudio use %d internal buffers]\n\n", pa_min_nbuf));
+	pa_debug(("\n[pa_set_output_media: stream opened, PortAudio use %d internal buffers]\n\n", pa_min_nbuf));
 
 	err = Pa_StartStream ( pa->pa_outstream );
 
@@ -653,7 +657,7 @@ int pa_set_output_media(media_device_t *dev, media_info_t *out_info)
 		pa->online = 0;
 		return MP_FAIL;
 	}
-
+   
 	return MP_OK;
 }
 
