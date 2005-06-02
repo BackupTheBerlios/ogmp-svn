@@ -125,8 +125,8 @@ int jua_process_event(eXosipua_t *jua)
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
 	  
-            jua_log(buf);
-            */
+         jua_log(buf);
+         */
 
 			jcall_answered(jua, je);
 		}
@@ -578,6 +578,7 @@ int jua_process_event(eXosipua_t *jua)
 			snprintf(buf, 99, "<- (%i %i) SUBSCRIBE from: %s",
 					je->nid, je->did, je->remote_uri);
 	  
+
             josua_printf(buf);
             */
 
@@ -602,6 +603,7 @@ int jua_process_event(eXosipua_t *jua)
   
 	return(counter);
 }
+
 
 int jua_loop(void *gen)
 {
@@ -861,6 +863,7 @@ int uas_unregist(sipua_uas_t *sipuas, char *userloc, char *registrar, char *id)
 	int regno = -1;
     /*
 	eXosipua_t *jua = (eXosipua_t*)sipuas;
+
 	*/
 	eXosip_lock();
 
@@ -978,12 +981,11 @@ int uas_invite(sipua_uas_t *sipuas, const char *to, sipua_set_t* call_info, char
 
 	/* sdp content of the call */
 	osip_message_set_content_type(invite, "application/sdp");
-	osip_message_set_content_length(invite, sdp_size);
+   osip_message_set_content_length(invite, sdp_size);
 	osip_message_set_body(invite, sdp_body, sdp_bytes);
-
+   
 	eXosip_lock();
-
-	printf("uas_invite: call\n");
+   
 	ret = eXosip_initiate_call(invite, call_info, NULL/*negotiation_reference*/, NULL/*local_audio_port*/);
 
 	eXosip_unlock();
@@ -1159,9 +1161,7 @@ int uas_init(sipua_uas_t* uas, int sip_port, const char* nettype, const char* ad
 
 		jua_log(("sipua_uas: using ip[127.0.0.1] (debug mode)!\n"));
 
-
-
-		strcpy(uas->netaddr, "127.0.0.1");
+      strcpy(uas->netaddr, "127.0.0.1");
    }
 	else
 	{
@@ -1190,6 +1190,7 @@ int uas_init(sipua_uas_t* uas, int sip_port, const char* nettype, const char* ad
 
 	uas->portno = sip_port;
 	
+	eXosip_set_user_agent("Ogmp/eXosip");
 	jua_log(("sipua_uas: uas ready\n"));
 
 	return UA_OK;

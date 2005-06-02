@@ -64,12 +64,14 @@
 #define SIPUA_STATUS_QUEUE			      6
 #define SIPUA_STATUS_SERVE    			7
 
-#define SIP_STATUS_CODE_TRYING	100
-#define SIP_STATUS_CODE_RINGING	180
-#define SIP_STATUS_CODE_FORAWRD	181
-#define SIP_STATUS_CODE_QUEUE	   182
+#define SIP_STATUS_CODE_TRYING	            100
+#define SIP_STATUS_CODE_DIALOGESTABLISHMENT	101
+#define SIP_STATUS_CODE_RINGING	            180
+#define SIP_STATUS_CODE_FORAWRD	            181
+#define SIP_STATUS_CODE_QUEUE	               182
+#define SIP_STATUS_CODE_SESSIONPROGRESS	   183
 
-#define SIP_STATUS_CODE_OK    	      200
+#define SIP_STATUS_CODE_OK    	            200
 
 #define SIP_STATUS_CODE_MULTIPLECHOICES         300
 #define SIP_STATUS_CODE_MOVEDPERMANENTLY        301
@@ -100,6 +102,10 @@
 #define SIP_STATUS_CODE_ADDRESSINCOMPLETE             484
 #define SIP_STATUS_CODE_AMBIGUOUS                     485
 #define SIP_STATUS_CODE_BUSYHERE	                     486
+#define SIP_STATUS_CODE_REQUESTTERMINATED             487
+#define SIP_STATUS_CODE_NOTACCEPTABLEHERE	            488
+#define SIP_STATUS_CODE_REQUESTPENDING	               491
+#define SIP_STATUS_CODE_UNDECIPHERABLE	               493
 
 #define SIP_STATUS_CODE_SERVERINTERNALERROR	   500
 #define SIP_STATUS_CODE_NOTIMPLEMENTED	         501
@@ -222,6 +228,8 @@ struct sipua_reg_event_s
 };
 
 typedef struct sipua_call_event_s sipua_call_event_t;
+
+
 struct sipua_call_event_s
 {
 	sipua_event_t event;
@@ -232,8 +240,11 @@ struct sipua_call_event_s
 	int did;
 
 	char *subject;
-	char *reason_phrase;
+   int sbytes;
 	char *textinfo;
+   int tbytes;
+   
+	char *reason_phrase;
 
 	char *req_uri;
 	char *remote_uri;
@@ -403,9 +414,9 @@ struct sipua_s
     int (*set_register_callback)(sipua_t *sipua, int(*callback)(void*callback_user,int statuscode,char*reason,int isreg), void* callback_user);
     int (*set_authentication_callback)(sipua_t *sipua, int(*callback)(void*callback_user, char* realm, user_profile_t* profile, char** user_id, char** user_password), void* callback_user);
     int (*set_progress_callback)(sipua_t *sipua, int(*callback)(void*callback_user,sipua_set_t *call,int statuscode), void* callback_user);
-    int (*set_newcall_callback)(sipua_t *sipua, int(*callback)(void*callback_user,int lineno,char *caller,char *subject,char *info), void* callback_user);
-    int (*set_conversation_start_callback)(sipua_t *sipua, int(*callback)(void *callback_user, int lineno,char *caller,char *subject,char *info), void* callback_user);
-    int (*set_conversation_end_callback)(sipua_t *sipua, int(*callback)(void *callback_user,int lineno,char *caller,char *subject,char *info), void* callback_user);
+    int (*set_newcall_callback)(sipua_t *sipua, int(*callback)(void*callback_user,int lineno,char *caller,char *subject,int sbytes,char *info,int ibytes), void* callback_user);
+    int (*set_conversation_start_callback)(sipua_t *sipua, int(*callback)(void *callback_user, int lineno,char *caller,char *subject,int sbytes,char *info,int ibytes), void* callback_user);
+    int (*set_conversation_end_callback)(sipua_t *sipua, int(*callback)(void *callback_user,int lineno,char *caller,char *subject,int sbytes,char *info,int ibytes), void* callback_user);
     int (*set_bye_callback)(sipua_t *sipua, int (*callback)(void *callback_user, int lineno, char *caller, char *reason), void* callback_user);
 
     int (*subscribe_bandwidth)(sipua_t *sipua, sipua_set_t *call);
@@ -480,6 +491,10 @@ int sipua_remove(sipua_t *sipua, sipua_set_t* set, xrtp_media_t* rtp_media);
 
 /* session description */
 int sipua_session_sdp(sipua_t *sipua, sipua_set_t* set, char** sdp);
+
+DECLSPEC
+int
+sipua_receive(sipua_t *ua, sipua_call_event_t *call_e, char **from, char **subject, int *sbytes, char **info, int *ibytes);
 
 DECLSPEC
 int 

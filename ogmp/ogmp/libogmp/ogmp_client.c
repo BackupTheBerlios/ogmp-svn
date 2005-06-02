@@ -332,6 +332,20 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			char *p, *q;
 
+         int ret;
+         char *from, *subject, *info;
+         int sbytes, ibytes;
+
+			clie_log(("sipua_event: new call incoming\n"));
+         
+         /* Retrieve call info */
+         ret = sipua_receive(sipua, call_e, &from, &subject, &sbytes, &info, &ibytes);         
+         if(ret>=UA_OK && client->on_newcall)
+         {
+				clie_log(("sipua_event: from[%s] subject[%s] info[%s]\n", from, subject, info));
+            client->on_newcall(client->user_on_newcall, lineno, from, subject, sbytes, info, ibytes);
+         }
+
 			sdp_message_init(&sdp_message);
 
 			if (sdp_message_parse(sdp_message, sdp_body) != 0)
@@ -362,8 +376,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			call_e->event.call_info = call;
 
          call->cid = call_e->cid;
-
 			call->did = call_e->did;
+         
 			call->rtpcapset = rtpcapset;
             
 			call->status = SIPUA_EVENT_NEW_CALL;
@@ -623,25 +637,37 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 int sipua_done_sip_session(void* gen)
 {
 	sipua_set_t *set = (sipua_set_t*)gen;
+   
+   if(!set)
+      return UA_OK;
 	
-	if(set->setid.nettype) xfree(set->setid.nettype);
+	if(set->setid.nettype)
+      xfree(set->setid.nettype);
+   if(set->setid.addrtype)
+      xfree(set->setid.addrtype);
+	if(set->setid.netaddr)
+      xfree(set->setid.netaddr);
 
+	if(set->setid.id)
+      xfree(set->setid.id);
+	if(set->version)
+	   xfree(set->version);
 
-	if(set->setid.addrtype) xfree(set->setid.addrtype);
-	if(set->setid.netaddr) xfree(set->setid.netaddr);
+	if(set->subject)
+	   xstr_done_string(set->subject);
+	if(set->info)
+	   xstr_done_string(set->info);
 
-	xfree(set->setid.id);
-	xfree(set->version);
+	if(set->proto)
+      xstr_done_string(set->proto);
+	if(set->from)
+      xstr_done_string(set->from);
 
-	xstr_done_string(set->subject);
-	xstr_done_string(set->info);
-
-   xstr_done_string(set->proto);
-   xstr_done_string(set->from);
-
-
-	set->rtp_format->done(set->rtp_format);
-	rtp_capable_done_set(set->rtpcapset);
+	if(set->rtp_format)
+      set->rtp_format->done(set->rtp_format);
+   
+	if(set->rtpcapset)
+	   rtp_capable_done_set(set->rtpcapset);
 
 	xfree(set);
 	
@@ -669,8 +695,7 @@ int client_done_call(sipua_t* sipua, sipua_set_t* set)
 		ua->sipua.incall = NULL;
 	}
 
-	ua->control->release_bandwidth(ua->control, set->bandwidth_need);
-
+	ua->control->release_bandwidth(ua->control, set->bandwidth_hold);
 
    return sipua_done_sip_session(set);
 }
@@ -697,7 +722,6 @@ int sipua_done(sipua_t *sipua)
 
 	return UA_OK;
 }
-
 
 user_t* client_load_userdata (sipua_t* sipua, const char* loc, const char* uid, const char* tok, const int tsz)
 {
@@ -817,6 +841,7 @@ int client_authenticate(sipua_t *sipua, int profile_no, const char* realm, const
 {
 	ogmp_client_t *ua = (ogmp_client_t*)sipua;
 
+
    user_profile_t *prof = (user_profile_t*)xlist_at(ua->user->profiles, profile_no);
    if(!prof)
       return UA_FAIL;
@@ -862,6 +887,7 @@ int client_unregist(sipua_t *sipua, user_profile_t *user)
 	if(user->thread_register)
 	{
 		user->enable = 0;
+
 		xthr_wait(user->thread_register, &ret);
 	}
 
@@ -971,6 +997,7 @@ int client_busylines(sipua_t* sipua, int *busylines, int nlines)
 	xthr_lock(client->lines_lock);
 
     for(i=0; i<nlines; i++)
+
 		if(client->lines[i])
 			busylines[n++] = i;
 
@@ -1007,6 +1034,7 @@ int client_close_source(sipua_t* sipua, media_source_t* src)
     /*
     ogmp_client_t *client = (ogmp_client_t*)sipua;
     */
+
 	return src->done(src);
 }
 
@@ -1143,7 +1171,7 @@ int client_hold(sipua_t* sipua)
 
 	return i;
 }
-	
+
 int client_answer(sipua_t *sipua, sipua_set_t* call, int reply, media_source_t* source)
 {  
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
@@ -1243,13 +1271,14 @@ int client_set_authentication_callback (sipua_t *sipua, int(*callback)(void*call
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
+
     client->on_authenticate = callback;
     client->user_on_authenticate = callback_user;
 
     return UA_OK;
 }
 
-int client_set_newcall_callback (sipua_t *sipua, int(*callback)(void*callback_user,int lineno,char *caller,char *subject,char *info), void* callback_user)
+int client_set_newcall_callback (sipua_t *sipua, int(*callback)(void*callback_user,int lineno,char *caller,char *subject,int sbytes,char *info,int ibytes), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1257,9 +1286,9 @@ int client_set_newcall_callback (sipua_t *sipua, int(*callback)(void*callback_us
     client->user_on_newcall = callback_user;
     
     return UA_OK;
-}
+}        
 
-int client_set_conversation_start_callback (sipua_t *sipua, int(*callback)(void *callback_user,int lineno,char *caller,char *subject,char *info), void* callback_user)
+int client_set_conversation_start_callback (sipua_t *sipua, int(*callback)(void *callback_user,int lineno,char *caller,char *subject,int sbytes,char *info,int ibytes), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1269,7 +1298,7 @@ int client_set_conversation_start_callback (sipua_t *sipua, int(*callback)(void 
     return UA_OK;
 }
 
-int client_set_conversation_end_callback (sipua_t *sipua, int(*callback)(void *callback_user,int lineno,char *caller,char *subject,char *info), void* callback_user)
+int client_set_conversation_end_callback (sipua_t *sipua, int(*callback)(void *callback_user,int lineno,char *caller,char *subject,int sbytes,char *info,int ibytes), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1351,6 +1380,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_ca
    
 	printf("client_new: %d format module found\n", nmod);
 
+
 	/* set sip client */
 	client->valid = 0;
 
@@ -1410,6 +1440,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_ca
  	/* current call session */
 
 	sipua->session = client_session;
+
  	sipua->line = client_line;
 
 
@@ -1425,7 +1456,8 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_ca
  	sipua->pick = client_pick;
  	sipua->hold = client_hold;
   
-	sipua->call = sipua_call;
+	sipua->call = sipua_call;   
+   
 	sipua->answer = client_answer;
    
 	sipua->queue = client_queue;
