@@ -28,7 +28,7 @@ int window_sessions_list_print(gui_t* gui, int wid)
 	char buf[250];
 	char status[20];
 
-	sipua_set_t* call;
+	sipua_call_t* call;
 
 	int nbusy, line, n, view;
 	int busylines[MAX_SIPUA_LINES];
@@ -257,7 +257,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 
 	switch (c)
     {
-		sipua_set_t* call;
+		sipua_call_t* call;
 
 		case KEY_DOWN:
 		{
@@ -402,6 +402,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 			call = ocui->sipua->pick(ocui->sipua, calllist_line);
 			if (!call) 
 			{ 
+
 				beep(); 
 				break; 
 			}
@@ -461,6 +462,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 			if(ocui->sipua->incall)
 				calllist_line = ocui->sipua->hold(ocui->sipua);
 			else
+
 			{
 				call = ocui->sipua->pick(ocui->sipua, calllist_line);
 				if (!call) 

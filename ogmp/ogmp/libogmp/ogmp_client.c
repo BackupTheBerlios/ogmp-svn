@@ -46,12 +46,12 @@ extern ogmp_ui_t* global_ui;
 #define MAX_CALL_BANDWIDTH  20480  /* in Bytes */
 
 /****************************************************************************************/
-int client_queue(sipua_t *sipua, sipua_set_t* call);
+int client_queue(sipua_t *sipua, sipua_call_t* call);
 
 int client_call_ringing(void* gen)
 {
 	int i;
-	sipua_set_t* call;
+	sipua_call_t* call;
 	rtime_t r;
 	ogmp_client_t *client = (ogmp_client_t*)gen;
 
@@ -160,7 +160,7 @@ int client_register_loop(void *gen)
 	return UA_OK;
 }
 
-int client_place_call(sipua_t *sipua, sipua_set_t *call)
+int client_place_call(sipua_t *sipua, sipua_call_t *call)
 {
    int i;
    
@@ -195,7 +195,7 @@ int client_place_call(sipua_t *sipua, sipua_set_t *call)
    return -1;
 }
 
-int client_release_call(sipua_t *sipua, sipua_set_t *call)
+int client_release_call(sipua_t *sipua, sipua_call_t *call)
 {
    ogmp_client_t *client = (ogmp_client_t*)sipua;
    
@@ -370,7 +370,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		{
 			/* Callee receive a new call, now in negotiation stage */
 			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
-			sipua_set_t *call;
+			sipua_call_t *call;
 
          int lineno;
 
@@ -386,7 +386,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			if (sdp_message_parse(sdp_message, sdp_body) != 0)
 			{
-				clie_log(("\nsipua_event: fail to parse sdp\n"));
+				clie_log(("\nclient_sipua_event: fail to parse sdp\n"));
 				sdp_message_free(sdp_message);
 
             return UA_FAIL;
@@ -408,7 +408,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			call->did = call_e->did;
 
 			call->rtpcapset = rtpcapset;
-			clie_log(("sipua_event: new call@%x [%s]\n", (int)call, call->subject));
 
          /* put in line */
          lineno = client_place_call(sipua, call);
@@ -438,7 +437,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 							client->default_rtcp_ports, client->nmedia,
 							client->control, MAX_CALL_BANDWIDTH);
 			
-         {char *nettype,  *addrtype, *netaddr;clie_log(("sipua_event: 2\n"));sipua->uas->address(sipua->uas, &nettype, &addrtype, &netaddr);}
 			if(ret < UA_OK)
 			{
 				/* Fail to receive the call, miss it */
@@ -458,10 +456,10 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		}
 		case(SIPUA_EVENT_CALL_CLOSED):
 		{
-			sipua_set_t *call = e->call_info;
+			sipua_call_t *call = e->call_info;
 			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
 
-			clie_log(("sipua_event: call@%x [%s] closed\n", (int)call, call->subject));
+			clie_log(("client_sipua_event: call@%x [%s] closed\n", (int)call, call->subject));
          
          if(client->on_terminate)
             client->on_terminate(client->user_on_terminate, call, call_e->status_code);
@@ -472,7 +470,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
       }
 		case(SIPUA_EVENT_PROCEEDING):
 		{
-			sipua_set_t *call = e->call_info;
+			sipua_call_t *call = e->call_info;
          sipua_call_event_t *call_e = (sipua_call_event_t*)e;         
          clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
 
@@ -482,7 +480,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		}
 		case(SIPUA_EVENT_RINGING):
 		{	
-			sipua_set_t *call = e->call_info;
+			sipua_call_t *call = e->call_info;
          sipua_call_event_t *call_e = (sipua_call_event_t*)e;
          clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
 
@@ -493,7 +491,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		case(SIPUA_EVENT_ANSWERED):
 		{
 			/* Caller establishs call when callee is answered */
-			sipua_set_t *call;
+			sipua_call_t *call;
 			rtpcap_set_t* rtpcapset;
 			sdp_message_t *sdp_message;
 			char* sdp_body = (char*)e->content;
@@ -517,7 +515,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			if (sdp_message_parse(sdp_message, sdp_body) != 0)
 			{
-				clie_log(("\nsipua_event: fail to parse sdp\n"));
+				clie_log(("\nclient_sipua_event: fail to parse sdp\n"));
 
 				sdp_message_free(sdp_message);
 				
@@ -559,7 +557,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		case(SIPUA_EVENT_ACK):
 		{
          int bw;
-		 sipua_set_t *call;
+		 sipua_call_t *call;
          sipua_call_event_t *call_e = (sipua_call_event_t*)e;
          clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
 
@@ -600,7 +598,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		}
 		case(SIPUA_EVENT_REQUESTFAILURE):
 		{
-			sipua_set_t *call = e->call_info;
+			sipua_call_t *call = e->call_info;
 			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
          user_profile_t *user_prof = call->user_prof;
          
@@ -644,7 +642,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		}
 		case(SIPUA_EVENT_SERVERFAILURE):
 		{
-			sipua_set_t *call = e->call_info;
+			sipua_call_t *call = e->call_info;
 			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
          clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
 
@@ -661,7 +659,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		}
 		case(SIPUA_EVENT_GLOBALFAILURE):
 		{
-			sipua_set_t *call = e->call_info;
+			sipua_call_t *call = e->call_info;
 			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
          clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
 
@@ -682,50 +680,50 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 int sipua_done_sip_session(void* gen)
 {
-	sipua_set_t *set = (sipua_set_t*)gen;
+	sipua_call_t *call = (sipua_call_t*)gen;
 
-   if(!set)
+   if(!call)
       return UA_OK;
 	
-	if(set->setid.id)
+	if(call->setid.id)
    {
-      xfree(set->setid.id);
-      xfree(set->setid.nettype);
-      xfree(set->setid.addrtype);
-      xfree(set->setid.netaddr);
+      xfree(call->setid.id);
+      xfree(call->setid.nettype);
+      xfree(call->setid.addrtype);
+      xfree(call->setid.netaddr);
    }
    
-	if(set->version)
-	   xfree(set->version);
+	if(call->version)
+	   xfree(call->version);
 
-	if(set->subject)
-	   xstr_done_string(set->subject);
-	if(set->info)
-	   xstr_done_string(set->info);
+	if(call->subject)
+	   xstr_done_string(call->subject);
+	if(call->info)
+	   xstr_done_string(call->info);
 
-	if(set->proto)
-      xstr_done_string(set->proto);
-	if(set->from)
-      xstr_done_string(set->from);
+	if(call->proto)
+      xstr_done_string(call->proto);
+	if(call->from)
+      xstr_done_string(call->from);
 
-	if(set->rtp_format)
-      set->rtp_format->done(set->rtp_format);
+	if(call->rtp_format)
+      call->rtp_format->done(call->rtp_format);
    
-	if(set->rtpcapset)
-	   rtp_capable_done_set(set->rtpcapset);
+	if(call->rtpcapset)
+	   rtp_capable_done_set(call->rtpcapset);
 
-	xfree(set);
+	xfree(call);
 	
 	return UA_OK;
 }
 
-int client_done_call(sipua_t* sipua, sipua_set_t* set)
+int client_done_call(sipua_t* sipua, sipua_call_t* call)
 {
 	ogmp_client_t *ua = (ogmp_client_t*)sipua;
 
-	ua->control->release_bandwidth(ua->control, set->bandwidth_hold);
+	ua->control->release_bandwidth(ua->control, call->bandwidth_hold);
 
-   return sipua_done_sip_session(set);
+   return sipua_done_sip_session(call);
 }
 
 int sipua_done(sipua_t *sipua)
@@ -767,44 +765,44 @@ user_t* client_load_userdata (sipua_t* sipua, const char* loc, const char* uid, 
 /* NOTE! if match, return ZERO, otherwise -1 */
 int sipua_match_call(void* tar, void* pat)
 {
-	sipua_set_t *set = (sipua_set_t*)tar;
+	sipua_call_t *call = (sipua_call_t*)tar;
 	sipua_setid_t *id = (sipua_setid_t*)pat;
 
-	if(!strcmp(set->setid.id, id->id) && 
-		!strcmp(set->setid.username, id->username) && 
-		!strcmp(set->setid.nettype, id->nettype) && 
-		!strcmp(set->setid.addrtype, id->addrtype) && 
-		!strcmp(set->setid.netaddr, id->netaddr))
+	if(!strcmp(call->setid.id, id->id) &&
+		!strcmp(call->setid.username, id->username) &&
+		!strcmp(call->setid.nettype, id->nettype) &&
+		!strcmp(call->setid.addrtype, id->addrtype) &&
+		!strcmp(call->setid.netaddr, id->netaddr))
 			return 0;
 
 	return -1;
 }
 
-sipua_set_t* client_find_call(sipua_t* sipua, char* id, char* username, char* nettype, char* addrtype, char* netaddr)
+sipua_call_t* client_find_call(sipua_t* sipua, char* id, char* username, char* nettype, char* addrtype, char* netaddr)
 {
 	int i;
 	ogmp_client_t *ua = (ogmp_client_t*)sipua;
 
 	for(i=0; i<MAX_SIPUA_LINES; i++)
 	{
-		sipua_set_t* set = ua->lines[i];
+		sipua_call_t* call = ua->lines[i];
 
 
-		if(set && !strcmp(set->setid.id, id) && 
-			!strcmp(set->setid.username, username) && 
-			!strcmp(set->setid.nettype, nettype) && 
-			!strcmp(set->setid.addrtype, addrtype) && 
-			!strcmp(set->setid.netaddr, netaddr))
+		if(call && !strcmp(call->setid.id, id) && 
+			!strcmp(call->setid.username, username) && 
+			!strcmp(call->setid.nettype, nettype) && 
+			!strcmp(call->setid.addrtype, addrtype) && 
+			!strcmp(call->setid.netaddr, netaddr))
 			break;
 	}
 
 	return ua->lines[i];
 }
 
-sipua_set_t* client_make_call(sipua_t* sipua, const char* subject, int sbytes, const char *desc, int dbytes)
+sipua_call_t* client_make_call(sipua_t* sipua, const char* subject, int sbytes, const char *desc, int dbytes)
 {
 	sipua_setting_t *setting;
-	sipua_set_t* call;
+	sipua_call_t* call;
 	ogmp_client_t* clie = (ogmp_client_t*)sipua;
 
 	int bw_budget = clie->control->book_bandwidth(clie->control, MAX_CALL_BANDWIDTH);
@@ -824,7 +822,7 @@ sipua_set_t* client_make_call(sipua_t* sipua, const char* subject, int sbytes, c
 	return call;
 }
 
-char* client_set_call_source(sipua_t* sipua, sipua_set_t* call, media_source_t* source)
+char* client_set_call_source(sipua_t* sipua, sipua_call_t* call, media_source_t* source)
 {
 	sipua_setting_t *setting;
 	ogmp_client_t* clie = (ogmp_client_t*)sipua;
@@ -1035,14 +1033,14 @@ int client_busylines(sipua_t* sipua, int *busylines, int nlines)
 }
 
 /* current call session */
-sipua_set_t* client_session(sipua_t* sipua)
+sipua_call_t* client_session(sipua_t* sipua)
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
 	return client->sipua.incall;
 }
 
-sipua_set_t* client_line(sipua_t* sipua, int line)
+sipua_call_t* client_line(sipua_t* sipua, int line)
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1110,7 +1108,7 @@ media_source_t* client_set_background_source(sipua_t* sipua, char* name, char *s
 }
 
 /* call media attachment */
-int client_attach_source(sipua_t* sipua, sipua_set_t* call, transmit_source_t* tsrc)
+int client_attach_source(sipua_t* sipua, sipua_call_t* call, transmit_source_t* tsrc)
 {
 	xlist_user_t lu;
 	char *cname = call->rtpcapset->cname;
@@ -1150,13 +1148,13 @@ int client_attach_source(sipua_t* sipua, sipua_set_t* call, transmit_source_t* t
 	return MP_EIMPL;
 }
 
-int client_detach_source(sipua_t* sipua, sipua_set_t* call, transmit_source_t* tsrc)
+int client_detach_source(sipua_t* sipua, sipua_call_t* call, transmit_source_t* tsrc)
 {
 	return MP_EIMPL;
 }
 	
 /* switch current call session */
-sipua_set_t* client_pick(sipua_t* sipua, int line)
+sipua_call_t* client_pick(sipua_t* sipua, int line)
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1200,7 +1198,7 @@ int client_hold(sipua_t* sipua)
 	return i;
 }
 
-int client_answer(sipua_t *sipua, sipua_set_t* call, int reply, media_source_t* source)
+int client_answer(sipua_t *sipua, sipua_call_t* call, int reply, media_source_t* source)
 {  
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1246,7 +1244,7 @@ int client_answer(sipua_t *sipua, sipua_set_t* call, int reply, media_source_t* 
 	return UA_OK;
 }
 
-int client_queue(sipua_t *sipua, sipua_set_t* call)
+int client_queue(sipua_t *sipua, sipua_call_t* call)
 {
 
    char *sdp;
@@ -1285,7 +1283,7 @@ int client_set_register_callback (sipua_t *sipua, int(*callback)(void*callback_u
     return UA_OK;
 }
 
-int client_set_progress_callback (sipua_t *sipua, int(*callback)(void*callback_user, sipua_set_t *call, int statuscode), void* callback_user)
+int client_set_progress_callback (sipua_t *sipua, int(*callback)(void*callback_user, sipua_call_t *call, int statuscode), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1306,7 +1304,7 @@ int client_set_authentication_callback (sipua_t *sipua, int(*callback)(void*call
     return UA_OK;
 }
 
-int client_set_newcall_callback (sipua_t *sipua, int(*callback)(void*callback_user,int lineno,sipua_set_t *call), void* callback_user)
+int client_set_newcall_callback (sipua_t *sipua, int(*callback)(void*callback_user,int lineno,sipua_call_t *call), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1316,7 +1314,7 @@ int client_set_newcall_callback (sipua_t *sipua, int(*callback)(void*callback_us
     return UA_OK;
 }        
 
-int client_set_terminate_callback (sipua_t *sipua, int(*callback)(void*callback_user, sipua_set_t *call, int statuscode), void* callback_user)
+int client_set_terminate_callback (sipua_t *sipua, int(*callback)(void*callback_user, sipua_call_t *call, int statuscode), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1326,7 +1324,7 @@ int client_set_terminate_callback (sipua_t *sipua, int(*callback)(void*callback_
     return UA_OK;
 }
 
-int client_set_conversation_start_callback (sipua_t *sipua, int(*callback)(void *callback_user,int lineno,sipua_set_t *call), void* callback_user)
+int client_set_conversation_start_callback (sipua_t *sipua, int(*callback)(void *callback_user,int lineno,sipua_call_t *call), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1336,7 +1334,7 @@ int client_set_conversation_start_callback (sipua_t *sipua, int(*callback)(void 
     return UA_OK;
 }
 
-int client_set_conversation_end_callback (sipua_t *sipua, int(*callback)(void *callback_user,int lineno,sipua_set_t *call), void* callback_user)
+int client_set_conversation_end_callback (sipua_t *sipua, int(*callback)(void *callback_user,int lineno,sipua_call_t *call), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1356,13 +1354,13 @@ int client_set_bye_callback (sipua_t *sipua, int (*callback)(void *callback_user
     return UA_OK;
 }
 
-int client_subscribe_bandwidth(sipua_t *sipua, sipua_set_t* call)
+int client_subscribe_bandwidth(sipua_t *sipua, sipua_call_t* call)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
    return call->bandwidth_hold = client->control->book_bandwidth(client->control, call->bandwidth_need);
 }
 
-int client_unsubscribe_bandwidth(sipua_t *sipua, sipua_set_t* call)
+int client_unsubscribe_bandwidth(sipua_t *sipua, sipua_call_t* call)
 {
    int hold;
    

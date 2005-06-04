@@ -35,6 +35,7 @@ char newcall_inputs[3][LINE_MAX];
 
 
 
+
 editline_t *newcall_edit[3];
 int cursor_newcall = 0;
 
@@ -205,7 +206,7 @@ int window_new_call_run_command(gui_t* gui, int c)
 		case 1: /* Ctrl-A */
 		{
 			/* if (_josua_start_call(cfg.identity, to, subject, route) != 0) beep(); */
-			sipua_set_t* call;
+			sipua_call_t* call;
 
          call = ocui->sipua->make_call(ocui->sipua, newcall_inputs[NEWCALL_SUBJ], strlen(newcall_inputs[NEWCALL_SUBJ]), newcall_inputs[NEWCALL_DESC], strlen(newcall_inputs[NEWCALL_DESC]));
          if(call)

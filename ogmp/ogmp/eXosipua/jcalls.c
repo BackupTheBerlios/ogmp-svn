@@ -146,7 +146,7 @@ int jcall_closed(eXosipua_t *jua, eXosip_event_t *je)
 	call_e.cid = je->cid;
 	call_e.did = je->did;
 
-	call_e.event.call_info = (sipua_set_t*)je->external_reference;
+	call_e.event.call_info = (sipua_call_t*)je->external_reference;
 	call_e.event.type = SIPUA_EVENT_CALL_CLOSED;
    call_e.status_code = je->status_code;
    
@@ -184,7 +184,7 @@ int jcall_proceeding(eXosipua_t *jua, eXosip_event_t *je)
 	sipua_call_event_t call_e;
 
 	call_e.event.type = SIPUA_EVENT_PROCEEDING;
-	call_e.event.call_info = (sipua_set_t*)je->external_reference;
+	call_e.event.call_info = (sipua_call_t*)je->external_reference;
 
 	call_e.subject = je->subject;
 	call_e.textinfo = je->textinfo;
@@ -213,7 +213,7 @@ int jcall_ringing(eXosipua_t *jua, eXosip_event_t *je)
 	sipua_call_event_t call_e;
 
 	call_e.event.type = SIPUA_EVENT_RINGING;
-	call_e.event.call_info = (sipua_set_t*)je->external_reference;
+	call_e.event.call_info = (sipua_call_t*)je->external_reference;
 
 	call_e.subject = je->subject;
 
@@ -247,7 +247,7 @@ int jcall_answered(eXosipua_t *jua, eXosip_event_t *je)
 	/* event back to sipuac */
 	memset(&call_e, 0, sizeof(sipua_call_event_t));
 
-	call_e.event.call_info = (sipua_set_t*)je->external_reference;
+	call_e.event.call_info = (sipua_call_t*)je->external_reference;
 
 
 
@@ -304,12 +304,12 @@ int jcall_answered(eXosipua_t *jua, eXosip_event_t *je)
 int jcall_ack(eXosipua_t *jua, eXosip_event_t *je)
 {
 	sipua_event_t e;
-	sipua_set_t* call;
+	sipua_call_t* call;
 
     /* event back to sipuac */
 	memset(&e, 0, sizeof(sipua_event_t));
 
-	call = e.call_info = (sipua_set_t*)je->external_reference;
+	call = e.call_info = (sipua_call_t*)je->external_reference;
 
 	if (je->cid != call->cid && je->did != call->did)
 		return -1; 
@@ -330,7 +330,7 @@ int jcall_redirected(eXosipua_t *jua, eXosip_event_t *je)
 
 	/* event back to sipuac */
 	sipua_event_t sip_e;
-	sip_e.call_info = (sipua_set_t*)je->external_reference;
+	sip_e.call_info = (sipua_call_t*)je->external_reference;
 	sip_e.type = SIPUA_EVENT_REDIRECTED;
 
 	for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
@@ -389,6 +389,7 @@ char* jcall_dequota_copy(char *quota)
       return xstr_clone(quota);
    }
 
+
    start++;
    end = start;
    
@@ -408,7 +409,7 @@ int jcall_requestfailure(eXosipua_t *jua, eXosip_event_t *je)
    call_e.auth_realm = NULL;
 
 	call_e.event.type = SIPUA_EVENT_REQUESTFAILURE;
-	call_e.event.call_info = (sipua_set_t*)je->external_reference;
+	call_e.event.call_info = (sipua_call_t*)je->external_reference;
 
 	call_e.cid = je->cid;
 	call_e.did = je->did;
@@ -462,7 +463,7 @@ int jcall_serverfailure(eXosipua_t *jua, eXosip_event_t *je)
 	sipua_call_event_t call_e;
 
 	call_e.event.type = SIPUA_EVENT_SERVERFAILURE;
-	call_e.event.call_info = (sipua_set_t*)je->external_reference;
+	call_e.event.call_info = (sipua_call_t*)je->external_reference;
 
 	call_e.subject = je->subject;
 	call_e.textinfo = je->textinfo;
@@ -494,7 +495,7 @@ int jcall_globalfailure(eXosipua_t *jua, eXosip_event_t *je)
 	sipua_call_event_t call_e;
 
 	call_e.event.type = SIPUA_EVENT_GLOBALFAILURE;
-	call_e.event.call_info = (sipua_set_t*)je->external_reference;
+	call_e.event.call_info = (sipua_call_t*)je->external_reference;
 
 	call_e.subject = je->subject;
 	call_e.textinfo = je->textinfo;
@@ -527,7 +528,7 @@ int jcall_onhold(eXosipua_t *jua, eXosip_event_t *je)
 
 	/* event back to sipuac */
 	sipua_event_t sip_e;
-	sip_e.call_info = (sipua_set_t*)je->external_reference;
+	sip_e.call_info = (sipua_call_t*)je->external_reference;
 	sip_e.type = SIPUA_EVENT_ONHOLD;
 
   for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
@@ -573,7 +574,7 @@ int jcall_offhold(eXosipua_t *jua, eXosip_event_t *je)
 	/* event back to sipuac */
 
 	sipua_event_t sip_e;
-	sip_e.call_info = (sipua_set_t*)je->external_reference;
+	sip_e.call_info = (sipua_call_t*)je->external_reference;
 	sip_e.type = SIPUA_EVENT_OFFHOLD;
 
   for (k=0;k<MAX_NUMBER_OF_CALLS;k++)

@@ -1,5 +1,5 @@
 /*
- * josua - Jack's open sip User Agent
+ * eXosipua - SIP User Agent base on eXosip.
  *
  * Copyright (C) 2002,2003   Aymeric Moizard <jack@atosc.org>
  *
@@ -605,10 +605,6 @@ int uas_address(sipua_uas_t* sipuas, char* *nettype, char* *addrtype, char* *net
 {
 	sipua_uas_t* uas = (sipua_uas_t*)sipuas;
 
-	jua_log(("uas_address: nettype[%s]\n", uas->nettype));
-	jua_log(("uas_address: addrtype[%s]\n", uas->addrtype));
-	jua_log(("uas_address: netaddr[%s]\n", uas->netaddr));
-
    *nettype = xstr_clone(uas->nettype);
 	*addrtype = xstr_clone(uas->addrtype);
 	*netaddr = xstr_clone(uas->netaddr);
@@ -871,7 +867,7 @@ char* uas_check_route(const char *url)
    return NULL;
 }
 
-int uas_retry_call(sipua_uas_t *sipuas, sipua_set_t* call)
+int uas_retry_call(sipua_uas_t *sipuas, sipua_call_t* call)
 {
 	eXosip_lock();
 	eXosip_retry_call(call->cid);
@@ -880,7 +876,7 @@ int uas_retry_call(sipua_uas_t *sipuas, sipua_set_t* call)
    return UA_OK;
 }
                
-int uas_invite(sipua_uas_t *sipuas, const char *to, sipua_set_t* call_info, char* sdp_body, int sdp_bytes)
+int uas_invite(sipua_uas_t *sipuas, const char *to, sipua_call_t* call_info, char* sdp_body, int sdp_bytes)
 {
 	eXosipua_t *jua = (eXosipua_t*)sipuas;
     
@@ -952,7 +948,7 @@ int uas_invite(sipua_uas_t *sipuas, const char *to, sipua_set_t* call_info, char
 	return ret;
 }
 
-int uas_accept(sipua_uas_t* uas, sipua_set_t *call)
+int uas_accept(sipua_uas_t* uas, sipua_call_t *call)
 {
 	eXosipua_t *jua = (eXosipua_t*)uas;
 
@@ -1058,7 +1054,7 @@ NULL, NULL, NULL));
 }
 #endif
 
-int uas_answer(sipua_uas_t* uas, sipua_set_t* call, int reply, char* reply_type, char* reply_body)
+int uas_answer(sipua_uas_t* uas, sipua_call_t* call, int reply, char* reply_type, char* reply_body)
 {
 	if(reply_body)
 	{
@@ -1074,7 +1070,7 @@ int uas_answer(sipua_uas_t* uas, sipua_set_t* call, int reply, char* reply_type,
 	return UA_FAIL;
 }
 
-int uas_bye(sipua_uas_t* uas, sipua_set_t* call)
+int uas_bye(sipua_uas_t* uas, sipua_call_t* call)
 {
    /*
    eXosipua_t *jua = (eXosipua_t*)uas;
