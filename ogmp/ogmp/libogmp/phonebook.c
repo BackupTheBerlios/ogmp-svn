@@ -196,6 +196,7 @@ int sipua_next_name (sipua_phonebook_t* book, FILE* f, sipua_contact_t* c)
 
 
 
+
 	sipua_read_nchar(book, f, c->name, c->nbytes);
 
 	return UA_OK;
@@ -219,6 +220,7 @@ int sipua_next_memo (sipua_phonebook_t* book, FILE* f, sipua_contact_t* c)
 	start = sipua_next_nchar(book, f, 1);
 
 	c->nbytes = strtol(start, &end, 10);
+
 
 	start = end;
 	if(strncmp(start, "]=", 2) != 0)
@@ -718,6 +720,7 @@ int sipua_save_user_file_v2(user_t* user, FILE* f, const char* tok, int tsz)
 
 int sipua_load_nchar(char* data, int len, char* buf, int* bsize, int* i, FILE* f)
 {
+
 	int n=0;
 
 	if(*bsize == 0)
@@ -1627,6 +1630,7 @@ user_t* sipua_load_user_file(FILE* f, const char* uid, const char* tok, int tsz)
 {
 	char buf[256];
 
+
 	int bsize = 256;
 	int bi;
    int ver;
@@ -1680,6 +1684,7 @@ int user_done_profile(void* gen)
 	user_profile_t* prof = (user_profile_t*)gen;
 
 	xfree(prof->fullname);		/* could be multibytes char */
+
 
 	xfree(prof->regname);		/* sip name notation */
 
@@ -1987,6 +1992,30 @@ int user_profile_contact(user_t* user, int profile_no, int contact_no, char** re
    return UA_OK;
 }
 
+int user_find_contact_index(user_t* user, const char* regname, int *profile_index, int *contact_index)
+{
+   int p_index = 0, c_index = 0;
+   
+   int nprof = user_profile_number(user);
+   
+   *profile_index = -1;
+   *contact_index = -1;
+
+   for(p_index=0; p_index<nprof; p_index++)
+   {
+       c_index = user_profile_contact_index(user, p_index, regname);
+       if(c_index >= 0)
+       {
+          *profile_index = p_index;
+          *contact_index = c_index;
+
+          return UA_OK;
+       }
+   }
+   
+   return UA_FAIL;
+}
+
 int user_modified(user_t* user)
 {
    return user->modified;
@@ -2003,6 +2032,7 @@ char* user_id(user_t* user)
 }
 
 int user_done(user_t* u)
+
 {
 	if(u->loc)
 	{

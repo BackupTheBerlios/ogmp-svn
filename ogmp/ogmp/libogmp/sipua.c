@@ -122,7 +122,7 @@ int sipua_locate_user(sipua_t* sipua, user_t* user)
 }
 
 /* Create a empty call with initial sdp */
-sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id, 
+sipua_set_t* sipua_make_call(sipua_t *sipua, user_profile_t* user_prof, char* id, 
 							   char* subject, int sbyte, char* info, int ibyte,
 							   char* mediatypes[], int rtp_ports[], int rtcp_ports[], int nmedia,
 							   media_control_t* control, int bw_budget,
@@ -157,8 +157,9 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 	set->info = xstr_clone(info);
 	set->ibyte = ibyte;
 
+	ua_log(("sipua_make_call: \n"));
 	sipua->uas->address(sipua->uas, &nettype, &addrtype, &netaddr);
-	
+
 	/* generate id and version */
 	if(id == NULL)
 	{
@@ -171,9 +172,9 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 		set->setid.id = xstr_clone(id);
 		set->setid.username = user_prof->username;
 
-		set->setid.nettype = xstr_clone(nettype);
-		set->setid.addrtype = xstr_clone(addrtype);
-		set->setid.netaddr = xstr_clone(netaddr);
+		set->setid.nettype = nettype;
+		set->setid.addrtype = addrtype;
+		set->setid.netaddr = netaddr;
 	}
 
 	sprintf(tmp, "%i", (int)time(NULL));
@@ -181,7 +182,7 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 
 	/*sipua->uas->clear_coding(sipua->uas);*/
 
-	/* generate sdp message */
+   /* generate sdp message */
 	sdp_info.sdp_media_pos = 0;
 	sdp_message_init(&sdp_info.sdp_message);
 
@@ -270,7 +271,7 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 	}
 
    sdp_message_to_str (sdp_info.sdp_message, &set->sdp_body);
-
+   
    /* if free here, posix dore dump ??? win32 ok !!!
     sdp_message_free(sdp_info.sdp_message);
     */
@@ -278,14 +279,44 @@ sipua_set_t* sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id,
 	return set;
 }
 
+/********************************************
+ * Generate a new call, but yet to process.
+ */
+sipua_set_t* sipua_new_call(sipua_t *ua, user_profile_t* current_prof, char *from,
+                              char *subject, int sbytes, char *info, int ibytes)
+{
+   sipua_set_t* call;
+
+	call = xmalloc(sizeof(sipua_set_t));
+	if(!call)
+	{
+		ua_log(("sipua_receive_call: No memory\n"));
+		return NULL;
+	}
+	memset(call, 0, sizeof(sipua_set_t));
+
+   /* *
+    * May match to the right profile later, now map to current profile
+    */
+   call->user_prof = current_prof;
+
+   call->subject = xstr_clone(subject);
+   call->sbyte = sbytes;
+
+   call->info = xstr_clone(info);
+   call->ibyte = ibytes;
+
+   call->from = from;
+
+   return call;
+}
+
 /* Create a new call from incoming sdp, and generate new sdp */
-sipua_set_t * sipua_negotiate_call(sipua_t *sipua, user_profile_t *user_prof, 
+int sipua_negotiate_call(sipua_t *sipua, sipua_set_t *call,
 								rtpcap_set_t *rtpcapset, char *mediatypes[], 
 								int rtp_ports[], int rtcp_ports[], int nmedia, 
 								media_control_t *control, int call_max_bw)
 {
-	sipua_set_t* set;
-
 	rtpcap_descript_t* rtpcap;
 	xlist_user_t u;
 
@@ -306,39 +337,21 @@ sipua_set_t * sipua_negotiate_call(sipua_t *sipua, user_profile_t *user_prof,
 	{
 		/* No enough bandwidth to make call */
 		ua_log(("sipua_new_set: No bandwidth\n"));
-		return NULL;
+		return UA_FAIL;
 	}
 
-	set = xmalloc(sizeof(sipua_set_t));
-	if(!set)
-	{
-		ua_log(("sipua_new_set: No memory\n"));
-		return NULL;
-	}
-	memset(set, 0, sizeof(sipua_set_t));
-
-	set->bandwidth_need = bw_budget;
-
-	set->user_prof = user_prof;
-
-	set->subject = xstr_clone(rtpcapset->subject);
-
-	set->sbyte = rtpcapset->sbytes;
-
-	set->info = xstr_clone(rtpcapset->info);
-	set->ibyte = rtpcapset->ibytes;
+	call->bandwidth_need = bw_budget;
 
 	sipua->uas->address(sipua->uas, &nettype, &addrtype, &netaddr);
-	
-	set->version = xstr_clone(rtpcapset->version);
+   
+	call->version = xstr_clone(rtpcapset->version);
 
-	/* call owner identification */
-	set->setid.id = xstr_clone(rtpcapset->callid);
-	set->setid.username = rtpcapset->username;
-
-	set->setid.nettype = xstr_clone(rtpcapset->nettype);
-	set->setid.addrtype = xstr_clone(rtpcapset->addrtype);
-	set->setid.netaddr = xstr_clone(rtpcapset->netaddr);
+   /* call owner identification */
+	call->setid.id = xstr_clone(rtpcapset->callid);
+	call->setid.username = rtpcapset->username;
+	call->setid.nettype = xstr_clone(rtpcapset->nettype);
+	call->setid.addrtype = xstr_clone(rtpcapset->addrtype);
+	call->setid.netaddr = xstr_clone(rtpcapset->netaddr);
 
 	sipua->uas->clear_coding(sipua->uas);
 
@@ -378,23 +391,20 @@ sipua_set_t * sipua_negotiate_call(sipua_t *sipua, user_profile_t *user_prof,
 	{
 		sdp_message_free(sdp_info.sdp_message);
 
-      xfree(set);
-
-		return NULL;
+		return UA_FAIL;
 	}
 	
 	rtpcap = xlist_first(rtpcapset->rtpcaps, &u);
 
 	call_bw = 0;
-	
-	while(rtpcap)
+
+   while(rtpcap)
 	{
 		int media_bw;
 
 		char mediatype[16];
 
-
-		int j = 0;
+      int j = 0;
 	
 		do
 		{
@@ -449,9 +459,9 @@ sipua_set_t * sipua_negotiate_call(sipua_t *sipua, user_profile_t *user_prof,
 		rtpcap = xlist_next(rtpcapset->rtpcaps, &u);
 	}
 
-	set->bandwidth_need = call_bw;
+   call->bandwidth_need = call_bw;
 
-	sdp_message_to_str(sdp_info.sdp_message, &set->reply_body);
+	sdp_message_to_str(sdp_info.sdp_message, &call->reply_body);
 
     /* FIXME: If free here, lead to segment fault on linux(POSIX)
      * But why?
@@ -468,14 +478,211 @@ sipua_set_t * sipua_negotiate_call(sipua_t *sipua, user_profile_t *user_prof,
 	getchar();
 	*/
     
+	return UA_OK;
+}
+
+#if 0
+/*backup*/
+sipua_set_t * sipua_negotiate_call(sipua_t *sipua, user_profile_t *user_prof,
+								rtpcap_set_t *rtpcapset, char *mediatypes[],
+								int rtp_ports[], int rtcp_ports[], int nmedia,
+								media_control_t *control, int call_max_bw)
+{
+	sipua_set_t* set;
+
+	rtpcap_descript_t* rtpcap;
+	xlist_user_t u;
+
+	rtpcap_sdp_t sdp_info;
+
+	char *nettype, *addrtype, *netaddr;
+
+	char tmp[16];
+	char tmp2[16];
+
+	int bw_budget;
+	int call_bw;
+
+	module_catalog_t *cata = control->modules(control);
+
+	bw_budget = control->book_bandwidth(control, call_max_bw);
+	if(bw_budget == 0)
+	{
+		/* No enough bandwidth to make call */
+		ua_log(("sipua_new_set: No bandwidth\n"));
+		return NULL;
+	}
+
+	set = xmalloc(sizeof(sipua_set_t));
+	if(!set)
+	{
+		ua_log(("sipua_new_set: No memory\n"));
+		return NULL;
+	}
+	memset(set, 0, sizeof(sipua_set_t));
+
+	set->bandwidth_need = bw_budget;
+
+	set->user_prof = user_prof;
+
+	set->subject = xstr_clone(rtpcapset->subject);
+
+	set->sbyte = rtpcapset->sbytes;
+
+	set->info = xstr_clone(rtpcapset->info);
+	set->ibyte = rtpcapset->ibytes;
+
+	sipua->uas->address(sipua->uas, &nettype, &addrtype, &netaddr);
+
+	set->version = xstr_clone(rtpcapset->version);
+
+	/* call owner identification */
+
+	set->setid.id = xstr_clone(rtpcapset->callid);
+	set->setid.username = rtpcapset->username;
+
+	set->setid.nettype = xstr_clone(rtpcapset->nettype);
+	set->setid.addrtype = xstr_clone(rtpcapset->addrtype);
+	set->setid.netaddr = xstr_clone(rtpcapset->netaddr);
+
+	sipua->uas->clear_coding(sipua->uas);
+
+	/* generate sdp message */
+	/* sdp_info = xmalloc(sizeof(rtpcap_sdp_t)); */
+
+	sdp_info.sdp_media_pos = 0;
+	sdp_message_init(&sdp_info.sdp_message);
+
+	sdp_message_v_version_set(sdp_info.sdp_message, xstr_clone(SDP_VERSION));
+
+	/* Not used in negotiation, but can identify call */
+	sdp_message_o_origin_set (sdp_info.sdp_message,
+								xstr_clone(rtpcapset->username),
+								xstr_clone(rtpcapset->callid),
+								xstr_clone(rtpcapset->version),
+								xstr_clone(rtpcapset->nettype),
+								xstr_clone(rtpcapset->addrtype),
+								xstr_clone(rtpcapset->netaddr));
+
+	sdp_message_s_name_set (sdp_info.sdp_message, xstr_clone(rtpcapset->subject));
+
+	/* My net connection */
+	sdp_message_c_connection_add (sdp_info.sdp_message,
+									-1 /* media_pos */,
+									xstr_clone(nettype) /* IN */,
+									xstr_clone(addrtype) /* IP4 */,
+									xstr_clone(netaddr),
+									NULL /* multicast_ttl */,
+									NULL /* multicast_int */);
+
+	/* offer-answer draft says we must copy the "t=" line */
+	sprintf (tmp, "%i", 0);
+	sprintf (tmp2, "%i", 0);
+
+	if (sdp_message_t_time_descr_add (sdp_info.sdp_message, tmp, tmp2) != 0)
+	{
+		sdp_message_free(sdp_info.sdp_message);
+
+      xfree(set);
+
+
+		return NULL;
+	}
+
+	rtpcap = xlist_first(rtpcapset->rtpcaps, &u);
+
+	call_bw = 0;
+
+	while(rtpcap)
+	{
+		int media_bw;
+
+		char mediatype[16];
+
+      int j = 0;
+
+		do
+		{
+			mediatype[j] = rtpcap->profile_mime[j];
+			j++;
+
+		}while(rtpcap->profile_mime[j] != '/');
+
+		mediatype[j] = '\0';
+
+		rtpcap->local_rtp_portno = 0;
+		rtpcap->local_rtcp_portno = 0;
+
+		for(j=0; j<nmedia; j++)
+		{
+			if(strcmp(mediatype, mediatypes[j]) == 0)
+			{
+				rtpcap->local_rtp_portno = rtp_ports[j];
+				rtpcap->local_rtcp_portno = rtcp_ports[j];
+
+				break;
+			}
+		}
+
+		if(j < nmedia && !rtpcap->enable)
+		{
+			media_bw = session_new_sdp(cata, nettype, addrtype, netaddr,
+							&rtpcap->local_rtp_portno, &rtpcap->local_rtcp_portno,
+							rtpcap->profile_no, rtpcap->profile_mime,
+							rtpcap->clockrate, rtpcap->coding_param,
+							bw_budget, control, &sdp_info);
+
+			printf("sipua_new_set: media_bw[%d]\n", media_bw);
+
+			if(media_bw == 0)
+
+            {
+
+                /* Not support this rtpcap */
+                rtpcap = xlist_next(rtpcapset->rtpcaps, &u);
+                continue;
+            }
+
+			if(media_bw < 0 || bw_budget < call_bw + media_bw)
+				break;
+
+			rtpcap->enable = 1;
+
+			call_bw += media_bw;
+		}
+
+		rtpcap = xlist_next(rtpcapset->rtpcaps, &u);
+	}
+
+	set->bandwidth_need = call_bw;
+
+	sdp_message_to_str(sdp_info.sdp_message, &set->reply_body);
+
+    /* FIXME: If free here, lead to segment fault on linux(POSIX)
+     * But why?
+	sdp_message_free(sdp_info.sdp_message);
+    */
+
+    /*
+	printf("sipua_negotiate_call:\n");
+	printf("-------Reply SDP----------\n");
+	printf("CallId[%s]\n", set->setid.id);
+	printf("--------------------------\n");
+	printf("%s\n", set->reply_body);
+	printf("--------------------------\n");
+	getchar();
+	*/
+
 	return set;
 }
+#endif
 
 /* *
  * Open an input source from given device name
  */
 media_maker_t* sipua_open_device(char* devname, char* devmode, media_control_t* control, media_receiver_t* receiver, media_info_t *minfo)
 {
+
    media_maker_t* maker = NULL;
 
    media_stream_t* stream = NULL;
@@ -622,6 +829,7 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
 			if(bw > 0)
 			{
 				call->rtp_format = format;
+
 			}
 			else
 			{
@@ -653,7 +861,7 @@ int sipua_establish_call(sipua_t* sipua, sipua_set_t* call, char *mode, rtpcap_s
 	if(call->status == SIP_STATUS_CODE_OK)
 	   sipua_new_inputs(sipua, call, rtpcapset, control);
 
-	ua_log(("sipua_create_call: call[%s] established\n", rtpcapset->subject));
+	ua_log(("sipua_establish_call: call[%s] established\n", rtpcapset->subject));
 
 	return bw;
 }
@@ -796,6 +1004,7 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_set_t* call, int bw_budget, media_con
 			rtp_stream_t* rtpstream = (rtp_stream_t*)rtp_strm;
 
 			media_bw = session_mediainfo_sdp(rtpstream->session, nettype, addrtype, netaddr, &rtp_portno, &rtcp_portno, rtp_strm->media_info->mime, (bw_budget - call->bandwidth_need), control, &sdp_info, rtp_strm->media_info);
+
 		}
         
 		printf("sipua_call_sdp: mime[%s]\n", src_strm->media_info->mime);

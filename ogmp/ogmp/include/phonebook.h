@@ -211,6 +211,9 @@ extern DECLSPEC
 int user_profile_contact(user_t* user, int profile_no, int contact_no, char** regname, char** name, int* nbytes, char** memo, int* mbytes);
 
 extern DECLSPEC
+int user_find_contact_index(user_t* user, const char* regname, int *profile_index, int *contact_index);
+
+extern DECLSPEC
 int user_modified(user_t* user);
 
 extern DECLSPEC

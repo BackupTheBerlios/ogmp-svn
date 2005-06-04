@@ -63,6 +63,7 @@
 #define SIPUA_STATUS_UNREG_DOING			5
 #define SIPUA_STATUS_QUEUE			      6
 #define SIPUA_STATUS_SERVE    			7
+#define SIPUA_STATUS_DECLINE    			8
 
 #define SIP_STATUS_CODE_TRYING	            100
 #define SIP_STATUS_CODE_DIALOGESTABLISHMENT	101
@@ -229,7 +230,6 @@ struct sipua_reg_event_s
 
 typedef struct sipua_call_event_s sipua_call_event_t;
 
-
 struct sipua_call_event_s
 {
 	sipua_event_t event;
@@ -311,7 +311,8 @@ struct sipua_uas_s
 	
 	int (*unregist)(sipua_uas_t* uas, char *userloc, char *registrar, char *regname);
  	
-	int (*accept)(sipua_uas_t* uas, int lineno);
+	int (*accept)(sipua_uas_t* uas, sipua_set_t *call);
+	int (*release)(sipua_uas_t* uas);
 
 	int (*invite)(sipua_uas_t* uas, const char *regname, sipua_set_t* call, char* sdp_body, int bytes);
 	int (*answer)(sipua_uas_t* uas, sipua_set_t* call, int reply, char* reply_type, char* reply_body);
@@ -329,9 +330,8 @@ struct sipua_s
    char *proxy_realm;
 
 	sipua_set_t* incall;  /* The call in conversation */
-	
 
-	user_profile_t* user_profile;
+   user_profile_t* user_profile;
    config_t* config;
 
 	int (*done)(sipua_t *ua);
@@ -354,7 +354,7 @@ struct sipua_s
    int (*unregister_profile) (sipua_t *sipua, int profile_no);
 
 	/* call */
-	sipua_set_t* (*new_call)(sipua_t* sipua, const char* subject, int sbytes, const char *desc, int dbytes);
+	sipua_set_t* (*make_call)(sipua_t* sipua, const char* subject, int sbytes, const char *desc, int dbytes);
 	int (*done_call)(sipua_t *sipua, sipua_set_t* set);
  	
 	/**
@@ -414,9 +414,10 @@ struct sipua_s
     int (*set_register_callback)(sipua_t *sipua, int(*callback)(void*callback_user,int statuscode,char*reason,int isreg), void* callback_user);
     int (*set_authentication_callback)(sipua_t *sipua, int(*callback)(void*callback_user, char* realm, user_profile_t* profile, char** user_id, char** user_password), void* callback_user);
     int (*set_progress_callback)(sipua_t *sipua, int(*callback)(void*callback_user,sipua_set_t *call,int statuscode), void* callback_user);
-    int (*set_newcall_callback)(sipua_t *sipua, int(*callback)(void*callback_user,int lineno,char *caller,char *subject,int sbytes,char *info,int ibytes), void* callback_user);
-    int (*set_conversation_start_callback)(sipua_t *sipua, int(*callback)(void *callback_user, int lineno,char *caller,char *subject,int sbytes,char *info,int ibytes), void* callback_user);
-    int (*set_conversation_end_callback)(sipua_t *sipua, int(*callback)(void *callback_user,int lineno,char *caller,char *subject,int sbytes,char *info,int ibytes), void* callback_user);
+    int (*set_newcall_callback)(sipua_t *sipua, int(*callback)(void*callback_user,int lineno,sipua_set_t *call), void* callback_user);
+    int (*set_terminate_callback)(sipua_t *sipua, int(*callback)(void*callback_user,sipua_set_t *call,int statuscode), void* callback_user);
+    int (*set_conversation_start_callback)(sipua_t *sipua, int(*callback)(void *callback_user, int lineno,sipua_set_t *call), void* callback_user);
+    int (*set_conversation_end_callback)(sipua_t *sipua, int(*callback)(void *callback_user,int lineno,sipua_set_t *call), void* callback_user);
     int (*set_bye_callback)(sipua_t *sipua, int (*callback)(void *callback_user, int lineno, char *caller, char *reason), void* callback_user);
 
     int (*subscribe_bandwidth)(sipua_t *sipua, sipua_set_t *call);
@@ -443,27 +444,31 @@ DECLSPEC
 int 
 sipua_unregist(sipua_t *sipua, user_profile_t *user);
 
-/* create call with rtp sessions when establish a call */
+/* create call with rtp sessions when establish a call 
 sipua_set_t* 
 sipua_create_call(sipua_t *sipua, user_profile_t* user_prof, char* id, 
-
                   char* subject, int sbyte, char* info, int ibyte,
                   char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
                   int nmedia, media_control_t* control, 
                   rtp_coding_t codings[], int ncoding, int pt_pool[]);
+*/
+DECLSPEC
+sipua_set_t*
+sipua_new_call(sipua_t *ua, user_profile_t* current_prof, char *from,
+                              char *subject, int sbytes, char *info, int ibytes);
 
 /* generate sdp message when call out, no rtp session created */
 DECLSPEC
 sipua_set_t* 
-sipua_new_call(sipua_t *sipua, user_profile_t* user_prof, char* id, 
+sipua_make_call(sipua_t *sipua, user_profile_t* user_prof, char* id, 
 					char* subject, int sbyte, char* info, int ibyte,
 					char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
 					int nmedia, media_control_t* control, int bw_budget,
 					rtp_coding_t codings[], int ncoding, int pt_pool[]);
 
 DECLSPEC
-sipua_set_t* 
-sipua_negotiate_call(sipua_t *sipua, user_profile_t* user_prof, 
+int
+sipua_negotiate_call(sipua_t *sipua, sipua_set_t *call,
                      rtpcap_set_t* rtpcapset,
 							char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
 							int nmedia, media_control_t* control, int call_max_bw);

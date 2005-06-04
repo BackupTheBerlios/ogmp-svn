@@ -86,7 +86,7 @@ int jcall_ack(eXosipua_t *jua, eXosip_event_t *je);
 int jcall_proceeding(eXosipua_t *jua, eXosip_event_t *je);
 int jcall_ringing(eXosipua_t *jua, eXosip_event_t *je);
 int jcall_redirected(eXosipua_t *jua, eXosip_event_t *je);
-int jcall_requestfailure(eXosipua_t *jua, eXosip_event_t *je, osip_message_t *mesg);
+int jcall_requestfailure(eXosipua_t *jua, eXosip_event_t *je);
 int jcall_serverfailure(eXosipua_t *jua, eXosip_event_t *je);
 int jcall_globalfailure(eXosipua_t *jua, eXosip_event_t *je);
 
@@ -206,6 +206,8 @@ struct eXosipua_s
 	int online_status;
 	int registration_status;
 
+
+
 	char registration_server[100];
 	char registration_reason_phrase[100];
 
@@ -224,3 +226,9 @@ struct eXosipua_s
 
 	xclock_t *clock;
 };
+
+/* Create new SDP message from SDP body, need to free after used. */
+osip_message_t *eXosipua_extract_message(eXosipua_t *jua, eXosip_event_t *je);
+
+/* Pick exist SDP message without create a new one */
+osip_message_t *eXosipua_receive_message(eXosipua_t *jua, eXosip_event_t *je);

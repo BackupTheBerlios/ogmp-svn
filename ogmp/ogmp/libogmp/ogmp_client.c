@@ -160,6 +160,57 @@ int client_register_loop(void *gen)
 	return UA_OK;
 }
 
+int client_place_call(sipua_t *sipua, sipua_set_t *call)
+{
+   int i;
+   
+   ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+	for(i=0; i<MAX_SIPUA_LINES; i++)
+	{
+	   if(client->lines[i] == NULL)
+	   {
+	      call->ring_num = SIPUA_MAX_RING;
+
+	      client->lines[i] = call;
+         call->lineno = i;
+
+	      if(!client->thread_ringing)
+	      {
+				client->nring++;
+				client->thread_ringing = xthr_new(client_call_ringing, client, XTHREAD_NONEFLAGS);
+	      }
+	      else
+	      {
+				xthr_lock(client->nring_lock);
+				client->nring++;
+				xthr_unlock(client->nring_lock);
+	      }
+
+	      sipua->uas->accept(sipua->uas, call);
+	      return i;
+	   }
+	}
+         
+   return -1;
+}
+
+int client_release_call(sipua_t *sipua, sipua_set_t *call)
+{
+   ogmp_client_t *client = (ogmp_client_t*)sipua;
+   
+   if(!call)
+      return UA_IGNORE;
+
+   if(call->lineno >= 0 && call->lineno < MAX_SIPUA_LINES)
+      client->lines[call->lineno] = NULL;
+   
+	sipua->uas->release(sipua->uas);
+   sipua->done_call(sipua, call);
+
+   return UA_OK;
+}
+
 int client_sipua_event(void* lisener, sipua_event_t* e)
 {
 	sipua_t *sipua = (sipua_t*)lisener;
@@ -318,33 +369,18 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		case(SIPUA_EVENT_NEW_CALL):
 		{
 			/* Callee receive a new call, now in negotiation stage */
-			int i;
 			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
 			sipua_set_t *call;
 
-         int lineno = e->lineno;
+         int lineno;
 
-			rtpcap_set_t* rtpcapset;
+			rtpcap_set_t* rtpcapset = NULL;
 
-			sdp_message_t *sdp_message;
-
-			char* sdp_body = (char*)e->content;
-
-			char *p, *q;
+			sdp_message_t *sdp_message = NULL;
 
          int ret;
-         char *from, *subject, *info;
-         int sbytes, ibytes;
 
-			clie_log(("sipua_event: new call incoming\n"));
-         
-         /* Retrieve call info */
-         ret = sipua_receive(sipua, call_e, &from, &subject, &sbytes, &info, &ibytes);         
-         if(ret>=UA_OK && client->on_newcall)
-         {
-				clie_log(("sipua_event: from[%s] subject[%s] info[%s]\n", from, subject, info));
-            client->on_newcall(client->user_on_newcall, lineno, from, subject, sbytes, info, ibytes);
-         }
+			char* sdp_body = (char*)e->content;
 
 			sdp_message_init(&sdp_message);
 
@@ -356,75 +392,84 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
             return UA_FAIL;
 			}
 
-			rtpcapset = rtp_capable_from_sdp(sdp_message);
-			rtpcapset->user_profile = client->sipua.user_profile;
+         if(sdp_message)
+            rtpcapset = rtp_capable_from_sdp(sdp_message);
+         
+         /* Retrieve call info */
+         call = sipua_new_call(sipua, client->sipua.user_profile, call_e->remote_uri,
+                        call_e->subject, call_e->sbytes, rtpcapset->info, rtpcapset->ibytes);
+         if(!call)
+         {
+            rtp_capable_done_set(rtpcapset);
+            return UA_FAIL;
+         }
 
+         call->cid = call_e->cid;
+			call->did = call_e->did;
+
+			call->rtpcapset = rtpcapset;
+			clie_log(("sipua_event: new call@%x [%s]\n", (int)call, call->subject));
+
+         /* put in line */
+         lineno = client_place_call(sipua, call);
+            
+         if(client->on_newcall)
+            client->on_newcall(client->user_on_newcall, lineno, call);
+
+         /* Check status after UI respond */
+         if(call->status == SIPUA_STATUS_DECLINE)
+         {
+            /* Call is declined */
+				sipua_answer(&client->sipua, call, SIP_STATUS_CODE_TEMPORARILYUNAVAILABLE, NULL);
+
+            client_release_call(sipua, call);
+            
+            return UA_OK;
+         }
+         
+         /* Get call profile */
+         rtpcapset->user_profile = call->user_prof;
+         
 			/* now to negotiate call, which will generate call structure with sdp message for reply
 			 * still no rtp session created !
 			 */
-			call = sipua_negotiate_call(sipua, client->sipua.user_profile, rtpcapset,
+			ret = sipua_negotiate_call(sipua, call, rtpcapset,
 							client->mediatypes, client->default_rtp_ports, 
 							client->default_rtcp_ports, client->nmedia,
 							client->control, MAX_CALL_BANDWIDTH);
 			
-			if(!call)
+         {char *nettype,  *addrtype, *netaddr;clie_log(("sipua_event: 2\n"));sipua->uas->address(sipua->uas, &nettype, &addrtype, &netaddr);}
+			if(ret < UA_OK)
 			{
 				/* Fail to receive the call, miss it */
-				break;
-			}
+				sipua_answer(&client->sipua, call, SIP_STATUS_CODE_TEMPORARILYUNAVAILABLE, NULL);
 
-			call_e->event.call_info = call;
+            client_release_call(sipua, call);
 
-         call->cid = call_e->cid;
-			call->did = call_e->did;
-         
-			call->rtpcapset = rtpcapset;
-            
-			call->status = SIPUA_EVENT_NEW_CALL;
-
-            /* Parse from uri */
-			p = call_e->remote_uri;
-			while(*p != '<') p++;
-			q = ++p;
-			while(*q != ':') q++;
-
-			call->proto = xstr_nclone(p, q-p);
-			p = ++q;
-			while(*q != '>') q++;
-
-			call->from = xstr_nclone(p, q-p);
-
-			for(i=0; i<MAX_SIPUA_LINES; i++)
-			{
-				if(client->lines[i] == NULL)
-				{
-					call->ring_num = SIPUA_MAX_RING;
-
-					client->lines[i] = call;
-					sipua->uas->accept(sipua->uas, lineno);
-
-					if(!client->thread_ringing)
-					{
-						client->nring++;
-						client->thread_ringing = xthr_new(client_call_ringing, client, XTHREAD_NONEFLAGS);
-					}
-					else
-					{
-						xthr_lock(client->nring_lock);
-						client->nring++;
-						xthr_unlock(client->nring_lock);
-					}
-
-					break;
-				}
+            return UA_FAIL;
 			}
 
          /**
           * Cannot free here, need for media specific parsing !!!
           * sdp_message_free(sdp_message);
           */
+          
 			break;
 		}
+		case(SIPUA_EVENT_CALL_CLOSED):
+		{
+			sipua_set_t *call = e->call_info;
+			sipua_call_event_t *call_e = (sipua_call_event_t*)e;
+
+			clie_log(("sipua_event: call@%x [%s] closed\n", (int)call, call->subject));
+         
+         if(client->on_terminate)
+            client->on_terminate(client->user_on_terminate, call, call_e->status_code);
+
+         client_release_call(sipua, call);
+         
+         break;
+      }
 		case(SIPUA_EVENT_PROCEEDING):
 		{
 			sipua_set_t *call = e->call_info;
@@ -502,7 +547,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
           * Find sessions in the format which match cname and mimetype in source
           * Move_member_from_session_of(call->rtp_format) to_session_of(source->players);
          if(call->status == SIPUA_STATUS_QUEUE && client->background_source)
-
          {
             sipua->unsubscribe_bandwidth(sipua, call);
 
@@ -563,6 +607,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
          clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
 
 			client->ogui->ui.beep(&client->ogui->ui);
+
          
 			clie_debug(("client_sipua_event: SIPUA_EVENT_REQUESTFAILURE\n"));
 
@@ -611,6 +656,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			else
 				call->status = call_e->status_code;
 
+
 			break;
 		}
 		case(SIPUA_EVENT_GLOBALFAILURE):
@@ -637,19 +683,18 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 int sipua_done_sip_session(void* gen)
 {
 	sipua_set_t *set = (sipua_set_t*)gen;
-   
+
    if(!set)
       return UA_OK;
 	
-	if(set->setid.nettype)
-      xfree(set->setid.nettype);
-   if(set->setid.addrtype)
-      xfree(set->setid.addrtype);
-	if(set->setid.netaddr)
-      xfree(set->setid.netaddr);
-
 	if(set->setid.id)
+   {
       xfree(set->setid.id);
+      xfree(set->setid.nettype);
+      xfree(set->setid.addrtype);
+      xfree(set->setid.netaddr);
+   }
+   
 	if(set->version)
 	   xfree(set->version);
 
@@ -676,24 +721,7 @@ int sipua_done_sip_session(void* gen)
 
 int client_done_call(sipua_t* sipua, sipua_set_t* set)
 {
-	int i;
 	ogmp_client_t *ua = (ogmp_client_t*)sipua;
-
-	if(ua->sipua.incall != set)
-   {
-		for(i=0; i<MAX_SIPUA_LINES; i++)
-      {
-			if(ua->lines[i] == set)
-			{
-				ua->lines[i] = NULL;
-				break;
-			}
-      }
-   }
-	else
-	{
-		ua->sipua.incall = NULL;
-	}
 
 	ua->control->release_bandwidth(ua->control, set->bandwidth_hold);
 
@@ -773,7 +801,7 @@ sipua_set_t* client_find_call(sipua_t* sipua, char* id, char* username, char* ne
 	return ua->lines[i];
 }
 
-sipua_set_t* client_new_call(sipua_t* sipua, const char* subject, int sbytes, const char *desc, int dbytes)
+sipua_set_t* client_make_call(sipua_t* sipua, const char* subject, int sbytes, const char *desc, int dbytes)
 {
 	sipua_setting_t *setting;
 	sipua_set_t* call;
@@ -783,7 +811,7 @@ sipua_set_t* client_new_call(sipua_t* sipua, const char* subject, int sbytes, co
 
 	setting = sipua->setting(sipua);
 
-	call = sipua_new_call(sipua, clie->sipua.user_profile, NULL, subject, sbytes, desc, dbytes,
+	call = sipua_make_call(sipua, clie->sipua.user_profile, NULL, subject, sbytes, desc, dbytes,
 						clie->mediatypes, clie->default_rtp_ports, clie->default_rtcp_ports, clie->nmedia,
 						clie->control, bw_budget, setting->codings, setting->ncoding, clie->pt);
 
@@ -814,8 +842,7 @@ char* client_set_call_source(sipua_t* sipua, sipua_set_t* call, media_source_t* 
       printf("%s\n", sdp);
       printf("client_set_call_source: sdp\n");
 
-
-		call->renew_body = sdp;
+      call->renew_body = sdp;
 	}
 
 	return sdp;
@@ -967,6 +994,7 @@ int client_lock_lines(sipua_t* sipua)
 }
 
 int client_unlock_lines(sipua_t* sipua)
+
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1257,7 +1285,7 @@ int client_set_register_callback (sipua_t *sipua, int(*callback)(void*callback_u
     return UA_OK;
 }
 
-int client_set_progress_callback (sipua_t *sipua, int(*callback)(void*callback_user, sipua_set_t *call, int result), void* callback_user)
+int client_set_progress_callback (sipua_t *sipua, int(*callback)(void*callback_user, sipua_set_t *call, int statuscode), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1278,7 +1306,7 @@ int client_set_authentication_callback (sipua_t *sipua, int(*callback)(void*call
     return UA_OK;
 }
 
-int client_set_newcall_callback (sipua_t *sipua, int(*callback)(void*callback_user,int lineno,char *caller,char *subject,int sbytes,char *info,int ibytes), void* callback_user)
+int client_set_newcall_callback (sipua_t *sipua, int(*callback)(void*callback_user,int lineno,sipua_set_t *call), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1288,7 +1316,17 @@ int client_set_newcall_callback (sipua_t *sipua, int(*callback)(void*callback_us
     return UA_OK;
 }        
 
-int client_set_conversation_start_callback (sipua_t *sipua, int(*callback)(void *callback_user,int lineno,char *caller,char *subject,int sbytes,char *info,int ibytes), void* callback_user)
+int client_set_terminate_callback (sipua_t *sipua, int(*callback)(void*callback_user, sipua_set_t *call, int statuscode), void* callback_user)
+{
+    ogmp_client_t *client = (ogmp_client_t*)sipua;
+
+    client->on_terminate = callback;
+    client->user_on_terminate = callback_user;
+
+    return UA_OK;
+}
+
+int client_set_conversation_start_callback (sipua_t *sipua, int(*callback)(void *callback_user,int lineno,sipua_set_t *call), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1298,7 +1336,7 @@ int client_set_conversation_start_callback (sipua_t *sipua, int(*callback)(void 
     return UA_OK;
 }
 
-int client_set_conversation_end_callback (sipua_t *sipua, int(*callback)(void *callback_user,int lineno,char *caller,char *subject,int sbytes,char *info,int ibytes), void* callback_user)
+int client_set_conversation_end_callback (sipua_t *sipua, int(*callback)(void *callback_user,int lineno,sipua_set_t *call), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1427,15 +1465,14 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_ca
 	sipua->register_profile = client_register_profile;
 	sipua->unregister_profile = client_unregister_profile;
 
-	sipua->new_call = client_new_call;
+	sipua->make_call = client_make_call;
 	sipua->done_call = client_done_call;
 
  	/* lines management */
  	sipua->lock_lines = client_lock_lines;
  	sipua->unlock_lines = client_unlock_lines;
 
-
-	sipua->lines = client_lines;
+   sipua->lines = client_lines;
  	sipua->busylines = client_busylines;
  	/* current call session */
 
@@ -1443,8 +1480,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_ca
 
  	sipua->line = client_line;
 
-
-	sipua->set_background_source = client_set_background_source;
+   sipua->set_background_source = client_set_background_source;
 	sipua->setting = client_setting;
 
 	sipua->open_source = client_open_source;
@@ -1473,6 +1509,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_ca
    sipua->set_authentication_callback = client_set_authentication_callback;
    sipua->set_progress_callback = client_set_progress_callback;
    sipua->set_newcall_callback = client_set_newcall_callback;
+   sipua->set_terminate_callback = client_set_terminate_callback;
    sipua->set_conversation_start_callback = client_set_conversation_start_callback;
 
    sipua->set_conversation_end_callback = client_set_conversation_end_callback;

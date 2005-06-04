@@ -320,6 +320,7 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 		char *p = rtpcapset->cname;
 		char *username;
 
+
       username = sdp_message_o_username_get(sdp);
 		if(username)
 		{

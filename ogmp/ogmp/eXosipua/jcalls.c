@@ -85,18 +85,22 @@ jcall_t *jcall_find_call(eXosipua_t *jua, int pos)
 int jcall_new(eXosipua_t *jua, eXosip_event_t *je)
 {
 	/*event back to sipuac */
+   osip_message_t *message = NULL;
+   osip_from_t  *from = NULL;
+   osip_uri_t *from_uri = NULL;
+   
 	sipua_call_event_t call_e;
-
+   
 	memset(&call_e, 0, sizeof(sipua_call_event_t));
 
 	if(jua->ncall == MAX_SIPUA_LINES-1)
 	{
 		/* All lines are busy */
-		eXosip_answer_call(je->did, 486, 0);
+		eXosip_answer_call(je->did, SIP_STATUS_CODE_BUSYHERE, 0);
 		return 0;
 	}
 
-	call_e.event.type = SIPUA_EVENT_NEW_CALL;
+   call_e.event.type = SIPUA_EVENT_NEW_CALL;
 	call_e.event.content = je->sdp_body;
 
 	call_e.cid = je->cid;
@@ -107,21 +111,47 @@ int jcall_new(eXosipua_t *jua, eXosip_event_t *je)
     
 	call_e.req_uri = je->req_uri;
 	call_e.local_uri = je->local_uri;
-	call_e.remote_uri = je->remote_uri;
+   
+   message = eXosipua_receive_message(jua, je);
+   if(message)
+   {
+      from = osip_message_get_from(message);      
+      if(from)
+      {
+         from_uri = osip_from_get_url(from);
+         osip_uri_to_str(from_uri, &call_e.remote_uri);
+      }
+   }
 
 	je->jc->c_ack_sdp = 0;
 
 	if (je->reason_phrase[0]!='\0')
-    {
 		call_e.reason_phrase = je->reason_phrase;
-		call_e.status_code = je->status_code;
-    }
+
+   call_e.status_code = je->status_code;
 
 	/* event notification */
 	jua->sipuas.notify_event(jua->sipuas.lisener, &call_e.event);
 
-	/* set create call reference */
-	je->jc->external_reference = call_e.event.call_info;
+	return 0;
+}
+
+int jcall_closed(eXosipua_t *jua, eXosip_event_t *je)
+{
+	/* event back to sipuac */
+	sipua_call_event_t call_e;
+
+	memset(&call_e, 0, sizeof(sipua_call_event_t));
+
+	call_e.cid = je->cid;
+	call_e.did = je->did;
+
+	call_e.event.call_info = (sipua_set_t*)je->external_reference;
+	call_e.event.type = SIPUA_EVENT_CALL_CLOSED;
+   call_e.status_code = je->status_code;
+   
+	/* event notification */
+	jua->sipuas.notify_event(jua->sipuas.lisener, &call_e.event);
 
 	return 0;
 }
@@ -187,13 +217,13 @@ int jcall_ringing(eXosipua_t *jua, eXosip_event_t *je)
 
 	call_e.subject = je->subject;
 
-
-
-	call_e.textinfo = je->textinfo;
+   call_e.textinfo = je->textinfo;
     
 	call_e.req_uri = je->req_uri;
 	call_e.local_uri = je->local_uri;
 	call_e.remote_uri = je->remote_uri;
+
+
 
 	je->jc->c_ack_sdp = 0;
 
@@ -213,10 +243,13 @@ int jcall_answered(eXosipua_t *jua, eXosip_event_t *je)
 {
 	sipua_call_event_t call_e;
 
+
 	/* event back to sipuac */
 	memset(&call_e, 0, sizeof(sipua_call_event_t));
 
 	call_e.event.call_info = (sipua_set_t*)je->external_reference;
+
+
 
 	call_e.event.type = SIPUA_EVENT_ANSWERED;
 	call_e.event.content = je->sdp_body;
@@ -365,11 +398,13 @@ char* jcall_dequota_copy(char *quota)
    return xstr_nclone(start, end-start);
 }
 
-int jcall_requestfailure(eXosipua_t *jua, eXosip_event_t *je, osip_message_t *message)
+int jcall_requestfailure(eXosipua_t *jua, eXosip_event_t *je)
 {
 	/* event back to sipuac */
 	sipua_call_event_t call_e;
    
+   osip_message_t *message = eXosipua_extract_message(jua, je);
+
    call_e.auth_realm = NULL;
 
 	call_e.event.type = SIPUA_EVENT_REQUESTFAILURE;
@@ -415,6 +450,8 @@ int jcall_requestfailure(eXosipua_t *jua, eXosip_event_t *je, osip_message_t *me
       xfree(call_e.auth_realm);
       call_e.auth_realm = NULL;
    }
+
+   osip_message_free(message);
 
 	return 0;
 }
@@ -483,58 +520,6 @@ int jcall_globalfailure(eXosipua_t *jua, eXosip_event_t *je)
 	return 0;
 }
 
-int jcall_closed(eXosipua_t *jua, eXosip_event_t *je)
-{
-  jcall_t *ca;
-  int k;
-
-	/* event back to sipuac */
-	sipua_event_t sip_e;
-	sip_e.call_info = (sipua_set_t*)je->external_reference;
-	sip_e.type = SIPUA_EVENT_CALL_CLOSED;
-
-
-
-  for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
-    {
-      if (jua->jcalls[k].state != NOT_USED
-	  && jua->jcalls[k].cid==je->cid)
-	break;
-    }
-  if (k==MAX_NUMBER_OF_CALLS)
-    return -1;
-
-	sip_e.lineno = k;
-
-  ca = &(jua->jcalls[k]);
-
-#ifdef MEDIASTREAMER_SUPPORT
-
-	if (ca->enable_audio>0)
-    {
-		ca->enable_audio = -1;
-		os_sound_close(ca);
-    }
-
-#elif defined(XRTP_SUPPORT)
-			
-	if(ca->callin_info)
-	{
-		rtp_capable_done_set(ca->callin_info);
-				
-		ca->callin_info = NULL;
-	}
-
-#endif
-
-	ca->state = NOT_USED;
-
-	/* event notification */
-	jua->sipuas.notify_event(jua->sipuas.lisener, &sip_e);
-
-	return 0;
-}
-
 int jcall_onhold(eXosipua_t *jua, eXosip_event_t *je)
 {
   jcall_t *ca;
@@ -550,6 +535,7 @@ int jcall_onhold(eXosipua_t *jua, eXosip_event_t *je)
       if (jua->jcalls[k].state != NOT_USED
 	  && jua->jcalls[k].cid==je->cid
 	  && jua->jcalls[k].did==je->did)
+
 	break;
     }
   if (k==MAX_NUMBER_OF_CALLS)
