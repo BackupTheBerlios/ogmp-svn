@@ -166,7 +166,8 @@ int client_place_call(sipua_t *sipua, sipua_call_t *call)
    
    ogmp_client_t *client = (ogmp_client_t*)sipua;
 
-	for(i=0; i<MAX_SIPUA_LINES; i++)
+   /* line #0 reserved for current call */
+	for(i=1; i<MAX_SIPUA_LINES; i++)
 	{
 	   if(client->lines[i] == NULL)
 	   {
@@ -385,6 +386,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			sdp_message_init(&sdp_message);
 
 			if (sdp_message_parse(sdp_message, sdp_body) != 0)
+
 			{
 				clie_log(("\nclient_sipua_event: fail to parse sdp\n"));
 				sdp_message_free(sdp_message);
@@ -419,6 +421,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
          if(call->status == SIPUA_STATUS_DECLINE)
          {
             /* Call is declined */
+
 				sipua_answer(&client->sipua, call, SIP_STATUS_CODE_TEMPORARILYUNAVAILABLE, NULL);
 
             client_release_call(sipua, call);
@@ -606,8 +609,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			client->ogui->ui.beep(&client->ogui->ui);
 
-         
-			clie_debug(("client_sipua_event: SIPUA_EVENT_REQUESTFAILURE\n"));
+         clie_debug(("client_sipua_event: SIPUA_EVENT_REQUESTFAILURE\n"));
 
 			if(call_e->status_code == SIPUA_STATUS_UNKNOWN)
 				call->status = SIPUA_EVENT_REQUESTFAILURE;
@@ -718,6 +720,7 @@ int sipua_done_sip_session(void* gen)
 }
 
 int client_done_call(sipua_t* sipua, sipua_call_t* call)
+
 {
 	ogmp_client_t *ua = (ogmp_client_t*)sipua;
 
@@ -736,9 +739,6 @@ int sipua_done(sipua_t *sipua)
 	for(i=0; i<MAX_SIPUA_LINES; i++)
 		if(ua->lines[i])
 			sipua_done_sip_session(ua->lines[i]);
-
-	if(ua->sipua.incall)
-		sipua_done_sip_session(ua->sipua.incall);
 
 	xthr_done_lock(ua->lines_lock);
    xthr_done_lock(ua->nring_lock);
@@ -801,23 +801,42 @@ sipua_call_t* client_find_call(sipua_t* sipua, char* id, char* username, char* n
 
 sipua_call_t* client_make_call(sipua_t* sipua, const char* subject, int sbytes, const char *desc, int dbytes)
 {
+   int ret;
 	sipua_setting_t *setting;
 	sipua_call_t* call;
 	ogmp_client_t* clie = (ogmp_client_t*)sipua;
 
-	int bw_budget = clie->control->book_bandwidth(clie->control, MAX_CALL_BANDWIDTH);
+	int bw_budget;
+
+	if(clie->lines[0])
+   {
+        clie_log(("client_call: You are in call, can not make a new call\n"));
+        return NULL;
+   }
+
+	bw_budget = clie->control->book_bandwidth(clie->control, MAX_CALL_BANDWIDTH);
 
 	setting = sipua->setting(sipua);
 
-	call = sipua_make_call(sipua, clie->sipua.user_profile, NULL, subject, sbytes, desc, dbytes,
-						clie->mediatypes, clie->default_rtp_ports, clie->default_rtcp_ports, clie->nmedia,
-						clie->control, bw_budget, setting->codings, setting->ncoding, clie->pt);
-
+	call = sipua_new_call(sipua, clie->sipua.user_profile, NULL, subject, sbytes, desc, dbytes);
 	if(!call)
 	{
 		clie_log(("client_new_call: no call created\n"));
 		return NULL;
 	}
+
+   client_place_call(sipua, call);
+
+	ret = sipua_make_call(sipua, call, NULL, clie->mediatypes,
+                  clie->default_rtp_ports, clie->default_rtcp_ports,
+                  clie->nmedia, clie->control, bw_budget, setting->codings,
+                  setting->ncoding, clie->pt);
+
+   if(ret < UA_OK)
+   {
+      client_release_call(sipua, call);
+      return NULL;
+   }
 
 	return call;
 }
@@ -833,6 +852,7 @@ char* client_set_call_source(sipua_t* sipua, sipua_call_t* call, media_source_t*
 	sdp = sipua_call_sdp(sipua, call, MAX_CALL_BANDWIDTH, clie->control, clie->mediatypes,
                        clie->default_rtp_ports, clie->default_rtcp_ports,
                        clie->nmedia, source, clie->pt);
+
 
 	if(sdp)
 	{
@@ -1022,9 +1042,8 @@ int client_busylines(sipua_t* sipua, int *busylines, int nlines)
 
 	xthr_lock(client->lines_lock);
 
-    for(i=0; i<nlines; i++)
-
-		if(client->lines[i])
+   for(i=0; i<nlines; i++)
+      if(client->lines[i])
 			busylines[n++] = i;
 
 	xthr_unlock(client->lines_lock);
@@ -1035,9 +1054,16 @@ int client_busylines(sipua_t* sipua, int *busylines, int nlines)
 /* current call session */
 sipua_call_t* client_session(sipua_t* sipua)
 {
-	ogmp_client_t *client = (ogmp_client_t*)sipua;
+   sipua_call_t *call = NULL;   
+   ogmp_client_t *client = (ogmp_client_t*)sipua;
 
-	return client->sipua.incall;
+   xthr_lock(client->lines_lock);
+   
+   call = client->lines[0];
+   
+   xthr_unlock(client->lines_lock);
+
+   return call;
 }
 
 sipua_call_t* client_line(sipua_t* sipua, int line)
@@ -1050,6 +1076,7 @@ sipua_call_t* client_line(sipua_t* sipua, int line)
 media_source_t* client_open_source(sipua_t* sipua, char* name, char* mode, void* param)
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
+
 	
 	return source_open(name, client->control, mode, param);
 }
@@ -1156,42 +1183,51 @@ int client_detach_source(sipua_t* sipua, sipua_call_t* call, transmit_source_t* 
 /* switch current call session */
 sipua_call_t* client_pick(sipua_t* sipua, int line)
 {
-	ogmp_client_t *client = (ogmp_client_t*)sipua;
+   sipua_call_t *current;
+   ogmp_client_t *client = (ogmp_client_t*)sipua;
 
-    if(client->sipua.incall)
-	{
-		client->lines[line]->status = SIPUA_EVENT_ONHOLD;
+   xthr_lock(client->lines_lock);
 
-		return client->lines[line];
-	}
+   current = client->lines[0];
+   if(current)
+		current->status = SIPUA_EVENT_ONHOLD;
 
-	client->sipua.incall = client->lines[line];
-	client->lines[line] = NULL;
+	client->lines[0] = client->lines[line];
+	client->lines[line] = current;
+
+   if(client->lines[0])
+		client->lines[0]->status = SIPUA_STATUS_SERVE;
+      
+   xthr_unlock(client->lines_lock);
 
 	/* FIXME: Howto transfer call from waiting session */
 
-    return client->sipua.incall;
+   return client->lines[0];
 }
 
 int client_hold(sipua_t* sipua)
 {
-	int i;
+	int i=0;
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
+   sipua_call_t *current = client->lines[0];
 
-
-	if(!client->sipua.incall)
+   current = client->lines[0];
+   if(!current)
 		return -1;
 
-
-	for(i=0; i<MAX_SIPUA_LINES; i++)
+   xthr_lock(client->lines_lock);
+   
+   for(i=0; i<MAX_SIPUA_LINES; i++)
 		if(!client->lines[i])
 			break;
 
-	client->lines[i] = client->sipua.incall;
+   /* There always a free line available */
+   current->status = SIPUA_EVENT_ONHOLD;
 
-	client->sipua.incall->status = SIPUA_EVENT_ONHOLD;
+   client->lines[i] = current;
+   client->lines[0] = NULL;
 
-	client->sipua.incall = NULL;
+   xthr_unlock(client->lines_lock);
 
 	/* FIXME: Howto transfer call to waiting session */
 

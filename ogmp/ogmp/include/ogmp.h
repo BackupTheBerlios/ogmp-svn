@@ -141,7 +141,8 @@ struct ogmp_client_s
 
 	int pt[MAX_PAYLOAD_TYPE];
 
-	sipua_call_t* lines[MAX_SIPUA_LINES];
+   /* line #0 reserved for current call */
+	sipua_call_t* lines[MAX_SIPUA_LINES+1];   
 	xthr_lock_t* lines_lock;
 
 	void* lisener;
@@ -223,9 +224,6 @@ client_config_rtp(void *conf, control_setting_t *setting);
 
 extern DECLSPEC
 sipua_setting_t* client_setting(sipua_t* sipua);
-
-int
-client_call(ogmp_client_t *client, char *regname);
 
 extern DECLSPEC
 media_source_t* 

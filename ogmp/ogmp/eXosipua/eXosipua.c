@@ -61,22 +61,45 @@ static int jua_check_url(char *url)
 }
 
 /* Get SIP message of the call leg */
+sdp_message_t *eXosipua_extract_sdp_message(eXosipua_t *jua, eXosip_event_t *je)
+{
+   sdp_message_t *sdp;
+
+   if(!je->sdp_body || !je->sdp_body[0] || sdp_message_init(&sdp) != 0)
+   {
+      jua_debug(("eXosipua_extract_message: no sdp body\n"));
+      return NULL;
+   }
+
+   jua_debug(("eXosipua_extract_message: sdp body\n"));
+   jua_debug(("%s", je->sdp_body));
+
+   if(sdp_message_parse(sdp, je->sdp_body) != 0)
+   {
+      sdp_message_free(sdp);
+      return NULL;
+   }
+
+   return sdp;
+}
+
+/* Get SIP message of the call leg */
 osip_message_t *eXosipua_extract_message(eXosipua_t *jua, eXosip_event_t *je)
 {
    osip_message_t *message;
 
-   if(!je->sdp_body || !je->sdp_body[0] || osip_message_init(&message) != 0)
-      return NULL;  
-   
-   jua_debug(("eXosipua_extract_message: sdp body\n"));
-   jua_debug(("%s", je->sdp_body));
+   if(osip_message_init(&message) != 0)
+   {
+      jua_debug(("eXosipua_extract_message: init sip body error\n"));
+      return NULL;
+   }
 
    if(osip_message_parse(message, je->sdp_body, strlen(je->sdp_body)) != 0)
    {
       osip_message_free(message);
       return NULL;
    }
-   
+
    return message;
 }
 
@@ -91,7 +114,10 @@ osip_message_t *eXosipua_receive_message(eXosipua_t *jua, eXosip_event_t *je)
       return NULL;
    }
    
-	return call->c_inc_tr->last_response;
+   if(call->c_inc_tr)
+      return call->c_inc_tr->last_response;
+
+   return call->c_out_tr->last_response;
 }
 
 /**
@@ -294,6 +320,7 @@ int jua_process_event(eXosipua_t *jua)
 			}
 			else
 			{
+
 				/* answer 486 ok */
 				eXosip_answer_options(je->cid, je->did, 486);
 			}
@@ -762,6 +789,7 @@ int uas_regist(sipua_uas_t *sipuas, int *regno, char *loc, char *registrar, char
    while(*p)
       p++;
 
+
    snprintf(p, 12, ":%d", sipuas->portno);
 
 	jua_log(("uas_regist: %s on %s within %ds\n", id, registrar, seconds));
@@ -954,7 +982,7 @@ int uas_accept(sipua_uas_t* uas, sipua_call_t *call)
 
    jua->ncall++;
    
-   if(eXosip_set_call_reference(call->did, call) == 0)
+   if(call->did >= 0 && eXosip_set_call_reference(call->did, call) == 0)
       jua_log(("uas_accept: accepted\n"));
 	
 	return UA_OK;

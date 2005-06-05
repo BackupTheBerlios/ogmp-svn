@@ -312,6 +312,7 @@ struct sipua_uas_s
 	int (*unregist)(sipua_uas_t* uas, char *userloc, char *registrar, char *regname);
  	
 	int (*accept)(sipua_uas_t* uas, sipua_call_t *call);
+
 	int (*release)(sipua_uas_t* uas);
 
 	int (*invite)(sipua_uas_t* uas, const char *regname, sipua_call_t* call, char* sdp_body, int bytes);
@@ -329,8 +330,8 @@ struct sipua_s
 	sipua_uas_t* uas;
    char *proxy_realm;
 
-	sipua_call_t* incall;  /* The call in conversation */
-
+   /* sipua_call_t* incall; The call in conversation */
+   
    user_profile_t* user_profile;
    config_t* config;
 
@@ -459,10 +460,9 @@ sipua_new_call(sipua_t *ua, user_profile_t* current_prof, char *from,
 
 /* generate sdp message when call out, no rtp session created */
 DECLSPEC
-sipua_call_t* 
-sipua_make_call(sipua_t *sipua, user_profile_t* user_prof, char* id, 
-					char* subject, int sbyte, char* info, int ibyte,
-					char* mediatypes[], int rtp_ports[], int rtcp_ports[], 
+int 
+sipua_make_call(sipua_t *sipua, sipua_call_t* call, char* id,
+					char* mediatypes[], int rtp_ports[], int rtcp_ports[],
 					int nmedia, media_control_t* control, int bw_budget,
 					rtp_coding_t codings[], int ncoding, int pt_pool[]);
 

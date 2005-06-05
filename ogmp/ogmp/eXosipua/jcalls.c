@@ -381,15 +381,13 @@ char* jcall_dequota_copy(char *quota)
    char *end;
    
    start = quota;
-   
+
    while(*start == ' ' || *start == '\t' || *start == '\n') start++;
 
    if(*start != '\"')
    {
       return xstr_clone(quota);
    }
-
-
    start++;
    end = start;
    
@@ -404,7 +402,7 @@ int jcall_requestfailure(eXosipua_t *jua, eXosip_event_t *je)
 	/* event back to sipuac */
 	sipua_call_event_t call_e;
    
-   osip_message_t *message = eXosipua_extract_message(jua, je);
+   osip_message_t *message = eXosipua_receive_message(jua, je);
 
    call_e.auth_realm = NULL;
 
@@ -451,8 +449,6 @@ int jcall_requestfailure(eXosipua_t *jua, eXosip_event_t *je)
       xfree(call_e.auth_realm);
       call_e.auth_realm = NULL;
    }
-
-   osip_message_free(message);
 
 	return 0;
 }

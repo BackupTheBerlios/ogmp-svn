@@ -72,9 +72,9 @@ int window_sessions_list_print(gui_t* gui, int wid)
 	/* Window Body */
 
 	/* Current incall */
-	if(ocui->sipua->incall)
+	if(ocui->sipua->session(ocui->sipua))
 	{
-		call = ocui->sipua->incall;
+		call = ocui->sipua->session(ocui->sipua);
 			
 		switch(call->status)
 		{
@@ -304,7 +304,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 		}
 		case 'n': 
 		{
-            if(ocui->sipua->incall)
+            if(ocui->sipua->session(ocui->sipua))
             {
                 beep();
                 break;
@@ -459,7 +459,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
 		}
 		case 'h':   
 		{
-			if(ocui->sipua->incall)
+			if(ocui->sipua->session(ocui->sipua))
 				calllist_line = ocui->sipua->hold(ocui->sipua);
 			else
 
