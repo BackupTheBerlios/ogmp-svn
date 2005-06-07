@@ -220,6 +220,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
    int isreg = 0;
 
+
 	switch(e->type)
 	{
 		case(SIPUA_EVENT_REGISTRATION_SUCCEEDED):
@@ -452,6 +453,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
          /**
           * Cannot free here, need for media specific parsing !!!
+
           * sdp_message_free(sdp_message);
           */
           
@@ -783,6 +785,7 @@ sipua_call_t* client_find_call(sipua_t* sipua, char* id, char* username, char* n
 	int i;
 	ogmp_client_t *ua = (ogmp_client_t*)sipua;
 
+
 	for(i=0; i<MAX_SIPUA_LINES; i++)
 	{
 		sipua_call_t* call = ua->lines[i];
@@ -822,6 +825,7 @@ sipua_call_t* client_make_call(sipua_t* sipua, const char* subject, int sbytes, 
 	if(!call)
 	{
 		clie_log(("client_new_call: no call created\n"));
+
 		return NULL;
 	}
 
@@ -852,8 +856,6 @@ char* client_set_call_source(sipua_t* sipua, sipua_call_t* call, media_source_t*
 	sdp = sipua_call_sdp(sipua, call, MAX_CALL_BANDWIDTH, clie->control, clie->mediatypes,
                        clie->default_rtp_ports, clie->default_rtcp_ports,
                        clie->nmedia, source, clie->pt);
-
-
 	if(sdp)
 	{
       printf("client_set_call_source: sdp\n");
@@ -1012,12 +1014,19 @@ int client_lock_lines(sipua_t* sipua)
 }
 
 int client_unlock_lines(sipua_t* sipua)
-
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
 	xthr_unlock(client->lines_lock);
 
+	return UA_OK;
+}
+
+int client_line_range(sipua_t* sipua, int *min, int *max)
+{
+	*min = 1;
+	*max = MAX_SIPUA_LINES;
+   
 	return UA_OK;
 }
 
@@ -1077,8 +1086,7 @@ media_source_t* client_open_source(sipua_t* sipua, char* name, char* mode, void*
 {
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
 
-	
-	return source_open(name, client->control, mode, param);
+   return source_open(name, client->control, mode, param);
 }
 
 
@@ -1110,6 +1118,7 @@ media_source_t* client_set_background_source(sipua_t* sipua, char* name, char *s
 
 		if(client->background_source_subject)
 			xstr_done_string(client->background_source_subject);
+         
 		if(client->background_source_info)
 			xstr_done_string(client->background_source_info);
 
@@ -1281,6 +1290,7 @@ int client_answer(sipua_t *sipua, sipua_call_t* call, int reply, media_source_t*
 }
 
 int client_queue(sipua_t *sipua, sipua_call_t* call)
+
 {
 
    char *sdp;
@@ -1506,6 +1516,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_ca
  	sipua->lock_lines = client_lock_lines;
  	sipua->unlock_lines = client_unlock_lines;
 
+   sipua->line_range = client_line_range;
    sipua->lines = client_lines;
  	sipua->busylines = client_busylines;
  	/* current call session */

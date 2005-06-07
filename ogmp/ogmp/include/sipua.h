@@ -31,7 +31,8 @@
 
 #define MAX_PAYLOAD_TYPE 128
 #define MAX_CALLID_LEN		32
-#define MAX_SIPUA_LINES		8
+
+#define MAX_SIPUA_LINES		4
 #define MAX_SIPUA_MEDIA		4
 
 #define SIPUA_EVENT_SUCCEED						   0
@@ -313,6 +314,7 @@ struct sipua_uas_s
  	
 	int (*accept)(sipua_uas_t* uas, sipua_call_t *call);
 
+
 	int (*release)(sipua_uas_t* uas);
 
 	int (*invite)(sipua_uas_t* uas, const char *regname, sipua_call_t* call, char* sdp_body, int bytes);
@@ -365,16 +367,17 @@ struct sipua_s
 	int (*remove)(sipua_t *sipua, sipua_call_t* set, xrtp_media_t* rtp_media);
 	 */
 
- 	/* lines management */
- 	int (*lock_lines)(sipua_t* sipua);
- 	int (*unlock_lines)(sipua_t* sipua);
+	/* lines management */
+	int (*lock_lines)(sipua_t* sipua);
+	int (*unlock_lines)(sipua_t* sipua);
 
+	int (*line_range)(sipua_t* sipua, int *min, int *max);
 	int (*lines)(sipua_t* sipua, int *nbusy);
- 	int (*busylines)(sipua_t* sipua, int *busylines, int nlines);
+	int (*busylines)(sipua_t* sipua, int *busylines, int nlines);
 
- 	/* current call session */
+	/* current call session */
 	sipua_call_t* (*session)(sipua_t* sipua);
- 	sipua_call_t* (*line)(sipua_t* sipua, int line);
+	sipua_call_t* (*line)(sipua_t* sipua, int line);
 
 	/* switch current call session */
 	sipua_call_t* (*pick)(sipua_t* sipua, int line);
