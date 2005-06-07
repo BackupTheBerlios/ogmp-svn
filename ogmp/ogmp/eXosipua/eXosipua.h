@@ -54,7 +54,7 @@ struct jcall
   /* rtp capable */
   rtpcap_set_t *callin_info;
 
-  sipua_set_t *call_info;
+  sipua_call_t *call_info;
 
 #endif
 

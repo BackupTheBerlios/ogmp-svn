@@ -103,7 +103,7 @@
 #define SIP_STATUS_CODE_TOOMANYHOPS                   483
 #define SIP_STATUS_CODE_ADDRESSINCOMPLETE             484
 #define SIP_STATUS_CODE_AMBIGUOUS                     485
-#define SIP_STATUS_CODE_BUSYHERE	                     486
+#define SIP_STATUS_CODE_BUSYHERE	                  486
 #define SIP_STATUS_CODE_REQUESTTERMINATED             487
 #define SIP_STATUS_CODE_NOTACCEPTABLEHERE	            488
 #define SIP_STATUS_CODE_REQUESTPENDING	               491

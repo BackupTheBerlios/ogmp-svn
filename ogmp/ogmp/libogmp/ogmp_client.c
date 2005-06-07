@@ -1426,7 +1426,6 @@ int client_unsubscribe_bandwidth(sipua_t *sipua, sipua_call_t* call)
 
 sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_catalog_t* mod_cata, int bandwidth)
 {
-	int nmod;
 	int nformat;
 
 	ogmp_client_t *client=NULL;
@@ -1456,12 +1455,6 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_ca
 	/* Initialise */
 	client->conf = conf_new ( "ogmprc" );
    
-	client->format_handlers = xlist_new();
-
-	nmod = catalog_create_modules (mod_cata, "format", client->format_handlers);
-   
-	printf("client_new: %d format module found\n", nmod);
-
 
 	/* set sip client */
 	client->valid = 0;
@@ -1475,7 +1468,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_ca
 
    nformat = catalog_create_modules (mod_cata, "format", client->format_handlers);
 
-   //clie_log (("client_new_sipua: %d format module found\n", nformat));
+   clie_log (("client_new_sipua: %d format module found\n", nformat));
 
    client->lines_lock = xthr_new_lock();
 

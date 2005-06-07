@@ -23,22 +23,22 @@ int main(int argc, char** argv)
    sipua_t* sipua = NULL;
 	sipua_uas_t* uas = NULL;
 	module_catalog_t *mod_cata = NULL;
-   char *realm;
+   char *realm = NULL;
 
 	int sip_port;
 
-	if(argc < 2)
+	if(argc == 1)
 	{
 		sip_port = 5060;
 	}
-	else if(argc < 3)
-	{
-      realm = "realmtel.net";
-	}
-	else
+	else if(argc == 2)
 	{
 		sip_port = strtol(argv[1], NULL, 10);
-      realm = argv[2];
+	}
+	else if(argc == 3)
+	{
+		sip_port = strtol(argv[1], NULL, 10);
+        realm = argv[2];
 	}
 
 	printf("main: sip port is %d\n", sip_port);
@@ -50,17 +50,17 @@ int main(int argc, char** argv)
 	catalog_scan_modules ( mod_cata, OGMP_VERSION, MOD_DIR );
 
 	uas = client_new_uas(mod_cata, "eXosipua");
-   if(!uas)
+	if(!uas)
       printf("main: fail to create sipua server!\n");
 
 	if(uas && uas->init(uas, sip_port, "IN", "IP4", NULL, NULL) >= UA_OK)
 	{
 		sipua = client_new("cursesui", uas, realm, mod_cata, 64*1024);
 
-      if(sipua)
-         client_start(sipua);
-      else
-         printf("main: fail to create sipua!\n");
+		if(sipua)
+			client_start(sipua);
+		else
+			printf("main: fail to create sipua!\n");
 	}
 
 	return 0;

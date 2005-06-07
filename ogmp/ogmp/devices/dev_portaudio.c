@@ -773,8 +773,8 @@ int pa_offline (media_device_t * dev) {
    return MP_OK;
 }
 
-int pa_done (media_device_t * dev) {
-
+int pa_done (media_device_t * dev) 
+{
    portaudio_device_t *pa_dev = (portaudio_device_t *)dev;
    
    if (pa_dev->online) pa_offline (dev);

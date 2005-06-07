@@ -140,7 +140,7 @@ int jua_process_event(eXosipua_t *jua)
       
 		counter++;
 
-      jua_log(("jua_process_event: je->status_code[%d]\n", je->status_code));
+      jua_debug(("jua_process_event: je->status_code[%d]\n", je->status_code));
 
 		if (je->type==EXOSIP_CALL_NEW)
 		{
