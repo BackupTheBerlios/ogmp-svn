@@ -44,6 +44,7 @@ int rtp_done_setting(control_setting_t *gen){
    return MP_OK;
 }
 
+
 control_setting_t* rtp_new_setting(media_device_t *dev)
 {
    rtp_setting_t * set = xmalloc(sizeof(struct rtp_setting_s));
@@ -213,7 +214,7 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
 			return NULL;
 		}
 
-		rtp_media = session_new_media(ses, profile_no, profile_mime, clockrate, coding_param);
+      rtp_media = session_new_media(ses, profile_no, profile_mime, clockrate, coding_param);
 		
 		if(session_bandwidth(ses) <= bw_budget)
 		{

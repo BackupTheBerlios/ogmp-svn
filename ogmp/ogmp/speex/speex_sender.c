@@ -374,6 +374,7 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 	return MP_OK;
 }
 
+/*  */
 int spxs_link_device(media_player_t *mp, media_control_t *cont, media_stream_t* strm, void* extra)
 {
 	control_setting_t *setting = NULL;
@@ -401,11 +402,12 @@ int spxs_link_device(media_player_t *mp, media_control_t *cont, media_stream_t* 
 	if(!rtpcap)
 	{
 		spxs_debug(("spxs_set_device: No speex capable found\n"));
-      
 		return MP_FAIL;
 	}
 
-	dev_rtp = rtpstrm->rtp_format->rtp_in;
+   dev_rtp = (dev_rtp_t*)cont->find_device(cont, "rtp", "output");
+	/*dev_rtp = rtpstrm->rtp_format->rtp_in;*/
+
    dev = (media_device_t*)dev_rtp;
    
 	setting = cont->fetch_setting(cont, "rtp", dev);
@@ -418,7 +420,6 @@ int spxs_link_device(media_player_t *mp, media_control_t *cont, media_stream_t* 
 	rtpset = (rtp_setting_t*)setting;
 
 	spxset = speex_setting(cont);
-
 
 	total_bw = cont->book_bandwidth(cont, 0);
 
@@ -621,6 +622,7 @@ module_interface_t * media_new_sender()
 
    sender->transmit.add_destinate = spxs_add_destinate;
    sender->transmit.remove_destinate = spxs_remove_destinate;
+
    sender->transmit.session = spxs_session;
 
    return mp;

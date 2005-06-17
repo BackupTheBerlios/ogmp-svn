@@ -54,7 +54,7 @@ extern "C"{
 #define OGMP_VERSION_STRING  "0.1.0"
 
 #ifndef MOD_DIR
- #define MOD_DIR "ogmp"
+ #define MOD_DIR "."
 #endif
 
 #ifndef MED_DIR

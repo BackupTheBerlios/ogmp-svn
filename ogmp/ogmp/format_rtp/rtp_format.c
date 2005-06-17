@@ -176,9 +176,7 @@ media_player_t * rtp_mime_player(media_format_t * mf, const char * mime)
       }
     
       cur = cur->next;
-
-
-   }                                                  
+   }
 
    return NULL;
 }
@@ -316,6 +314,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 		rtp_debug(("rtp_open_stream: No memory for rtp stream\n"));
 		return NULL;
 	}
+   
 	memset(strm, 0, sizeof(rtp_stream_t));
 
 	if(strncmp(rtpcap->profile_mime, "audio", 5) == 0)

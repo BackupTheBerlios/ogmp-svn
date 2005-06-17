@@ -227,6 +227,7 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
       return NULL;
    }
 
+
    osource = xmalloc(sizeof(ogmp_source_t));
 	if(!osource)
    {
@@ -288,6 +289,7 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
 	{
 		if(0 == format->new_all_player(format, osource->control, "playback", mode_param))
 		{
+
 
 			source_done(msrc);
 			return NULL;
@@ -391,24 +393,23 @@ int source_associate_guests(media_source_t* msrc, media_format_t* rtp_fmt)
 
    if(!rtp_fmt->support_type(rtp_fmt, "mime", "application/sdp"))
    {
-      src_debug(("source_associate: Not a rtp format, pause\n"));
-           
+      src_debug(("source_associate: Not a rtp format, pause\n"));           
       return XRTP_EUNSUP;
    }
 
    for(i=0; i<osrc->nstream; i++)
    {
-      media_stream_t *strm = rtp_fmt->first;
+      media_stream_t *strm;
 
       player = osrc->players[i];
 
+      strm = rtp_fmt->first;
       while(strm)
       {
          rtp_stream_t* rtp_strm = (rtp_stream_t*)strm;
 
          if(player->match_play_type(player, "netcast") && player->receiver.match_type(&player->receiver, strm->mime, NULL))
          {
-
             media_transmit_t *transmit;
             xrtp_session_t *tr_ses;
 

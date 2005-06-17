@@ -499,7 +499,6 @@ int ogm_set_handlers ( ogm_format_t *ogm, module_catalog_t * cata )
       return MP_FAIL;
    }
 
-
    return MP_OK;
 }
 
@@ -528,6 +527,7 @@ int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_strea
    //stream_header sth;
    xrtp_list_user_t $u;
    ogm_media_t *handler;
+   media_stream_t *stream = NULL;
    
    media_format_t *mf = (media_format_t *)ogm;
 
@@ -537,9 +537,12 @@ int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_strea
    while (handler)
    {
       if (handler->detect_media(packet) != 0)
-	  {
-         if(handler->open_media(handler, ogm, ctrl, sstate, sno, (stream_header *)&(ogm->packet.packet[0])) >= MP_OK)
-			break;
+	  {            
+         stream = handler->open_media(handler, ogm, ctrl, sstate, sno, (stream_header *)&(ogm->packet.packet[0]));
+         if(stream)
+         {
+            break;
+         }
       }
       
       handler = (ogm_media_t*) xlist_next (mf->stream_handlers, &$u);     
@@ -681,6 +684,7 @@ int demux_ogm_millisec (media_format_t * mf, int rescan)
    /*determine the streamlenght and set this->time_length accordingly.
      ATTENTION:current_pos and oggbuffers will be destroyed by this function,
      there will be no way to continue playback uninterrupted.
+
 
      You have to seek afterwards, because after get_stream_length, the
      current_position is at the end of the file */
@@ -842,6 +846,7 @@ int ogm_seek_millisecond (media_format_t *mf, int millis) {
 
             this->resync[i]=1;
          }
+
 
          this->start_pts=-1;
       }
@@ -1043,6 +1048,7 @@ int ogm_demux_next (media_format_t *mf, int stream_end)
       }
    }          
 
+
    /* never reach here */
    return 0;
 }
@@ -1141,6 +1147,7 @@ module_interface_t * media_new_format()
    {
       ogm_log(("ogm_new_rtp_group: No memery to allocate\n"));
       return NULL;
+
    }
 
    memset(ogm, 0, sizeof(struct ogm_format_s));

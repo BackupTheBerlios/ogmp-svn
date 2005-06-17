@@ -91,6 +91,8 @@ int spxp_loop(void *gen)
 	media_frame_t * auf = NULL;
 
 	media_pipe_t *output = mp->device->pipe(mp->device);
+   mp->device->start(mp->device, DEVICE_OUTPUT);
+   
 	dec->stop = 0;
 	while(1)
 	{
@@ -159,7 +161,7 @@ int spxp_open_stream (media_player_t *mp, media_info_t *media_info)
    
 	spxp_log (("spxp_open_stream: rate[%d]; channels[%d]\n", ai.info.sample_rate, ai.channels));
 
-	ret = mp->device->set_output_media(mp->device, (media_info_t*)&ai);
+	ret = mp->device->set_io(mp->device, (media_info_t*)&ai, NULL);
 	if (ret < MP_OK)
 	{
 		spxp_debug(("spxp_open_stream: speex stream fail to open\n"));
@@ -206,6 +208,16 @@ int spxp_close_stream (media_player_t * mp)
    xthr_done_lock(dec->pending_lock);
    xthr_done_cond(dec->packet_pending);
    
+   return MP_OK;
+}
+
+int spxp_start (media_player_t *mp)
+{
+   if(!mp->device)
+      return MP_FAIL;
+      
+   mp->device->start(mp->device, DEVICE_OUTPUT);
+
    return MP_OK;
 }
 
@@ -256,18 +268,8 @@ int spxp_done(media_player_t *mp)
 
 int spxp_set_options (media_player_t * mp, char *opt, void *value)
 {
-    if(!value)
-	 {
-        spxp_debug(("vorbis_set_options: param 'value' is NULL point\n"));
-        return MP_FAIL;
-    }
-
-	 {
-        spxp_log(("vorbis_set_options: the option is not supported\n"));
-        return MP_EUNSUP;
-    }
-    
-    return MP_OK;
+    spxp_log(("vorbis_set_options: the option is not supported\n"));
+    return MP_EUNSUP;
 }
 
 int spxp_done_device(void *gen)
@@ -285,7 +287,7 @@ int spxp_set_device(media_player_t* mp, media_control_t* cont, module_catalog_t*
    control_setting_t *setting = NULL;
 
    media_device_t *dev = NULL;
-   
+  
    spxp_log(("spxp_set_device: need audio device\n"));
 
    dev = cont->find_device(cont, "audio", "output");
@@ -418,9 +420,9 @@ module_interface_t * media_new_player()
    mp->set_device = spxp_set_device;
    mp->link_device = spxp_link_device;
    
+   mp->start = spxp_start;
    mp->stop = spxp_stop;
    
-
    mp->receiver.match_type = spxp_match_type;
    mp->receiver.receive_media = spxp_receive_next;
 

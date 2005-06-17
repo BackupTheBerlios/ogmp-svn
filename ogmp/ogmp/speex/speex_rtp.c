@@ -532,15 +532,14 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 	{
 		spxrtp_log(("audio/speex.spxrtp_rtcp_in: Member[%d] is not valid yet\n", src_sender));
 
-		rtcp_compound_done(rtcp);
+		rtcp_compound_done (rtcp);
 
 		return XRTP_CONSUMED;
 	}
 	else
 	{
 		uint32 hi_ntp, lo_ntp;
-        uint32 rtcpts = 0, packet_sent = 0,  octet_sent = 0;
-
+      uint32 rtcpts = 0, packet_sent = 0,  octet_sent = 0;
 
 		if(rtcp_sender_info(rtcp, &src_sender, &hi_ntp, &lo_ntp,
                           &rtcpts, &packet_sent, &octet_sent) >= XRTP_OK)
@@ -570,11 +569,12 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 			 */
 			if(!sender->media_playable && sender->media_playable != -1)
 			{
-				/* useless in Speex codec */
+				/* useless in speex codec */
 				uint32 rtpts_mi;
 				int signum;
 
 				int ret;
+
 				media_player_t *player, *explayer = NULL;
 				media_control_t *ctrl;
 
@@ -588,6 +588,7 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 				}
 
 				ctrl = (media_control_t*)session_media_control(profile->session);
+            
 				player = ctrl->find_player(ctrl, "playback", SPEEX_MIME, "", NULL);
 		      if(player->set_device(player, ctrl, ctrl->modules(ctrl), NULL) < MP_OK)
 				{
@@ -650,51 +651,11 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 		}
 	}
    
-#if 0  /* Create input stream in sipua.establish_call */
-	/******************************
-	 * Create a local sender for the remote receiver
-	 */
-	if(ses->rtp_send_pipe && !myself->media_playable)
-	{
-		/* useless in Speex codec */
-		uint32 rtpts_mi;
-		int signum;
-
-      speex_info_t *spxinfo = (speex_info_t*)session_member_mediainfo(myself, &rtpts_mi, &signum);
-		if(spxinfo)
-		{
-			media_control_t *ctrl;
-
-
-         media_device_t *audio_in;
-			media_maker_t *maker;
-			media_receiver_t *receiver;
-
-			ctrl = (media_control_t*)session_media_control(ses);
-
-			/* create a netcast player associate to the rtp session */
-			receiver = (media_receiver_t*)ctrl->new_player(ctrl, "netcast", SPEEX_MIME, "", ses);
-         if(receiver)
-                myself->media_playable = 1;
-                
-         /* audio maker */
-         audio_in = ctrl->find_device(ctrl, "audio_in");
-			maker = ctrl->find_creater(ctrl, SPEEX_MIME, (media_info_t*)&spxinfo);
-         if(maker)
-         {
-            maker->new_media_stream(maker, ctrl, audio_in, receiver, (media_info_t*)spxinfo);
-            audio_in->start(audio_in, ctrl);
-         }
-		}
-	}
-#endif
-
 	/* find out minority report */
 	if(rtcp_report(rtcp, myself->ssrc, &frac_lost, &total_lost,
                       &full_seqno, &jitter, &lsr_stamp, &lsr_delay) >= XRTP_OK)
 	{
-		session_member_check_report(myself, frac_lost, total_lost, full_seqno,
-                                jitter, lsr_stamp, lsr_delay);
+		session_member_check_report (myself, frac_lost, total_lost, full_seqno, jitter, lsr_stamp, lsr_delay);
 	}
 	else
 	{
@@ -708,7 +669,7 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
    return XRTP_CONSUMED;
 }
 
-/*
+/* *
  * Following need to be sent by rtcp:
  * - SR/RR depends on the condition
  * - SDES:CNAME
@@ -776,6 +737,7 @@ int rtp_speex_set_master(profile_handler_t *handler, void *master)
 void * rtp_speex_master(profile_handler_t *handler)
 {
    spxrtp_handler_t *h = (spxrtp_handler_t *)handler;
+
 
    return h->master;
 }
@@ -1008,6 +970,7 @@ int rtp_speex_new_sdp(xrtp_media_t *media, char* nettype, char* addrtype, char* 
 	spxset = speex_setting(mctrl);
 
 	/* override default port */
+
 	if(spxset->rtp_setting.rtp_portno > 0)
 		*rtp_portno = spxset->rtp_setting.rtp_portno;
 
@@ -1293,6 +1256,7 @@ int rtp_speex_send_loop(void *gen)
 			if(first_payload)
 				usec_stream_payload = usec_now;
 
+
 			if(first_group_payload)
 			{
 				/* group usec range from the time send the first rtp payload of the samplestamp */
@@ -1317,6 +1281,7 @@ int rtp_speex_send_loop(void *gen)
 
 			spxrtp_debug(("audio/speex.rtp_speex_send_loop: %dus now, deadline[%dus]...in #%dus\n", usec_now, usec_payload_deadline, usec_payload_deadline - usec_now));
 			 Test end */
+
 
 
 

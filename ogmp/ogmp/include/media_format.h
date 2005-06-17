@@ -225,7 +225,7 @@ struct audio_info_s
 
 struct media_stream_s
 {
-	int (*play)(media_stream_t* stream);
+	int (*start)(media_stream_t* stream);
 	int (*stop)(media_stream_t* stream);
 
 	char mime[MIME_MAXLEN];
@@ -240,6 +240,7 @@ struct media_stream_s
 	media_info_t   *media_info;
 
 	media_stream_t *next;
+	media_stream_t *peer;
    
 	media_maker_t *maker;
    
@@ -304,11 +305,12 @@ struct media_device_s
    int (*start) (media_device_t * dev, int mode);   
    int (*stop) (media_device_t * dev, int mode);
 
-
    media_stream_t* (*new_media_stream) (media_device_t* dev, media_receiver_t *mr, media_info_t *media_info);
 
    int (*set_input_media)(media_device_t *dev, media_receiver_t* recvr, media_info_t *in_info);
    int (*set_output_media)(media_device_t *dev, media_info_t *out_info);
+
+   int (*set_io)(media_device_t *dev, media_info_t *minfo, media_receiver_t *receiver);
 
    int (*setting) (media_device_t * dev, control_setting_t *setting, module_catalog_t *catalog);
 
@@ -378,6 +380,7 @@ struct media_player_s
    capable_descript_t* (*capable)(media_player_t *playa, void *data);
    int (*match_capable)(media_player_t *playa, capable_descript_t *cap);
 
+   int (*start) (media_player_t * playa);
    int (*stop) (media_player_t * playa);
 };
 

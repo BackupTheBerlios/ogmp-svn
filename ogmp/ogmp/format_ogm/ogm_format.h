@@ -119,7 +119,7 @@ struct ogm_media_s
    /* Detect a media type from ogg packet */
    int (*detect_media) (ogg_packet *packet);
 
-   int (*open_media) (ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ctrl, ogg_stream_state *sstate, int sno, stream_header *sth);
+   media_stream_t* (*open_media) (ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ctrl, ogg_stream_state *sstate, int sno, stream_header *sth);
 
    int (*process_media) (ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page, ogg_packet *pack, int hdrlen, int64 lenbytes, int64 samplestamp, int last_packet, int stream_end);
 };

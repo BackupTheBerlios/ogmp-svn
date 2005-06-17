@@ -64,7 +64,9 @@
 #define SIPUA_STATUS_UNREG_DOING			5
 #define SIPUA_STATUS_QUEUE			      6
 #define SIPUA_STATUS_SERVE    			7
-#define SIPUA_STATUS_DECLINE    			8
+#define SIPUA_STATUS_DECLINE  			8
+#define SIPUA_STATUS_INCOMING    		9
+#define SIPUA_STATUS_ACCEPT   		   10
 
 #define SIP_STATUS_CODE_TRYING	            100
 #define SIP_STATUS_CODE_DIALOGESTABLISHMENT	101
@@ -160,6 +162,8 @@ struct sipua_auth_s
 {
    char* username;
    char* realm;
+   char* authid;    /* Due to libeXosip v1 cannot delete single auth */
+   char* password;  /* I have to cache all of them for re-adding. */
 };
 
 struct sipua_call_s
@@ -370,6 +374,7 @@ struct sipua_s
 	/* lines management */
 	int (*lock_lines)(sipua_t* sipua);
 	int (*unlock_lines)(sipua_t* sipua);
+
 
 	int (*line_range)(sipua_t* sipua, int *min, int *max);
 	int (*lines)(sipua_t* sipua, int *nbusy);

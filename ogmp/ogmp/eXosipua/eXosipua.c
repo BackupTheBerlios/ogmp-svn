@@ -238,6 +238,8 @@ int jua_process_event(eXosipua_t *jua)
                   reg_e.seconds_expires = strtol(expires->gvalue, NULL, 10);
             }
 
+
+
             osip_message_free(message);
          }                                                                
          else
@@ -675,6 +677,7 @@ int uas_add_coding(sipua_uas_t* sipuas, int pt, int rtp_portno, int rtcp_portno,
 	strncpy(coding, p, q-p);
 	coding[q-p] = '\0';
 
+
 	snprintf(rtpmap_a, 32, "%i %s/%i/%i", pt, coding, clockrate, param);
 
 	if(rtp_portno - rtcp_portno == 1)
@@ -699,13 +702,15 @@ int uas_clear_coding(sipua_uas_t* sipuas)
 	return UA_OK;
 }
 
-sipua_auth_t *uas_new_auth(char* username, char *realm)
+sipua_auth_t *uas_new_auth(char* username, char *realm, char *authid, char *password)
 {
    sipua_auth_t *auth = xmalloc(sizeof(sipua_auth_t));
    if(auth)
    {              
       auth->username = xstr_clone(username);
       auth->realm = xstr_clone(realm);
+      auth->authid = xstr_clone(authid);
+      auth->password = xstr_clone(password);
    }
 
    return auth;
@@ -717,6 +722,9 @@ int uas_done_auth(void* gen)
    
    xfree(auth->username);
    xfree(auth->realm);
+   xfree(auth->authid);
+   xfree(auth->password);
+   
    xfree(auth);
 
    return UA_OK;
@@ -743,7 +751,7 @@ int uas_set_authentication_info(sipua_uas_t *sipuas, char *username, char *useri
    if(xlist_find(sipuas->auth_list, &auth, uas_match_auth, &lu))
       return UA_OK;
 
-   new_auth = uas_new_auth(username, realm);
+   new_auth = uas_new_auth(username, realm, userid, passwd);
    if(new_auth)
    {
       xlist_addto_first(sipuas->auth_list, new_auth);
@@ -755,15 +763,40 @@ int uas_set_authentication_info(sipua_uas_t *sipuas, char *username, char *useri
    return UA_FAIL;
 }
 
+/**
+ * libeXosip cannot delete single authentication info, so I clear and re-add all rest auth,
+ * libeXosip2 can change its api, so I don't need store all passwords.
+ */
 int uas_clear_authentication_info(sipua_uas_t *sipuas, char *username, char *realm)
 {
-   return UA_EIMPL;
+   xlist_user_t lu;
+   int n;
+
+   sipua_auth_t *auth;
+   sipua_auth_t search_auth = {username, realm};
+
+   n = xlist_size(sipuas->auth_list);
+   xlist_delete_if(sipuas->auth_list, &search_auth, uas_match_auth, uas_done_auth);
+   if(n == xlist_size(sipuas->auth_list))
+      return UA_FAIL;
+      
+   eXosip_clear_authentication_info();
+
+   auth = (sipua_auth_t*)xlist_first(sipuas->auth_list, &lu);
+   while(auth)
+   {
+      eXosip_add_authentication_info(auth->username, auth->authid, auth->password, NULL, auth->realm);
+      
+      auth = (sipua_auth_t*)xlist_next(sipuas->auth_list, &lu);
+   }
+
+   return UA_OK;
 }
 
 int uas_has_authentication_info(sipua_uas_t *sipuas, char *username, char *realm)
 {
    xlist_user_t lu;
-   sipua_auth_t auth = {username, realm};
+   sipua_auth_t auth = {username, realm, NULL};
 
    if(xlist_find(sipuas->auth_list, &auth, uas_match_auth, &lu))
       return 1;
@@ -980,7 +1013,7 @@ int uas_accept(sipua_uas_t* uas, sipua_call_t *call)
 {
 	eXosipua_t *jua = (eXosipua_t*)uas;
 
-   jua->ncall++;
+   jua->ncall++;       
    
    if(call->did >= 0 && eXosip_set_call_reference(call->did, call) == 0)
       jua_log(("uas_accept: accepted\n"));
@@ -1017,6 +1050,7 @@ int eXosip_reinvite_with_authentication (struct eXosip_call_t *jc)
     int i;
 
 	osip_message_clone (jc->c_out_tr->orig_request, &cloneinvite);
+
 	osip_cseq_num = osip_atoi(jc->c_out_tr->orig_request->cseq->number);
 	length   = strlen(jc->c_out_tr->orig_request->cseq->number);
 	tmp    = (char *)osip_malloc(90*sizeof(char));
@@ -1051,8 +1085,7 @@ int eXosip_reinvite_with_authentication (struct eXosip_call_t *jc)
 	cloneinvite->cseq->number = (char*)osip_malloc(length + 2);
 	sprintf(cloneinvite->cseq->number, "%i", osip_cseq_num);
 
-	eXosip_add_authentication_information(cloneinvite,
-jc->c_out_tr->last_response);
+	eXosip_add_authentication_information(cloneinvite, jc->c_out_tr->last_response);
     cloneinvite->message_property = 0;
 
     eXosip_call_init(&jcc);
@@ -1086,6 +1119,7 @@ int uas_answer(sipua_uas_t* uas, sipua_call_t* call, int reply, char* reply_type
 {
 	if(reply_body)
 	{
+
 		if(eXosip_answer_call_with_body(call->did, reply, reply_type, reply_body) == 0)
 			return UA_OK;
 	}
@@ -1250,7 +1284,6 @@ module_interface_t* sipua_new_server()
 
 	return uas;
 }
-
 
 /**
  * Loadin Infomation Block

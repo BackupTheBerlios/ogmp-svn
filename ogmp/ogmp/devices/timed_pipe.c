@@ -40,6 +40,7 @@
 
 #define DEFAULT_USEC_PER_BUF  1000000  /* 1s */
 
+
 #define MIN_USEC_BUFFER       10000     /* 10ms */
 
 #define MUTE_VALUE 0
@@ -390,6 +391,7 @@ sample_buffer_t * pout_switch_buffer(timed_pipe_t *pipe)
 	  {
          pipe->last_played_frame = pipe->frame_read_now;
 
+
          pipe->frame_read_now = pipe->frame_read_now->next;
       }
       
@@ -604,6 +606,8 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
             return 1; /* end */
          }
        
+
+
 
          /* to next frame */
          pipe->last_played_frame = pipe->frame_read_now;
@@ -881,10 +885,9 @@ media_pipe_t * timed_pipe_new(int sample_rate, int usec_pulse)
    /*
    pout->dad_min_nsample = (int)((double)ms_min / 1000 * sample_rate);
    pout->dad_max_nsample = (int)((double)ms_max / 1000 * sample_rate);
-   */
    pout_log(("timed_pipe_new: delay adapt detect b/w [%d...%d] samples\n"
         , pout->dad_min_nsample, pout->dad_max_nsample));
-   
+   */
    mout = (media_pipe_t *)pout;
    
    mout->done = pout_done;

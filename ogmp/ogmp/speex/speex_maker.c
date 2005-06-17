@@ -151,8 +151,46 @@ int spxmk_done(media_maker_t *maker)
 	xfree(maker);
 
 	return MP_OK;
+}                     
+
+int spxmk_start(media_maker_t *maker)
+{
+	speex_encoder_t *enc = (speex_encoder_t *)maker;
+
+   enc->input_device->start(enc->input_device, DEVICE_INPUT);
+
+   return MP_OK;
 }
 
+int spxmk_stop(media_maker_t *maker)
+{
+	speex_encoder_t *enc = (speex_encoder_t *)maker;
+
+   enc->input_device->stop(enc->input_device, DEVICE_INPUT);
+
+   return MP_OK;
+}
+
+int speex_start_stream (media_stream_t* stream)
+{
+   if(!stream->maker)
+      return MP_FAIL;
+      
+   spxmk_start (stream->maker);
+   
+   return MP_OK;
+}
+
+int speex_stop_stream (media_stream_t* stream)
+{
+   if(!stream->maker)
+      return MP_FAIL;
+
+   spxmk_stop (stream->maker);
+
+   return MP_OK;
+}
+   
 media_stream_t* spxmk_new_media_stream(media_maker_t* maker, media_control_t* control, media_device_t* dev, media_receiver_t* receiver, media_info_t* minfo)
 {
 	int ret;
@@ -185,7 +223,7 @@ media_stream_t* spxmk_new_media_stream(media_maker_t* maker, media_control_t* co
 	
 	spxinfo->audioinfo.info.sample_bits = SPEEX_SAMPLE_BITS;
 
-	ret = dev->set_input_media(dev, &maker->receiver, minfo);
+	ret = dev->set_io(dev, minfo, &maker->receiver);
 	if (ret < MP_OK)
 	{
 		spxmk_log (("spxmk_new_media_stream: speex stream fail to open\n"));
@@ -194,6 +232,9 @@ media_stream_t* spxmk_new_media_stream(media_maker_t* maker, media_control_t* co
 	}
 
 	memset(strm, 0, sizeof(media_stream_t));
+
+   strm->start = speex_start_stream;
+   strm->stop = speex_stop_stream;
 
 	strm->maker = maker;
 	strm->player = (media_player_t*)receiver;
@@ -256,24 +297,6 @@ media_stream_t* spxmk_new_media_stream(media_maker_t* maker, media_control_t* co
    
 	return strm;
 }
-
-int spxmk_start(media_maker_t *maker)
-{
-	speex_encoder_t *enc = (speex_encoder_t *)maker;
-
-   enc->input_device->start(enc->input_device, DEVICE_INPUT);
-   
-   return MP_OK;
-}
-
-int spxmk_stop(media_maker_t *maker)
-{
-	speex_encoder_t *enc = (speex_encoder_t *)maker;
-   
-   enc->input_device->stop(enc->input_device, DEVICE_INPUT);
-
-   return MP_OK;
-}                   
 
 module_interface_t* media_new_maker()
 {

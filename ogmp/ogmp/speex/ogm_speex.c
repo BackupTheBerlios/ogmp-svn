@@ -133,8 +133,28 @@ int speex_open_header(ogg_packet *op, speex_info_t *spxinfo)
    return MP_OK;
 }
 
+int ogm_start_speex (media_stream_t* stream)
+{
+   if(!stream->player)
+      return MP_FAIL;
+
+   stream->player->start (stream->player);
+
+   return MP_OK;
+}
+
+int ogm_stop_speex (media_stream_t* stream)
+{
+   if(!stream->player)
+      return MP_FAIL;
+
+   stream->player->stop (stream->player);
+
+   return MP_OK;
+}
+
 /* Open a new 'Ogg/Speex' stream in the ogm file */
-int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ctrl, ogg_stream_state *sstate, int sno, stream_header *sth)
+media_stream_t* ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ctrl, ogg_stream_state *sstate, int sno, stream_header *sth)
 {
 	speex_info_t *spxinfo = NULL;
 
@@ -154,12 +174,14 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
 		if(!ogm_strm)
 		{
 			ogm_speex_log(("ogm_open_speex: stream xmalloc failed.\n"));
-			return MP_EMEM;
+			return NULL;
 		}
       
 		memset(ogm_strm, 0, sizeof(ogm_stream_t));
       
 		stream = (media_stream_t *)ogm_strm;
+      stream->start = ogm_start_speex;
+      stream->start = ogm_stop_speex;
 
 		strncpy(stream->mime, "audio/speex\0", strlen("audio/speex")+1);
 
@@ -169,8 +191,8 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
 		if (!spxinfo)
 		{
 			ogm_speex_log(("ogm_open_speex: mediainfo xmalloc failed.\n"));
-			xfree(ogm_strm);
-			return MP_EMEM;
+         stream->playable = -1;
+			return stream;
 		}
 
 		memset(spxinfo, 0, sizeof(struct speex_info_s));
@@ -184,7 +206,8 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
 		spxinfo = (speex_info_t*)stream->media_info;      
 	}
 			
-	speex_bits_init(&spxinfo->bits);
+	if(stream->playable == -1)
+      return stream;
 
 	if(spxinfo->head_packets < 2 && stream->playable != -1)
 	{
@@ -195,7 +218,8 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
 			if(speex_open_header(&ogm->packet, spxinfo) < MP_OK)
 			{
 				stream->playable = -1;
-				return MP_FAIL;
+			   ogm_speex_log(("ogm_open_speex: speex unplayable.\n"));
+				return stream;
 			}
 				
 			mf->add_stream(mf, stream, sno, 'a');
@@ -209,6 +233,8 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
 			ogm_strm->sno = mf->nastreams;
 			ogm_strm->stype = 'a';
 			ogm_strm->instate = sstate;
+
+	      speex_bits_init(&spxinfo->bits);
 
          ogm_speex_log(("ogm_open_speex: version[%d]\n", spxinfo->version));
          ogm_speex_log(("ogm_open_speex: bitstream version[%d]\n", spxinfo->bitstream_version));
@@ -234,7 +260,7 @@ int ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_control_t *ct
 	
 	ogm_speex_log(("ogm_open_speex: stream #%d opened as Speex\n", sno));
 
-	return MP_OK;
+	return stream;
 }
 
 /* Handle speex packet */
@@ -254,7 +280,7 @@ int ogm_process_speex(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page
 		return MP_FAIL;
 	}
 
-	if(stream->playable == 0 || spxinfo->head_packets < spxinfo->nheader)
+	if(spxinfo->head_packets < spxinfo->nheader)
 	{
 		spxinfo->head_packets++;
 
@@ -263,6 +289,12 @@ int ogm_process_speex(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page
 
 		return MP_OK;
 	}
+
+   if(stream->playable == 0)
+   {
+      stream->playable = 1;
+      stream->start(stream);
+   }
 
 	frame.bytes = pack->bytes;
 	frame.raw = pack->packet;
@@ -290,8 +322,8 @@ int ogm_done_speex (ogm_media_t * ogmm)
    return MP_OK;
 }
 
-module_interface_t * ogm_new_media() {
-
+module_interface_t * ogm_new_media()
+{
    ogm_media_t * ogmm = xmalloc(sizeof(struct ogm_media_s));
    if (!ogmm) {
 

@@ -281,6 +281,11 @@ int sipua_make_call(sipua_t *sipua, sipua_call_t* call, char* id,
 		media_bw = session_new_sdp(cata, nettype, addrtype, netaddr, &rtp_portno, &rtcp_portno, pt, codings[i].mime, codings[i].clockrate, codings[i].param, bw_budget, control, &sdp_info);
 
 		if(media_bw > 0 && bw_budget > call->bandwidth_need + media_bw)
+
+
+
+
+
 		{
 			call->bandwidth_need += media_bw;
 		}
@@ -628,13 +633,18 @@ int sipua_negotiate_call(sipua_t *sipua, sipua_call_t *call,
 	return UA_OK;
 }
 
+int sipua_done_maker(void *gen)
+{
+   media_maker_t* maker = (media_maker_t*)gen;
+   return maker->done(maker);
+}
+
 /* *
- * Open an input source from given device name
+ * Open an input stream from given media type.
  */
-media_maker_t* sipua_open_device(char* devname, char* devmode, media_control_t* control, media_receiver_t* receiver, media_info_t *minfo)
+media_stream_t* sipua_open_stream(char* mediatype, char* iomode, media_control_t* control, media_receiver_t* receiver, media_info_t *minfo)
 {
    media_maker_t* maker = NULL;
-
    media_stream_t* stream = NULL;
 
 	xlist_t* maker_mods;
@@ -648,20 +658,19 @@ media_maker_t* sipua_open_device(char* devname, char* devmode, media_control_t* 
 
 	xlist_user_t $lu;
 
-   ua_log(("source_open_device: need audio device\n"));
-   dev = control->find_device(control, devname, "input");
+   ua_log(("source_open_device: need media device\n"));
+   dev = control->find_device(control, mediatype, iomode);
 
    if(!dev)
    {
-      ua_debug(("source_open_device: No %s found\n\n", devname));
-
+      ua_debug(("source_open_device: No %s found\n\n", mediatype));
 	   return NULL;
    }
 
-   setting = control->fetch_setting(control, devname, dev);
+   setting = control->fetch_setting(control, mediatype, dev);
    if(!setting)
    {
-      ua_log(("source_open_device: use default setting for '%s' device\n", devname));
+      ua_log(("source_open_device: use default setting for '%s' device\n", mediatype));
    }
    else
    {
@@ -680,39 +689,53 @@ media_maker_t* sipua_open_device(char* devname, char* devmode, media_control_t* 
 		if(maker->receiver.match_type(&maker->receiver, minfo->mime, minfo->fourcc))
 		{
 			xlist_remove_item(maker_mods, maker);
-
          stream = maker->new_media_stream(maker, control, dev, receiver, minfo);
-         if(stream)
-            return maker;
+         
+         break;
 		}
 
 		maker = (media_maker_t *)xlist_next(maker_mods, &$lu);
 	}
 
-   //xlist_done(maker_mods);
-   ua_debug(("source_open_device: no maker found\n\n"));
+   xlist_done(maker_mods, sipua_done_maker);
 
-   return NULL;
+   if(!stream)
+      ua_debug(("source_open_stream: no stream create\n\n"));
+
+   stream->start(stream);
+
+   return stream;
 }
 
-int sipua_new_inputs(sipua_t* sipua, sipua_call_t* call, rtpcap_set_t* rtpcapset, media_control_t* control)
+int sipua_new_media_streams(sipua_t* sipua, sipua_call_t* call, rtpcap_set_t* rtpcapset, media_control_t* control)
 {
-   media_maker_t* maker = NULL;
    media_info_t* minfo = NULL;
-   
+
    media_format_t* rtpfmt = NULL;
-   media_stream_t* strm = NULL;
+   
+   media_stream_t* instream = NULL;
+   media_stream_t* outstream = NULL;
 
    int i, n_input = 0;
    char mediatype[33];
    
    rtpfmt = call->rtp_format;   
-   strm = rtpfmt->first;
+   instream = rtpfmt->first;
    
-   while(strm)
+   while(instream)
    {
-      minfo = (media_info_t*)session_mediainfo(((rtp_stream_t*)strm)->session);
+      media_player_t* outplayer = NULL;
 
+      if(instream->peer)
+      {
+         n_input++;
+         instream = instream->next;
+         continue;
+      }
+
+      minfo = (media_info_t*)session_mediainfo(((rtp_stream_t*)instream)->session);
+
+      /* Detremine the media type */
       i=0;
       while(minfo->mime[i] != '/')
       {
@@ -722,21 +745,28 @@ int sipua_new_inputs(sipua_t* sipua, sipua_call_t* call, rtpcap_set_t* rtpcapset
 
       mediatype[i] = '\0';
 
-      strm->player = control->find_player(control, "netcast", minfo->mime, minfo->fourcc, call->rtpcapset);
-      if(strm->player->link_device(strm->player, control, strm, rtpcapset) < MP_OK)
+      outplayer = control->find_player(control, "netcast", minfo->mime, minfo->fourcc, call->rtpcapset);
+      if(!outplayer)
       {
-	      strm = strm->next;
+	      instream = instream->next;
          continue;
       }
       
-      maker = sipua_open_device(mediatype, "input", control, &strm->player->receiver, minfo);
-      if(maker)
-      {
-         maker->start(maker);
-         n_input++;
+      outstream = sipua_open_stream(mediatype, "input", control, &outplayer->receiver, minfo);
+      if(!outstream || outplayer->link_device(outplayer, control, outstream, rtpcapset) < MP_OK)
+      {          
+         outplayer->done(outplayer);
+         instream = instream->next;
+         continue;
       }
+
+      n_input++;
+      outstream->player = outplayer;
       
-	   strm = strm->next;
+      outstream->peer = instream;
+      instream->peer = outstream;
+      
+	   instream = instream->next;
    }
 
    return n_input;
@@ -778,7 +808,6 @@ int sipua_establish_call(sipua_t* sipua, sipua_call_t* call, char *mode, rtpcap_
 			if(bw > 0)
 			{
 				call->rtp_format = format;
-
 			}
 			else
 			{
@@ -806,10 +835,11 @@ int sipua_establish_call(sipua_t* sipua, sipua_call_t* call, char *mode, rtpcap_
 
 	call->bandwidth_need = bw;
 
-	/* create a input source */
+	/* create a input source 
 	if(call->status == SIP_STATUS_CODE_OK)
-	   sipua_new_inputs(sipua, call, rtpcapset, control);
-
+	   sipua_new_media_streams(sipua, call, rtpcapset, control);
+   */
+   
 	ua_log(("sipua_establish_call: call[%s] established\n", rtpcapset->subject));
 
 	return bw;
@@ -833,6 +863,7 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_call_t* call, int bw_budget, media_co
                 char* mediatypes[], int rtp_ports[], int rtcp_ports[], int nmedia,
                 media_source_t* source, int pt_pool[])
 {       
+
 	char *sdp_body = NULL;
 	char *nettype, *addrtype, *netaddr;
  
@@ -911,6 +942,7 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_call_t* call, int bw_budget, media_co
          pt = sipua_book_pt(pt_pool);
          if(pt<0)
          {
+
             ua_log(("sipua_new_session: no payload type available\n"));
             break;
          }
@@ -1062,6 +1094,7 @@ int sipua_session_sdp(sipua_t *sipua, sipua_call_t* call, char** sdp_body)
 
 
 	return UA_OK;
+
 }
 #endif    
 
@@ -1142,7 +1175,6 @@ int sipua_answer(sipua_t *ua, sipua_call_t* call, int reply, char *sdp_body)
 int sipua_options_call(sipua_t *ua, sipua_call_t* call)
 {
 	ua_log(("sipua_options_call: FIXME - yet to implement\n"));
-
 	return UA_OK;
 }
 int sipua_info_call(sipua_t *ua, sipua_call_t* call, char *type, char *info)

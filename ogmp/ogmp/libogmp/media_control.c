@@ -211,7 +211,7 @@ int cont_add_device (media_control_t *cont, char *name, control_setting_call_t *
    if(!item)
    {
       cont_log(("cont_add_device: No memory for setting\n"));
-	  dev->done(dev);
+	   dev->done(dev);
 
       return MP_EMEM;
    }
@@ -241,16 +241,18 @@ int cont_match_device(void* t, void *p)
    return -1;
 }
 
-media_device_t* cont_find_device(media_control_t *cont, char *name, char* mode)
+media_device_t* cont_find_device(media_control_t *cont, char *mediatype, char* mode)
 {
    xlist_user_t lu;
    xlist_t *devs;
    
    control_impl_t *impl = (control_impl_t*)cont;
 
-   media_device_t *dev = xlist_find(impl->devices, name, cont_match_device, &lu);
+   /* give back the cached version */
+   media_device_t *dev = xlist_find(impl->devices, mediatype, cont_match_device, &lu);
    
-   if(dev) return dev;
+   if(dev)
+      return dev;
 
    devs = xlist_new();
 
@@ -266,9 +268,9 @@ media_device_t* cont_find_device(media_control_t *cont, char *name, char* mode)
    dev = xlist_first(devs, &lu);
    while (dev)
    {
-      if (dev->match_type(dev, name) && dev->match_mode(dev, mode))
+      if (dev->match_type(dev, mediatype) && dev->match_mode(dev, mode))
 	   {
-         cont_log(("cont_find_device: found '%s/%s' device\n", name, mode));
+         cont_log(("cont_find_device: found '%s/%s' device\n", mediatype, mode));
 
          xlist_remove_item(devs, dev);
 
@@ -281,7 +283,10 @@ media_device_t* cont_find_device(media_control_t *cont, char *name, char* mode)
    xlist_done(devs, cont_done_device);
 
    if(!dev) 
-	   cont_log(("cont_find_device: can't find '%s' device\n", name));
+	   cont_log(("cont_find_device: can't find '%s' device\n", mediatype));
+      
+   /* cache the device */
+   xlist_addto_first(impl->devices, dev);
 
    return dev;
 }
