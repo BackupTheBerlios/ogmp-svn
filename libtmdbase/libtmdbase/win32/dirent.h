@@ -40,7 +40,7 @@ typedef struct
 
 
 /* Function prototypes */ 
-extern DECLSPEC DIR *opendir(char *); 
+extern DECLSPEC DIR *opendir(const char *); 
 extern DECLSPEC struct dirent *readdir(DIR *); 
 extern DECLSPEC int closedir(DIR *);
 

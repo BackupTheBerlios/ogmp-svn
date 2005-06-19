@@ -21,7 +21,7 @@
 #include "dirent.h" 
 
 
-DIR *opendir(char *dir) 
+DIR *opendir(const char *dir) 
 { 
     DIR *dp; 
     char *filespec; 
