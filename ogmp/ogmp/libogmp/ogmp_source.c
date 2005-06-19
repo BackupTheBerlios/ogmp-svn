@@ -295,7 +295,7 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
 			return NULL;
 		}
 	}
-   else if(0 == strcmp(mode, "netcast"))
+    else if(0 == strcmp(mode, "netcast"))
 	{
 		netcast_parameter_t *np = (netcast_parameter_t*)mode_param;
 		

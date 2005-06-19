@@ -825,7 +825,7 @@ int uas_regist(sipua_uas_t *sipuas, int *regno, char *loc, char *registrar, char
 
    snprintf(p, 12, ":%d", sipuas->portno);
 
-	jua_log(("uas_regist: %s on %s within %ds\n", id, registrar, seconds));
+	jua_debug(("uas_regist: %s on %s within %ds\n", id, registrar, seconds));
 
 	eXosip_lock();
 
@@ -847,8 +847,7 @@ int uas_regist(sipua_uas_t *sipuas, int *regno, char *loc, char *registrar, char
 
 	if(ret != 0)
 	{
-		jua_log(("uas_regist: ret=%d\n", ret));
-
+		jua_debug(("uas_regist: ret=%d\n", ret));
 		return UA_FAIL;
 	}
 		

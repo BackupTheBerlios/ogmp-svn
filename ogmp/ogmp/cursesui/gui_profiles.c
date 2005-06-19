@@ -407,13 +407,13 @@ int window_profiles_run_command(gui_t* gui, int c)
 
 			if(prof)
 			{
-            if(prof->reg_status == SIPUA_STATUS_REG_OK)
+				if(prof->reg_status == SIPUA_STATUS_REG_OK)
 					ocui->sipua->set_profile(ocui->sipua, prof);
 				else
-            {
-               prof->regno = -1;
+				{
+					prof->regno = -1;
 					ocui->sipua->regist(ocui->sipua, prof, ocui->user->userloc);
-            }
+				}
 			}
 
 			break;          

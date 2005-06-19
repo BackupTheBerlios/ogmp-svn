@@ -420,6 +420,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
          
          call->status = SIPUA_STATUS_INCOMING;
 
+			call->status = SIPUA_STATUS_INCOMING;
+
 			call->rtpcapset = rtpcapset;
 
          /* put in line */

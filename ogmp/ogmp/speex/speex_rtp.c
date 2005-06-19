@@ -590,7 +590,7 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 				ctrl = (media_control_t*)session_media_control(profile->session);
             
 				player = ctrl->find_player(ctrl, "playback", SPEEX_MIME, "", NULL);
-		      if(player->set_device(player, ctrl, ctrl->modules(ctrl), NULL) < MP_OK)
+		        if(player->set_device(player, ctrl, ctrl->modules(ctrl), NULL) < MP_OK)
 				{
 					sender->media_playable = -1;
 					player->done(player);

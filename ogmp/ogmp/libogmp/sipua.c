@@ -644,8 +644,8 @@ int sipua_done_maker(void *gen)
  */
 media_stream_t* sipua_open_stream(char* mediatype, char* iomode, media_control_t* control, media_receiver_t* receiver, media_info_t *minfo)
 {
-   media_maker_t* maker = NULL;
-   media_stream_t* stream = NULL;
+    media_maker_t* maker = NULL;
+    media_stream_t* stream = NULL;
 
 	xlist_t* maker_mods;
 
@@ -653,8 +653,8 @@ media_stream_t* sipua_open_stream(char* mediatype, char* iomode, media_control_t
 
 	module_catalog_t * mod_cata = NULL;
 
-   control_setting_t *setting = NULL;
-   media_device_t *dev = NULL;
+    control_setting_t *setting = NULL;
+    media_device_t *dev = NULL;
 
 	xlist_user_t $lu;
 
@@ -664,7 +664,7 @@ media_stream_t* sipua_open_stream(char* mediatype, char* iomode, media_control_t
    if(!dev)
    {
       ua_debug(("source_open_device: No %s found\n\n", mediatype));
-	   return NULL;
+	  return NULL;
    }
 
    setting = control->fetch_setting(control, mediatype, dev);
@@ -737,6 +737,7 @@ int sipua_new_media_streams(sipua_t* sipua, sipua_call_t* call, rtpcap_set_t* rt
 
       /* Detremine the media type */
       i=0;
+
       while(minfo->mime[i] != '/')
       {
          mediatype[i] = minfo->mime[i];
@@ -838,7 +839,7 @@ int sipua_establish_call(sipua_t* sipua, sipua_call_t* call, char *mode, rtpcap_
 	/* create a input source 
 	if(call->status == SIP_STATUS_CODE_OK)
 	   sipua_new_media_streams(sipua, call, rtpcapset, control);
-   */
+    */
    
 	ua_log(("sipua_establish_call: call[%s] established\n", rtpcapset->subject));
 
@@ -869,15 +870,15 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_call_t* call, int bw_budget, media_co
  
 	rtpcap_sdp_t sdp_info;
 
-   int pt;   
+    int pt;   
    
 	char tmp[16];          
 	char tmp2[16];
 
 	module_catalog_t *cata = control->modules(control);
     
-   media_format_t *src_fmt = source->format;
-   media_stream_t *src_strm;
+    media_format_t *src_fmt = source->format;
+    media_stream_t *src_strm;
 
 	sipua->uas->address(sipua->uas, &nettype, &addrtype, &netaddr);
  

@@ -179,13 +179,13 @@ int ogm_new_all_player(media_format_t *mf, media_control_t* ctrl, char* mode, vo
 			ogm_debug(("ogm_new_all_player: No %s player\n", cur->media_info->mime));
 		}
 		else if(cur->player->set_device(cur->player, ctrl, ctrl->modules(ctrl), mode_param) < MP_OK)
-      {
-	      cur->player->done(cur->player);
-         cur->player = NULL;
+		{
+	        cur->player->done(cur->player);
+            cur->player = NULL;
 			cur->playable = -1;
 			ogm_debug(("ogm_new_all_player: %s stream fail to set device\n", cur->media_info->mime));
-      }
-      else if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
+		}
+        else if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
 		{      
 			cur->playable = -1;
 			ogm_debug(("ogm_new_all_player: open %s stream fail!\n", cur->media_info->mime));

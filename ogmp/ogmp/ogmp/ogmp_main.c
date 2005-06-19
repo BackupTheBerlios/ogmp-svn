@@ -17,6 +17,10 @@
  
 #include "ogmp.h"
 
+#ifndef MOD_DIR
+ #define MOD_DIR "ogmp"
+#endif
+
 /* For standalone sipua */
 int main(int argc, char** argv)
 {

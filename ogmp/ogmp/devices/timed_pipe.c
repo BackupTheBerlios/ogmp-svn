@@ -22,8 +22,8 @@
 #include <string.h>
 /*
 #define PIPE_LOG
-#define PIPE_DEBUG
 */
+#define PIPE_DEBUG
 #ifdef PIPE_LOG
  #define pout_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else

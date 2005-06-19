@@ -30,7 +30,7 @@
 
 #define DEFAULT_SAMPLE_FACTOR  2
 
-#define DEFAULT_OUTPUT_NSAMPLE_PULSE  2048
+#define DEFAULT_OUTPUT_NSAMPLE_PULSE 2048
 #define DEFAULT_INPUT_NSAMPLE_PULSE  2048
 #define PA_DEFAULT_INBUF_N 2
 
@@ -208,7 +208,7 @@ int pa_input_loop(void *gen)
 			memset(&inputbuf->pcm[inputbuf->nbyte_read], 0, nbyte_need);
 			inputbuf->npcm_read += npcm_need;
          
-			//pa_debug(("pa_input_loop: Input %d/%d bytes\n", inputbuf->npcm_read, inputbuf->npcm_write));
+			pa_debug(("pa_input_loop: Input %d/%d bytes\n", inputbuf->npcm_read, inputbuf->npcm_write));
 
 			npcm_left = inputbuf->npcm_write - inputbuf->npcm_read;
 			if(npcm_left < pa->input_npcm_once)
@@ -267,6 +267,30 @@ static int pa_io_callback( void *inbuf, void *outbuf, unsigned long npcm, PaTime
    int ret;
    int pick_us;
 
+   /* Record input data */
+   if(inbuf)
+   {
+		pa->input_samplestamp += npcm;
+
+		next = (pa->inbuf_w+1) % pa->inbuf_n;
+		if(next != pa->inbuf_r)
+		{
+			memcpy(pa->inbuf[pa->inbuf_w].pcm, inbuf, npcm);
+
+			pa->inbuf[pa->inbuf_w].stamp = pa->input_samplestamp;
+			pa->inbuf[pa->inbuf_w].npcm_write = npcm;
+			pa->inbuf_w = next;
+		}
+		else
+		{
+			/* encoding slower than input */
+			pa_debug(("pa_io_callback: inbuf full\n"));
+		}
+   }
+
+   if(!outbuf)
+	   return 1;
+
    pick_us_start = time_usec_now(pa->clock);
    ret = pa->out->pick_content(pa->out, (media_info_t*)&pa->ai_output, outbuf, npcm);
    pick_us = time_usec_spent(pa->clock, pick_us_start);
@@ -302,22 +326,6 @@ static int pa_io_callback( void *inbuf, void *outbuf, unsigned long npcm, PaTime
       }
    }
    pa->last_pick = pick_us_start;
-
-   /* Record input data */
-   pa->input_samplestamp += npcm;
-
-   next = (pa->inbuf_w+1) % pa->inbuf_n;
-   if(next == pa->inbuf_r)
-   {
-	   /* encoding slower than input */
-	   return 0;
-   }
-
-   memcpy(pa->inbuf[pa->inbuf_w].pcm, inbuf, npcm);
-
-   pa->inbuf[pa->inbuf_w].stamp = pa->input_samplestamp;
-   pa->inbuf[pa->inbuf_w].npcm_write = npcm;
-   pa->inbuf_w = next;
 
    return ret;
 }
@@ -557,15 +565,15 @@ int pa_set_output_media(media_device_t *dev, media_info_t *out_info)
    sample_type = pa_sample_type(pa->ai_output.info.sample_bits);
 
    err = Pa_OpenDefaultStream
-                  (  &pa->pa_outstream
-                     , pa->ai_output.channels   /* no input channels */
-                     , pa->ai_output.channels   /* output channels */
-                     , sample_type              /* paInt16: 16 bit integer output, etc */
-                     , pa->ai_output.info.sample_rate  /* sample rate, cd is 44100hz */
-                     , nsample_pulse
-                     , pa->nbuf_internal        /* use default minimum audio buffers in portaudio */
-                     , pa_io_callback
-                     , pa
+                  (  &pa->pa_outstream,
+                     0,                        /* no input channels */
+                     pa->ai_output.channels,   /* output channels */
+                     sample_type,              /* paInt16: 16 bit integer output, etc */
+                     pa->ai_output.info.sample_rate,  /* sample rate, cd is 44100hz */
+                     nsample_pulse,
+                     pa->nbuf_internal,        /* use default minimum audio buffers in portaudio */
+                     pa_io_callback,
+                     pa
                   );
 
    if ( err != paNoError )
@@ -615,7 +623,7 @@ int pa_set_io(media_device_t *dev, media_info_t *out_info, media_receiver_t* rec
 
    if(!pa->online && pa_online (dev) < MP_OK)
    {
-      pa_debug (("pa_set_input_media: Can't activate PortAudio device\n"));
+      pa_debug (("pa_set_io: Can't activate PortAudio device\n"));
 
       return MP_FAIL;
    }
@@ -627,7 +635,7 @@ int pa_set_io(media_device_t *dev, media_info_t *out_info, media_receiver_t* rec
    else
       pa->usec_pulse = (int)((double)nsample_pulse / ai->info.sample_rate * 1000000);
 
-   pa_debug(("pa_set_output_media: %d channels, %d rate, %d sample per pulse (%dus)\n",
+   pa_debug(("pa_set_io: %d channels, %d rate, %d sample per pulse (%dus)\n",
 			ai->channels, ai->info.sample_rate, nsample_pulse, pa->usec_pulse));
 
    ai->channels_bytes = ai->channels * ai->info.sample_bits / OS_BYTE_BITS;
@@ -643,7 +651,7 @@ int pa_set_io(media_device_t *dev, media_info_t *out_info, media_receiver_t* rec
 
    err = Pa_OpenDefaultStream
                   (  &pa->pa_iostream,
-                     ai->channels,   /* no input channels */
+                     ai->channels,   /* input channels */
                      ai->channels,   /* output channels */
                      sample_type,              /* paInt16: 16 bit integer output, etc */
                      ai->info.sample_rate,  /* sample rate, cd is 44100hz */
@@ -652,10 +660,29 @@ int pa_set_io(media_device_t *dev, media_info_t *out_info, media_receiver_t* rec
                      pa_io_callback,
                      pa
                   );
+#if 0
+   err = Pa_OpenStream 
+					(	&pa->pa_iostream,
+						Pa_GetDefaultInputDeviceID(),
+						pa->ai_input.channels,
+						sample_type,
+						NULL,				/* void *inputDriverInfo */
+						Pa_GetDefaultOutputDeviceID(),
+						pa->ai_output.channels,	/* int numOutputChannels */
+						sample_type,		/* PaSampleFormat outputSampleFormat */
+						NULL,				/* void *outputDriverInfo */
+						pa->ai_input.info.sample_rate,
+						nsample_pulse,		/* unsigned long framesPerBuffer */
+						pa->nbuf_internal,	/* unsigned long numberOfBuffers */
+						0,					/* PaStreamFlags streamFlags: paDitherOff */
+						pa_io_callback,
+						pa 
+					);
+#endif
 
    if ( err != paNoError )
    {
-      pa_debug(("pa_set_output_media: %s\n", Pa_GetErrorText(err) ));
+      pa_debug(("pa_set_io: %s\n", Pa_GetErrorText(err) ));
       Pa_Terminate();
 
       return MP_FAIL;
@@ -665,7 +692,7 @@ int pa_set_io(media_device_t *dev, media_info_t *out_info, media_receiver_t* rec
 
    pa->io_ready = 1;
 
-	pa_debug(("\n[pa_set_output_media: stream opened, PortAudio use %d internal buffers]\n\n", pa_min_nbuf));
+	pa_debug(("\n[pa_set_io: stream opened, PortAudio use %d internal buffers]\n\n", pa_min_nbuf));
 
    return MP_OK;
 }
