@@ -58,6 +58,94 @@ int spxmk_match_type(media_receiver_t * mr, char *mime, char *fourcc)
 	return 0;
 }
 
+int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samplestamp, int last_packet)
+{
+	int spx_bytes;
+	char *spx_frame;
+
+	speex_encoder_t *enc = (speex_encoder_t *)mr;
+
+	int delta_nsample = 0;
+   int cache_nsample = 0;
+
+   int todo_nbyte = auf->bytes;
+   int done_nbyte = 0;
+   int delta_nbyte = 0;
+
+	media_frame_t spxf;
+	media_stream_t *stream = enc->media_stream;
+
+	spxmk_debug (("spxmk_receive_media: receive %d bytes\n", auf->bytes));
+	spxmk_debug (("spxmk_receive_media: auf->raw@%x\n", (int)auf->raw));
+
+   /* finish last remain */
+   if(enc->cache_nbyte > 0)
+   {
+      cache_nsample = enc->cache_nbyte / (SPEEX_SAMPLE_BITS / OS_BYTE_BITS);      
+      delta_nsample = enc->frame_nsample - cache_nsample;
+      delta_nbyte = enc->frame_nbyte - enc->cache_nbyte;
+
+      memcpy(&enc->encoding_frame[enc->cache_nbyte], auf->raw, delta_nbyte);
+      
+	   spx_bytes = spxc_encode(enc, enc->speex_info, enc->encoding_frame, enc->frame_nbyte, &spx_frame);
+
+      enc->cache_nbyte = 0;
+      done_nbyte = delta_nbyte;
+      todo_nbyte -= delta_nbyte;
+
+	   /* make speex media frame */
+	   spxf.raw = spx_frame;
+	   spxf.bytes = spx_bytes;
+	   spxf.nraw = enc->frame_nsample;
+	   spxf.eots = 1;
+
+	   stream->player->receiver.receive_media(&stream->player->receiver, &spxf, samplestamp-cache_nsample, last_packet);
+
+	   xfree(spx_frame);
+
+	   /* for next group */
+	   samplestamp = samplestamp + delta_nsample;
+   }
+      
+   while(todo_nbyte >= enc->frame_nbyte)
+   {
+	   /* encode */
+	   spx_bytes = spxc_encode(enc, enc->speex_info, &auf->raw[done_nbyte], enc->frame_nbyte, &spx_frame);
+
+	   /* make speex media frame */
+	   spxf.raw = spx_frame;
+	   spxf.bytes = spx_bytes;
+	   spxf.nraw = enc->frame_nsample;
+      
+      if(todo_nbyte == enc->frame_nbyte)
+	      spxf.eots = 1;
+      else
+	      spxf.eots = 0;
+
+	   /* submit */
+	   stream->player->receiver.receive_media(&stream->player->receiver, &spxf, samplestamp, last_packet);
+
+	   xfree(spx_frame);
+
+      done_nbyte += enc->frame_nbyte;
+      todo_nbyte -= enc->frame_nbyte;
+
+      samplestamp += enc->frame_nsample;
+   }
+   
+   /* samples left for next */
+   if(todo_nbyte > 0)
+   {
+      memcpy(enc->encoding_frame, &auf->raw[done_nbyte], todo_nbyte);
+      enc->cache_nbyte = todo_nbyte;
+   }
+
+	spxmk_debug (("spxmk_receive_media: auf->raw@%x\n", (int)auf->raw));
+	
+	return MP_OK;
+}
+
+#if 0
 int spxmk_receive_media (media_receiver_t *mr, media_frame_t * auf, int64 samplestamp, int last_packet)
 {
 	int spx_bytes;
@@ -65,8 +153,8 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t * auf, int64 sample
 
 	speex_encoder_t *enc = (speex_encoder_t *)mr;
 
-	int delta = enc->encoding_nsample_expect - enc->encoding_nsample_buffered;
-	int sample_bytes = auf->bytes/auf->nraw;
+	int delta = 0;
+	int sample_bytes = 0;
 
 	char *over_samples;
 	int over_bytes;
@@ -74,14 +162,21 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t * auf, int64 sample
 	media_frame_t spxf;
 	media_stream_t *stream = enc->media_stream;
 
+	spxmk_debug (("spxmk_receive_media: receive %d bytes\n", auf->bytes));
+	spxmk_debug (("spxmk_receive_media: auf->raw@%x\n", (int)auf->raw));
+
+	delta = enc->encoding_nsample_expect - enc->encoding_nsample_buffered;
+	sample_bytes = auf->bytes/auf->nraw;
+
 	/* assemble all input pcm frame to 20ms encoding frame */
 	if(delta > auf->nraw)
 	{
 		memcpy(enc->encoding_gap, auf->raw, auf->bytes);
+
 		enc->encoding_gap += auf->bytes;
 		enc->encoding_nsample_buffered += auf->nraw;
 
-		if(last_packet != MP_EOS)
+		if(last_packet == MP_EOS)
 			return MP_OK;
 		else
 		{
@@ -110,7 +205,8 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t * auf, int64 sample
 
 	/* encode and submit */
 	spx_bytes = spxc_encode(enc, enc->speex_info, enc->encoding_frame, enc->encoding_frame_bytes, &spx_frame);
-	/* samples left for next */
+
+   /* samples left for next */
 	if(over_bytes)
 	{
 		memcpy(enc->encoding_frame, over_samples, over_bytes);
@@ -128,14 +224,17 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t * auf, int64 sample
 	spxf.eots = 1;
 
 	stream->player->receiver.receive_media(&stream->player->receiver, &spxf, enc->group_samplestamp, last_packet);
-   
+
 	/* for next group */
 	enc->group_samplestamp += enc->nsample_per_group;
 
 	xfree(spx_frame);
-	
+
+	spxmk_debug (("spxmk_receive_media: auf->raw@%x\n", (int)auf->raw));
+
 	return MP_OK;
 }
+#endif
 
 int spxmk_done(media_maker_t *maker)
 {
@@ -191,23 +290,20 @@ int speex_stop_stream (media_stream_t* stream)
    return MP_OK;
 }
    
-media_stream_t* spxmk_new_media_stream(media_maker_t* maker, media_control_t* control, media_device_t* dev, media_receiver_t* receiver, media_info_t* minfo)
+int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_control_t* control, media_device_t* dev, media_info_t* minfo)
 {
 	int ret;
-	media_stream_t* strm;
  
 	speex_encoder_t *enc = (speex_encoder_t *)maker;
 
 	int rate;
 	int nchannel;
-	int frame_bytes;
-	int frame_size;
 
 	speex_info_t* spxinfo= (speex_info_t*)minfo;
 
 	/* Create mode */
 	if(spxinfo->audioinfo.info.sample_rate < 6000)
-		return NULL;
+		return MP_FAIL;
 	else if(spxinfo->audioinfo.info.sample_rate <= 12500)
 		spxinfo->spxmode = speex_lib_get_mode(SPEEX_MODEID_NB);
 	else if(spxinfo->audioinfo.info.sample_rate <= 25000)
@@ -215,31 +311,23 @@ media_stream_t* spxmk_new_media_stream(media_maker_t* maker, media_control_t* co
 	else if(spxinfo->audioinfo.info.sample_rate <= 48000)
 		spxinfo->spxmode = speex_lib_get_mode(SPEEX_MODEID_UWB);
 	else
-		return NULL;
+		return MP_FAIL;
 
-	strm = xmalloc(sizeof(media_stream_t));
-	if(!strm)
-		return NULL;
-	
 	spxinfo->audioinfo.info.sample_bits = SPEEX_SAMPLE_BITS;
 
 	ret = dev->set_io(dev, minfo, &maker->receiver);
 	if (ret < MP_OK)
 	{
 		spxmk_log (("spxmk_new_media_stream: speex stream fail to open\n"));
-		xfree(strm);
-		return NULL;
+		return ret;
 	}
 
-	memset(strm, 0, sizeof(media_stream_t));
+   stream->start = speex_start_stream;
+   stream->stop = speex_stop_stream;
 
-   strm->start = speex_start_stream;
-   strm->stop = speex_stop_stream;
+	stream->maker = maker;
 
-	strm->maker = maker;
-	strm->player = (media_player_t*)receiver;
- 
-   enc->media_stream = strm;
+   enc->media_stream = stream;
 	enc->speex_info = spxinfo;
    
    enc->clock = control->clock(control);
@@ -268,12 +356,12 @@ media_stream_t* spxmk_new_media_stream(media_maker_t* maker, media_control_t* co
 	/* Initialization of the structure that holds the bits */
 	speex_bits_init(&spxinfo->bits);
 
-	rate = enc->speex_info->audioinfo.info.sample_rate;
-	frame_size = enc->speex_info->nsample_per_frame;
-	nchannel = spxinfo->audioinfo.channels;
-	frame_bytes = nchannel * frame_size * sizeof(int16);
+   rate = enc->speex_info->audioinfo.info.sample_rate;
+	enc->frame_nsample = enc->speex_info->nsample_per_frame;
    
-	enc->encoding_nsample_expect = rate / 50;  /* smaples / 20ms */
+	nchannel = spxinfo->audioinfo.channels;
+	enc->frame_nbyte = nchannel * enc->frame_nsample * sizeof(int16);
+   
 	enc->nsample_per_group = enc->nframe_group * enc->speex_info->nsample_per_frame;
 
 	enc->lookahead = 0;
@@ -282,20 +370,20 @@ media_stream_t* spxmk_new_media_stream(media_maker_t* maker, media_control_t* co
    
 	if (enc->speex_info->denoise || enc->speex_info->agc)
 	{
-		spxinfo->preprocess = speex_preprocess_state_init(frame_size, rate);
+		spxinfo->preprocess = speex_preprocess_state_init(enc->frame_nsample, rate);
 		speex_preprocess_ctl(spxinfo->preprocess, SPEEX_PREPROCESS_SET_DENOISE, &enc->speex_info->denoise);
 		speex_preprocess_ctl(spxinfo->preprocess, SPEEX_PREPROCESS_SET_AGC, &enc->speex_info->agc);
 
-      enc->lookahead += frame_size;
+      enc->lookahead += enc->frame_nsample;
 	}
 
-	enc->encoding_frame = xmalloc(frame_bytes);
-	enc->encoding_nsample_expect = frame_size;
+	enc->encoding_frame = xmalloc(enc->frame_nbyte);
 	enc->encoding_gap = enc->encoding_frame;
-
+   
    enc->input_device = dev;
    
-	return strm;
+	return MP_OK;
+
 }
 
 module_interface_t* media_new_maker()
@@ -310,7 +398,7 @@ module_interface_t* media_new_maker()
    memset(enc, 0, sizeof(struct speex_encoder_s));
 
    enc->maker.done = spxmk_done;
-   enc->maker.new_media_stream = spxmk_new_media_stream;
+   enc->maker.link_stream = spxmk_link_stream;
 
    enc->maker.receiver.match_type = spxmk_match_type;
 

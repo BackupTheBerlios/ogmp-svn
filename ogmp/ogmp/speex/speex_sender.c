@@ -32,9 +32,10 @@
 
 #define PROFILE_MIME "audio/speex"
 /*
+*/
 #define SPXSENDER_LOG
 #define SPXSENDER_DEBUG
-*/
+
 #ifdef SPXSENDER_LOG
  #define spxs_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
@@ -61,9 +62,6 @@ struct speex_sender_s
    struct media_transmit_s transmit;
 
    /*int (*callback_on_ready) (void *user, media_player_t *player);*/
-
-
-
    void *callback_on_ready_user;
    int (*callback_on_ready)();
 
@@ -298,9 +296,6 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 	if(!rtpcap)
 	{
 		spxs_debug(("spxs_set_device: No speex capable found\n"));
-	   spxs_log(("spxs_set_device: pause(1)\n"));
-      getchar();
-
 		return MP_FAIL;
 	}       
 
@@ -308,9 +303,6 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 	if(!dev)
 	{
 		spxs_debug(("spxs_set_device: No rtp device found\n"));
-	   spxs_log(("spxs_set_device: pause(2)\n"));
-      getchar();
-
 		return MP_FAIL;
 	}
 
@@ -323,9 +315,6 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 	if(!setting)
 	{
 		spxs_debug(("spxs_set_device: Can't set rtp device properly\n"));
-	   spxs_log(("spxs_set_device: pause(3)\n"));
-      getchar();
-
 		return MP_FAIL;
 	}
 
@@ -375,15 +364,13 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 }
 
 /*  */
-int spxs_link_device(media_player_t *mp, media_control_t *cont, media_stream_t* strm, void* extra)
+int spxs_link_stream(media_player_t *mp, media_stream_t* strm, media_control_t *cont, void* extra)
 {
 	control_setting_t *setting = NULL;
  
 	/* extra is cast to rtpcapset for rtp device */
 	rtpcap_set_t *rtpcapset = (rtpcap_set_t*)extra;
 	user_profile_t *user;
-
-	rtpcap_descript_t *rtpcap;
 
 	media_device_t *dev = NULL;
 
@@ -398,13 +385,6 @@ int spxs_link_device(media_player_t *mp, media_control_t *cont, media_stream_t* 
 
 	user = rtpcapset->user_profile;
    
-	rtpcap = rtp_get_capable(rtpcapset, global_const.mime_type);
-	if(!rtpcap)
-	{
-		spxs_debug(("spxs_set_device: No speex capable found\n"));
-		return MP_FAIL;
-	}
-
    dev_rtp = (dev_rtp_t*)cont->find_device(cont, "rtp", "output");
 	/*dev_rtp = rtpstrm->rtp_format->rtp_in;*/
 
@@ -423,16 +403,17 @@ int spxs_link_device(media_player_t *mp, media_control_t *cont, media_stream_t* 
 
 	total_bw = cont->book_bandwidth(cont, 0);
 
-	ss->profile_no = rtpcap->profile_no;
+	ss->profile_no = rtpstrm->rtp_cap->profile_no;
 
 	ss->nettype = xstr_clone(user->user->nettype);
 	ss->addrtype = xstr_clone(user->user->addrtype);
 	ss->netaddr = xstr_clone(user->user->netaddr);
 
-	ss->rtp_port = rtpcap->local_rtp_portno;
-	ss->rtcp_port = rtpcap->local_rtcp_portno;
+	ss->rtp_port = rtpstrm->rtp_cap->local_rtp_portno;
+	ss->rtcp_port = rtpstrm->rtp_cap->local_rtcp_portno;
 
 	ss->cname = xstr_clone(user->cname);
+
 	ss->cnlen = strlen(user->cname)+1;
 
    ss->rtp_session = rtpstrm->session;
@@ -447,7 +428,9 @@ int spxs_link_device(media_player_t *mp, media_control_t *cont, media_stream_t* 
 
 	setting->done(setting);
 
-	spxs_debug(("spxs_set_device: mp->device@%x ok\n", (int)mp->device));
+	strm->player = mp;
+
+   spxs_open_stream (mp, strm->media_info);
 
 	return MP_OK;
 }
@@ -508,7 +491,6 @@ int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 sample
    {
       spxs_log(("....................................................\n"));
 	   spxs_log(("spxs_receive_next: samples(%lld) ", samplestamp));
-	   spxs_log(("start @%dus\n", time_usec_now(clock)));
 
 	   ss->recent_samplestamp = samplestamp;
 	   ss->group_packets = 0;
@@ -535,6 +517,7 @@ int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 sample
 	 */
     
    spxinfo = ss->speex_info;
+   spxs_debug(("spxs_receive_next: spxinfo@%x\n", (int)spxinfo));
 
    rtpf->samples = spxinfo->nframe_per_packet * spxinfo->nsample_per_frame;
 
@@ -550,9 +533,8 @@ int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 sample
 
    if(last_packet)
    {
-      spxs_log(("spxs_receive_next: samples(%lld) ", samplestamp));
-      spxs_log(("end @%dus\n", time_usec_now(clock)));
-   }
+      spxs_log(("spxs_receive_next: last samples(%lld) ", samplestamp));
+   }                 
 
    return MP_OK;
 }
@@ -591,7 +573,6 @@ module_interface_t * media_new_sender()
 
    mp = (media_player_t*)sender;
    mp->done = spxs_done;
-   
 
    mp->media_type = spxs_media_type;
    mp->codec_type = spxs_codec_type;
@@ -603,14 +584,12 @@ module_interface_t * media_new_sender()
    
    mp->init = spxs_init;
 
-
-
    mp->open_stream = spxs_open_stream;
    mp->close_stream = spxs_close_stream;
    mp->set_options = spxs_set_options;
 
    mp->set_device = spxs_set_device;
-   mp->link_device = spxs_link_device;
+   mp->link_stream = spxs_link_stream;
 
    mp->capable = spxs_capable;
    mp->match_capable = spxs_match_capable;
@@ -627,7 +606,6 @@ module_interface_t * media_new_sender()
 
    return mp;
 }
-
 
 /**
  * Loadin Infomation Block

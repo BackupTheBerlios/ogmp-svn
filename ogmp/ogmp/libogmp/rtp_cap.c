@@ -162,7 +162,8 @@ int sdp_parse_ipv4(char *addr, char *ip, int ipbytes, int *ttl)
 		strncpy(ip, addr, end - addr);
 		ip[end-addr] = '\0';
 
-		*ttl = atoi(++end);
+		/**ttl = atoi(++end);*/
+		*ttl = strtol(++end, NULL, 10);
 	
 		return MP_OK;
 	}
@@ -321,6 +322,7 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 		char *username;
 
 
+
       username = sdp_message_o_username_get(sdp);
 		if(username)
 		{
@@ -359,7 +361,9 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 		media_type = sdp_message_m_media_get (sdp, pos_media);
 		media_port = (uint)strtol(sdp_message_m_port_get (sdp, pos_media), NULL, 10);
 
-		nport = atoi(sdp_message_m_number_of_port_get (sdp, pos_media));
+		/*nport = atoi(sdp_message_m_number_of_port_get (sdp, pos_media));*/
+		nport = strtol(sdp_message_m_number_of_port_get (sdp, pos_media), NULL, 10);
+      
 		protocol = sdp_message_m_proto_get (sdp, pos_media);
 
 		rtpcap_log(("rtp_capable_to_sdp: media[%s] port[%d]\n", media_type, media_port));

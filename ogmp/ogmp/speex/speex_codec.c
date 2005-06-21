@@ -140,7 +140,7 @@ int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcm_
 	/*Encode the frame*/
 	speex_encode_int(spxinfo->est, (short*)pcm, &spxinfo->bits);
 
-    if(enc->nframe_group == spxinfo->nframe_per_packet)
+   if(enc->nframe_group == spxinfo->nframe_per_packet)
 	{
 		char* spx;
 

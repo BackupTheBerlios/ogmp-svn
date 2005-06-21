@@ -310,7 +310,7 @@ int spxp_set_device(media_player_t* mp, media_control_t* cont, module_catalog_t*
    return MP_OK;
 }
 
-int spxp_link_device(media_player_t *mp, media_control_t *cont, media_stream_t* strm, void* extra)
+int spxp_link_stream(media_player_t *mp, media_stream_t* strm, media_control_t *cont, void* extra)
 {
 	spxp_log(("spxp_link_device: Not implemented\n"));
    return MP_EIMPL;
@@ -418,7 +418,7 @@ module_interface_t * media_new_player()
    mp->set_options = spxp_set_options;
 
    mp->set_device = spxp_set_device;
-   mp->link_device = spxp_link_device;
+   mp->link_stream = spxp_link_stream;
    
    mp->start = spxp_start;
    mp->stop = spxp_stop;

@@ -197,6 +197,7 @@ int sipua_next_name (sipua_phonebook_t* book, FILE* f, sipua_contact_t* c)
 
 
 
+
 	sipua_read_nchar(book, f, c->name, c->nbytes);
 
 	return UA_OK;
@@ -220,6 +221,7 @@ int sipua_next_memo (sipua_phonebook_t* book, FILE* f, sipua_contact_t* c)
 	start = sipua_next_nchar(book, f, 1);
 
 	c->nbytes = strtol(start, &end, 10);
+
 
 
 	start = end;
@@ -906,6 +908,7 @@ int sipua_verify_user_file(FILE* f, const char* uid, const char* tok, int tsz, c
 
 		n = len-(start-line);
 		if(n >= tsz)
+
 		{
 			strncpy(tok0, start, tsz);
 		}
@@ -1122,6 +1125,8 @@ user_t* sipua_load_user_file_v0(FILE* f, const char* uid, const char* tok, int t
 		if(nitem < 5)
 			continue;
 
+      u->thread_register_lock = xthr_new_lock();
+
 		xlist_addto_last(user->profiles, u);
 		nitem = 0;
 	}
@@ -1157,7 +1162,6 @@ user_t* sipua_load_user_file_v1(FILE* f, const char* uid, char* buf, int *bsize,
 	}
 
 	user->uid = xstr_clone(uid);
-
 
 	while(1)
 	{
@@ -1265,6 +1269,8 @@ user_t* sipua_load_user_file_v1(FILE* f, const char* uid, char* buf, int *bsize,
 		if(nitem < 5)
 			continue;
 
+      u->thread_register_lock = xthr_new_lock();
+      
 		xlist_addto_last(user->profiles, u);
 		nitem = 0;
 	}
@@ -1440,6 +1446,8 @@ user_t* sipua_load_user_file_v2(FILE* f, const char* uid, char* buf, int *bsize,
 
 		if(nitem < 5)
 			continue;
+
+      u->thread_register_lock = xthr_new_lock();
 
 		xlist_addto_last(user->profiles, u);
 		nitem = 0;
@@ -1699,6 +1707,8 @@ int user_done_profile(void* gen)
 	if(prof->book_location) xfree(prof->book_location);
 
 	if(prof->phonebook) sipua_done_book(prof->phonebook);
+   
+	if(prof->thread_register_lock) xthr_done_lock(prof->thread_register_lock);
 
 	return OS_OK;
 }
@@ -1718,7 +1728,6 @@ user_profile_t* user_add_profile(user_t* user, const char* fullname, int fbytes,
 	if(!prof)
    {
       pbk_log(("user_add_profile: no memory for profile"));
-
       return NULL;
    }
 
@@ -1735,6 +1744,8 @@ user_profile_t* user_add_profile(user_t* user, const char* fullname, int fbytes,
 	prof->registrar = xstr_clone(home);
 	prof->regname = xstr_clone(regname);
 	prof->seconds = sec;
+
+   prof->thread_register_lock = xthr_new_lock();
 
 	if(book_loc)
 		prof->book_location = xstr_clone(book_loc);
@@ -2032,7 +2043,6 @@ char* user_id(user_t* user)
 }
 
 int user_done(user_t* u)
-
 {
 	if(u->loc)
 	{

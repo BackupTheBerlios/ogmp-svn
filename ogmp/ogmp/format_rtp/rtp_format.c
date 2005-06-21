@@ -41,10 +41,17 @@
 
 int rtp_done_stream(rtp_stream_t *strm)
 {
-	strm->rtp_cap->descript.done((capable_descript_t*)strm->rtp_cap);
+   media_stream_t* peer = strm->stream.peer;
+   
+   if(!peer && strm->rtp_cap)
+      strm->rtp_cap->descript.done((capable_descript_t*)strm->rtp_cap);
 
 	xstr_done_string(strm->source_cname);
-	session_done(strm->session);
+   
+   if(!peer)
+      session_done(strm->session);
+
+   peer->peer = NULL;
 
 	xfree(strm);
 
@@ -294,6 +301,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 {
 	unsigned char stype;
 	rtp_stream_t *strm;
+   rtp_stream_t *peer;
 
    rtp_setting_t *rset = NULL;
 
@@ -308,16 +316,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 	char* remote_addrtype;
 	char* remote_netaddr;
 
-	strm = xmalloc(sizeof(rtp_stream_t));
-	if(!strm)
-	{
-		rtp_debug(("rtp_open_stream: No memory for rtp stream\n"));
-		return NULL;
-	}
-   
-	memset(strm, 0, sizeof(rtp_stream_t));
-
-	if(strncmp(rtpcap->profile_mime, "audio", 5) == 0)
+   if(strncmp(rtpcap->profile_mime, "audio", 5) == 0)
 	{
 		rtp_log(("rtp_open_stream: audio media\n"));
 		stype = MP_AUDIO;
@@ -335,9 +334,29 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 	else
 	{
 		rtp_debug(("rtp_open_stream: Unknown media type\n"));
-		xfree(strm);
 		return NULL;
 	}
+
+	strm = xmalloc(sizeof(rtp_stream_t));
+	if(!strm)
+	{
+		rtp_debug(("rtp_open_stream: No memory for rtp stream\n"));
+		return NULL;
+	}   
+
+	peer = xmalloc(sizeof(rtp_stream_t));
+	if(!peer)
+	{
+		rtp_debug(("rtp_open_stream: No memory for rtp stream\n"));
+      xfree(strm);
+		return NULL;
+	}
+   
+	memset(strm, 0, sizeof(rtp_stream_t));
+	memset(peer, 0, sizeof(rtp_stream_t));
+
+   strm->stream.peer = (media_stream_t*)peer;
+   peer->stream.peer = (media_stream_t*)strm;
 
 	rset = (rtp_setting_t*)ctrl->fetch_setting(ctrl, "rtp", (media_device_t*)rtp_format->rtp_in);
 	if(!rset)
@@ -370,6 +389,15 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 	rtpcap->profile_no = session_payload_type(strm->session);
 
 	strm->rtp_format = rtp_format;
+	peer->rtp_format = rtp_format;
+
+   strm->rtp_cap = rtpcap;
+   peer->rtp_cap = rtpcap;
+
+   strm->stream.media_info = session_mediainfo(strm->session);
+   peer->stream.media_info = strm->stream.media_info;
+   
+   peer->session = strm->session;
 
 	rtp_log(("rtp_open_stream: FIXME - stream mime string overflow possible!!\n"));
 	strcpy(strm->stream.mime, rtpcap->profile_mime);
@@ -397,8 +425,11 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 	/* waiting to source to be available */
 	strm->source_cname = xstr_clone(rtpcapset->cname);
 	strm->bandwidth = session_bandwidth(strm->session);
+   
+	peer->source_cname = xstr_clone(user_prof->cname);
+	peer->bandwidth = strm->bandwidth;
 
-	rtp_format->bandwidth += strm->bandwidth;
+	rtp_format->bandwidth += strm->bandwidth + peer->bandwidth;
 
 	session_set_callback(strm->session, CALLBACK_SESSION_MEMBER_UPDATE, rtp_stream_on_member_update, strm);
 
@@ -566,6 +597,7 @@ int rtp_set_player (media_format_t * mf, media_player_t * player)
 
    rtp_debug(("rtp_set_player: can't play the media with player\n"));
 
+
    return ret;
 }
 
@@ -580,7 +612,7 @@ int rtp_new_all_player(media_format_t *mf, media_control_t* ctrl, char* mode, vo
 
 	while (cur != NULL)
 	{
-		cur->player = ctrl->find_player(ctrl, mode, cur->media_info->mime, cur->media_info->fourcc, mode_param);
+		cur->player = ctrl->find_player(ctrl, mode, cur->media_info->mime, cur->media_info->fourcc);
 
 		if(!cur->player)
 		{
@@ -593,6 +625,7 @@ int rtp_new_all_player(media_format_t *mf, media_control_t* ctrl, char* mode, vo
 			cur->playable = -1;
 
 			rtp_log(("rtp_new_all_player: open %s stream fail!\n", cur->media_info->mime));
+
 		}
 		else
 		{
@@ -620,7 +653,7 @@ media_player_t* rtp_new_stream_player(media_format_t *mf, int strmno, media_cont
 		rtp_stream_t* rtp_strm = (rtp_stream_t*)cur;
 		if (rtp_strm->sno == strmno)
 		{
-			cur->player = ctrl->find_player(ctrl, mode, cur->media_info->mime, cur->media_info->fourcc, mode_param);
+			cur->player = ctrl->find_player(ctrl, mode, cur->media_info->mime, cur->media_info->fourcc);
 
 			if(!cur->player)
 			{
@@ -661,7 +694,7 @@ media_player_t * rtp_new_mime_player(media_format_t * mf, char * mime, media_con
 	{
 		if (!strcmp(cur->mime, mime))
 		{
-			cur->player = ctrl->find_player(ctrl, mode, mime, NULL, mode_param);
+			cur->player = ctrl->find_player(ctrl, mode, mime, NULL);
 
 			if(!cur->player)
 			{
@@ -721,10 +754,7 @@ module_interface_t * media_new_format()
    mf->find_mime = rtp_find_mime;
    mf->find_fourcc = rtp_find_fourcc;
 
-
    mf->set_control = rtp_set_control;
-
-
 
    mf->set_player = rtp_set_player;
 
@@ -760,6 +790,7 @@ module_interface_t * media_new_format()
 extern DECLSPEC module_loadin_t mediaformat =
 {
    "format",   /* Label */
+
 
    000001,         /* Plugin version */
    000001,         /* Minimum version of lib API supportted by the module */

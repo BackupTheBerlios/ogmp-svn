@@ -333,7 +333,7 @@ control_setting_t* cont_fetch_setting(media_control_t *cont, char *name, media_d
    return NULL;
 }
 
-media_player_t * cont_find_player (media_control_t *cont, char *mode, char *mime, char *fourcc, void* extra)
+media_player_t * cont_find_player (media_control_t *cont, char *mode, char *mime, char *fourcc)
 {
    media_player_t * player = NULL;
    
@@ -494,6 +494,7 @@ int cont_demux_next (media_control_t * cont, int strm_end)
 	   cont_log(("cont_demux_next: %dus period, last sleep %dus(need catchup %dus)\n", impl->period_us, impl->sleep_us, impl->catchup_us));
 
 	   demux_us = time_usec_spent(impl->clock, impl->period_start);
+
 
 	   impl->sleep_us = impl->period_us - demux_us - impl->catchup_us;
 	   

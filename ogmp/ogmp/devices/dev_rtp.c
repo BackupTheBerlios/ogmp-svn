@@ -45,6 +45,8 @@ int rtp_done_setting(control_setting_t *gen){
 }
 
 
+
+
 control_setting_t* rtp_new_setting(media_device_t *dev)
 {
    rtp_setting_t * set = xmalloc(sizeof(struct rtp_setting_s));
@@ -170,7 +172,8 @@ media_pipe_t * rtp_out_pipe (media_device_t *dev)
 {
 	dev_rtp_t* dr = (dev_rtp_t*)dev;
 
-	if(dr->frame_maker) return dr->frame_maker;
+	if(dr->frame_maker)
+      return dr->frame_maker;
 
 	dr->frame_maker = rtp_pipe_new();
 

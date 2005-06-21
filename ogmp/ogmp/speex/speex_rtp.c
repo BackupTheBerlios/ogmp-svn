@@ -363,7 +363,7 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 
 		   ctrl = (media_control_t*)session_media_control(spxh->session);
 
-		   player = ctrl->find_player(ctrl, "playback", SPEEX_MIME, "", NULL);
+		   player = ctrl->find_player(ctrl, "playback", SPEEX_MIME, "");
 
 		   ret = player->open_stream(player, (media_info_t*)spxinfo);
 		   if( ret < MP_OK)
@@ -589,8 +589,8 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 
 				ctrl = (media_control_t*)session_media_control(profile->session);
             
-				player = ctrl->find_player(ctrl, "playback", SPEEX_MIME, "", NULL);
-		        if(player->set_device(player, ctrl, ctrl->modules(ctrl), NULL) < MP_OK)
+				player = ctrl->find_player(ctrl, "playback", SPEEX_MIME, "");
+		      if(player->set_device(player, ctrl, ctrl->modules(ctrl), NULL) < MP_OK)
 				{
 					sender->media_playable = -1;
 					player->done(player);
@@ -1191,6 +1191,7 @@ int rtp_speex_send_loop(void *gen)
 			}
 		}
 
+
 		/* discard frames when time is late */
 		if(discard)
 		{
@@ -1550,6 +1551,7 @@ int spxrtp_done(profile_class_t * clazz)
    xfree(clazz);
    return XRTP_OK;
 }
+
 
 profile_handler_t * spxrtp_new_handler(profile_class_t * clazz, xrtp_session_t * ses)
 {

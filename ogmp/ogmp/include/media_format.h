@@ -78,7 +78,7 @@ struct media_control_s
 {
    int (*done) (media_control_t * cont);
 
-   media_player_t* (*find_player) (media_control_t *cont, char *mode, char *mime, char *fourcc, void* extra);
+   media_player_t* (*find_player) (media_control_t *cont, char *mode, char *mime, char *fourcc);
    media_player_t* (*new_player) (media_control_t *cont, char *mode, char *mime, char *fourcc, void* extra);
 
    media_maker_t* (*find_creater)(media_control_t *cont, char *name, media_info_t* minfo);
@@ -342,6 +342,7 @@ struct media_maker_s
    int (*stop) (media_maker_t *mm);
    
    media_stream_t* (*new_media_stream) (media_maker_t *mm, media_control_t* control, media_device_t* dev, media_receiver_t* player, media_info_t *media_info);
+   int (*link_stream) (media_maker_t *mm, media_stream_t* stream, media_control_t* control, media_device_t* dev, media_info_t *media_info);
 };
 
 struct media_player_s
@@ -368,7 +369,7 @@ struct media_player_s
    int (*set_options) (media_player_t * playa, char *opt, void *value);
 
    int (*set_device) (media_player_t * mp, media_control_t *control, module_catalog_t *cata, void* extra);
-   int (*link_device) (media_player_t * mp, media_control_t *control, media_stream_t *stream, void* extra);
+   int (*link_stream) (media_player_t * mp, media_stream_t *stream, media_control_t *control, void* extra);
 
    media_pipe_t* (*pipe) (media_player_t * playa);
 

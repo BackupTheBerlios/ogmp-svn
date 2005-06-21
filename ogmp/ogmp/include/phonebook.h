@@ -127,6 +127,7 @@ struct user_profile_s
    int auth;  /* indicate an authentication is carry on or not */
 
 	xthread_t* thread_register;
+   xthr_lock_t *thread_register_lock;
 };
 
 struct user_s

@@ -73,15 +73,14 @@ struct speex_encoder_s
    char* encoding_frame;			/* 20ms frame size */
    char* encoding_gap;
 
-   int encoding_frame_bytes;
-   int encoding_nsample_expect;
-   int encoding_nsample_buffered;
+   int frame_nbyte;
+   int frame_nsample;
+   int cache_nbyte;
 
    int lookahead;
    int nframe_group;	/* current how many speex frames in a group */
 
    int nsample_per_group;
-   int64 group_samplestamp;
 
    media_device_t* input_device;
    media_stream_t* media_stream;

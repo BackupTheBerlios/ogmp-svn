@@ -279,11 +279,14 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			user_prof->sipua = client;
 			user_prof->enable = 1;
 
-
 			/* Create a register thread */
+         xthr_lock(user_prof->thread_register_lock);
+         
 			if(!user_prof->thread_register)
 				user_prof->thread_register = xthr_new(client_register_loop, user_prof, XTHREAD_NONEFLAGS);
 
+         xthr_unlock(user_prof->thread_register_lock);
+         
          if(client->on_register)
             client->on_register(client->user_on_register, reg_e->status_code, user_prof->regname, isreg);
                 
@@ -478,6 +481,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
          
          if(client->on_terminate)
             client->on_terminate(client->user_on_terminate, call, call_e->status_code);
+
 
          client_release_call(sipua, call);
          
@@ -749,6 +753,7 @@ int sipua_done(sipua_t *sipua)
 		if(ua->lines[i])
 			sipua_done_sip_session(ua->lines[i]);
 
+
 	xthr_done_lock(ua->lines_lock);
    xthr_done_lock(ua->nring_lock);
    conf_done(ua->conf);
@@ -756,6 +761,7 @@ int sipua_done(sipua_t *sipua)
 	xfree(ua);
 
 	return UA_OK;
+
 }
 
 user_t* client_load_userdata (sipua_t* sipua, const char* loc, const char* uid, const char* tok, const int tsz)
@@ -1007,6 +1013,7 @@ int client_unregister_profile (sipua_t *sipua, int profile_no)
 
 	clie_debug(("client_unregister_profile: unregistering ...\n"));
 
+
    return UA_OK;
 }
 
@@ -1212,6 +1219,7 @@ sipua_call_t* client_pick(sipua_t* sipua, int line)
 
 	client->lines[0] = client->lines[line];
 	client->lines[line] = current;
+
 
    if(client->lines[0])
 		client->lines[0]->status = SIPUA_STATUS_SERVE;

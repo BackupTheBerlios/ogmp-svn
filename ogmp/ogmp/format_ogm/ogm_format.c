@@ -44,6 +44,7 @@ int done_stream_handler(void *gen)
 
    handler->done(handler);
 
+
    return MP_OK;
 }
 
@@ -171,7 +172,7 @@ int ogm_new_all_player(media_format_t *mf, media_control_t* ctrl, char* mode, vo
 
 	while (cur != NULL)
 	{
-		cur->player = ctrl->find_player(ctrl, mode, cur->media_info->mime, cur->media_info->fourcc, mode_param);
+		cur->player = ctrl->find_player(ctrl, mode, cur->media_info->mime, cur->media_info->fourcc);
 			
 		if(!cur->player)
 		{
@@ -180,12 +181,12 @@ int ogm_new_all_player(media_format_t *mf, media_control_t* ctrl, char* mode, vo
 		}
 		else if(cur->player->set_device(cur->player, ctrl, ctrl->modules(ctrl), mode_param) < MP_OK)
 		{
-	        cur->player->done(cur->player);
-            cur->player = NULL;
+	      cur->player->done(cur->player);
+         cur->player = NULL;
 			cur->playable = -1;
 			ogm_debug(("ogm_new_all_player: %s stream fail to set device\n", cur->media_info->mime));
 		}
-        else if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
+      else if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
 		{      
 			cur->playable = -1;
 			ogm_debug(("ogm_new_all_player: open %s stream fail!\n", cur->media_info->mime));
@@ -214,7 +215,7 @@ media_player_t* ogm_new_stream_player(media_format_t *mf, int strmno, media_cont
 
 		if (ogm_strm->serial == strmno)
 		{
-			cur->player = ctrl->find_player(ctrl, mode, cur->media_info->mime, cur->media_info->fourcc, mode_param);
+			cur->player = ctrl->find_player(ctrl, mode, cur->media_info->mime, cur->media_info->fourcc);
 
          if(!cur->player)
 			{
@@ -257,7 +258,7 @@ media_player_t * ogm_new_mime_player(media_format_t * mf, char * mime, media_con
 	{
 		if (!strcmp(cur->mime, mime))
 		{
-			cur->player = ctrl->find_player(ctrl, mode, mime, NULL, mode_param);
+			cur->player = ctrl->find_player(ctrl, mode, mime, NULL);
 			
 			if(!cur->player)
 			{
@@ -423,6 +424,7 @@ int demux_ogm_write_page(ogm_stream_t *stream, ogg_packet *op)
    ogg_page page;
 
    char * page_data;
+
 
    while (ogg_stream_pageout(&stream->outstate, &page))
    {
@@ -590,6 +592,7 @@ int ogm_open(media_format_t *mf, char *fname, media_control_t *ctrl)
       {
          ogm->page_ready = 1;
 
+
          ogm_log(("----------------------------------------------------\n"));
          ogm_log(("ogm_open_file: total %d stream(s) found in '%s' by now\n", mf->numstreams, fname));
 
@@ -621,6 +624,7 @@ int ogm_open(media_format_t *mf, char *fname, media_control_t *ctrl)
          ogg_stream_pagein(sstate, &ogm->page);
 
          while(ogg_stream_packetout(sstate, &ogm->packet) == 1)
+
          {
             n_pack++;
 
