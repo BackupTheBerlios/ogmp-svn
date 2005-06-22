@@ -121,6 +121,8 @@ int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcm_
    
 	int spx_bytes;
    
+	char* spx;
+
 	nframes = spxinfo->nframe_per_packet;
 	frame_size = spxinfo->nsample_per_frame;
 	nchannel = spxinfo->audioinfo.channels;
@@ -140,24 +142,15 @@ int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcm_
 	/*Encode the frame*/
 	speex_encode_int(spxinfo->est, (short*)pcm, &spxinfo->bits);
 
-   if(enc->nframe_group == spxinfo->nframe_per_packet)
-	{
-		char* spx;
+	speex_bits_insert_terminator(&spxinfo->bits);
+	spx_bytes = speex_bits_nbytes(&spxinfo->bits);
 
-		speex_bits_insert_terminator(&spxinfo->bits);
-		spx_bytes = speex_bits_nbytes(&spxinfo->bits);
+	spx = xmalloc(spx_bytes);
 
-		spx = xmalloc(spx_bytes);
+	spx_bytes = speex_bits_write(&spxinfo->bits, spx, spx_bytes);
+	speex_bits_reset(&spxinfo->bits);
 
-		spx_bytes = speex_bits_write(&spxinfo->bits, spx, spx_bytes);
-		speex_bits_reset(&spxinfo->bits);
+	*encoded = spx;
 
-		*encoded = spx;
-
-		return spx_bytes;
-	}
-
-	*encoded = NULL;
-
-	return 0;
+	return spx_bytes;
 }

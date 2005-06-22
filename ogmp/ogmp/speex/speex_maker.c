@@ -76,7 +76,6 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 	media_stream_t *stream = enc->media_stream;
 
 	spxmk_debug (("spxmk_receive_media: receive %d bytes\n", auf->bytes));
-	spxmk_debug (("spxmk_receive_media: auf->raw@%x\n", (int)auf->raw));
 
    /* finish last remain */
    if(enc->cache_nbyte > 0)
@@ -140,8 +139,6 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
       enc->cache_nbyte = todo_nbyte;
    }
 
-	spxmk_debug (("spxmk_receive_media: auf->raw@%x\n", (int)auf->raw));
-	
 	return MP_OK;
 }
 
@@ -233,6 +230,7 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t * auf, int64 sample
 	spxmk_debug (("spxmk_receive_media: auf->raw@%x\n", (int)auf->raw));
 
 	return MP_OK;
+
 }
 #endif
 
@@ -407,6 +405,7 @@ module_interface_t* media_new_maker()
    
    enc->maker.receiver.receive_media = spxmk_receive_media;
    
+
    return enc;
 }
 

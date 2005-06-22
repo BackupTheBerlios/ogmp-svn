@@ -46,6 +46,7 @@
 
 
 
+
  #define pa_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pa_log(fmtargs)
@@ -290,12 +291,7 @@ int pa_input_loop(void *gen)
 
 		auf.eots = 1;
 
-		pa_debug(("pa_input_loop: inbufr->pcm@%x\n", (int)inbufr->pcm));
-
 		pa->receiver->receive_media(pa->receiver, &auf, (int64)(pa->inbuf[pa->inbuf_r].stamp), 0);
-
-		pa_debug(("pa_input_loop: inbufr->pcm@%x\n", (int)inbufr->pcm));
-      exit(1);
 
 		memset(inbufr->pcm, 0, pa->input_nbyte_once);
       
@@ -913,6 +909,7 @@ int pa_done (media_device_t * dev)
    xfree(pa_dev);
    
    return MP_OK;
+
 }
 
 int pa_setting (media_device_t * dev, control_setting_t *setting, module_catalog_t *cata) {

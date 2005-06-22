@@ -78,9 +78,9 @@ struct speex_encoder_s
    int cache_nbyte;
 
    int lookahead;
-   int nframe_group;	/* current how many speex frames in a group */
-
-   int nsample_per_group;
+   
+   //int nframe_group;	/* current how many speex frames in a group */
+   //int nsample_per_group;
 
    media_device_t* input_device;
    media_stream_t* media_stream;

@@ -174,6 +174,7 @@ int speex_info_from_sdp(media_info_t *info, int rtpmap_no, sdp_message_t *sdp, i
 						spxinfo->audioinfo.info.sample_rate = clockrate;
 
 						spxinfo->audioinfo.channels = coding_param;
+                  spxinfo->nsample_per_frame = clockrate / 1000 * SPX_FRAME_MSEC;
 
 						spxsdp_log(("speex_info_from_sdp: clockrate[%d] channels[%d]\n", clockrate, coding_param));
 
