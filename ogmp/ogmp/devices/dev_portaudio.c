@@ -290,10 +290,11 @@ int pa_input_loop(void *gen)
 
 		auf.raw = inbufr->pcm;
 		auf.bytes = pa->input_nbyte_once;
-
+      
 		auf.eots = 1;
 
 		pa->receiver->receive_media(pa->receiver, &auf, (int64)(pa->inbuf[pa->inbuf_r].stamp), 0);
+		pa_debug(("pa_input_loop: got %d samples\n", auf.nraw));
 
 		memset(inbufr->pcm, 0, pa->input_nbyte_once);
       
@@ -353,9 +354,9 @@ static int pa_io_callback( void *inbuf, void *outbuf, unsigned long npcm, PaTime
 			inbufw->npcm_write = npcm;
          
 			pa->inbuf_w = (pa->inbuf_w+1) % pa->inbuf_n;
-         
-			pa_debug(("----------------------------\n"));
-			pa_debug(("pa_io_callback: inbufw wrote\n"));
+   
+			pa_debug(("---------------------------------------\n"));
+			pa_debug(("pa_io_callback: inbufw wrote %ld samples\n", npcm));
 		}
    }
 
@@ -711,13 +712,12 @@ int pa_set_io(media_device_t *dev, media_info_t *out_info, media_receiver_t* rec
    else
       pa->usec_pulse = (int)((double)nsample_pulse / ai->info.sample_rate * 1000000);
 
-
    pa_debug(("pa_set_io: %d channels, %d rate, %d sample per pulse (%dus)\n",
 			ai->channels, ai->info.sample_rate, nsample_pulse, pa->usec_pulse));
 
    ai->channels_bytes = ai->channels * ai->info.sample_bits / OS_BYTE_BITS;
 
-   pa->input_npcm_once = ai->info.sampling_constant;
+   pa->input_npcm_once = nsample_pulse;
    pa->input_nbyte_once = ai->channels_bytes * nsample_pulse;
 
 	pa_debug(("pa_set_io: %d bytes once\n", pa->input_nbyte_once));
