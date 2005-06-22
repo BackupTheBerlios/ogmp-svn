@@ -75,7 +75,7 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 	media_frame_t spxf;
 	media_stream_t *stream = enc->media_stream;
 
-	spxmk_debug (("spxmk_receive_media: receive %d bytes\n", auf->bytes));
+	spxmk_debug (("\rspxmk_receive_media: receive %d bytes\n", auf->bytes));
 
    /* finish last remain */
    if(enc->cache_nbyte > 0)
@@ -360,8 +360,6 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
 	nchannel = spxinfo->audioinfo.channels;
 	enc->frame_nbyte = nchannel * enc->frame_nsample * sizeof(int16);
    
-	enc->nsample_per_group = enc->nframe_group * enc->speex_info->nsample_per_frame;
-
 	enc->lookahead = 0;
    
 	speex_encoder_ctl(spxinfo->est, SPEEX_GET_LOOKAHEAD, &enc->lookahead);
@@ -394,6 +392,7 @@ module_interface_t* media_new_maker()
    }
 
    memset(enc, 0, sizeof(struct speex_encoder_s));
+
 
    enc->maker.done = spxmk_done;
    enc->maker.link_stream = spxmk_link_stream;

@@ -47,6 +47,7 @@
 
 
 
+
  #define pa_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pa_log(fmtargs)
@@ -125,6 +126,7 @@ static int pa_input_callback( void *inbuf, void *outbuf, unsigned long npcm_in,
 								      PaTimestamp intime, void *udata )
 {
    int next;
+
    portaudio_device_t* pa = (portaudio_device_t*)udata;
 
    pa->input_samplestamp += npcm_in;
@@ -351,6 +353,8 @@ static int pa_io_callback( void *inbuf, void *outbuf, unsigned long npcm, PaTime
 			inbufw->npcm_write = npcm;
          
 			pa->inbuf_w = (pa->inbuf_w+1) % pa->inbuf_n;
+         
+			pa_debug(("----------------------------\n"));
 			pa_debug(("pa_io_callback: inbufw wrote\n"));
 		}
    }
@@ -706,6 +710,7 @@ int pa_set_io(media_device_t *dev, media_info_t *out_info, media_receiver_t* rec
       pa->usec_pulse = (int)(1000000 / (ai->info.sample_rate / (double)nsample_pulse));
    else
       pa->usec_pulse = (int)((double)nsample_pulse / ai->info.sample_rate * 1000000);
+
 
    pa_debug(("pa_set_io: %d channels, %d rate, %d sample per pulse (%dus)\n",
 			ai->channels, ai->info.sample_rate, nsample_pulse, pa->usec_pulse));

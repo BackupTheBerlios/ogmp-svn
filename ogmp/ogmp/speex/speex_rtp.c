@@ -29,8 +29,9 @@
 #include <string.h>
 /*
 #define SPXRTP_LOG
-#define SPXRTP_DEBUG
 */
+#define SPXRTP_DEBUG
+
 #ifdef SPXRTP_LOG
  #define spxrtp_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
@@ -546,6 +547,7 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 		{
 			/* Check the SR report */
 
+
 			/* record the sync reference point */
 			rtcp_arrival_time(rtcp, &ms, &us, &ns);
 
@@ -791,6 +793,7 @@ int rtp_speex_set_parameter(xrtp_media_t* media, char* key, void* val)
 }
 
 int rtp_speex_parameter(xrtp_media_t *media, char* key, void* value)
+
 {
 	spxrtp_media_t *spxrtp = (spxrtp_media_t*)media;
 
@@ -1089,7 +1092,6 @@ int rtp_speex_send_loop(void *gen)
 	int first_group = 1;
 	int first_payload = 1;
 
-	//rtp_frame_t *remain_frame = NULL;
 	char *packet_data = NULL;
 	int packet_bytes = 0;
 
@@ -1148,11 +1150,9 @@ int rtp_speex_send_loop(void *gen)
 		if (xlist_size(profile->packets) == 0) 
 		{
 			profile->idle = 1;
-			
-			spxrtp_log(("rtp_speex_send_loop: waiting packet to send...\n"));
 
+         spxrtp_debug(("===================================\n"));
 			xthr_cond_wait(profile->pending, profile->packets_lock);
-
 			spxrtp_log(("rtp_speex_send_loop: waiting is over!\n"));
 
 			profile->idle = 0;
@@ -1180,19 +1180,15 @@ int rtp_speex_send_loop(void *gen)
 			usec_now = time_usec_now(ses_clock);
 			if(in_group && usec_now > usec_group_end)
 			{
-
-
 				spxrtp_log(("rtp_speex_send_loop: timeout for samplestamp[%lld]\n", profile->recent_samplestamp));
 				discard = 1;
 
-
-				/* new group notice consumed */
+            /* new group notice consumed */
 				profile->new_group = 0;
 			}
 		}
 
-
-		/* discard frames when time is late */
+      /* discard frames when time is late */
 		if(discard)
 		{
 			xlist_reset(discard_frames, rtp_speex_done_frame);
@@ -1219,8 +1215,8 @@ int rtp_speex_send_loop(void *gen)
 				
 			usec_group = (rtime_t)(1000000 * delta_samplestamp / spxinfo->audioinfo.info.sample_rate);
 				
-			spxrtp_log(("rtp_speex_send_loop: new group[%lld], ", rtpf->samplestamp));
-			spxrtp_log(("usec_group=%dus\n", usec_group));
+			spxrtp_debug(("\rrtp_speex_send_loop: new group[%lld], ", rtpf->samplestamp));
+			spxrtp_debug(("usec_group=%dus\r\n", usec_group));
 
 			profile->recent_samplestamp = rtpf->samplestamp;
 
@@ -1257,8 +1253,7 @@ int rtp_speex_send_loop(void *gen)
 			if(first_payload)
 				usec_stream_payload = usec_now;
 
-
-			if(first_group_payload)
+         if(first_group_payload)
 			{
 				/* group usec range from the time send the first rtp payload of the samplestamp */
 				if(first_group)
@@ -1271,34 +1266,25 @@ int rtp_speex_send_loop(void *gen)
 
 				usec_group_end = usec_group_start + usec_group;
 
-				spxrtp_debug(("rtp_speex_send_loop: %dus...%dus\n", usec_group_start, usec_group_end));
+				spxrtp_debug(("rtp_speex_send_loop: %dus...%dus\r\n", usec_group_start, usec_group_end));
 			}
 
 			usec_payload = payload_nframe * SPX_FRAME_MSEC * 1000;
 			usec_payload_deadline = usec_stream_payload + usec_payload;
 
-			/* Test purpose
-			spxrtp_debug(("audio/speex.rtp_speex_send_loop: payload[%d]@%dus (%dS,%dus)\n", profile->usec_payload_timestamp, usec_stream_payload, payload_samples, usec_payload));
+			spxrtp_debug(("audio/speex.rtp_speex_send_loop: payload[%d]@%dus (%dS,%dus)\r\n", profile->usec_payload_timestamp, usec_stream_payload, payload_samples, usec_payload));
+			spxrtp_debug(("audio/speex.rtp_speex_send_loop: %dus now, deadline[%dus]...in #%dus\r\n", usec_now, usec_payload_deadline, usec_payload_deadline - usec_now));
 
-			spxrtp_debug(("audio/speex.rtp_speex_send_loop: %dus now, deadline[%dus]...in #%dus\n", usec_now, usec_payload_deadline, usec_payload_deadline - usec_now));
-			 Test end */
-
-
-
-
-			/* call for session sending 
+         /* call for session sending 
 			 * usec left before send rtp packet to the net
 			 * deadline<=0, means ASAP, the quickness decided by bandwidth
 				spxrtp_debug(("rtp_speex_send_loop: deadline[%dus]@%d,eots[%d], remains %d packets\n", usec_payload_deadline, (int)ses_clock, eots, xlist_size(profile->packets)));
-			 */
-
+			 */          
 			session_rtp_to_send(profile->session, usec_payload_deadline, eots);  
          
 			/*
 			spxrtp_debug(("rtp_speex_send_loop: %d frames sent\n", payload_nframe));
 			if(eots)
-
-
 			{
 				spxrtp_debug(("rtp_speex_send_loop: end of ts\n"));
 			}
@@ -1499,6 +1485,7 @@ xrtp_media_t* rtp_speex(profile_handler_t *handler, int clockrate, int coding_pa
 			}
 	   
 			profile->thread = xthr_new(rtp_speex_send_loop, profile, XTHREAD_NONEFLAGS); 
+
 			if(!profile->thread)
 			{
 				xlist_done(profile->packets, NULL);
@@ -1643,6 +1630,7 @@ module_loadin_t mediaformat =
 	000001,         /* Plugin Version */
 	000001,         /* Minimum version of lib API supportted by the module */
 	000001,         /* Maximum version of lib API supportted by the module */
+
 
 	module_init     /* Module initializer */
 };
