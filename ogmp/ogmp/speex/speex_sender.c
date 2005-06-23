@@ -283,6 +283,7 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 
 
 
+
 	media_device_t *dev = NULL;
 
 	dev_rtp_t * dev_rtp = NULL;
@@ -517,8 +518,7 @@ int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 sample
 
    /* Now samplestamp is 64 bits, for maximum media stamp possible
 	 * All param for sending stored in the frame
-	 */
-    
+	 */    
    spxinfo = ss->speex_info;
 
    rtpf->samples = spxinfo->nframe_per_packet * spxinfo->nsample_per_frame;

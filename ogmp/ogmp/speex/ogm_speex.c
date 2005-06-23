@@ -268,10 +268,8 @@ int ogm_process_speex(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page
 {
 	/* Output the Ogg/Speex media */
 	media_frame_t frame;
-	media_format_t *mf = (media_format_t *)ogm;
-   
+	media_format_t *mf = (media_format_t *)ogm;   
 	media_stream_t *stream = (media_stream_t *)ogm_strm;
-
 	speex_info_t *spxinfo = (speex_info_t *)stream->media_info;
    
 	if(stream->playable == -1)

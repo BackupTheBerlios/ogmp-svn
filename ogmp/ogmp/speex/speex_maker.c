@@ -75,8 +75,6 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 	media_frame_t spxf;
 	media_stream_t *stream = enc->media_stream;
 
-	spxmk_debug (("\rspxmk_receive_media: receive %d bytes\n", auf->bytes));
-
    /* finish last remain */
    if(enc->cache_nbyte > 0)
    {
@@ -312,6 +310,7 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
 		return MP_FAIL;
 
 	spxinfo->audioinfo.info.sample_bits = SPEEX_SAMPLE_BITS;
+   spxinfo->nframe_per_packet = 1;
 
 	ret = dev->set_io(dev, minfo, &maker->receiver);
 	if (ret < MP_OK)
@@ -379,7 +378,6 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
    enc->input_device = dev;
    
 	return MP_OK;
-
 }
 
 module_interface_t* media_new_maker()

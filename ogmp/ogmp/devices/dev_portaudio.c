@@ -48,6 +48,7 @@
 
 
 
+
  #define pa_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pa_log(fmtargs)
@@ -272,6 +273,8 @@ int pa_input_loop(void *gen)
 
 	pa->input_stop = 0;
 
+   int nloop=2000;
+
 	while(!pa->input_stop)
 	{
 		rtime_t us_left;
@@ -294,7 +297,10 @@ int pa_input_loop(void *gen)
 		auf.eots = 1;
 
 		pa->receiver->receive_media(pa->receiver, &auf, (int64)(pa->inbuf[pa->inbuf_r].stamp), 0);
-		pa_debug(("pa_input_loop: got %d samples\n", auf.nraw));
+
+      if(nloop==0)
+         exit(1);
+      nloop--;   
 
 		memset(inbufr->pcm, 0, pa->input_nbyte_once);
       
@@ -354,9 +360,6 @@ static int pa_io_callback( void *inbuf, void *outbuf, unsigned long npcm, PaTime
 			inbufw->npcm_write = npcm;
          
 			pa->inbuf_w = (pa->inbuf_w+1) % pa->inbuf_n;
-   
-			pa_debug(("---------------------------------------\n"));
-			pa_debug(("pa_io_callback: inbufw wrote %ld samples\n", npcm));
 		}
    }
 
