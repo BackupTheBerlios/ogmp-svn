@@ -49,6 +49,7 @@
 
 
 
+
  #define pa_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pa_log(fmtargs)
@@ -152,6 +153,7 @@ static int pa_input_callback( void *inbuf, void *outbuf, unsigned long npcm_in,
 int pa_input_loop(void *gen)
 {
 	int err;
+
 	int sample_bytes;
 	pa_input_t* inputbuf;
 
@@ -360,6 +362,7 @@ static int pa_io_callback( void *inbuf, void *outbuf, unsigned long npcm, PaTime
 			inbufw->npcm_write = npcm;
          
 			pa->inbuf_w = (pa->inbuf_w+1) % pa->inbuf_n;
+			pa_debug(("\rpa_io_callback: input[%lld]\n", inbufw->stamp));
 		}
    }
 
@@ -868,6 +871,7 @@ int pa_stop_io(media_device_t * dev, int mode)
 		if( err != paNoError )
 		{
 			Pa_Terminate();
+
 			pa_debug(("pa_stop: An error occured while stop the portaudio\n"));
 
 			pa_dev->online = 0;
