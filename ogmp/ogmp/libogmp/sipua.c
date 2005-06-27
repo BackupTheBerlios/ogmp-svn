@@ -290,6 +290,7 @@ int sipua_make_call(sipua_t *sipua, sipua_call_t* call, char* id,
 
 
 
+
 		{
 			call->bandwidth_need += media_bw;
 		}
@@ -878,7 +879,6 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_call_t* call, int bw_budget, media_co
                 char* mediatypes[], int rtp_ports[], int rtcp_ports[], int nmedia,
                 media_source_t* source, int pt_pool[])
 {       
-
 	char *sdp_body = NULL;
 	char *nettype, *addrtype, *netaddr;
  

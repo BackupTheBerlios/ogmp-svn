@@ -43,13 +43,6 @@
 
 #ifdef PORTAUDIO_LOG
 
-
-
-
-
-
-
-
  #define pa_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pa_log(fmtargs)
@@ -77,8 +70,6 @@ typedef struct portaudio_device_s
 
    PortAudioStream *pa_iostream;
    int io_ready;
-
-
 
    /* Input */
    audio_info_t ai_input;
@@ -132,16 +123,16 @@ static int pa_input_callback( void *inbuf, void *outbuf, unsigned long npcm_in,
    portaudio_device_t* pa = (portaudio_device_t*)udata;
 
    pa->input_samplestamp += npcm_in;
-   
+
    next = (pa->inbuf_w+1) % pa->inbuf_n;
    if(next == pa->inbuf_r)
    {
 	   /* encoding slower than input */
 	   return 0;
    }
-   
+
    memcpy(pa->inbuf[pa->inbuf_w].pcm, inbuf, npcm_in);
-   
+
    pa->inbuf[pa->inbuf_w].stamp = pa->input_samplestamp;
    pa->inbuf[pa->inbuf_w].npcm_write = npcm_in;
    pa->inbuf_w = next;
@@ -152,110 +143,68 @@ static int pa_input_callback( void *inbuf, void *outbuf, unsigned long npcm_in,
 #if 0
 int pa_input_loop(void *gen)
 {
-	int err;
+	rtime_t us_left;
 
-	int sample_bytes;
-	pa_input_t* inputbuf;
-
-   media_frame_t auf;
-	portaudio_device_t* pa = (portaudio_device_t*)gen;
-
-	int npcm_need, npcm_left, nbyte_need;
-	char *auf_raw;
-
-	if (!pa->receiver) return MP_FAIL;
-   
-	sample_bytes = pa->ai_input.info.sample_bits / OS_BYTE_BITS;
-	pa_debug(("pa_input_loop: PortAudio started, %d bytes/sample\n\n", sample_bytes));
-   
-	auf.raw = (char*)xmalloc(pa->input_nbyte_once);
-   
-	pa->input_stop = 0;
-   
-	npcm_need = pa->input_npcm_once;
-	nbyte_need = pa->input_nbyte_once;
-   
-	auf_raw = auf.raw;
-
-	while(!pa->input_stop)
+   portaudio_device_t* pa = (portaudio_device_t*)gen;
+	while(1)
 	{
-		rtime_t us_left;
-		
-		inputbuf = &pa->inbuf[pa->inbuf_r];
-		npcm_left = inputbuf->npcm_write;
-      
-		if(inputbuf->npcm_write == 0)
-		{
-			/* encoding catch up input */
-			time_usec_sleep(pa->clock, pa->input_usec_pulse, &us_left);
-			continue;
-		}
-      
-		inputbuf->npcm_read = 0;
+		/* encoding catch up input */
+		time_usec_sleep(pa->clock, pa->input_usec_pulse, &us_left);
 
-      while(inputbuf->npcm_read < inputbuf->npcm_write)
-		{
-			auf.nraw = pa->input_npcm_once;
-			auf.samplestamp = inputbuf->stamp;
-         
-			if(npcm_left < pa->input_npcm_once)
-				auf.eots = 0;
-			else
-				auf.eots = 1;
-
-			memcpy(auf_raw, &inputbuf->pcm[inputbuf->nbyte_read], nbyte_need);
-			auf.bytes = pa->input_nbyte_once;
-         
-			pa->receiver->receive_media(pa->receiver, &auf, (int64)(pa->inbuf[pa->inbuf_r].stamp * 1000000), 0);
-
-			memset(&inputbuf->pcm[inputbuf->nbyte_read], 0, nbyte_need);
-			inputbuf->npcm_read += npcm_need;
-         
-			pa_debug(("pa_input_loop: Input %d/%d bytes\n", inputbuf->npcm_read, inputbuf->npcm_write));
-
-			npcm_left = inputbuf->npcm_write - inputbuf->npcm_read;
-			if(npcm_left < pa->input_npcm_once)
-			{
-				int nbyte_left = npcm_left * pa->ai_input.channels_bytes;
-            
-				memcpy(auf_raw, &inputbuf->pcm[inputbuf->nbyte_read], nbyte_left);
-				auf_raw += nbyte_left;
-            
-				npcm_need = pa->input_npcm_once - npcm_left;
-				nbyte_need = pa->input_nbyte_once - nbyte_left;
-
-				inputbuf->npcm_read = inputbuf->npcm_write;
-				npcm_left = 0;
-			}
-			else
-			{
-				auf_raw = auf.raw;
-				npcm_need = pa->input_npcm_once;
-				nbyte_need = pa->input_nbyte_once;
-			}
-		}
-
-		inputbuf->npcm_write = 0;
-
-		pa->inbuf_r = (pa->inbuf_r + 1) % pa->inbuf_n;
-	}
-
-	auf.bytes = 0;
-	auf.nraw = 0;
-	auf.raw = pa->inbuf[pa->inbuf_r].pcm;
-   
-	pa->receiver->receive_media(pa->receiver, &auf, (int64)(pa->inbuf[pa->inbuf_r].stamp * 1000000), MP_EOS);
-
-	err = Pa_StopStream ( pa->pa_outstream );
-	if( err != paNoError )
-	{
-		Pa_Terminate();
-		pa_debug(("pa_input_loop: An error occured while stop the portaudio\n"));
-
-		return MP_FAIL;
+      continue;
 	}
 
 	return MP_OK;
+}
+
+static int pa_io_callback (void *inbuf, void *outbuf, unsigned long npcm,
+							      PaTimestamp intime, void *udata)
+{
+   portaudio_device_t* pa = (portaudio_device_t*)udata;
+
+	pa_input_t* inbufr;
+	pa_input_t* inbufw;
+
+   /* Record input data */
+   if(inbuf)
+   {
+		pa->input_samplestamp += npcm;
+
+      inbufw = &pa->inbuf[pa->inbuf_w];
+
+      if(inbufw->npcm_write != 0)
+		{
+			/* encoding slower than input */
+			pa_debug(("pa_io_callback: inbuf full\n"));
+		}
+		else
+		{
+			memcpy(inbufw->pcm, inbuf, npcm);
+			memset(inbuf, 0, npcm);
+
+			inbufw->stamp = pa->input_samplestamp;
+			inbufw->npcm_write = npcm;
+
+			pa->inbuf_w = (pa->inbuf_w+1) % pa->inbuf_n;
+			pa_debug(("\rpa_io_callback: input[%lld]\n", inbufw->stamp));
+		}
+   }
+
+   if(!outbuf)
+	   return 0;
+
+	inbufr = &pa->inbuf[pa->inbuf_r];
+
+	if(inbufr->npcm_write == 0)
+		return 0;
+
+	memcpy(outbuf, inbufr->pcm, npcm);
+
+	inbufr->npcm_write = 0;
+
+	pa->inbuf_r = (pa->inbuf_r + 1) % pa->inbuf_n;
+      
+   return 0;
 }
 #endif
 
@@ -268,7 +217,8 @@ int pa_input_loop(void *gen)
    media_frame_t auf;
 	portaudio_device_t* pa = (portaudio_device_t*)gen;
 
-	if (!pa->receiver) return MP_FAIL;
+	if (!pa->receiver)
+      return MP_FAIL;
 
 	sample_bytes = pa->ai_input.info.sample_bits / OS_BYTE_BITS;
 	pa_debug(("pa_input_loop: PortAudio started, %d bytes/sample\n\n", sample_bytes));
@@ -318,6 +268,7 @@ int pa_input_loop(void *gen)
 	pa->receiver->receive_media(pa->receiver, &auf, (int64)(pa->inbuf[pa->inbuf_r].stamp * 1000000), MP_EOS);
 
 	err = Pa_StopStream ( pa->pa_outstream );
+
 	if( err != paNoError )
 	{
 		Pa_Terminate();
@@ -348,8 +299,8 @@ static int pa_io_callback( void *inbuf, void *outbuf, unsigned long npcm, PaTime
 		pa->input_samplestamp += npcm;
 
       inbufw = &pa->inbuf[pa->inbuf_w];
-      
-		if(inbufw->npcm_write != 0)
+
+      if(inbufw->npcm_write != 0)
 		{
 			/* encoding slower than input */
 			pa_debug(("pa_io_callback: inbuf full\n"));
@@ -533,6 +484,7 @@ int pa_set_input_media(media_device_t *dev, media_receiver_t* recvr, media_info_
       return MP_FAIL;
    }
    
+
    pa->ai_input = *ai;
 
    nsp = pa->ai_input.info.sample_rate / pa->sample_factor;
@@ -667,6 +619,7 @@ int pa_set_output_media(media_device_t *dev, media_info_t *out_info)
    }
 
 	pa_min_nbuf = Pa_GetMinNumBuffers (nsample_pulse, pa->ai_output.info.sample_rate);
+
 
 
 	pa_debug(("\n[pa_set_output_media: stream opened, PortAudio use %d internal buffers]\n\n", pa_min_nbuf));

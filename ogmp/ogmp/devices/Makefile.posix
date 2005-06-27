@@ -21,6 +21,9 @@ RTPOBJ = dev_rtp.o
 
 LIBFILES = dev_portaudio.so dev_rtp.so
 
+TESTSRC = patest_record.c
+TEST = parecord
+
 CFLAGS = -Wall -fPIC
 
 all:	 libs install
@@ -39,9 +42,13 @@ uninstall:
 	-@rm -f $(INSTDIR)/dev_portaudio.so
 	-@rm -f $(INSTDIR)/dev_rtp.so
 
+test:
+	-$(CC) -I$(PREFIX)/include -L$(PREFIX)/lib -lportaudio -lpthread $(TESTSRC) -o $(TEST)
+
 clean:
 	-@rm -f *.o
 	-@rm -f *.lo
 	-@rm -f *.so
+	-@rm -f $(TEST)
 
 
