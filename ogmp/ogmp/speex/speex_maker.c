@@ -82,6 +82,7 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
       delta_nsample = enc->frame_nsample - cache_nsample;
       delta_nbyte = enc->frame_nbyte - enc->cache_nbyte;
 
+		spxmk_debug(("spxmk_receive_media: pick %d cached samples\n", cache_nsample));
       memcpy(&enc->encoding_frame[enc->cache_nbyte], auf->raw, delta_nbyte);
       
 	   spx_bytes = spxc_encode(enc, enc->speex_info, enc->encoding_frame, enc->frame_nbyte, &spx_frame);

@@ -43,6 +43,7 @@
 
 #ifdef PORTAUDIO_LOG
 
+
  #define pa_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pa_log(fmtargs)
@@ -303,13 +304,13 @@ static int pa_io_callback( void *inbuf, void *outbuf, unsigned long npcm, PaTime
       if(inbufw->npcm_write != 0)
 		{
 			/* encoding slower than input */
-			pa_debug(("pa_io_callback: inbuf full\n"));
+			pa_debug(("\rpa_io_callback: inbuf full\n"));
 		}
 		else
 		{
 			memcpy(inbufw->pcm, inbuf, npcm);
 
-			inbufw->stamp = pa->input_samplestamp;
+         inbufw->stamp = pa->input_samplestamp;
 			inbufw->npcm_write = npcm;
          
 			pa->inbuf_w = (pa->inbuf_w+1) % pa->inbuf_n;

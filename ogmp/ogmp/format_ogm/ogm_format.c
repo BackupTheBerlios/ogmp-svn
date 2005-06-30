@@ -45,6 +45,7 @@ int done_stream_handler(void *gen)
    handler->done(handler);
 
 
+
    return MP_OK;
 }
 
@@ -252,6 +253,7 @@ media_player_t* ogm_new_stream_player(media_format_t *mf, int strmno, media_cont
 
 media_player_t * ogm_new_mime_player(media_format_t * mf, char * mime, media_control_t* ctrl, char* mode, void* mode_param)
 {
+
 	media_stream_t *cur = mf->first;
 
 	while (cur != NULL)
@@ -628,6 +630,7 @@ int ogm_open(media_format_t *mf, char *fname, media_control_t *ctrl)
          {
             n_pack++;
 
+
             if (head_parsed)
             {
                ogm_log(("ogm_open_file: stream header parsed, the packet untouched yet\n"));
@@ -781,6 +784,7 @@ int ogm_seek_millisecond (media_format_t *mf, int millis) {
           */
 
          start_pos = start_sec * current_pos / current_sec ;
+
       } 
 	  else
 	  {
@@ -1017,7 +1021,7 @@ int ogm_demux_next (media_format_t *mf, int stream_end)
          /* last packet of the page */          
          ret = demux_ogm_process_packet(ogm, ogm_strm, &(ogm->page), dual_pack[send], page_granul, 1, stream_end);
          if(ret < 0)
-		 {
+		   {
             ogm_log(("ogm_demux_next: Need resync stream(%d) when fail process\n", sno));
             return ret;
          }

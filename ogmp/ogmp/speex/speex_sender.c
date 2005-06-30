@@ -285,6 +285,7 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 
 
 
+
 	media_device_t *dev = NULL;
 
 	dev_rtp_t * dev_rtp = NULL;
@@ -532,7 +533,7 @@ int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 sample
 
    rtpf->grpno = ++ss->group_packets;
 
-   spxs_debug(("\rspxs_receive_next: frame bytes[%d], samples[%d]\n", rtpf->frame.bytes, rtpf->samples));
+   spxs_log(("\rspxs_receive_next: frame bytes[%d], samples[%d]\n", rtpf->frame.bytes, rtpf->samples));
    ss->rtp_media->post(ss->rtp_media, (media_data_t*)rtpf, rtpf->frame.bytes, last_packet);
 
    if(last_packet)
@@ -599,6 +600,7 @@ module_interface_t * media_new_sender()
    mp->match_capable = spxs_match_capable;
 
    mp->stop = spxs_stop;
+
 
    mp->receiver.match_type = spxs_match_type;
    mp->receiver.receive_media = spxs_receive_next;
