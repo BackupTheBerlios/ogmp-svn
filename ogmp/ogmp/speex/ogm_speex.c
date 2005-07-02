@@ -234,7 +234,7 @@ media_stream_t* ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_c
 			ogm_strm->stype = 'a';
 			ogm_strm->instate = sstate;
 
-	      speex_bits_init(&spxinfo->bits);
+	      speex_bits_init(&spxinfo->decbits);
 
          ogm_speex_log(("ogm_open_speex: version[%d]\n", spxinfo->version));
          ogm_speex_log(("ogm_open_speex: bitstream version[%d]\n", spxinfo->bitstream_version));

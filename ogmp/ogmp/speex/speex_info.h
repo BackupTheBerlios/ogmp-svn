@@ -39,7 +39,9 @@ struct speex_info_s
 {
 	struct audio_info_s audioinfo;
    
-	SpeexBits bits;
+	SpeexBits decbits;
+	SpeexBits encbits;
+   
 	SpeexStereoState stereo;
 	SpeexPreprocessState *preprocess;
 
@@ -62,7 +64,6 @@ struct speex_info_s
 	int penh;		/* perceptual enhancement */
 
 	void *dst;		/* decode state */
-
 
 	/* encoding parameters */
 	void *est;		/* encode state */

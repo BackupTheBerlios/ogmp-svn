@@ -58,7 +58,7 @@ media_frame_t* spxc_decode(speex_info_t *spxinfo, media_frame_t *spxf, media_pip
 	frame_bytes = nchannel * frame_size * sizeof(int16);
    
 	/*Copy Ogg packet to Speex bitstream*/
-	speex_bits_read_from(&spxinfo->bits, (char*)spxf->raw, spxf->bytes);
+	speex_bits_read_from(&spxinfo->decbits, (char*)spxf->raw, spxf->bytes);
 
 	auf = (media_frame_t*)output->new_frame(output, nframes * frame_bytes, NULL);
 	if (!auf)
@@ -75,7 +75,7 @@ media_frame_t* spxc_decode(speex_info_t *spxinfo, media_frame_t *spxf, media_pip
 
 		/*Decode frame*/
 		if (!lost)
-			ret = speex_decode_int(spxinfo->dst, &spxinfo->bits, (int16*)pcm);
+			ret = speex_decode_int(spxinfo->dst, &spxinfo->decbits, (int16*)pcm);
 		else
 			ret = speex_decode_int(spxinfo->dst, NULL, (int16*)pcm);
 		
@@ -91,7 +91,7 @@ media_frame_t* spxc_decode(speex_info_t *spxinfo, media_frame_t *spxf, media_pip
 			break;
 		}
 
-		if (speex_bits_remaining(&spxinfo->bits)<0)
+		if (speex_bits_remaining(&spxinfo->decbits)<0)
 		{
 			spxc_log(("speex_decode: Decoding overflow: corrupted stream?\n"));
 			output->recycle_frame(output, auf);
@@ -131,24 +131,24 @@ int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcm_
 	frame_bytes = nchannel * frame_size * sizeof(int16);
 
 	/*Flush all the bits in the struct so we can encode a new frame*/
-	speex_bits_reset(&spxinfo->bits);
+	speex_bits_reset(&spxinfo->encbits);
 
 	if (nchannel==2)
-		speex_encode_stereo_int((short*)pcm, frame_size, &spxinfo->bits);
+		speex_encode_stereo_int((short*)pcm, frame_size, &spxinfo->encbits);
 		
 	if (spxinfo->agc || spxinfo->denoise)
 		speex_preprocess(spxinfo->preprocess, (short*)pcm, NULL);
 
 	/*Encode the frame*/
-	speex_encode_int(spxinfo->est, (short*)pcm, &spxinfo->bits);
+	speex_encode_int(spxinfo->est, (short*)pcm, &spxinfo->encbits);
 
-	speex_bits_insert_terminator(&spxinfo->bits);
-	spx_bytes = speex_bits_nbytes(&spxinfo->bits);
+	speex_bits_insert_terminator(&spxinfo->encbits);
+	spx_bytes = speex_bits_nbytes(&spxinfo->encbits);
 
 	spx = xmalloc(spx_bytes);
 
-	spx_bytes = speex_bits_write(&spxinfo->bits, spx, spx_bytes);
-	speex_bits_reset(&spxinfo->bits);
+	spx_bytes = speex_bits_write(&spxinfo->encbits, spx, spx_bytes);
+	speex_bits_reset(&spxinfo->encbits);
 
 	*encoded = spx;
 

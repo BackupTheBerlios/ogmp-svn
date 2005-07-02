@@ -458,7 +458,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 							client->mediatypes, client->default_rtp_ports, 
 							client->default_rtcp_ports, client->nmedia,
 							client->control, MAX_CALL_BANDWIDTH);
-			
+
 			if(ret < UA_OK)
 			{
 				/* Fail to receive the call, miss it */
@@ -722,7 +722,6 @@ int sipua_done_sip_session(void* gen)
 }
 
 int client_done_call(sipua_t* sipua, sipua_call_t* call)
-
 {
 	ogmp_client_t *ua = (ogmp_client_t*)sipua;
 
@@ -796,6 +795,7 @@ sipua_call_t* client_find_call(sipua_t* sipua, char* id, char* username, char* n
 		if(call && !strcmp(call->setid.id, id) && 
 			!strcmp(call->setid.username, username) && 
 			!strcmp(call->setid.nettype, nettype) && 
+
 			!strcmp(call->setid.addrtype, addrtype) && 
 			!strcmp(call->setid.netaddr, netaddr))
 			break;

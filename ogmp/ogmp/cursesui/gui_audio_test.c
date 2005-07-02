@@ -33,6 +33,7 @@ editline_t *audio_test_edit[2];
 
 int cursor_audio_test = 0;
 
+
 media_source_t* audio_test_source = NULL;
 
 int window_audio_test_print(gui_t* gui, int wid)
@@ -132,7 +133,6 @@ int window_audio_test_run_command(gui_t* gui, int c)
 
 	if(gui->x1 != -999)
 		x = gui->x1;
-
 
 	if(gui->xcursor == -1)
 		gui->xcursor = 20;
@@ -237,6 +237,10 @@ int window_audio_test_run_command(gui_t* gui, int c)
 
 			break;
 		}
+		case 18:  /* Ctrl-R */
+		{
+			break;
+      }
 		case 19:  /* Ctrl-S */
 		{
 			if(audio_test_source)

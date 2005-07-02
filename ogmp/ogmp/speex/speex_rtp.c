@@ -632,7 +632,7 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 				if(explayer)
 					explayer->done(explayer);
 
-	         speex_bits_init(&spxinfo->bits);
+	         //speex_bits_init(&spxinfo->decbits);
 				sender->media_playable = 1;
 
             spxrtp_debug(("audio/speex.spxrtp_rtcp_in: playback ready for sender[%s]\n", sender->cname));
@@ -778,6 +778,7 @@ int rtp_speex_set_parameter(xrtp_media_t* media, char* key, void* val)
 	
 	if(0==strcmp(key, "penh"))
 	{
+
 		profile->penh = (int)val;
       
 		spxrtp_log(("rtp_speex_set_parameter: penh[%d]\n", profile->penh));
@@ -1085,6 +1086,7 @@ int rtp_speex_send_loop(void *gen)
 {
 	rtp_frame_t *rtpf = NULL;
 
+
 	int eos=0, eots=0;
 
    int first_loop= 1;
@@ -1372,6 +1374,7 @@ int rtp_speex_post(xrtp_media_t* media, media_data_t* frame, int data_bytes, uin
    xlist_addto_last(profile->packets, rtpf);
 
    if(rtpf->samplestamp != profile->recent_samplestamp)
+
    {
 	   /* when new group coming, old group will be discard 
 	    * if could not catch up the time */

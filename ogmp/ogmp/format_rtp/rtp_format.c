@@ -242,7 +242,6 @@ media_player_t * rtp_fourcc_player(media_format_t * mf, const char *fourcc)
    return NULL;
 }
 
-
 int rtp_set_fourcc_player (media_format_t * mf, media_player_t * player, const char *fourcc)
 {
    media_stream_t *cur = mf->first;
@@ -301,9 +300,13 @@ int rtp_stream_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
 int rtp_start_stream (media_stream_t* stream)
 {
    if(!stream->maker || !stream->player)
+   {
+      rtp_debug(("\rrtp_start_stream: exit\n"));
+      exit(1);
       return MP_FAIL;
+   }
 
-   stream->maker->start(stream->maker);
+   stream->maker->start(stream->maker);   
    stream->player->start(stream->player);
    
    return MP_OK;
@@ -331,7 +334,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
    int rtp_portno, rtcp_portno;
 
 	module_catalog_t *cata = ctrl->modules(ctrl);
-
+   
 	rtpcap_set_t* rtpcapset = (rtpcap_set_t*)extra;
 	user_profile_t* user_prof = rtpcapset->user_profile;
 
@@ -388,6 +391,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 		rtp_debug(("rtp_open_stream: No rtp setting\n"));
 		xfree(strm);
 		return NULL;
+
 	}
 
 	strm->session = rtp_format->rtp_in->rtp_session(rtp_format->rtp_in, cata, ctrl,
@@ -422,9 +426,10 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
    peer->stream.media_info = strm->stream.media_info;
    
    peer->session = strm->session;
-
+   
    strm->stream.start = rtp_start_stream;
    strm->stream.stop = rtp_stop_stream;
+   
    peer->stream.start = rtp_start_stream;
    peer->stream.stop = rtp_stop_stream;
 

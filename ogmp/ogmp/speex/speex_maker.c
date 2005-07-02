@@ -150,7 +150,7 @@ int spxmk_done(media_maker_t *maker)
 	speex_encoder_destroy(enc->speex_info->est);
 
 	/*Destroy the bit-packing struct */
-	speex_bits_destroy(&enc->speex_info->bits);
+	speex_bits_destroy(&enc->speex_info->encbits);
 
 	xfree(enc->encoding_frame);
 	xfree(maker);
@@ -228,11 +228,8 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
 		spxmk_log (("spxmk_new_media_stream: speex stream fail to open\n"));
 		return ret;
 	}
-   /*
-   stream->start = speex_start_stream;
-   stream->stop = speex_stop_stream;
-   */
-	stream->maker = maker;
+
+   stream->maker = maker;
 
    enc->media_stream = stream;
 	enc->speex_info = spxinfo;
@@ -261,7 +258,7 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
 		speex_encoder_ctl(spxinfo->est, SPEEX_SET_COMPLEXITY, &spxinfo->complexity);
   
 	/* Initialization of the structure that holds the bits */
-	speex_bits_init(&spxinfo->bits);
+	speex_bits_init(&spxinfo->encbits);
 
    rate = enc->speex_info->audioinfo.info.sample_rate;
 	enc->frame_nsample = enc->speex_info->nsample_per_frame;

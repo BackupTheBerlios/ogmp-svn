@@ -449,8 +449,12 @@ int spxs_init (media_player_t * mp, media_control_t *control, void* data)
 int spxs_start (media_player_t *mp)
 {
    if(!mp->device)
+   {
+      spxs_debug(("spxs_start: no device\n"));
       return MP_FAIL;
-
+   }
+   
+   spxs_debug(("spxs_start: start\n"));
    mp->device->start(mp->device, DEVICE_OUTPUT);
 
    return MP_OK;
