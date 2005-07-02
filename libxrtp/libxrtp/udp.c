@@ -106,7 +106,7 @@ session_connect_t * connect_new(xrtp_port_t * port, xrtp_teleport_t * tport)
      udp->remote_addr.sin_addr.s_addr = tport->addr;  /* Already in Network byteorder, see inet_addr() */
 
      udp_log(("connect_new: new connect to [%s:%u]\n", 
-		 inet_ntoa(udp->remote_addr.sin_addr), ntohs(udp->remote_addr.sin_port)));
+		inet_ntoa(udp->remote_addr.sin_addr), ntohs(udp->remote_addr.sin_port)));
 
      return udp;   
 }
@@ -138,8 +138,8 @@ int connect_match(session_connect_t * conn1, session_connect_t * conn2)
 int connect_match_teleport(session_connect_t * conn, xrtp_teleport_t * tport)
 {
 	 return conn->remote_addr.sin_family == AF_INET &&
-            conn->remote_addr.sin_addr.s_addr == tport->addr &&
-            conn->remote_addr.sin_port == tport->portno;
+           conn->remote_addr.sin_addr.s_addr == tport->addr &&
+           conn->remote_addr.sin_port == tport->portno;
 }
 
 xrtp_teleport_t* connect_new_teleport(session_connect_t * conn)
@@ -166,6 +166,7 @@ int connect_receive(session_connect_t * conn, char **r_buff, int *header_bytes, 
       conn->data_in = NULL;
       conn->datalen_in = 0;
 
+
 	  *header_bytes = IPV4_UDPIP_HEADER_BYTES;
 
       *ms = conn->msec_arrival;
@@ -177,17 +178,16 @@ int connect_receive(session_connect_t * conn, char **r_buff, int *header_bytes, 
 
 int connect_send(session_connect_t * conn, char *data, int datalen)
 {
-      int n;
+     int n;
 
 	  /* test */                                                                               
-      n = sendto(conn->port->socket, data, datalen, 0, (struct sockaddr *)&(conn->remote_addr), sizeof(struct sockaddr_in));
+     n = sendto(conn->port->socket, data, datalen, 0, (struct sockaddr *)&(conn->remote_addr), sizeof(struct sockaddr_in));
 	  if(n<0)
-	  {
-		udp_debug(("connect_send: sending fail\n"));
-	  }
+		   udp_debug(("connect_send: sending fail\n"));
 
-      udp_log(("connect_send: send to [%s:%d]\n", inet_ntoa(conn->remote_addr.sin_addr), ntohs(conn->remote_addr.sin_port)));
-      return n;
+     udp_debug(("\rconnect_send: port[%d]@%x send to [%s:%d]\n", conn->port->portno, (int)conn->port, inet_ntoa(conn->remote_addr.sin_addr), ntohs(conn->remote_addr.sin_port)));
+
+     return n;
 }
 
 /* These are for old static port protocol, which is rtcp is rtp + 1, It's NOT suggest to use, Simply for back compatability */
@@ -385,7 +385,7 @@ int port_poll(xrtp_port_t * port, rtime_t timeout_usec)
      fd_set io_set;
 
 	 int n;
-     
+  
      struct timeval tout;
      tout.tv_sec = timeout_usec / 1000000;     
      tout.tv_usec = timeout_usec % 1000000;
@@ -393,9 +393,8 @@ int port_poll(xrtp_port_t * port, rtime_t timeout_usec)
      FD_ZERO(&io_set);
      FD_SET(port->socket, &io_set);
 
-     udp_log(("port_poll: check incoming and timeout is set to %d seconds %d microseconds\n", (int)(tout.tv_sec), (int)(tout.tv_usec)));
-
      n = select(port->socket+1, &io_set, NULL, NULL, &tout);
+     udp_log(("\rport_poll: port[%d]@%x incoming[%d]\n", port->portno, (int)port, n));
 
      if(n == 1)
         port_incoming(port);
@@ -405,6 +404,7 @@ int port_poll(xrtp_port_t * port, rtime_t timeout_usec)
 
 int port_incoming(xrtp_port_t * port)
 {
+
      char data[UDP_MAX_LEN];
      struct sockaddr_in remote_addr;
 
