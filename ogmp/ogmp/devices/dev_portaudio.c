@@ -44,6 +44,7 @@
 #ifdef PORTAUDIO_LOG
 
 
+
  #define pa_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pa_log(fmtargs)
@@ -71,6 +72,7 @@ typedef struct portaudio_device_s
 
    PortAudioStream *pa_iostream;
    int io_ready;
+
 
    /* Input */
    audio_info_t ai_input;
@@ -314,7 +316,7 @@ static int pa_io_callback( void *inbuf, void *outbuf, unsigned long npcm, PaTime
 			inbufw->npcm_write = npcm;
          
 			pa->inbuf_w = (pa->inbuf_w+1) % pa->inbuf_n;
-			pa_debug(("\rpa_io_callback: input[%lld]\n", inbufw->stamp));
+			pa_log(("\rpa_io_callback: input[%lld]\n", inbufw->stamp));
 		}
    }
 
@@ -481,6 +483,7 @@ int pa_set_input_media(media_device_t *dev, media_receiver_t* recvr, media_info_
 
    if(!pa->online && pa_online (dev) < MP_OK)
    {
+
       pa_debug (("pa_set_input_media: Can't activate PortAudio device\n"));
       return MP_FAIL;
    }
@@ -937,6 +940,7 @@ module_interface_t* media_new_device ()
       pa_debug(("media_new_device: No enough memory\n"));
 
       return NULL;
+
    }
    
    memset(pa, 0, sizeof(struct portaudio_device_s));
@@ -983,6 +987,7 @@ module_interface_t* media_new_device ()
 	   pa->online = 1;
 
    pa_log(("media_new_device: PortAudio device created, with %dus pulse\n", pa->usec_pulse));
+
 
    return dev;
 }

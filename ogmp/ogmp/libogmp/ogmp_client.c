@@ -47,6 +47,7 @@ extern ogmp_ui_t* global_ui;
 
 /****************************************************************************************/
 int client_queue(sipua_t *sipua, sipua_call_t* call);
+int client_answer(sipua_t *sipua, sipua_call_t* call, int reply, media_source_t* source);
 
 int client_call_ringing(void* gen)
 {
@@ -81,15 +82,20 @@ int client_call_ringing(void* gen)
 				if(call->ring_num == 0)
 				{
 					/* On hold or redirect this call */
-					call->status = SIPUA_EVENT_ONHOLD;
 					client->nring--;
 
 					if(client->background_source)
+               {
+			         clie_debug(("\nclient_call_ringing: on hold\n"));
+					   call->status = SIPUA_STATUS_ONHOLD;
 						client_queue(&client->sipua, call);
+               }
+               else
+                  client_answer(&client->sipua, call, SIP_STATUS_CODE_OK, NULL);
 
 					if(client->nring == 0)
 						break;
-
+               
 					continue;
 				}
 				
@@ -421,8 +427,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
          call->cid = call_e->cid;
 			call->did = call_e->did;
          
-         call->status = SIPUA_STATUS_INCOMING;
-
 			call->status = SIPUA_STATUS_INCOMING;
 
 			call->rtpcapset = rtpcapset;
@@ -482,7 +486,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
          if(client->on_terminate)
             client->on_terminate(client->user_on_terminate, call, call_e->status_code);
 
-
          client_release_call(sipua, call);
          
          break;
@@ -501,8 +504,8 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		{	
 			sipua_call_t *call = e->call_info;
          sipua_call_event_t *call_e = (sipua_call_event_t*)e;
+         
          clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
-
 			call->status = SIPUA_EVENT_RINGING;
 
 			break;
@@ -543,13 +546,12 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			/* capable answered by callee */
 			rtpcapset = rtp_capable_from_sdp(sdp_message);
-
 			rtpcapset->user_profile = call->user_prof;
 			rtpcapset->rtpcap_selection = RTPCAP_ALL_CAPABLES;
 
 			/* rtp sessions created */
 			bw = sipua_establish_call(sipua, call, "playback", rtpcapset,
-                                    client->format_handlers, client->control, client->pt);
+                                   client->format_handlers, client->control, client->pt);
 			if(bw < 0)
 			{
 				sipua_answer(&client->sipua, call, SIP_STATUS_CODE_DECLINE, NULL);
@@ -558,32 +560,19 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			rtp_capable_done_set(rtpcapset);
 
-         /**
-          * Find sessions in the format which match cname and mimetype in source
-          * Move_member_from_session_of(call->rtp_format) to_session_of(source->players);
-         if(call->status == SIPUA_STATUS_QUEUE && client->background_source)
-         {
-            sipua->unsubscribe_bandwidth(sipua, call);
-
-            source_associate_guests(client->background_source, call->rtp_format);
-         }
-
-          */
-
          break;
 		}
 		case(SIPUA_EVENT_ACK):
 		{
          int bw;
 		   sipua_call_t *call;
-         sipua_call_event_t *call_e = (sipua_call_event_t*)e;
-         clie_debug(("client_sipua_event: status_cade[%d]\n", call_e->status_code));
 
 		   call = e->call_info;
             
-         if(call->status == SIPUA_EVENT_ONHOLD)
+         if(call->status == SIPUA_STATUS_ONHOLD)
 			{
-				client->sipua.attach_source(&client->sipua, call, (transmit_source_t*)client->background_source);
+            exit(1);
+            client->sipua.attach_source(&client->sipua, call, (transmit_source_t*)client->background_source);
 				break;
 			}
 
@@ -857,6 +846,7 @@ sipua_call_t* client_make_call(sipua_t* sipua, const char* subject, int sbytes, 
 
 	return call;
 }
+
 
 char* client_set_call_source(sipua_t* sipua, sipua_call_t* call, media_source_t* source)
 {
@@ -1215,11 +1205,10 @@ sipua_call_t* client_pick(sipua_t* sipua, int line)
 
    current = client->lines[0];
    if(current)
-		current->status = SIPUA_EVENT_ONHOLD;
+		current->status = SIPUA_STATUS_ONHOLD;
 
 	client->lines[0] = client->lines[line];
 	client->lines[line] = current;
-
 
    if(client->lines[0])
 		client->lines[0]->status = SIPUA_STATUS_SERVE;
@@ -1248,7 +1237,7 @@ int client_hold(sipua_t* sipua)
 			break;
 
    /* There always a free line available */
-   current->status = SIPUA_EVENT_ONHOLD;
+   current->status = SIPUA_STATUS_ONHOLD;
 
    client->lines[i] = current;
    client->lines[0] = NULL;
@@ -1282,7 +1271,6 @@ int client_answer(sipua_t *sipua, sipua_call_t* call, int reply, media_source_t*
             source_associate_guests(source, call->rtp_format);
 
             sipua_answer(&client->sipua, call, reply, sdp);
-
 
             xstr_done_string(sdp);
          }

@@ -227,7 +227,6 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
       return NULL;
    }
 
-
    osource = xmalloc(sizeof(ogmp_source_t));
 	if(!osource)
    {
@@ -289,8 +288,6 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
 	{
 		if(0 == format->new_all_player(format, osource->control, "playback", mode_param))
 		{
-
-
 			source_done(msrc);
 			return NULL;
 		}
@@ -327,15 +324,16 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
    osource->lock = xthr_new_lock();
    osource->wait_request = xthr_new_cond(XTHREAD_NONEFLAGS);
    
-   //test
+   /*test
    osource->control->demux_next(osource->control, 0);
-
+   */
+   
    return msrc;
 }
 
 /**
  * Find sessions in the format which match cname and mimetype in source
- * Move_member_from_session_of(call->rtp_format) to_session_of(source->players);
+ * Move member_of_session(call->rtp_format) to member_of_session(source->players);
  */
 int source_associate(media_source_t* msrc, media_format_t* rtp_fmt, char* cname)
 {

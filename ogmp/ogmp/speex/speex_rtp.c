@@ -172,13 +172,12 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
    src = rtp_packet_ssrc(rtp);
 
    rtpts_payload = rtp_packet_timestamp(rtp);
-   spxrtp_log(("audio/speex.spxrtp_rtp_in: packet ssrc=%u, seqno=%u, timestamp=%u, rtp->connect=%d\n", src, seqno, rtpts_payload, (int)rtp->connect));
 
    sender = session_member_state(rtp->session, src);
    
    if(sender->media_playable == -1)
    {
-	   spxrtp_debug(("audio/speex.vrtp_rtp_in: Member[%s] unplayable! discard\n", sender->cname));
+	   spxrtp_debug(("spxrtp_rtp_in: Member[%s] unplayable! discard\n", sender->cname));
 
       rtp_packet_done(rtp);
 
@@ -187,7 +186,7 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
    
    if(!sender->media_playable)
    {
-	   spxrtp_debug(("audio/speex.vrtp_rtp_in: Member[%s] not playbackable yet!\n", sender->cname));
+	   spxrtp_debug(("spxrtp_rtp_in: Member[%s] not playbackable yet!\n", sender->cname));
 
       rtp_packet_done(rtp);
 
@@ -197,21 +196,21 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
    if(sender && sender->valid && !connect_match(rtp->connect, sender->rtp_connect))
    {
       /* this could be true if sender behind the firewall */
-	  spxrtp_debug(("audio/speex.vrtp_rtp_in: put NAT in mind\n"));
+	  spxrtp_debug(("spxrtp_rtp_in: put NAT in mind\n"));
 
 	  session_solve_collision(sender, src);
 
-      rtp_packet_done(rtp);
+     rtp_packet_done(rtp);
 
-      return XRTP_CONSUMED;
+     return XRTP_CONSUMED;
    }
 
    if(!sender)
    {
       /* The rtp packet is recieved before rtcp arrived, so the participant is not identified yet */
       if(!spxh->session->$state.receive_from_anonymous)
-	  {
-         spxrtp_log(("audio/speex.spxrtp_rtp_in: participant waiting for identifed before receiving media\n"));
+	   {
+         spxrtp_log(("spxrtp_rtp_in: participant waiting for identifed before receiving media\n"));
          rtp_packet_done(rtp);
 
          return XRTP_CONSUMED;
@@ -225,25 +224,25 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 
       sender = session_new_member(spxh->session, src, NULL);
       if(!sender)
-	  {
+	   {
          /* Something WRONG!!! packet disposed */
          rtp_packet_done(rtp);
          return XRTP_CONSUMED;
       }
 
       if(spxh->session->$callbacks.member_connects)
-	  {
+	   {
          spxh->session->$callbacks.member_connects(spxh->session->$callbacks.member_connects_user, src, &rtp_conn, &rtcp_conn);
          session_member_set_connects(sender, rtp_conn, rtcp_conn);
       }
-	  else
-	  {
+	   else
+	   {
          rtcp_conn = connect_rtp_to_rtcp(rtp->connect); /* For RFC1889 static port allocation: rtcp port = rtp port + 1 */
          session_member_set_connects(sender, rtp->connect, rtcp_conn);
       }
 
       if(spxh->session->join_to_rtp_port && connect_match_teleport(rtp->connect, spxh->session->join_to_rtp_port))
-	  {
+	   {
          /* participant joined, clear the join desire */
          teleport_done(spxh->session->join_to_rtp_port);
          spxh->session->join_to_rtp_port = NULL;
@@ -259,7 +258,7 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 
       if(!spxh->session->$state.receive_from_anonymous)
 	   {
-         spxrtp_log(("audio/speex.spxrtp_rtp_in: participant waiting for validated before receiving media\n"));
+         spxrtp_log(("spxrtp_rtp_in: participant waiting for validated before receiving media\n"));
          rtp_packet_done(rtp);
 
          return XRTP_CONSUMED;
@@ -281,12 +280,12 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
             rtp->connect = NULL; /* Dump the connect from rtcp packet */
 
             if(spxh->session->$callbacks.member_connects)
-			{
+			   {
                spxh->session->$callbacks.member_connects(spxh->session->$callbacks.member_connects_user, src, &rtp_conn, &rtcp_conn);
                session_member_set_connects(sender, rtp_conn, rtcp_conn);
             }
-			else
-			{
+			   else
+			   {
                rtcp_conn = connect_rtp_to_rtcp(rtp->connect); /* For RFC1889 static port allocation: rtcp port = rtp port + 1 */
                session_member_set_connects(sender, rtp->connect, rtcp_conn);
             }
@@ -298,19 +297,17 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 
    if(session_member_update_by_rtp(sender, rtp) < XRTP_OK)
    {
-	   spxrtp_log(("audio/speex.spxrtp_rtp_in: bad packet\n"));
+	   spxrtp_log(("spxrtp_rtp_in: bad packet\n"));
 	   rtp_packet_done(rtp);
-
 	   return XRTP_CONSUMED;
    }
 
    if(session_member_seqno_stall(sender, seqno))
    {
-	   spxrtp_log(("audio/speex.spxrtp_rtp_in: seqno[%u] is stall, discard\n", seqno));
+	   spxrtp_log(("spxrtp_rtp_in: seqno[%u] is stall, discard\n", seqno));
 	   rtp_packet_done(rtp);
 
 	   return XRTP_CONSUMED;
-
    }
 
    /* calculate play timestamp */
@@ -334,7 +331,7 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 
 	   if(!spxinfo)
 	   {
-			spxrtp_log(("audio/vorbis.vrtp_rtp_in: invalid media info\n"));
+			spxrtp_log(("spxrtp_rtp_in: invalid media info\n"));
 			rtp_packet_done(rtp);
 
 			return XRTP_CONSUMED;
@@ -345,7 +342,7 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 		{
 			sender->media_playable = -1;
 
-			spxrtp_debug(("audio/speex.spxrtp_rtp_in: device is not available\n"));
+			spxrtp_debug(("spxrtp_rtp_in: device is not available\n"));
 			rtp_packet_done(rtp);
 
 			return XRTP_CONSUMED;
@@ -372,10 +369,9 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 				sender->media_playable = -1;
 				player->done(player);
 			
-				spxrtp_debug(("audio/speex.rtp_in: media is not playable\n"));
+				spxrtp_debug(("spxrtp_rtp_in: media is not playable\n"));
+            
 				rtp_packet_done(rtp);
-
-				exit(1);
 			
 				return XRTP_CONSUMED;
 		   }         
@@ -422,7 +418,7 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 		mf->samplestamp = session_member_samples(sender, rtpts_payload);
       mf->ts = rtpts_toplay;
 
-      spxrtp_log(("audio/speex.rtp_in: rtpts_sync[%d] rtpts_toplay[%d] delta[%uus]\r\n", rtpts_sync, rtpts_toplay, us_since_sync));
+      spxrtp_log(("spxrtp_rtp_in: rtpts_sync[%d] rtpts_toplay[%d] delta[%uus]\r\n", rtpts_sync, rtpts_toplay, us_since_sync));
       spxrtp_log(("spxrtp[%dts:+%dus]", rtpts_toplay, us_since_sync));
       spxrtp_log(("spx_mf[%lldts:%dB]", mf->samplestamp, mf->bytes));
 
@@ -474,7 +470,6 @@ int spxrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp)
 int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 {
 	uint32 src_sender = 0;
-
 	uint8 frac_lost = 0;
 	uint32 total_lost = 0, full_seqno, jitter = 0;
 	uint32 lsr_stamp = 0, lsr_delay = 0;
@@ -546,7 +541,6 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
                           &rtcpts, &packet_sent, &octet_sent) >= XRTP_OK)
 		{
 			/* Check the SR report */
-
 
 			/* record the sync reference point */
 			rtcp_arrival_time(rtcp, &ms, &us, &ns);
@@ -655,7 +649,7 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
    
 	/* find out minority report */
 	if(rtcp_report(rtcp, myself->ssrc, &frac_lost, &total_lost,
-                      &full_seqno, &jitter, &lsr_stamp, &lsr_delay) >= XRTP_OK)
+                  &full_seqno, &jitter, &lsr_stamp, &lsr_delay) >= XRTP_OK)
 	{
 		session_member_check_report (myself, frac_lost, total_lost, full_seqno, jitter, lsr_stamp, lsr_delay);
 	}
@@ -1045,6 +1039,7 @@ int rtp_speex_new_sdp(xrtp_media_t *media, char* nettype, char* addrtype, char* 
 	return bw;
 }
 
+
 /**
  * Get the media clockrate when the stream is opened
  */
@@ -1221,7 +1216,6 @@ int rtp_speex_send_loop(void *gen)
 				rtpf->frame.owner->recycle_frame(rtpf->frame.owner, (media_frame_t*)rtpf);
 
 			spxrtp_debug(("\rdiscarded\n"));
-         exit(1);
 
 			discard = 0;
 			continue;
@@ -1294,7 +1288,7 @@ int rtp_speex_send_loop(void *gen)
 		   usec_group_end = usec_group_start + usec_group;
 		}
 
-		spxrtp_debug(("\rrtp_speex_send_loop: [input], usec_now[%d], usec_group_end[%d]\n", usec_now, usec_group_end));
+		spxrtp_log(("\rrtp_speex_send_loop: [input], usec_now[%d], usec_group_end[%d]\n", usec_now, usec_group_end));
 
       /* send payload in a rtp packet when end of stream or the rtp nframe limit is reached */
 		if(eots || payload_nframe + spxinfo->nframe_per_packet > profile->max_nframe_per_rtp)
@@ -1309,9 +1303,9 @@ int rtp_speex_send_loop(void *gen)
          /* delay 1 frame data */
 			usec_payload_deadline = usec_stream_payload + SPX_FRAME_MSEC * 1000;
 
-			spxrtp_debug(("\rrtp_speex_send_loop: payload[%d]@%dus (%dS,%dus)\n", profile->usec_payload_timestamp, usec_stream_payload, payload_samples, usec_payload));
-			spxrtp_debug(("\rrtp_speex_send_loop: us_now[%d], us_deadline[%d]...in #%dus\n", usec_now, usec_payload_deadline, usec_payload_deadline - usec_now));
-			spxrtp_debug(("\rrtp_speex_send_loop: ===================================>>>>>>>>>>>>>>>>>\n"));
+			spxrtp_log(("\rrtp_speex_send_loop: payload[%d]@%dus (%dS,%dus)\n", profile->usec_payload_timestamp, usec_stream_payload, payload_samples, usec_payload));
+			spxrtp_log(("\rrtp_speex_send_loop: us_now[%d], us_deadline[%d]...in #%dus\n", usec_now, usec_payload_deadline, usec_payload_deadline - usec_now));
+			spxrtp_log(("\rrtp_speex_send_loop: ===================================>>>>>>>>>>>>>>>>>\n"));
 
          /* call for session sending 
 			 * usec left before send rtp packet to the net
@@ -1393,6 +1387,8 @@ int rtp_speex_post(xrtp_media_t* media, media_data_t* frame, int data_bytes, uin
    return MP_OK;
 }
 
+static int64 pacno_got = 0;
+
 int rtp_speex_play(void *player, void *media, int64 packetno, int ts_last, int eos)
 {
 	media_player_t *mp = (media_player_t*)player;
@@ -1401,6 +1397,9 @@ int rtp_speex_play(void *player, void *media, int64 packetno, int ts_last, int e
  
 	mf->sno = packetno;
 
+	spxrtp_debug(("\rrtp_speex_play: mf->sno[%lld], step[%lld]\n", packetno, packetno-pacno_got));
+   pacno_got = packetno;
+   
    if(eos)
 		mp->receiver.receive_media(&mp->receiver, mf, mf?mf->samplestamp:-1, MP_EOS);
 	else
@@ -1659,6 +1658,7 @@ extern DECLSPEC
 module_loadin_t mediaformat = 
 {
 	"rtp_profile",   /* Plugin ID */
+
 
 	000001,         /* Plugin Version */
 	000001,         /* Minimum version of lib API supportted by the module */

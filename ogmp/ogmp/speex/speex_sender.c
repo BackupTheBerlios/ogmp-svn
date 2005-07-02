@@ -33,6 +33,7 @@
 #define PROFILE_MIME "audio/speex"
 /*
 */
+
 #define SPXSENDER_LOG
 #define SPXSENDER_DEBUG
 
@@ -281,12 +282,7 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 	rtpcap_descript_t *rtpcap;
 
 
-
-
-
-
-
-	media_device_t *dev = NULL;
+   media_device_t *dev = NULL;
 
 	dev_rtp_t * dev_rtp = NULL;
 	rtp_setting_t *rtpset = NULL;
@@ -450,6 +446,16 @@ int spxs_init (media_player_t * mp, media_control_t *control, void* data)
 	return MP_OK;
 }
 
+int spxs_start (media_player_t *mp)
+{
+   if(!mp->device)
+      return MP_FAIL;
+
+   mp->device->start(mp->device, DEVICE_OUTPUT);
+
+   return MP_OK;
+}
+
 int spxs_stop (media_player_t *mp)
 {
    spxs_debug(("spxs_stop: to stop speex sender\n"));
@@ -599,8 +605,8 @@ module_interface_t * media_new_sender()
    mp->capable = spxs_capable;
    mp->match_capable = spxs_match_capable;
 
+   mp->start = spxs_start;
    mp->stop = spxs_stop;
-
 
    mp->receiver.match_type = spxs_match_type;
    mp->receiver.receive_media = spxs_receive_next;

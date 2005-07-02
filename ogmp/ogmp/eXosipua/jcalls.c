@@ -243,13 +243,10 @@ int jcall_answered(eXosipua_t *jua, eXosip_event_t *je)
 {
 	sipua_call_event_t call_e;
 
-
 	/* event back to sipuac */
 	memset(&call_e, 0, sizeof(sipua_call_event_t));
 
 	call_e.event.call_info = (sipua_call_t*)je->external_reference;
-
-
 
 	call_e.event.type = SIPUA_EVENT_ANSWERED;
 	call_e.event.content = je->sdp_body;
@@ -304,6 +301,7 @@ int jcall_answered(eXosipua_t *jua, eXosip_event_t *je)
 int jcall_ack(eXosipua_t *jua, eXosip_event_t *je)
 {
 	sipua_event_t e;
+   
 	sipua_call_t* call;
 
     /* event back to sipuac */
@@ -525,7 +523,7 @@ int jcall_onhold(eXosipua_t *jua, eXosip_event_t *je)
 	/* event back to sipuac */
 	sipua_event_t sip_e;
 	sip_e.call_info = (sipua_call_t*)je->external_reference;
-	sip_e.type = SIPUA_EVENT_ONHOLD;
+	sip_e.type = SIPUA_STATUS_ONHOLD;
 
   for (k=0;k<MAX_NUMBER_OF_CALLS;k++)
     {

@@ -48,7 +48,7 @@ struct global_const_s
 
 int spxmk_match_type(media_receiver_t * mr, char *mime, char *fourcc)
 {
-    /* FIXME: due to no strncasecmp on win32 mime is case sensitive */
+   /* FIXME: due to no strncasecmp on win32 mime is case sensitive */
 	if (mime && strncmp(mime, "audio/speex", 11) == 0)
 	{
 		spxmk_log(("speex_match_type: mime = 'audio/speex'\n"));
@@ -82,7 +82,7 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
       delta_nsample = enc->frame_nsample - cache_nsample;
       delta_nbyte = enc->frame_nbyte - enc->cache_nbyte;
 
-		spxmk_debug(("spxmk_receive_media: pick %d cached samples\n", cache_nsample));
+		spxmk_log(("spxmk_receive_media: pick %d cached samples\n", cache_nsample));
       memcpy(&enc->encoding_frame[enc->cache_nbyte], auf->raw, delta_nbyte);
       
 	   spx_bytes = spxc_encode(enc, enc->speex_info, enc->encoding_frame, enc->frame_nbyte, &spx_frame);
@@ -93,6 +93,7 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 
 	   /* make speex media frame */
 	   spxf.raw = spx_frame;
+
 	   spxf.bytes = spx_bytes;
 	   spxf.nraw = enc->frame_nsample;
 	   spxf.eots = 1;
@@ -140,98 +141,6 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 
 	return MP_OK;
 }
-
-#if 0
-int spxmk_receive_media (media_receiver_t *mr, media_frame_t * auf, int64 samplestamp, int last_packet)
-{
-	int spx_bytes;
-	char *spx_frame;
-
-	speex_encoder_t *enc = (speex_encoder_t *)mr;
-
-	int delta = 0;
-	int sample_bytes = 0;
-
-	char *over_samples;
-	int over_bytes;
-
-	media_frame_t spxf;
-	media_stream_t *stream = enc->media_stream;
-
-	spxmk_debug (("spxmk_receive_media: receive %d bytes\n", auf->bytes));
-	spxmk_debug (("spxmk_receive_media: auf->raw@%x\n", (int)auf->raw));
-
-	delta = enc->encoding_nsample_expect - enc->encoding_nsample_buffered;
-	sample_bytes = auf->bytes/auf->nraw;
-
-	/* assemble all input pcm frame to 20ms encoding frame */
-	if(delta > auf->nraw)
-	{
-		memcpy(enc->encoding_gap, auf->raw, auf->bytes);
-
-		enc->encoding_gap += auf->bytes;
-		enc->encoding_nsample_buffered += auf->nraw;
-
-		if(last_packet == MP_EOS)
-			return MP_OK;
-		else
-		{
-			int gap_bytes = delta * sample_bytes;
-			memset(enc->encoding_gap, 0, auf->bytes - gap_bytes);
-		}
-	}
-	else
-	{
-		/* 20ms buffered */
-		int gap_bytes = delta * sample_bytes;
-		memcpy(enc->encoding_gap, auf->raw, gap_bytes);
-
-		if(delta == auf->nraw)
-		{
-			over_samples = NULL;
-			over_bytes = 0;
-			enc->encoding_gap = enc->encoding_frame;
-		}
-		else
-		{
-			over_samples = auf->raw + gap_bytes;
-			over_bytes = auf->bytes - gap_bytes;
-		}
-	}
-
-	/* encode and submit */
-	spx_bytes = spxc_encode(enc, enc->speex_info, enc->encoding_frame, enc->encoding_frame_bytes, &spx_frame);
-
-   /* samples left for next */
-	if(over_bytes)
-	{
-		memcpy(enc->encoding_frame, over_samples, over_bytes);
-		enc->encoding_nsample_buffered = auf->nraw - delta;
-		enc->encoding_gap = enc->encoding_frame + over_bytes;
-	}
-
-	if(spx_frame == NULL)
-		return MP_OK;
-
-	/* make speex media frame */
-	spxf.raw = spx_frame;
-	spxf.bytes = spx_bytes;
-	spxf.nraw = enc->encoding_nsample_expect;
-	spxf.eots = 1;
-
-	stream->player->receiver.receive_media(&stream->player->receiver, &spxf, enc->group_samplestamp, last_packet);
-
-	/* for next group */
-	enc->group_samplestamp += enc->nsample_per_group;
-
-	xfree(spx_frame);
-
-	spxmk_debug (("spxmk_receive_media: auf->raw@%x\n", (int)auf->raw));
-
-	return MP_OK;
-
-}
-#endif
 
 int spxmk_done(media_maker_t *maker)
 {
@@ -319,10 +228,10 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
 		spxmk_log (("spxmk_new_media_stream: speex stream fail to open\n"));
 		return ret;
 	}
-
+   /*
    stream->start = speex_start_stream;
    stream->stop = speex_stop_stream;
-
+   */
 	stream->maker = maker;
 
    enc->media_stream = stream;
@@ -391,7 +300,6 @@ module_interface_t* media_new_maker()
    }
 
    memset(enc, 0, sizeof(struct speex_encoder_s));
-
 
    enc->maker.done = spxmk_done;
    enc->maker.link_stream = spxmk_link_stream;

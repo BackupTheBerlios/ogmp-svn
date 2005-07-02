@@ -86,15 +86,13 @@ int window_sessions_list_print(gui_t* gui, int wid)
 				strcpy(status, "Ringing"); break;
 			case SIPUA_EVENT_ANSWERED:
 				strcpy(status, "Answered"); break;
-			case SIPUA_EVENT_ACK:
-				strcpy(status, "Established"); break;
 			case SIPUA_EVENT_REQUESTFAILURE:
 				strcpy(status, "Request Fail"); break;
 			case SIPUA_EVENT_SERVERFAILURE:
 				strcpy(status, "Server Fail"); break;
 			case SIPUA_EVENT_GLOBALFAILURE:
 				strcpy(status, "Global Fail"); break;
-			case SIPUA_EVENT_ONHOLD:
+			case SIPUA_STATUS_ONHOLD:
 				strcpy(status, "On hold"); break;
 			case SIP_STATUS_CODE_TEMPORARILYUNAVAILABLE:
 				strcpy(status, "Rejected"); break;
@@ -169,7 +167,7 @@ int window_sessions_list_print(gui_t* gui, int wid)
 				strcpy(status, "Server Fail"); break;
 			case SIPUA_EVENT_GLOBALFAILURE:
 				strcpy(status, "Global Fail"); break;
-			case SIPUA_EVENT_ONHOLD:
+			case SIPUA_STATUS_ONHOLD:
 				strcpy(status, "On hold"); break;
 			case SIP_STATUS_CODE_TEMPORARILYUNAVAILABLE:
 				strcpy(status, "Rejected"); break;
@@ -177,8 +175,6 @@ int window_sessions_list_print(gui_t* gui, int wid)
 				strcpy(status, "Busy"); break;
 			case SIP_STATUS_CODE_DECLINE:
 				strcpy(status, "Declined"); break;
-			case SIPUA_EVENT_ACK:
-				strcpy(status, "Established"); break;
 			default:
 				strcpy(status, "Unknown");
 		}
@@ -309,6 +305,7 @@ int window_sessions_list_run_command(gui_t* gui, int c)
                 beep();
                 break;
             }
+
 
             gui_show_window(gui, GUI_NEWCALL, GUI_SESSION);
             

@@ -25,8 +25,9 @@
 #define DIRNAME_MAXLEN  128
 /*
 #define RTP_LOG
-#define RTP_DEBUG
 */
+#define RTP_DEBUG
+
 #ifdef RTP_LOG
  #define rtp_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
@@ -297,6 +298,28 @@ int rtp_stream_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
    return MP_OK;
 }
 
+int rtp_start_stream (media_stream_t* stream)
+{
+   if(!stream->maker || !stream->player)
+      return MP_FAIL;
+
+   stream->maker->start(stream->maker);
+   stream->player->start(stream->player);
+   
+   return MP_OK;
+}
+
+int rtp_stop_stream (media_stream_t* stream)
+{
+   if(!stream->maker || !stream->player)
+      return MP_FAIL;
+
+   stream->maker->stop(stream->maker);
+   stream->player->stop(stream->player);
+   
+   return MP_OK;
+}
+
 rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript_t *rtpcap, media_control_t *ctrl, char *mode, int bw_budget, void* extra)
 {
 	unsigned char stype;
@@ -319,6 +342,7 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
    if(strncmp(rtpcap->profile_mime, "audio", 5) == 0)
 	{
 		rtp_log(("rtp_open_stream: audio media\n"));
+
 		stype = MP_AUDIO;
 	}
 	else if(strncmp(rtpcap->profile_mime, "video", 5) == 0)
@@ -399,6 +423,11 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
    
    peer->session = strm->session;
 
+   strm->stream.start = rtp_start_stream;
+   strm->stream.stop = rtp_stop_stream;
+   peer->stream.start = rtp_start_stream;
+   peer->stream.stop = rtp_stop_stream;
+
 	rtp_log(("rtp_open_stream: FIXME - stream mime string overflow possible!!\n"));
 	strcpy(strm->stream.mime, rtpcap->profile_mime);
 
@@ -417,9 +446,9 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 		remote_netaddr = rtpcapset->netaddr;
 	}
 	
-	rtp_log(("rtp_open_stream: for %s:(%u|%u)\n", rtpcapset->cname, rtpcap->rtp_portno, rtpcap->rtcp_portno));
+	rtp_log(("rtp_open_stream: for %s:%s(%u|%u)\n", rtpcapset->cname, remote_netaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno));
 	rtp_log(("rtp_open_stream: mime[%s] pt[%d]\n", rtpcap->profile_mime, rtpcap->profile_no));
-	
+   
 	session_add_cname(strm->session, rtpcapset->cname, strlen(rtpcapset->cname), remote_netaddr, rtpcap->rtp_portno, rtpcap->rtcp_portno, rtpcap, ctrl);
 	
 	/* waiting to source to be available */

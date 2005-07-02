@@ -366,7 +366,7 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
    }
    
    auf->ts = dec->ts_usec_now;
-   //spxp_debug(("spxs[%dts:%lld#:%llds]raw[%dus]--", spxf->ts, spxf->sno, samplestamp, auf->ts));
+   spxp_log(("\rspxp_receive_next: spxs[%dts:%lld#:%llds]raw[%dus]--", spxf->ts, spxf->sno, samplestamp, auf->ts));
 
    if(last_packet)
 	   auf->eots = 1;
