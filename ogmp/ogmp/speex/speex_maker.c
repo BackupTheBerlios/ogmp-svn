@@ -58,7 +58,6 @@ int spxmk_match_type(media_receiver_t * mr, char *mime, char *fourcc)
 	return 0;
 }
 
-#if 0
 int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samplestamp, int last_packet)
 {
 	int spx_bytes;
@@ -148,8 +147,8 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 
 	return MP_OK;
 }
-#endif
 
+#if 0
 // test: none encode
 int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samplestamp, int last_packet)
 {
@@ -186,6 +185,7 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
       todo_nbyte -= delta_nbyte;
 
 	   /* make speex media frame */
+
 	   spxf.raw = spx_frame;
 
 	   spxf.bytes = spx_bytes = enc->frame_nbyte;
@@ -242,6 +242,7 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 
 	return MP_OK;
 }
+#endif
 
 int spxmk_done(media_maker_t *maker)
 {
@@ -387,6 +388,7 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
    
    enc->input_device = dev;
    
+
 	return MP_OK;
 }
 
