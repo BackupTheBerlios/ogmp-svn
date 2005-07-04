@@ -281,6 +281,7 @@ int sipua_make_call(sipua_t *sipua, sipua_call_t* call, char* id,
 		media_bw = session_new_sdp(cata, nettype, addrtype, netaddr, &rtp_portno, &rtcp_portno, pt, codings[i].mime, codings[i].clockrate, codings[i].param, bw_budget, control, &sdp_info);
 
 		if(media_bw > 0 && bw_budget > call->bandwidth_need + media_bw)
+
 		{
 			call->bandwidth_need += media_bw;
 		}
@@ -758,7 +759,7 @@ int sipua_link_medium(sipua_t* sipua, sipua_call_t* call, media_control_t* contr
 
       mediatype[i] = '\0';
 
-      if(sipua_open_stream_output (control, call, outstream, mediatype, "netcast") < MP_OK)
+      if(sipua_open_stream_output (control, call, outstream, mediatype, "playback") < MP_OK)
       {
          instream = instream->next;
          continue;
@@ -1124,6 +1125,7 @@ int sipua_unregist(sipua_t *sipua, user_profile_t *user)
 	int ret;
 	char* siploc, *p;
 	
+
 	p = siploc = xmalloc(strlen(user->cname)+5);
 	if(!siploc)
 		return UA_FAIL;

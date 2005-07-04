@@ -71,7 +71,6 @@ struct speex_encoder_s
    xclock_t* clock;
 
    char* encoding_frame;			/* 20ms frame size */
-   char* encoding_gap;
 
    int frame_nbyte;
    int frame_nsample;

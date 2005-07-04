@@ -22,6 +22,10 @@
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  *
+
+
+
+
  * Any person wishing to distribute modifications to the Software is
  * requested to send the modifications to the original developer so that
  * they can be incorporated into the canonical version.
@@ -37,47 +41,68 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
-#include "portaudio.h"
+#include <portaudio.h>
+
+#include <timedia/os.h>
+#include <string.h>
 
 /* #define SAMPLE_RATE  (17932) // Test failure to open with this value. */
-#define SAMPLE_RATE  (8000)
-#define NUM_MSECONDS     (5000)
+#define SAMPLE_RATE  (44100)
+#define NUM_SECONDS     (5)
 #define NUM_CHANNELS    (2)
 /* #define DITHER_FLAG     (paDitherOff)  */
 #define DITHER_FLAG     (0) /**/
-#define FRAMES_PER_BUFFER  (2048)
+#define FRAMES_PER_BUFFER  (1024)
 
 /* Select sample format. */
-#if 1
-#define PA_SAMPLE_TYPE  paFloat32
-typedef float SAMPLE;
-#define SAMPLE_SILENCE  (0.0f)
+#if 0
+ #define PA_SAMPLE_TYPE  paFloat32
+ typedef float SAMPLE;
+ #define SAMPLE_SILENCE  (0.0f)
+#elif 1
+ #define PA_SAMPLE_TYPE  paInt16
+ typedef short SAMPLE;
+ #define SAMPLE_SILENCE  (0)
 #elif 0
-#define PA_SAMPLE_TYPE  paInt16
-typedef short SAMPLE;
-#define SAMPLE_SILENCE  (0)
-#elif 0
-#define PA_SAMPLE_TYPE  paInt8
-typedef char SAMPLE;
-#define SAMPLE_SILENCE  (0)
+ #define PA_SAMPLE_TYPE  paInt8
+ typedef char SAMPLE;
+ #define SAMPLE_SILENCE  (0)
 #else
-#define PA_SAMPLE_TYPE  paUInt8
-typedef unsigned char SAMPLE;
-#define SAMPLE_SILENCE  (128)
-
+ #define PA_SAMPLE_TYPE  paUInt8
+ typedef unsigned char SAMPLE;
+ #define SAMPLE_SILENCE  (128)
 #endif
 
 typedef struct
 {
+   int64 stamp;
+   int npcm_write;
+   int npcm_read;
+   int nbyte_read;
+   
+   int tick;
+   
+   int frameIndex;  /* Index into sample array. */
+   int byteIndex;  /* Index into sample array. */
+}
+paSampleOnce;
+
+typedef struct
+{
+    int          nwriter;
+    int          nreader;
+    
     int          frameIndex;  /* Index into sample array. */
     int          maxFrameIndex;
-    SAMPLE      *recordedSamples;
+    
+    paSampleOnce **once;
+    
+    SAMPLE      *pcm;
 }
 paSampleData;
 
 typedef struct
 {
-	paSampleData *Samples[2];
 	int RecData;
 	int PlayData;
 
@@ -85,108 +110,158 @@ typedef struct
 	int play;
 
 	int finish;
+   
+	paSampleData *Samples;
 }
-paTestData;
+paDevice;
 
 /* This routine will be called by the PortAudio engine when audio is needed.
 ** It may be called at interrupt level on some machines so don't do anything
 ** that could mess up the system like calling malloc() or free().
 */
-static int Callback( void *inputBuffer, void *outputBuffer,
-                           unsigned long framesPerBuffer,
-                           PaTimestamp outTime, void *userData )
+int recordCallback( void *inputBuffer,
+                    unsigned long framesPerBuffer,
+                    PaTimestamp outTime, void *userData )
 {
-    paTestData *data = (paTestData*)userData;
+    paDevice *padev = (paDevice*)userData;
+	 paSampleData *RecData = &padev->Samples[padev->RecData];
 
-    if(data->record && data->RecData != data->PlayData)
-    {/* Record */
-
-    	SAMPLE *rptr = (SAMPLE*)inputBuffer;
-	paSampleData *RecData = data->Samples[data->RecData];
-
-    	SAMPLE *wptr = &RecData->recordedSamples[RecData->frameIndex * NUM_CHANNELS];
-
-    	long framesToRecord;
-    	long i;
-
-    	unsigned long framesLeft = RecData->maxFrameIndex - RecData->frameIndex;
-    	int samplesToRecord;
-
-    	if( framesLeft < framesPerBuffer )
-    	{
-        	framesToRecord = framesLeft;
-		data->RecData = (data->RecData+1)%2;
-		RecData->frameIndex = 0;
-        	data->play = 1;
-    	}
-    	else
-    	{
-        	framesToRecord = framesPerBuffer;
-    	}
+    SAMPLE *wptr = &RecData->pcm[RecData->frameIndex * NUM_CHANNELS];    
+    SAMPLE *rptr = (SAMPLE*)inputBuffer;
     
-    	samplesToRecord = framesToRecord * NUM_CHANNELS;
-    
-    	if( inputBuffer == NULL )
-    	{
-        	for( i=0; i<samplesToRecord; i++ )
-        	{
-            		*wptr++ = SAMPLE_SILENCE;
-        	}
-    	}
-    	else
-    	{
-        	for( i=0; i<samplesToRecord; i++ )
-        	{
-            		*wptr++ = *rptr++;
-        	}
-    	}
+    long framesToRecord;
+    long i;
+    int buffer_full = 0;
+              
+    unsigned long framesLeft = RecData->maxFrameIndex - RecData->frameIndex;
+    int samplesToRecord;
 
-    	RecData->frameIndex += framesToRecord;
-    }
+    (void) outTime;
 
-    /* Playback */
-    if(data->play)
+    if( framesLeft < framesPerBuffer )
     {
-    	SAMPLE *wptr = (SAMPLE*)outputBuffer;
-	paSampleData *PlayData = data->Samples[data->PlayData];
-
-    	SAMPLE *rptr = &PlayData->recordedSamples[PlayData->frameIndex * NUM_CHANNELS];
-
-    	unsigned int i;
-    	unsigned int framesLeft = PlayData->maxFrameIndex - PlayData->frameIndex;
-
-    	int framesToPlay, samplesToPlay, samplesPerBuffer;
-
-    	if( framesLeft < framesPerBuffer )
-    	{
-        	framesToPlay = framesLeft;
-		data->PlayData = (data->PlayData+1)%2;
-		PlayData->frameIndex = 0;
-    	}
-    	else
-    	{
-        	framesToPlay = framesPerBuffer;
-    	}
+        framesToRecord = framesLeft;
+        buffer_full = 1;
+    }
+    else
+    {
+        framesToRecord = framesPerBuffer;
+    }
     
-    	samplesToPlay = framesToPlay * NUM_CHANNELS;
-    	samplesPerBuffer = framesPerBuffer * NUM_CHANNELS;
+    samplesToRecord = framesToRecord * NUM_CHANNELS;
+    
+    if( inputBuffer == NULL )
+    {
+        for( i=0; i<samplesToRecord; i++ )
+        {
+            *wptr++ = SAMPLE_SILENCE;
+        }
+    }
+    else
+    {
+        for( i=0; i<samplesToRecord; i++ )
+        {
+            *wptr++ = *rptr++;
+        }
+    }
+    
+    RecData->frameIndex += framesToRecord;
+    
+    return buffer_full;
+}
 
-    	for( i=0; i<samplesToPlay; i++ )
-    	{
-        	*wptr++ = *rptr;
-            	*rptr++ = SAMPLE_SILENCE;
-    	}
-    	for( ; i<framesPerBuffer; i++ )
-    	{
-        	*wptr++ = 0;  /* left */
-        	if( NUM_CHANNELS == 2 ) 
-			*wptr++ = 0;  /* right */
-    	}
+/* This routine will be called by the PortAudio engine when audio is needed.
+** It may be called at interrupt level on some machines so don't do anything
+** that could mess up the system like calling malloc() or free().
+*/
+int playCallback (void *outputBuffer,
+                  unsigned long framesPerBuffer,
+                  PaTimestamp outTime, void *userData)
+{
+    paDevice *padev = (paDevice*)userData;
 
-    	PlayData->frameIndex += framesToPlay;
+    paSampleData *PlayData = &padev->Samples[padev->PlayData];
+    SAMPLE *rptr = &PlayData->pcm[PlayData->frameIndex * NUM_CHANNELS];
+    SAMPLE *wptr = (SAMPLE*)outputBuffer;
+    
+    unsigned int i;
+    int buffer_empty = 0;
+    
+    unsigned int framesLeft = PlayData->maxFrameIndex - PlayData->frameIndex;
+    (void) outTime;
+    
+    int framesToPlay, samplesToPlay, samplesPerBuffer;
+
+    if( framesLeft < framesPerBuffer )
+    {
+        framesToPlay = framesLeft;
+        buffer_empty = 1;
+    }
+    else
+    {
+        framesToPlay = framesPerBuffer;
+    }
+    
+    samplesToPlay = framesToPlay * NUM_CHANNELS;
+    samplesPerBuffer = framesPerBuffer * NUM_CHANNELS;
+
+    for( i=0; i<samplesToPlay; i++ )
+    {
+        *wptr++ = *rptr++;
+    }
+    for( ; i<framesPerBuffer; i++ )
+    {
+        *wptr++ = 0;  /* left */
+        if( NUM_CHANNELS == 2 ) *wptr++ = 0;  /* right */
+    }
+    
+    PlayData->frameIndex += framesToPlay;
+
+    return buffer_empty;
+}
+
+static int ioCallback (void *inputBuffer, void *outputBuffer,
+                       unsigned long framesPerBuffer,
+                       PaTimestamp stamp, void *userData)
+{
+    paDevice *padev = (paDevice*)userData;
+
+    if(padev->record)
+    {
+       /* Record */
+	    paSampleData *RecData = &padev->Samples[padev->RecData];
+      
+       int full = recordCallback(inputBuffer, framesPerBuffer, stamp, userData);
+       if(full)
+       {
+		   padev->RecData = (padev->RecData+1)%2;
+         RecData = &padev->Samples[padev->RecData];
+         
+		   RecData->frameIndex = 0;
+        	padev->play = 1;
+
+         if(padev->RecData == padev->PlayData)
+            padev->record = 0;
+       }
     }
 
-    return data->finish;
+    if(padev->play)
+    {
+       /* Playback */
+       paSampleData *PlayData = &padev->Samples[padev->PlayData];
+       
+       int empty = playCallback(outputBuffer, framesPerBuffer, stamp, userData);
+       if(empty)
+       {
+		   padev->PlayData = (padev->PlayData+1)%2;
+         PlayData = &padev->Samples[padev->PlayData];
+         
+		   PlayData->frameIndex = 0;
+        	padev->record = 1;
+       }
+    }
+
+    return padev->finish;
 }
 
 /*******************************************************************/
@@ -194,51 +269,41 @@ int main(void)
 {
     PortAudioStream *stream;
     PaError    err;
-
-    paTestData data;
-    paSampleData Data0;
-    paSampleData Data1;
-
+    
     int        i;
     int        totalFrames;
     int        numSamples;
     int        numBytes;
     SAMPLE     max, average, val;
+    
+    paDevice padev;
+    
+    paSampleData *Data;
+
     printf("patest_record.c\n"); fflush(stdout);
-
-    Data0.maxFrameIndex = totalFrames = NUM_MSECONDS * SAMPLE_RATE / 1000; /* Record for a few milli seconds. */
-    Data0.frameIndex = 0;
-    numSamples = totalFrames * NUM_CHANNELS;
-
-    numBytes = numSamples * sizeof(SAMPLE);
-    Data0.recordedSamples = (SAMPLE *) malloc( numBytes );
-    if( Data0.recordedSamples == NULL )
+    
+    padev.Samples = (paSampleData*)malloc(sizeof(paSampleData)*2);    
+    memset(padev.Samples, 0, sizeof(paSampleData)*2);
+    
+    for(i=0; i<2; i++)
     {
-        printf("Could not allocate record array.\n");
-        exit(1);
+      Data = &padev.Samples[i];
+      Data->maxFrameIndex = totalFrames = NUM_SECONDS * SAMPLE_RATE; /* Record for a few seconds. */
+
+      Data->frameIndex = 0;
+      numSamples = totalFrames * NUM_CHANNELS;
+
+      numBytes = numSamples * sizeof(SAMPLE);
+      Data->pcm = (SAMPLE *) malloc( numBytes );
+      for( i=0; i<numSamples; i++ )
+         Data->pcm[i] = 0;
     }
-    for( i=0; i<numSamples; i++ ) Data0.recordedSamples[i] = 0;
-
-    Data1.maxFrameIndex = totalFrames = NUM_MSECONDS * SAMPLE_RATE / 1000; /* Record for a few milli seconds. */
-    Data1.frameIndex = 0;
-    numSamples = totalFrames * NUM_CHANNELS;
-
-    numBytes = numSamples * sizeof(SAMPLE);
-    Data1.recordedSamples = (SAMPLE *) malloc( numBytes );
-    if( Data1.recordedSamples == NULL )
-    {
-        printf("Could not allocate record array.\n");
-        exit(1);
-    }
-    for( i=0; i<numSamples; i++ ) Data1.recordedSamples[i] = 0;
-
-    data.Samples[0] = &Data0;
-    data.Samples[1] = &Data1;
-    data.RecData = 0;
-    data.PlayData = 1;
-    data.record = 1;
-    data.play = 0;
-    data.finish = 0;
+    
+    padev.RecData = 0;
+    padev.PlayData = 1;
+    padev.record = 1;
+    padev.play = 0;
+    padev.finish = 0;
 
     err = Pa_Initialize();
     if( err != paNoError ) goto error;
@@ -248,19 +313,19 @@ int main(void)
               &stream,
               Pa_GetDefaultInputDeviceID(),
               NUM_CHANNELS,
-              PA_SAMPLE_TYPE, /* Input */
+              PA_SAMPLE_TYPE,
               NULL,
               Pa_GetDefaultOutputDeviceID(),
               NUM_CHANNELS,
-              PA_SAMPLE_TYPE, /* Output */
+              PA_SAMPLE_TYPE,
               NULL,
               SAMPLE_RATE,
               FRAMES_PER_BUFFER,            /* frames per buffer */
               0,               /* number of buffers, if zero then use default minimum */
               0, /* paDitherOff, // flags */
-              Callback,
-              &data );
-
+              ioCallback,
+              &padev );
+              
     if( err != paNoError ) goto error;
 
     err = Pa_StartStream( stream );
@@ -269,26 +334,26 @@ int main(void)
 
     while( Pa_StreamActive( stream ) )
     {
-        Pa_Sleep(1000);
-	if(data.record)
-	{
-        	printf("recindex = %d\n", data.Samples[data.RecData]->frameIndex ); fflush(stdout);
-  	}
-	else
-	{      
-		printf("playindex = %d\n", data.Samples[data.PlayData]->frameIndex ); fflush(stdout);
-	}
+      Pa_Sleep(1000);
+	   if(padev.record)
+	   {
+         printf("recindex = %d\n", padev.Samples[padev.RecData].frameIndex ); fflush(stdout);
+  	   }
+	   else
+	   {
+		   printf("playindex = %d\n", padev.Samples[padev.PlayData].frameIndex ); fflush(stdout);
+	   }
     }
 
-#if 0
     err = Pa_CloseStream( stream );
     if( err != paNoError ) goto error;
+
     /* Measure maximum peak amplitude. */
     max = 0;
     average = 0;
     for( i=0; i<numSamples; i++ )
     {
-        val = data.recordedSamples[i];
+        val = padev.Samples[padev.RecData].pcm[i];
         if( val < 0 ) val = -val; /* ABS */
         if( val > max )
         {
@@ -309,60 +374,12 @@ int main(void)
         printf("sample max amplitude = %d\n", max );    /* <-- This IS compiled anyhow. */
         printf("sample average = %d\n", average );
     }
-#endif    
-    /* Write recorded data to a file. */
-#if 0
-    {
-        FILE  *fid;
-        fid = fopen("recorded.raw", "wb");
-        if( fid == NULL )
-        {
-            printf("Could not open file.");
-        }
-        else
-        {
-            fwrite( data.recordedSamples, NUM_CHANNELS * sizeof(SAMPLE), totalFrames, fid );
-            fclose( fid );
-            printf("Wrote data to 'recorded.raw'\n");
-        }
-    }
-#endif
-#if 0
-    /* Playback recorded data.  -------------------------------------------- */
-    data.frameIndex = 0;
-    printf("Begin playback.\n"); fflush(stdout);
-    err = Pa_OpenStream(
-              &stream,
-              paNoDevice,
-              0,               /* NO input */
-              PA_SAMPLE_TYPE,
-              NULL,
-              Pa_GetDefaultOutputDeviceID(),
-              NUM_CHANNELS,
-              PA_SAMPLE_TYPE,
-              NULL,
-              SAMPLE_RATE,
-              FRAMES_PER_BUFFER,            /* frames per buffer */
-              0,               /* number of buffers, if zero then use default minimum */
-              paClipOff,       /* we won't output out of range samples so don't bother clipping them */
-              playCallback,
-              &data );
-    if( err != paNoError ) goto error;
+    
+    for(i=0; i<2; i++)
+      free( padev.Samples[i].pcm);
 
-    if( stream )
-    {
-        err = Pa_StartStream( stream );
-        if( err != paNoError ) goto error;
-        printf("Waiting for playback to finish.\n"); fflush(stdout);
+    free(padev.Samples);
 
-        while( Pa_StreamActive( stream ) ) Pa_Sleep(100);
-
-        err = Pa_CloseStream( stream );
-        if( err != paNoError ) goto error;
-        printf("Done.\n"); fflush(stdout);
-    }
-    free( data.recordedSamples );
-#endif
     Pa_Terminate();
     return 0;
 

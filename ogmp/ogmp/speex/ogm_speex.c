@@ -124,7 +124,7 @@ int speex_open_header(ogg_packet *op, speex_info_t *spxinfo)
    ainfo->info.coding_parameter = ainfo->channels;
 
    if(header->nb_channels == 2)
-	   memcpy(&spxinfo->stereo, &stereo, sizeof(stereo));
+	   memcpy(&spxinfo->decstereo, &stereo, sizeof(stereo));
 
    spxinfo->nheader = 2 + header->extra_headers;
 

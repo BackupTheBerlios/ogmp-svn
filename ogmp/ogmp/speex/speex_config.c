@@ -48,31 +48,29 @@ speex_setting_t* speex_setting(media_control_t *control)
 	return &spx_setting;
 }
 
-int speex_info_setting(speex_info_t *spxinfo, speex_setting_t *spxset)
+int speex_info_setting(speex_info_t *spxinfo, speex_setting_t *spxsetting)
 {
-	if(spxset->rtp_setting.media_bps > 0)
-	{
-		spxinfo->audioinfo.info.bps = spxset->rtp_setting.media_bps;
-	}
+	if(spxsetting->rtp_setting.media_bps > 0)
+		spxinfo->audioinfo.info.bps = spxsetting->rtp_setting.media_bps;
 
-	spxinfo->audioinfo.info.sample_rate = spxset->sample_rate;
-	spxinfo->audioinfo.channels = spxset->channels;
+	spxinfo->audioinfo.info.sample_rate = spxsetting->sample_rate;
+	spxinfo->audioinfo.channels = spxsetting->channels;
 
-	spxinfo->penh = spxset->penh;
-	spxinfo->cng = spxset->cng;
-	spxinfo->ptime = spxset->ptime_max;
+	spxinfo->penh = spxsetting->penh;
+	spxinfo->cng = spxsetting->cng;
+	spxinfo->ptime = spxsetting->ptime_max;
 
-	spxinfo->vbr = spxset->vbr;
-	spxinfo->abr = spxset->abr;
-	spxinfo->cbr = spxset->cbr;
+	spxinfo->vbr = spxsetting->vbr;
+	spxinfo->abr = spxsetting->abr;
+	spxinfo->cbr = spxsetting->cbr;
 
-	spxinfo->complexity = spxset->complexity;
+	spxinfo->complexity = spxsetting->complexity;
 
-	spxinfo->vbr_quality = spxset->vbr_quality;
-	spxinfo->cbr_quality = spxset->cbr_quality;
+	spxinfo->vbr_quality = spxsetting->vbr_quality;
+	spxinfo->cbr_quality = spxsetting->cbr_quality;
 
-	spxinfo->denoise = spxset->denoise;
-	spxinfo->agc = spxset->agc;
+	spxinfo->denoise = spxsetting->denoise;
+	spxinfo->agc = spxsetting->agc;
 
 	return MP_OK;
 }

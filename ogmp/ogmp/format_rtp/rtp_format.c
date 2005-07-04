@@ -249,7 +249,7 @@ int rtp_set_fourcc_player (media_format_t * mf, media_player_t * player, const c
    while (cur != NULL)
    {
       if ( !strncmp(cur->fourcc, fourcc, 4) )
-	  {
+	   {
          cur->player = player;
 
          return MP_OK;

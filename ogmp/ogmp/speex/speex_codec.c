@@ -100,7 +100,7 @@ media_frame_t* spxc_decode(speex_info_t *spxinfo, media_frame_t *spxf, media_pip
 
 		/* frame bytes will double after decode stereo, samples stored as left,right,left,right,... */
 		if (nchannel==2)
-			speex_decode_stereo_int((int16*)pcm, frame_size, &spxinfo->stereo);
+			speex_decode_stereo_int((int16*)pcm, frame_size, &spxinfo->decstereo);
 		
 		pcm += frame_bytes;
 	}
@@ -134,11 +134,17 @@ int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcm_
 	speex_bits_reset(&spxinfo->encbits);
 
 	if (nchannel==2)
+   {
+		spxc_debug(("\rspeex_encode: encode stereo\n"));
 		speex_encode_stereo_int((short*)pcm, frame_size, &spxinfo->encbits);
-		
+	}
+   	
 	if (spxinfo->agc || spxinfo->denoise)
-		speex_preprocess(spxinfo->preprocess, (short*)pcm, NULL);
-
+   {
+		spxc_debug(("\rspeex_encode: agc or denoise perprocess\n"));
+		speex_preprocess(spxinfo->encpreprocess, (short*)pcm, NULL);
+   }
+   
 	/*Encode the frame*/
 	speex_encode_int(spxinfo->est, (short*)pcm, &spxinfo->encbits);
 

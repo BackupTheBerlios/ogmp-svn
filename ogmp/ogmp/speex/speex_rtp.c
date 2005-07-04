@@ -597,8 +597,8 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 					return XRTP_CONSUMED;
 				}
 
-				/* Create mode */
-				if(spxinfo->audioinfo.info.sample_rate < 6000 || spxinfo->audioinfo.info.sample_rate > 48000)
+            /*
+            if(spxinfo->audioinfo.info.sample_rate < 6000 || spxinfo->audioinfo.info.sample_rate > 48000)
 				{
 					sender->media_playable = -1;
 					player->done(player);
@@ -614,7 +614,8 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 					spxinfo->spxmode = speex_lib_get_mode(SPEEX_MODEID_WB);
 				else if(spxinfo->audioinfo.info.sample_rate <= 48000)
 					spxinfo->spxmode = speex_lib_get_mode(SPEEX_MODEID_UWB);
-
+            */
+            
 				ret = player->open_stream(player, (media_info_t*)spxinfo);
 				if( ret < MP_OK)
 				{
@@ -734,7 +735,6 @@ void * rtp_speex_master(profile_handler_t *handler)
 {
    spxrtp_handler_t *h = (spxrtp_handler_t *)handler;
 
-
    return h->master;
 }
 
@@ -790,7 +790,6 @@ int rtp_speex_set_parameter(xrtp_media_t* media, char* key, void* val)
 }
 
 int rtp_speex_parameter(xrtp_media_t *media, char* key, void* value)
-
 {
 	spxrtp_media_t *spxrtp = (spxrtp_media_t*)media;
 
@@ -874,14 +873,14 @@ void* rtp_speex_info(xrtp_media_t* media, void* rtp_cap)
    else if(spxinfo->audioinfo.info.sample_rate == 32000)
       spxinfo->spxmode = &speex_uwb_mode;
     
-   spxrtp_debug(("\n\nrtp_speex_info: clockrate[%d]\n", spxinfo->audioinfo.info.sample_rate));
-   spxrtp_debug(("rtp_speex_info: coding_param[%d]\n", spxinfo->audioinfo.channels));
-   spxrtp_debug(("rtp_speex_info: %d frames/packet\n", spxinfo->nframe_per_packet));
-   spxrtp_debug(("rtp_speex_info: vbr[%d]\n", spxinfo->vbr));
-   spxrtp_debug(("rtp_speex_info: abr[%d]\n", spxinfo->abr));
-   spxrtp_debug(("rtp_speex_info: cbr[%d]\n", spxinfo->cbr));
-   spxrtp_debug(("rtp_speex_info: cng[%d]\n", spxinfo->cng));
-   spxrtp_debug(("rtp_speex_info: penh[%d]\n", spxinfo->penh));
+   spxrtp_debug(("\r\nrtp_speex_info: clockrate[%d]\n", spxinfo->audioinfo.info.sample_rate));
+   spxrtp_debug(("\rrtp_speex_info: coding_param[%d]\n", spxinfo->audioinfo.channels));
+   spxrtp_debug(("\rrtp_speex_info: %d frames/packet\n", spxinfo->nframe_per_packet));
+   spxrtp_debug(("\rrtp_speex_info: vbr[%d]\n", spxinfo->vbr));
+   spxrtp_debug(("\rrtp_speex_info: abr[%d]\n", spxinfo->abr));
+   spxrtp_debug(("\rrtp_speex_info: cbr[%d]\n", spxinfo->cbr));
+   spxrtp_debug(("\rrtp_speex_info: cng[%d]\n", spxinfo->cng));
+   spxrtp_debug(("\rrtp_speex_info: penh[%d]\n", spxinfo->penh));
 
    return spxinfo;
 }
@@ -1001,11 +1000,19 @@ int rtp_speex_new_sdp(xrtp_media_t *media, char* nettype, char* addrtype, char* 
       }
 		
       speex_info_setting(spxinfo, spxset);
+
+      spxrtp_debug(("\r\nrtp_speex_new_sdp: clockrate[%d]\n", spxinfo->audioinfo.info.sample_rate));
+      spxrtp_debug(("\rrtp_speex_new_sdp: coding_param[%d]\n", spxinfo->audioinfo.channels));
+      spxrtp_debug(("\rrtp_speex_new_sdp: %d frames/packet\n", spxinfo->nframe_per_packet));
+      spxrtp_debug(("\rrtp_speex_new_sdp: vbr[%d]\n", spxinfo->vbr));
+      spxrtp_debug(("\rrtp_speex_new_sdp: abr[%d]\n", spxinfo->abr));
+      spxrtp_debug(("\rrtp_speex_new_sdp: cbr[%d]\n", spxinfo->cbr));
+      spxrtp_debug(("\rrtp_speex_new_sdp: cng[%d]\n", spxinfo->cng));
+      spxrtp_debug(("\rrtp_speex_new_sdp: penh[%d]\n", spxinfo->penh));
    }
    else
    {
       spxinfo = (speex_info_t*)mediainfo;
-
       clockrate = spxinfo->audioinfo.info.sample_rate;
       coding_param = spxinfo->audioinfo.channels;
    }
@@ -1014,7 +1021,6 @@ int rtp_speex_new_sdp(xrtp_media_t *media, char* nettype, char* addrtype, char* 
 	{
       spxrtp_debug(("rtp_speex_new_sdp: bps[%d] > bw_budget[%d]\n", spxinfo->audioinfo.info.bps, bw_budget));
       xfree(spxinfo);
-
       return 0;
 	}
 
@@ -1030,8 +1036,7 @@ int rtp_speex_new_sdp(xrtp_media_t *media, char* nettype, char* addrtype, char* 
 
 	if(ret < MP_OK)
    {
-      spxrtp_debug(("rtp_speex_new_sdp: info->sdp fail\n"));
-      
+      spxrtp_debug(("rtp_speex_new_sdp: info->sdp fail\n"));      
       return 0;
    }
 	   
@@ -1209,20 +1214,6 @@ int rtp_speex_send_loop(void *gen)
 			continue;
 		}
    
-      /* discard frames when time is late 
-		if(discard)
-		{
-			xlist_reset(discard_frames, rtp_speex_done_frame);
-
-			if(rtpf->samplestamp == profile->recent_samplestamp)
-				rtpf->frame.owner->recycle_frame(rtpf->frame.owner, (media_frame_t*)rtpf);
-
-			spxrtp_debug(("\rdiscarded\n"));
-
-			discard = 0;
-			continue;
-		}*/
-
 		spxinfo = (speex_info_t*)rtpf->media_info;
 
 		/* frame is retrieved, process ... */
@@ -1442,7 +1433,6 @@ xrtp_media_t* rtp_speex(profile_handler_t *handler, int clockrate, int coding_pa
 
 		spxset = speex_setting(session_media_control(profile->session));
 
-
 		profile->rtp_portno = spxset->rtp_setting.rtp_portno;
 		profile->rtcp_portno = spxset->rtp_setting.rtcp_portno;
 
@@ -1482,7 +1472,6 @@ xrtp_media_t* rtp_speex(profile_handler_t *handler, int clockrate, int coding_pa
       
 		media->set_parameter = rtp_speex_set_parameter;
 		media->parameter = rtp_speex_parameter;
-
   
 		media->info = rtp_speex_info;
       media->done_info = rtp_speex_done_info;
@@ -1495,7 +1484,6 @@ xrtp_media_t* rtp_speex(profile_handler_t *handler, int clockrate, int coding_pa
 		media->set_coding = rtp_speex_set_coding;
 		media->coding = rtp_speex_coding;
       
-
 		media->sign = rtp_speex_sign;
 		media->post = rtp_speex_post;
 		media->play = rtp_speex_play;
@@ -1511,7 +1499,6 @@ xrtp_media_t* rtp_speex(profile_handler_t *handler, int clockrate, int coding_pa
 			if(!profile->packets)
 			{
 				spxrtp_debug(("audio/speex.rtp_speex: no input buffer created\n"));
-
 
 				xfree(profile->speex_media);
 				profile->speex_media = NULL;
@@ -1573,7 +1560,6 @@ int spxrtp_done(profile_class_t * clazz)
    xfree(clazz);
    return XRTP_OK;
 }
-
 
 profile_handler_t * spxrtp_new_handler(profile_class_t * clazz, xrtp_session_t * ses)
 {

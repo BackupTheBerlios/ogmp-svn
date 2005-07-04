@@ -43,9 +43,6 @@
 
 #ifdef PORTAUDIO_LOG
 
-
-
-
  #define pa_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pa_log(fmtargs)
@@ -363,6 +360,7 @@ static int pa_io_callback( void *inbuf, void *outbuf, unsigned long npcm, PaTime
          pa_log(("pa_callback: %dus match %dus audio\n", itval, pa->usec_pulse));
       }
    }
+   
    pa->last_pick = pick_us_start;
 
    return ret;
@@ -983,6 +981,7 @@ module_interface_t* media_new_device ()
       delay--;
       
    hz_passed = time_nsec_spent(pa->clock, hz_start);
+
 
    pa->while_ns = hz_passed / DELAY_WHILE;
 

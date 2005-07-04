@@ -39,11 +39,9 @@ struct speex_info_s
 {
 	struct audio_info_s audioinfo;
    
-	SpeexBits decbits;
-	SpeexBits encbits;
-   
-	SpeexStereoState stereo;
-	SpeexPreprocessState *preprocess;
+	/* decoding parameters */
+	SpeexBits decbits;   
+	SpeexStereoState decstereo;
 
 	const SpeexMode *spxmode;
 	int mode;
@@ -66,6 +64,9 @@ struct speex_info_s
 	void *dst;		/* decode state */
 
 	/* encoding parameters */
+	SpeexBits encbits;
+	SpeexStereoState encstereo;
+	SpeexPreprocessState *encpreprocess;
 	void *est;		/* encode state */
 
 	float vbr_quality;	/* 1-10 */

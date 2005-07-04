@@ -44,10 +44,6 @@ int rtp_done_setting(control_setting_t *gen){
    return MP_OK;
 }
 
-
-
-
-
 control_setting_t* rtp_new_setting(media_device_t *dev)
 {
    rtp_setting_t * set = xmalloc(sizeof(struct rtp_setting_s));
@@ -136,6 +132,7 @@ int rtp_pick_content (media_pipe_t *pipe, media_info_t *media_info, char* raw, i
 
    return MP_EUNSUP;
 }
+
 
 int rtp_pipe_done (media_pipe_t *pipe)
 {
