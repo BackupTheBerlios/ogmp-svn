@@ -43,6 +43,7 @@
 
 #ifdef PORTAUDIO_LOG
 
+
  #define pa_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pa_log(fmtargs)
@@ -227,8 +228,6 @@ int pa_input_loop(void *gen)
 
 	pa->input_stop = 0;
 
-   int nloop=2000;
-
 	while(!pa->input_stop)
 	{
 		rtime_t us_left;
@@ -238,24 +237,20 @@ int pa_input_loop(void *gen)
 		if(inbufr->npcm_write == 0)
 		{
 			/* encoding catch up input */
-			time_usec_sleep(pa->clock, pa->input_usec_pulse, &us_left);
+			time_usec_sleep(pa->clock, (pa->input_usec_pulse / 2), &us_left);
 			continue;
 		}
 
-		auf.nraw = pa->input_npcm_once;
-		auf.samplestamp = inbufr->stamp;
+		auf.ts = auf.samplestamp = inbufr->stamp;
 
 		auf.raw = inbufr->pcm;
+		auf.nraw = pa->input_npcm_once;
 		auf.bytes = pa->input_nbyte_once;
       
 		auf.eots = 1;
       auf.sno = inbufr->tick;
 
-		pa->receiver->receive_media(pa->receiver, &auf, (int64)(pa->inbuf[pa->inbuf_r].stamp), 0);
-
-      if(nloop==0)
-         exit(1);
-      nloop--;   
+		pa->receiver->receive_media(pa->receiver, &auf, (int64)(auf.samplestamp), 0);
 
 		memset(inbufr->pcm, 0, pa->input_nbyte_once);
       
@@ -310,14 +305,13 @@ static int pa_io_callback( void *inbuf, void *outbuf, unsigned long npcm, PaTime
 		}
 		else
 		{
-			memcpy(inbufw->pcm, inbuf, npcm);
+			memcpy(inbufw->pcm, inbuf, pa->input_nbyte_once);
 
          inbufw->stamp = pa->input_samplestamp;
 			inbufw->npcm_write = npcm;
          inbufw->tick = pa->input_tick;
          
 			pa->inbuf_w = (pa->inbuf_w+1) % pa->inbuf_n;
-			pa_log(("\rpa_io_callback: input[%lld]\n", inbufw->stamp));
 		}
 
       pa->input_tick++;
@@ -835,6 +829,7 @@ int pa_stop_io(media_device_t * dev, int mode)
 			pa_dev->online = 0;
 			return MP_FAIL;
 		}
+
 
 		dev->running = 0;
 	}

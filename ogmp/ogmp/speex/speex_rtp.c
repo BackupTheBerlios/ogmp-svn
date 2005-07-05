@@ -1391,7 +1391,7 @@ int rtp_speex_play(void *player, void *media, int64 packetno, int ts_last, int e
  
 	mf->sno = packetno;
 
-	spxrtp_debug(("\rrtp_speex_play: mf->sno[%lld], step[%lld]\n", packetno, packetno-pacno_got));
+	spxrtp_log(("\rrtp_speex_play: mf->sno[%lld], step[%lld]\n", packetno, packetno-pacno_got));
    pacno_got = packetno;
    
    if(eos)
@@ -1636,6 +1636,7 @@ module_interface_t * module_init()
 	num_handler = 0;
 
 	spxrtp_log(("audio/speex.module_init: Module['audio/speex'] loaded.\n"));
+
 
 	return spxrtp;
 }
