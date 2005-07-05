@@ -21,6 +21,7 @@
 #include <ogg/ogg.h>
 
 #define SPEEX_SAMPLE_BITS 16  /* See speex_decode() */
+#define SPEEX_SAMPLE_BYTES   (SPEEX_SAMPLE_BITS / OS_BYTE_BITS)
 
 typedef struct speex_decoder_s speex_decoder_t;
 struct speex_decoder_s
@@ -71,6 +72,7 @@ struct speex_encoder_s
    xclock_t* clock;
 
    char* encoding_frame;			/* 20ms frame size */
+   char* spxcode;
 
    int frame_nbyte;
    int frame_nsample;
@@ -104,4 +106,4 @@ struct speex_encoder_s
 };
 
 media_frame_t* spxc_decode(speex_info_t* spxinfo, media_frame_t *spxf, media_pipe_t* output);
-int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int bytes, char** spx);
+int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcmnbyte, char* spx, int spxnbyte);

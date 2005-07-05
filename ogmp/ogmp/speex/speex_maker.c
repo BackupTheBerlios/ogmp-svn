@@ -73,9 +73,6 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 // test: none encode
 int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samplestamp, int last_packet)
 {
-	int spx_bytes;
-	char *spx_frame;
-
 	speex_encoder_t *enc = (speex_encoder_t *)mr;
 
 	int delta_nsample = 0;
@@ -88,53 +85,42 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 	media_frame_t spxf;
 	media_stream_t *stream = enc->media_stream;
 
+   char *cut = auf->raw;
+
    /* finish last remain */
    if(enc->cache_nbyte > 0)
    {
-      cache_nsample = enc->cache_nbyte / (SPEEX_SAMPLE_BITS / OS_BYTE_BITS);
+      cache_nsample = enc->cache_nbyte / SPEEX_SAMPLE_BYTES;
 
       delta_nsample = enc->frame_nsample - cache_nsample;
       delta_nbyte = enc->frame_nbyte - enc->cache_nbyte;
 
       memcpy(&enc->encoding_frame[enc->cache_nbyte], auf->raw, delta_nbyte);
 
-      spx_frame = xmalloc(enc->frame_nbyte);
-      memcpy(spx_frame, enc->encoding_frame, enc->frame_nbyte);
-
-      enc->cache_nbyte = 0;
       done_nbyte = delta_nbyte;
       todo_nbyte -= delta_nbyte;
 
 	   /* make speex media frame */
 
-	   spxf.raw = spx_frame;
-
-	   spxf.bytes = spx_bytes = enc->frame_nbyte;
+	   spxf.raw = enc->encoding_frame;
+	   spxf.bytes = enc->frame_nbyte;
 	   spxf.nraw = enc->frame_nsample;
 	   spxf.eots = 1;
 
-	   stream->player->receiver.receive_media(&stream->player->receiver, &spxf, samplestamp-cache_nsample, last_packet);
-
-	   xfree(spx_frame);
+	   stream->player->receiver.receive_media(&stream->player->receiver, &spxf, (samplestamp - cache_nsample), last_packet);
 
 	   /* for next group */
 	   samplestamp = samplestamp + delta_nsample;
-		spxmk_debug(("\rspxmk_receive_media: input %d+[%d] samples, encode %d/%d bytes of all %d\n", auf->nraw, cache_nsample, spx_bytes, done_nbyte, auf->bytes));
-   }
-   else
-   {
-	   spxmk_debug(("\rspxmk_receive_media: input %d samples\n", auf->nraw));
+
+      cut += delta_nbyte;
+      enc->cache_nbyte = 0;
    }
 
    while(todo_nbyte >= enc->frame_nbyte)
    {
-	   /* copy encode */
-      spx_frame = xmalloc(enc->frame_nbyte);
-      memcpy(spx_frame, enc->encoding_frame, enc->frame_nbyte);
-
 	   /* make speex media frame */
-	   spxf.raw = spx_frame;
-	   spxf.bytes = spx_bytes = enc->frame_nbyte;
+	   spxf.raw = cut;
+	   spxf.bytes = enc->frame_nbyte;
 	   spxf.nraw = enc->frame_nsample;
 
       if(todo_nbyte == enc->frame_nbyte)
@@ -145,27 +131,108 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 	   /* submit */
 	   stream->player->receiver.receive_media(&stream->player->receiver, &spxf, samplestamp, last_packet);
 
-	   xfree(spx_frame);
-
       done_nbyte += enc->frame_nbyte;
       todo_nbyte -= enc->frame_nbyte;
+      cut += enc->frame_nbyte;;
 
       samplestamp += enc->frame_nsample;
-	   spxmk_debug(("\rspxmk_receive_media: encode %d/%d sample bytes, %d/%d\n", spx_bytes, enc->frame_nbyte, done_nbyte, auf->bytes));
    }
 
    /* samples left for next */
    if(todo_nbyte > 0)
-   {
       memcpy(enc->encoding_frame, &auf->raw[done_nbyte], todo_nbyte);
-      enc->cache_nbyte = todo_nbyte;
-   }
+
+   enc->cache_nbyte = todo_nbyte;
 
 	return MP_OK;
 }
 
 #else
 
+int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samplestamp, int last_packet)
+{
+	speex_encoder_t *enc = (speex_encoder_t *)mr;
+
+	int delta_nsample = 0;
+   int cache_nsample = 0;
+
+   int todo_nbyte = auf->bytes;
+   int done_nbyte = 0;
+   int delta_nbyte = 0;
+
+	media_frame_t spxf;
+	media_stream_t *stream = enc->media_stream;
+
+   int spx_nbyte;
+
+   char *cut = auf->raw;
+
+   /* finish last remain */
+   if(enc->cache_nbyte > 0)
+   {
+      cache_nsample = enc->cache_nbyte / SPEEX_SAMPLE_BYTES;
+
+      delta_nsample = enc->frame_nsample - cache_nsample;
+      delta_nbyte = enc->frame_nbyte - enc->cache_nbyte;
+
+      memcpy(&enc->encoding_frame[enc->cache_nbyte], auf->raw, delta_nbyte);
+	   spx_nbyte = spxc_encode(enc, enc->speex_info, enc->encoding_frame, enc->frame_nbyte, enc->spxcode, enc->frame_nbyte);
+
+      done_nbyte = delta_nbyte;
+      todo_nbyte -= delta_nbyte;
+
+	   /* make speex media frame */
+
+	   spxf.raw = enc->spxcode;
+	   spxf.bytes = spx_nbyte;
+	   spxf.nraw = enc->frame_nsample;
+	   spxf.eots = 1;
+
+	   stream->player->receiver.receive_media(&stream->player->receiver, &spxf, (samplestamp - cache_nsample), last_packet);
+
+	   /* for next group */
+	   samplestamp = samplestamp + delta_nsample;
+
+      cut += delta_nbyte;
+      enc->cache_nbyte = 0;
+   }
+
+   while(todo_nbyte >= enc->frame_nbyte)
+   {
+	   spx_nbyte = spxc_encode(enc, enc->speex_info, cut, enc->frame_nbyte, enc->spxcode, enc->frame_nbyte);
+
+      /* make speex media frame */
+	   spxf.raw = enc->spxcode;
+	   spxf.bytes = spx_nbyte;
+	   spxf.nraw = enc->frame_nsample;
+
+      if(todo_nbyte == enc->frame_nbyte)
+	      spxf.eots = 1;
+      else
+	      spxf.eots = 0;
+
+	   /* submit */
+	   stream->player->receiver.receive_media(&stream->player->receiver, &spxf, samplestamp, last_packet);
+
+      done_nbyte += enc->frame_nbyte;
+      todo_nbyte -= enc->frame_nbyte;
+      cut += enc->frame_nbyte;;
+
+      samplestamp += enc->frame_nsample;
+   }
+
+   /* samples left for next */
+   if(todo_nbyte > 0)
+      memcpy(enc->encoding_frame, &auf->raw[done_nbyte], todo_nbyte);
+
+   enc->cache_nbyte = todo_nbyte;
+
+	return MP_OK;
+}
+
+#endif
+
+#if 0
 int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samplestamp, int last_packet)
 {
 	int spx_bytes;
@@ -262,6 +329,8 @@ int spxmk_done(media_maker_t *maker)
 	speex_bits_destroy(&enc->speex_info->encbits);
 
 	xfree(enc->encoding_frame);
+	xfree(enc->spxcode);
+   
 	xfree(maker);
 
 	return MP_OK;
@@ -392,9 +461,9 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
 	}
 
 	enc->encoding_frame = xmalloc(enc->frame_nbyte);
+	enc->spxcode = xmalloc(enc->frame_nbyte);
    
-   enc->input_device = dev;
-   
+   enc->input_device = dev;   
 
 	return MP_OK;
 }
