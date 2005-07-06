@@ -67,6 +67,7 @@ struct speex_info_s
 	SpeexBits encbits;
 	SpeexStereoState encstereo;
 	SpeexPreprocessState *encpreprocess;
+   
 	void *est;		/* encode state */
 
 	float vbr_quality;	/* 1-10 */

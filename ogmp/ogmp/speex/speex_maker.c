@@ -414,7 +414,9 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
    
    enc->clock = control->clock(control);
 
-	spxinfo->est = speex_encoder_init(spxinfo->spxmode);
+   spxinfo->est = speex_encoder_init(spxinfo->spxmode);
+   
+   speex_encoder_ctl(spxinfo->est, SPEEX_SET_SAMPLING_RATE, &spxinfo->audioinfo.info.sample_rate);
  
 	/* Set the quality to 8 (15 kbps) 
 	 * spxinfo->quality=8;
@@ -435,7 +437,7 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
 		speex_encoder_ctl(spxinfo->est, SPEEX_SET_COMPLEXITY, &spxinfo->complexity);
 	*/
    {
-      int cbr_quality = 4;
+      int cbr_quality = 8;
 	   speex_encoder_ctl(spxinfo->est, SPEEX_SET_QUALITY, &cbr_quality);
    }
    
@@ -450,7 +452,7 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
    
 	enc->lookahead = 0;
    
-	speex_encoder_ctl(spxinfo->est, SPEEX_GET_LOOKAHEAD, &enc->lookahead);
+	/*speex_encoder_ctl(spxinfo->est, SPEEX_GET_LOOKAHEAD, &enc->lookahead);*/
    
 	if (enc->speex_info->denoise || enc->speex_info->agc)
 	{

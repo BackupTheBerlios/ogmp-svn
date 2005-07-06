@@ -282,6 +282,7 @@ int sipua_make_call(sipua_t *sipua, sipua_call_t* call, char* id,
 
 		if(media_bw > 0 && bw_budget > call->bandwidth_need + media_bw)
 
+
 		{
 			call->bandwidth_need += media_bw;
 		}
@@ -949,6 +950,7 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_call_t* call, int bw_budget, media_co
             
          pt = sipua_book_pt(pt_pool);
 
+
          if(pt<0)
          {
             ua_log(("sipua_new_session: no payload type available\n"));
@@ -1124,6 +1126,7 @@ int sipua_unregist(sipua_t *sipua, user_profile_t *user)
 {
 	int ret;
 	char* siploc, *p;
+
 	
 
 	p = siploc = xmalloc(strlen(user->cname)+5);

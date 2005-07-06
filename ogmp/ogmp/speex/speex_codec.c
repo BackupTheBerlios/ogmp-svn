@@ -55,7 +55,7 @@ media_frame_t* spxc_decode(speex_info_t *spxinfo, media_frame_t *spxf, media_pip
 	nchannel = spxinfo->audioinfo.channels;
 
 	nsample = nframes * frame_size;
-	frame_bytes = nchannel * frame_size * sizeof(int16);
+	frame_bytes = nchannel * frame_size * SPEEX_SAMPLE_BYTES;
    
 	/*Copy Ogg packet to Speex bitstream*/
 	speex_bits_read_from(&spxinfo->decbits, (char*)spxf->raw, spxf->bytes);
@@ -113,19 +113,9 @@ media_frame_t* spxc_decode(speex_info_t *spxinfo, media_frame_t *spxf, media_pip
 
 int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcm_bytes, char* spx, int spx_bytes)
 {
-	int nframes;
-	int nchannel;
-	int frame_size;
-	int nsample;
-	int frame_bytes;
+	int nchannel = spxinfo->audioinfo.channels;
+	int frame_size = spxinfo->nsample_per_frame;
    
-	nframes = spxinfo->nframe_per_packet;
-	frame_size = spxinfo->nsample_per_frame;
-	nchannel = spxinfo->audioinfo.channels;
-
-	nsample = nframes * frame_size;
-	frame_bytes = nchannel * frame_size * sizeof(int16);
-
 	/*Flush all the bits in the struct so we can encode a new frame*/
 	speex_bits_reset(&spxinfo->encbits);
 
@@ -144,7 +134,7 @@ int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcm_
 	/*Encode the frame*/
 	speex_encode_int(spxinfo->est, (short*)pcm, &spxinfo->encbits);
 
-	speex_bits_insert_terminator(&spxinfo->encbits);
+	/*speex_bits_insert_terminator(&spxinfo->encbits);*/
 
 	spx_bytes = speex_bits_write(&spxinfo->encbits, spx, spx_bytes);
 
