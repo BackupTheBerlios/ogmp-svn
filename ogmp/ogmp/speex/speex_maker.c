@@ -181,17 +181,20 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
       done_nbyte = delta_nbyte;
       todo_nbyte -= delta_nbyte;
 
-	   /* make speex media frame */
-
+      samplestamp -= cache_nsample;
+      
+	   /* make speex media frame */      
+      spxf.sno++;
+      spxf.samplestamp = samplestamp;
 	   spxf.raw = enc->spxcode;
 	   spxf.bytes = spx_nbyte;
 	   spxf.nraw = enc->frame_nsample;
 	   spxf.eots = 1;
 
-	   stream->player->receiver.receive_media(&stream->player->receiver, &spxf, (samplestamp - cache_nsample), last_packet);
+	   stream->player->receiver.receive_media(&stream->player->receiver, &spxf, samplestamp, last_packet);
 
 	   /* for next group */
-	   samplestamp = samplestamp + delta_nsample;
+	   samplestamp = samplestamp + enc->frame_nsample;
 
       cut += delta_nbyte;
       enc->cache_nbyte = 0;
@@ -202,14 +205,12 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 	   spx_nbyte = spxc_encode(enc, enc->speex_info, cut, enc->frame_nbyte, enc->spxcode, enc->frame_nbyte);
 
       /* make speex media frame */
+      spxf.sno++;
+      spxf.samplestamp = samplestamp;
 	   spxf.raw = enc->spxcode;
 	   spxf.bytes = spx_nbyte;
 	   spxf.nraw = enc->frame_nsample;
-
-      if(todo_nbyte == enc->frame_nbyte)
-	      spxf.eots = 1;
-      else
-	      spxf.eots = 0;
+	   spxf.eots = 1;
 
 	   /* submit */
 	   stream->player->receiver.receive_media(&stream->player->receiver, &spxf, samplestamp, last_packet);
@@ -230,92 +231,6 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 	return MP_OK;
 }
 
-#endif
-
-#if 0
-int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samplestamp, int last_packet)
-{
-	int spx_bytes;
-	char *spx_frame;
-
-	speex_encoder_t *enc = (speex_encoder_t *)mr;
-
-	int delta_nsample = 0;
-   int cache_nsample = 0;
-
-   int todo_nbyte = auf->bytes;
-   int done_nbyte = 0;
-   int delta_nbyte = 0;
-
-	media_frame_t spxf;
-	media_stream_t *stream = enc->media_stream;
-
-   /* finish last remain */
-   if(enc->cache_nbyte > 0)
-   {
-      cache_nsample = enc->cache_nbyte / (SPEEX_SAMPLE_BITS / OS_BYTE_BITS);
-
-      delta_nsample = enc->frame_nsample - cache_nsample;
-      delta_nbyte = enc->frame_nbyte - enc->cache_nbyte;
-
-      memcpy(&enc->encoding_frame[enc->cache_nbyte], auf->raw, delta_nbyte);
-
-	   spx_bytes = spxc_encode(enc, enc->speex_info, enc->encoding_frame, enc->frame_nbyte, &spx_frame);
-
-      enc->cache_nbyte = 0;
-      done_nbyte = delta_nbyte;
-      todo_nbyte -= delta_nbyte;
-
-	   /* make speex media frame */
-	   spxf.raw = spx_frame;
-
-	   spxf.bytes = spx_bytes;
-	   spxf.nraw = enc->frame_nsample;
-	   spxf.eots = 1;
-
-	   stream->player->receiver.receive_media(&stream->player->receiver, &spxf, samplestamp-cache_nsample, last_packet);
-
-	   xfree(spx_frame);
-
-	   /* for next group */
-	   samplestamp = samplestamp + delta_nsample;
-   }
-
-   while(todo_nbyte >= enc->frame_nbyte)
-   {
-	   /* encode */
-	   spx_bytes = spxc_encode(enc, enc->speex_info, &auf->raw[done_nbyte], enc->frame_nbyte, &spx_frame);
-
-	   /* make speex media frame */
-	   spxf.raw = spx_frame;
-	   spxf.bytes = spx_bytes;
-	   spxf.nraw = enc->frame_nsample;
-
-      if(todo_nbyte == enc->frame_nbyte)
-	      spxf.eots = 1;
-      else
-	      spxf.eots = 0;
-
-	   /* submit */
-	   stream->player->receiver.receive_media(&stream->player->receiver, &spxf, samplestamp, last_packet);
-
-	   xfree(spx_frame);
-
-      done_nbyte += enc->frame_nbyte;
-      todo_nbyte -= enc->frame_nbyte;
-
-      samplestamp += enc->frame_nsample;
-   }
-
-   /* samples left for next */
-   if(todo_nbyte > 0)
-   {
-      memcpy(enc->encoding_frame, &auf->raw[done_nbyte], todo_nbyte);
-      enc->cache_nbyte = todo_nbyte;
-   }
-
-	return MP_OK;
-}
 #endif
 
 int spxmk_done(media_maker_t *maker)
