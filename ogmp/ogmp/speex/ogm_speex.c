@@ -296,6 +296,7 @@ int ogm_process_speex(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page
 
 	frame.bytes = pack->bytes;
 	frame.raw = pack->packet;
+   frame.nraw = spxinfo->nsample_per_frame;
 	frame.samplestamp = samplestamp;
 	frame.sno = pack->packetno;
    

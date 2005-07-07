@@ -60,6 +60,14 @@ struct speex_decoder_s
 
    /* thread running condiftion */
    xthr_cond_t *packet_pending;
+
+   /* repack to ptime, consider in seperate struct */
+   int sno;
+   int chunk_ptime;
+   int chunk_nsample;
+   int64 chunk_samplestamp;
+   char *chunk;
+   char *chunk_p;
 };
 
 typedef struct speex_encoder_s speex_encoder_t;

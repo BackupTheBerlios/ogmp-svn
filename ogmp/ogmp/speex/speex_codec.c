@@ -35,7 +35,7 @@
  #define spxc_debug(fmtargs)
 #endif
 
-media_frame_t* spxc_decode(speex_info_t *spxinfo, media_frame_t *spxf, media_pipe_t *output)
+media_frame_t* spxc_decode(speex_info_t *spxinfo, media_frame_t *ptimef, media_pipe_t *output)
 {
 	int i;
 
@@ -50,15 +50,15 @@ media_frame_t* spxc_decode(speex_info_t *spxinfo, media_frame_t *spxf, media_pip
 
 	media_frame_t *auf = NULL;
 
-	nframes = spxinfo->nframe_per_packet;
 	frame_size = spxinfo->nsample_per_frame;
+	nsample = spxinfo->audioinfo.info.sample_rate / 1000 * spxinfo->ptime;
+	nframes = nsample / spxinfo->nsample_per_frame;
+   
 	nchannel = spxinfo->audioinfo.channels;
-
-	nsample = nframes * frame_size;
 	frame_bytes = nchannel * frame_size * SPEEX_SAMPLE_BYTES;
    
 	/*Copy Ogg packet to Speex bitstream*/
-	speex_bits_read_from(&spxinfo->decbits, (char*)spxf->raw, spxf->bytes);
+	speex_bits_read_from(&spxinfo->decbits, (char*)ptimef->raw, ptimef->bytes);
 
 	auf = (media_frame_t*)output->new_frame(output, nframes * frame_bytes, NULL);
 	if (!auf)
