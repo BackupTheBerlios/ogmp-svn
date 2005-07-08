@@ -140,7 +140,6 @@ int spxs_match_play_type (media_player_t * mp, char *play)
 
 int spxs_open_stream (media_player_t *mp, media_info_t *media_info)
 {
-   int chunk_nbyte;
    speex_sender_t *ss = NULL;
    
    speex_info_t *spxinfo = (speex_info_t *)media_info;
@@ -161,12 +160,29 @@ int spxs_open_stream (media_player_t *mp, media_info_t *media_info)
    ai.info.sample_rate = spxinfo->audioinfo.info.sample_rate;
    ai.channels = spxinfo->audioinfo.channels;
    
-   chunk_nbyte = spxinfo->audioinfo.info.sample_rate / 1000 * spxinfo->ptime * spxinfo->audioinfo.channels * 8;
+   { /* repack */
+      int chunk_nbyte, frame_ms;
 
-   ss->chunk = xmalloc(chunk_nbyte);
-   ss->chunk_p = ss->chunk;
-   ss->chunk_nsample = 0;
-   ss->chunk_ptime = 0;
+      speex_setting_t* setting = speex_setting(NULL);
+      
+      frame_ms = 1000 * spxinfo->nsample_per_frame / spxinfo->audioinfo.info.sample_rate;
+      spxinfo->ptime = setting->ptime_max / frame_ms * frame_ms;
+      
+      if(spxinfo->ptime == 0)
+      {
+	      spxs_debug(("spxs_open_stream: ptime can't be ZERO, exit!\n"));
+         exit(1);
+      }
+      
+      chunk_nbyte = spxinfo->audioinfo.info.sample_rate / 1000 * spxinfo->ptime * spxinfo->audioinfo.channels * 4;
+
+      ss->chunk = xmalloc(chunk_nbyte);
+      ss->chunk_p = ss->chunk;
+      ss->chunk_nsample = 0;
+      ss->chunk_ptime = 0;
+      
+	   spxs_debug(("spxs_open_stream: ss[@%x] chunk_p[@%x] bytes[%d]\n", (int)ss, (int)ss->chunk_p, chunk_nbyte));
+   }
          
    ss->rtp_media->set_coding(ss->rtp_media, ai.info.sample_rate, ai.channels);
    ss->rtp_media->set_parameter(ss->rtp_media, "nframe_per_packet", (void*)spxinfo->nframe_per_packet);
@@ -321,6 +337,7 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 	dev = cont->find_device(cont, "rtp", "output");
 	if(!dev)
 	{
+
 		spxs_debug(("spxs_set_device: No rtp device found\n"));
 		return MP_FAIL;
 	}
@@ -386,8 +403,8 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 int spxs_link_stream(media_player_t *mp, media_stream_t* strm, media_control_t *cont, void* extra)
 {
 	control_setting_t *setting = NULL;
- 
-	/* extra is cast to rtpcapset for rtp device */
+
+   /* extra is cast to rtpcapset for rtp device */
 	rtpcap_set_t *rtpcapset = (rtpcap_set_t*)extra;
 	user_profile_t *user;
 
@@ -496,22 +513,18 @@ int spxs_match_type (media_receiver_t *recvr, char *mime, char *fourcc)
 
 }
 
-#if defined (SPEEX_SENDER_REPACK)
+#if !defined (SPEEX_SENDER_NOREPACK)
 
 int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 samplestamp, int last_packet)
 {
    media_pipe_t *output = NULL;
    rtp_frame_t *rtpf = NULL;
-   media_player_t *mp = (media_player_t*)recvr;
    
-   speex_sender_t *ss = (speex_sender_t *)mp;
-
-   int new_group = 0;
+   media_player_t *mp = (media_player_t*)recvr;
+   speex_sender_t *ss = (speex_sender_t *)recvr;
 
    /* varibles for samples counting */
    speex_info_t *spxinfo = ss->speex_info;;
-
-   int frame_ms;
 
    /*
     * packetno from 0,1 is head (maybe more if has extra header), then increase by 1 to last packet
@@ -526,23 +539,25 @@ int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 sample
    if(samplestamp != ss->recent_samplestamp)
    {
       spxs_log(("....................................................\n"));
-	   spxs_log(("spxs_receive_next: samples(%lld) ", samplestamp));
+	   spxs_log(("spxs_receive_next: samples(%lld)\n", samplestamp));
 
 	   ss->recent_samplestamp = samplestamp;
 	   ss->group_packets = 0;
-
-	   new_group = 1;
    }
 
-   frame_ms = 1000 * spxf->nraw / spxinfo->audioinfo.info.sample_rate;
-   memcpy(ss->chunk_p, spxf->nraw, spxf->bytes);
-   ss->chunk_p += spxf->bytes;
-   ss->chunk_ptime += frame_ms;
-   ss->chunk_nsample += spxf->nraw;
+   {  /* repack */
+      int frame_ms = 1000 * spxf->nraw / spxinfo->audioinfo.info.sample_rate;
+	   spxs_debug(("\rspxs_receive_next:  chunk ptime[%d] samples[%d]\n", ss->chunk_ptime, ss->chunk_nsample));
 
-   if(ss->chunk_ptime < spxinfo->ptime)
-      return MP_OK;
+      memcpy(ss->chunk_p, spxf->raw, spxf->bytes);
+      ss->chunk_p += spxf->bytes;
+      ss->chunk_ptime += frame_ms;
+      ss->chunk_nsample += spxf->nraw;
 
+      if(ss->chunk_ptime < spxinfo->ptime)
+         return MP_OK;
+   }
+   
    output = mp->device->pipe(mp->device);
 
    /**
@@ -553,30 +568,33 @@ int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 sample
    
    rtpf = (rtp_frame_t *)output->new_frame(output, (ss->chunk_p - ss->chunk), ss->chunk);
 
+   /* repack */
    rtpf->samplestamp = ss->chunk_samplestamp;
    rtpf->media_info = ss->speex_info;
    rtpf->frame.sno = ss->sno++;
    rtpf->frame.bytes = ss->chunk_p - ss->chunk;
    rtpf->frame.nraw = ss->chunk_nsample;
+   rtpf->frame.raw = ss->chunk;
    rtpf->frame.eos = (last_packet == MP_EOS);
    rtpf->frame.eots = last_packet;
-   
-   ss->chunk_samplestamp += rtpf->frame.nraw;
-   
+
    spxinfo->audio_start = 1;
 
    rtpf->grpno = ++ss->group_packets;
 
-   spxs_log(("\rspxs_receive_next: frame bytes[%d], samples[%d]\n", rtpf->frame.bytes, rtpf->samples));
+   spxs_debug(("\rspxs_receive_next: frame[%lld#:%lld:%llds] speex[%d]\n", rtpf->frame.sno, rtpf->frame.samplestamp, samplestamp, rtpf->frame.bytes));
    ss->rtp_media->post(ss->rtp_media, (media_data_t*)rtpf, rtpf->frame.bytes, last_packet);
 
    if(last_packet)
       spxs_log(("spxs_receive_next: last samples(%lld) ", samplestamp));
 
-   ss->chunk_p = ss->chunk;
-   ss->chunk_nsample = 0;
-   ss->chunk_ptime = 0;
-
+   {  /* repack */
+      ss->chunk_samplestamp += ss->chunk_nsample;
+      ss->chunk_p = ss->chunk;
+      ss->chunk_nsample = 0;
+      ss->chunk_ptime = 0;
+   }
+   
    return MP_OK;
 }
 
@@ -610,6 +628,7 @@ int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 sample
    if(samplestamp != ss->recent_samplestamp)
    {
       spxs_log(("....................................................\n"));
+
 	   spxs_log(("spxs_receive_next: samples(%lld) ", samplestamp));
 
 	   ss->recent_samplestamp = samplestamp;
@@ -665,6 +684,7 @@ int spxs_add_destinate(media_transmit_t *send, char *cname, char *nettype, char 
 {
 	/* media info for sending stored in session.self */
 
+
 	return session_add_cname(((speex_sender_t*)send)->rtp_session, cname, strlen(cname)+1, netaddr, (uint16)rtp_pno, (uint16)rtcp_pno, /* (rtpcap_descript_t*) */NULL, NULL);
 }
 
@@ -698,6 +718,7 @@ module_interface_t * media_new_sender()
    mp->codec_type = spxs_codec_type;
 
    mp->set_callback = spxs_set_callback;
+
    mp->pipe = spxs_pipe;
 
    mp->match_play_type = spxs_match_play_type;

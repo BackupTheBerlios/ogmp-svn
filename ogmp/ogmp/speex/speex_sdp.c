@@ -21,6 +21,7 @@
 #include <timedia/ui.h>
 
 #include "speex_info.h"
+
 /*
 #define SPXSDP_LOG
 */
@@ -216,6 +217,8 @@ int speex_info_from_sdp(media_info_t *info, int rtpmap_no, sdp_message_t *sdp, i
 
 			v = (int)strtol(ptime, NULL, 10);
 
+         spxinfo->ptime = v;
+
 			if(v > SPX_FRAME_MSEC && v % SPX_FRAME_MSEC == 0)
 				spxinfo->nframe_per_packet = v / SPX_FRAME_MSEC;
 			else
@@ -309,6 +312,9 @@ int speex_info_from_sdp(media_info_t *info, int rtpmap_no, sdp_message_t *sdp, i
 					
 		a = sdp_message_a_att_field_get (sdp, pos_media, ++pos_attr);
 	}
+
+   if(spxinfo->ptime == 0)
+      spxinfo->ptime = RTP_DEFAULT_PTIME;
 
 	return pos_media;
 }

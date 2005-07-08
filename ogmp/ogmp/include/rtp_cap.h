@@ -24,6 +24,8 @@
 #include <xrtp/xrtp.h>
 #include <osip2/osip_negotiation.h>
 
+#define RTP_DEFAULT_PTIME 20
+
 #define MAX_MIME_BYTES 64
 #define MAX_CNAME_BYTES 256
 #define MAX_IP_BYTES  64

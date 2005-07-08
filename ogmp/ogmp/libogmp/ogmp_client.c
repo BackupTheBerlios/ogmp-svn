@@ -513,6 +513,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		case(SIPUA_EVENT_ANSWERED):
 		{
 			/* Caller establishs call when callee is answered */
+
 			sipua_call_t *call;
 			rtpcap_set_t* rtpcapset;
 			sdp_message_t *sdp_message;
@@ -525,13 +526,11 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			call = e->call_info; 
 			call->status = SIP_STATUS_CODE_OK;
 
-         /*
 		   printf("client_sipua_event: call[%s] answered\n", call->subject);
 		   printf("client_sipua_event: SDP\n");
 		   printf("------------------------\n");
 		   printf("%s", sdp_body);
 		   printf("------------------------\n");
-		   */
 
          sdp_message_init(&sdp_message);
 
@@ -597,6 +596,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
             sipua->unsubscribe_bandwidth(sipua, call);
             source_associate_guests(client->background_source, call->rtp_format);
          }
+
 
 			call->status = SIPUA_EVENT_ACK;
 
@@ -879,6 +879,7 @@ int client_set_profile(sipua_t* sipua, user_profile_t* prof)
 	client->sipua.user_profile = prof; 
 
 	return UA_OK;
+
 }
 
 user_profile_t* client_profile(sipua_t* sipua)
@@ -917,6 +918,7 @@ int client_regist(sipua_t *sipua, user_profile_t *prof, char *userloc)
 	ret = sipua_regist(sipua, prof, userloc);
 
 	if(ret < UA_OK)
+
       client->reg_profile = NULL;
 		
 	return ret;

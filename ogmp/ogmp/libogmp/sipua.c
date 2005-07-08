@@ -281,8 +281,6 @@ int sipua_make_call(sipua_t *sipua, sipua_call_t* call, char* id,
 		media_bw = session_new_sdp(cata, nettype, addrtype, netaddr, &rtp_portno, &rtcp_portno, pt, codings[i].mime, codings[i].clockrate, codings[i].param, bw_budget, control, &sdp_info);
 
 		if(media_bw > 0 && bw_budget > call->bandwidth_need + media_bw)
-
-
 		{
 			call->bandwidth_need += media_bw;
 		}
@@ -750,6 +748,7 @@ int sipua_link_medium(sipua_t* sipua, sipua_call_t* call, media_control_t* contr
       minfo = (media_info_t*)session_mediainfo(((rtp_stream_t*)instream)->session);
 
       /* Detremine the media type */
+
       i=0;
 
       while(minfo->mime[i] != '/')
@@ -760,7 +759,7 @@ int sipua_link_medium(sipua_t* sipua, sipua_call_t* call, media_control_t* contr
 
       mediatype[i] = '\0';
 
-      if(sipua_open_stream_output (control, call, outstream, mediatype, "playback") < MP_OK)
+      if(sipua_open_stream_output (control, call, outstream, mediatype, "netcast") < MP_OK)
       {
          instream = instream->next;
          continue;
@@ -795,6 +794,7 @@ int sipua_establish_call(sipua_t* sipua, sipua_call_t* call, char *mode, rtpcap_
 	media_format_t *format;
 
 	sipua->uas->address(sipua->uas, &nettype, &addrtype, &netaddr);
+
 	
 	cata = control->modules(control);
 
@@ -837,6 +837,7 @@ int sipua_establish_call(sipua_t* sipua, sipua_call_t* call, char *mode, rtpcap_
 	/**
 	 * rtp_media = session_media(rtp_session);
 	 * xlist_addto_first(call->mediaset, rtp_media);
+
 	 */
 	if(call->bandwidth_need - bw > 0)
 		control->release_bandwidth(control, call->bandwidth_need - bw);
@@ -1172,6 +1173,7 @@ int sipua_call(sipua_t *sipua, sipua_call_t* call, const char *callee, char *sdp
 	   ua_debug(("sipua_call: Call from [%s] to [%s] fail\n", call->user_prof->regname, callee));
 		return ret;
    }
+
 
 	return UA_OK;
 }
