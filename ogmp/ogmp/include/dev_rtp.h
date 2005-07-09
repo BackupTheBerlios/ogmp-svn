@@ -77,7 +77,7 @@ struct rtp_frame_s
     */
 
    /* global timestamp */
-   int64 samplestamp;
+   //int64 samplestamp;
 
    int grpno;
 

@@ -255,6 +255,7 @@ int spxmk_start(media_maker_t *maker)
 {
 	speex_encoder_t *enc = (speex_encoder_t *)maker;
 
+
    enc->input_device->start(enc->input_device, DEVICE_INPUT);
 
    return MP_OK;
@@ -282,6 +283,7 @@ int speex_start_stream (media_stream_t* stream)
 int speex_stop_stream (media_stream_t* stream)
 {
    if(!stream->maker)
+
       return MP_FAIL;
 
    spxmk_stop (stream->maker);
@@ -354,7 +356,7 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
    {
       int cbr_quality = 8;
 	   speex_encoder_ctl(spxinfo->est, SPEEX_SET_QUALITY, &cbr_quality);
-   }
+   }            
    
 	/* Initialization of the structure that holds the bits */
 	speex_bits_init(&spxinfo->encbits);

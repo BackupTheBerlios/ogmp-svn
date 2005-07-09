@@ -31,11 +31,11 @@
 #include "speex_info.h"
 
 #define PROFILE_MIME "audio/speex"
-/*
-*/
 
+/*
 #define SPXSENDER_LOG
 #define SPXSENDER_DEBUG
+*/
 
 #ifdef SPXSENDER_LOG
  #define spxs_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
@@ -205,6 +205,7 @@ const char* spxs_play_type(media_player_t * mp)
    return global_const.play_type;
 }
 
+
 char* spxs_media_type(media_player_t * mp)
 {
    return global_const.media_type;
@@ -276,6 +277,7 @@ capable_descript_t* spxs_capable(media_player_t* mp, void* cap_info)
    if(speex_info_to_sdp((media_info_t*)spxinfo, rtpcap, sdp->sdp_message, sdp->sdp_media_pos) >= MP_OK)
 	   sdp->sdp_media_pos++;
 
+
    return (capable_descript_t*)rtpcap;
 }
 
@@ -316,6 +318,7 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 	rtpcap_descript_t *rtpcap;
 
    media_device_t *dev = NULL;
+
 
 	dev_rtp_t * dev_rtp = NULL;
 	rtp_setting_t *rtpset = NULL;
@@ -492,6 +495,7 @@ int spxs_start (media_player_t *mp)
    mp->device->start(mp->device, DEVICE_OUTPUT);
 
    return MP_OK;
+
 }
 
 int spxs_stop (media_player_t *mp)
@@ -547,7 +551,6 @@ int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 sample
 
    {  /* repack */
       int frame_ms = 1000 * spxf->nraw / spxinfo->audioinfo.info.sample_rate;
-	   spxs_debug(("\rspxs_receive_next:  chunk ptime[%d] samples[%d]\n", ss->chunk_ptime, ss->chunk_nsample));
 
       memcpy(ss->chunk_p, spxf->raw, spxf->bytes);
       ss->chunk_p += spxf->bytes;
@@ -569,9 +572,9 @@ int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 sample
    rtpf = (rtp_frame_t *)output->new_frame(output, (ss->chunk_p - ss->chunk), ss->chunk);
 
    /* repack */
-   rtpf->samplestamp = ss->chunk_samplestamp;
    rtpf->media_info = ss->speex_info;
    rtpf->frame.sno = ss->sno++;
+   rtpf->frame.samplestamp = ss->chunk_samplestamp;
    rtpf->frame.bytes = ss->chunk_p - ss->chunk;
    rtpf->frame.nraw = ss->chunk_nsample;
    rtpf->frame.raw = ss->chunk;
@@ -582,7 +585,7 @@ int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 sample
 
    rtpf->grpno = ++ss->group_packets;
 
-   spxs_debug(("\rspxs_receive_next: frame[%lld#:%lld:%llds] speex[%d]\n", rtpf->frame.sno, rtpf->frame.samplestamp, samplestamp, rtpf->frame.bytes));
+   spxs_log(("\rspxs_receive_next: frame[%lld#:%lld:%llds] speex[%d]\n", rtpf->frame.sno, rtpf->frame.samplestamp, samplestamp, rtpf->frame.bytes));
    ss->rtp_media->post(ss->rtp_media, (media_data_t*)rtpf, rtpf->frame.bytes, last_packet);
 
    if(last_packet)

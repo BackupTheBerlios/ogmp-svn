@@ -281,6 +281,7 @@ int sipua_make_call(sipua_t *sipua, sipua_call_t* call, char* id,
 		media_bw = session_new_sdp(cata, nettype, addrtype, netaddr, &rtp_portno, &rtcp_portno, pt, codings[i].mime, codings[i].clockrate, codings[i].param, bw_budget, control, &sdp_info);
 
 		if(media_bw > 0 && bw_budget > call->bandwidth_need + media_bw)
+
 		{
 			call->bandwidth_need += media_bw;
 		}
