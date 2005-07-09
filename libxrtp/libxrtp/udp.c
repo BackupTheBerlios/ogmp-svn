@@ -29,6 +29,7 @@
 #define UDP_LOG
 */
 #define UDP_DEBUG
+
 #ifdef UDP_LOG
 	#define udp_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -113,14 +114,12 @@ session_connect_t * connect_new(xrtp_port_t * port, xrtp_teleport_t * tport)
 
 int connect_done(session_connect_t * conn)
 {
-     udp_log(("connect_done: free connect[#%d]\n", connect_io(conn)));
-
-     if(conn->data_in) 
-		 xfree(conn->data_in);
+   if(conn->data_in)
+      xfree(conn->data_in);
      
-	 xfree(conn);
+   xfree(conn);
 
-     return XRTP_OK;
+   return XRTP_OK;
 }
 
 int connect_io(session_connect_t * conn)
@@ -158,22 +157,21 @@ xrtp_teleport_t* connect_new_teleport(session_connect_t * conn)
 
 int connect_receive(session_connect_t * conn, char **r_buff, int *header_bytes, rtime_t *ms, rtime_t *us, rtime_t *ns)
 {
-      int datalen;
+   int datalen;
       
-      datalen = conn->datalen_in;
-      *r_buff = conn->data_in;
+   datalen = conn->datalen_in;
+   *r_buff = conn->data_in;
       
-      conn->data_in = NULL;
-      conn->datalen_in = 0;
+   conn->data_in = NULL;
+   conn->datalen_in = 0;
 
+   *header_bytes = IPV4_UDPIP_HEADER_BYTES;
 
-	  *header_bytes = IPV4_UDPIP_HEADER_BYTES;
-
-      *ms = conn->msec_arrival;
-      *us = conn->usec_arrival;
-	  *ns = conn->nsec_arrival;
+   *ms = conn->msec_arrival;
+   *us = conn->usec_arrival;
+   *ns = conn->nsec_arrival;
       
-      return datalen;
+   return datalen;
 }
 
 int connect_send(session_connect_t * conn, char *data, int datalen)
@@ -185,7 +183,7 @@ int connect_send(session_connect_t * conn, char *data, int datalen)
 	  if(n<0)
 		   udp_debug(("connect_send: sending fail\n"));
 
-     udp_debug(("\rconnect_send: port[%d]@%x send to [%s:%d]\n", conn->port->portno, (int)conn->port, inet_ntoa(conn->remote_addr.sin_addr), ntohs(conn->remote_addr.sin_port)));
+     udp_debug(("\rconnect_send: port[%d] send %d bytes to [%s:%d]\n\n", conn->port->portno, datalen, inet_ntoa(conn->remote_addr.sin_addr), ntohs(conn->remote_addr.sin_port)));
 
      return n;
 }
@@ -218,6 +216,7 @@ session_connect_t * connect_rtp_to_rtcp(session_connect_t * rtp_conn)
 
       udp_log(("connect_rtp_to_rtcp: rtp connect is ip[%s:%u] at socket[%d]\n", inet_ntoa(rtp_conn->remote_addr.sin_addr), ntohs(rtp_conn->remote_addr.sin_port), rtp_conn->port->socket));
       udp_log(("connect_rtp_to_rtcp: rtcp connect is ip[%s:%u] at socket[%d]\n", inet_ntoa(rtcp_conn->remote_addr.sin_addr), ntohs(rtcp_conn->remote_addr.sin_port), rtcp_conn->port->socket));
+
 
       return rtcp_conn;
 }
@@ -380,7 +379,8 @@ int port_portno(xrtp_port_t* port)
 	return port->portno;
 }
 
-int port_poll(xrtp_port_t * port, rtime_t timeout_usec)
+session_connect_t* port_incoming(xrtp_port_t * port);
+session_connect_t* port_poll(xrtp_port_t * port, rtime_t timeout_usec)
 {
      fd_set io_set;
 
@@ -397,14 +397,13 @@ int port_poll(xrtp_port_t * port, rtime_t timeout_usec)
      udp_log(("\rport_poll: port[%d]@%x incoming[%d]\n", port->portno, (int)port, n));
 
      if(n == 1)
-        port_incoming(port);
+        return port_incoming(port);
 
-     return n;
+     return NULL;
 } 
 
-int port_incoming(xrtp_port_t * port)
+session_connect_t* port_incoming(xrtp_port_t * port)
 {
-
      char data[UDP_MAX_LEN];
      struct sockaddr_in remote_addr;
 
@@ -412,37 +411,37 @@ int port_incoming(xrtp_port_t * port)
      session_connect_t * conn = NULL;
 
      /* Determine the incoming packet address from recvfrom return */
-	 addrlen = sizeof(remote_addr);
+	  addrlen = sizeof(remote_addr);
      datalen = recvfrom(port->socket, data, UDP_MAX_LEN, UDP_FLAGS, (struct sockaddr *)&remote_addr, &addrlen);
 
      if(!port->session)
-	 {
+	  {
         udp_log(("port_incoming: discard data from [%s:%d] as no session bound to the port\n", inet_ntoa(remote_addr.sin_addr), ntohs(remote_addr.sin_port)));
-        return XRTP_EREFUSE;
+        return NULL;
      }
 
      /* From Address 0:0 is unacceptable */
      if(remote_addr.sin_addr.s_addr == 0 && remote_addr.sin_port == 0)
-	 {     
+	  {     
         udp_log(("port_incoming: discard data from [%s:%d] which is unacceptable !\n", inet_ntoa(remote_addr.sin_addr), ntohs(remote_addr.sin_port)));
-        return XRTP_EREFUSE;
+        return NULL;
      }
         
      conn = (session_connect_t *)xmalloc(sizeof(struct session_connect_s));
      if(!conn)
-	 {
+	  {
         udp_debug(("port_incoming: fail to allocate connect of incoming\n"));
-        return XRTP_EMEM;
+        return NULL;
      }     
      memset(conn, 0, sizeof(struct session_connect_s));
 
      conn->data_in = (char *)xmalloc(datalen);
      if(!conn->data_in)
-	 {
+	  {
         udp_log(("port_incoming: fail to allocate data space of incoming connect\n"));
         
         xfree(conn);
-        return XRTP_EMEM;
+        return NULL;
      }
      memset(conn->data_in, 0, datalen);
      
@@ -456,18 +455,19 @@ int port_incoming(xrtp_port_t * port)
 
      time_rightnow(session_clock(port->session), &(conn->msec_arrival), &(conn->usec_arrival), &(conn->nsec_arrival));
      
-     udp_log(("port_incoming: received %d bytes from [%s:%d] on @%dms/%dus/%dns\n", datalen, inet_ntoa(conn->remote_addr.sin_addr), ntohs(conn->remote_addr.sin_port), conn->msec_arrival, conn->usec_arrival, conn->nsec_arrival));
+     udp_debug(("\rport_incoming: received %d bytes from [%s:%d] on @%dms/%dus/%dns\n", datalen, inet_ntoa(conn->remote_addr.sin_addr), ntohs(conn->remote_addr.sin_port), conn->msec_arrival, conn->usec_arrival, conn->nsec_arrival));
 
      if(port->type == RTP_PORT)
-	 {
-        session_rtp_arrived(port->session, conn); /* High speed schedle */
+	  {
+        //session_rtp_arrived(port->session, conn); /* High speed schedle */
+        return conn;
      }
-	 else
-	 {
+	  else
+	  {
         session_rtcp_arrival_notified(port->session, conn, conn->msec_arrival); /* Low speed schedule */
      }
         
-     return XRTP_OK;
+     return NULL;
 }
 
 xrtp_teleport_t * teleport_new(char * addr_str, uint16 pno)

@@ -435,7 +435,7 @@ struct xrtp_session_s
    xrtp_port_t *rtcp_port;
 
    xthr_lock_t *rtp_incoming_lock;
-	session_connect_t * rtp_incoming;
+	//session_connect_t * rtp_incoming;
    session_connect_t * rtcp_incoming;
 
    session_connect_t * outgoing_rtcp[XRTP_MAX_REPORTS]; /* Only send to member on the report once a time */
@@ -570,6 +570,8 @@ session_mediainfo(xrtp_session_t *session);
  *
  * 'SESSION_SEND', 'SESSION_RECV' or 'SESSION_DUPLEX'
  */
+
+
 int session_set_mode(xrtp_session_t * session, int mode);
 uint session_mode(xrtp_session_t * session);
  
@@ -833,8 +835,9 @@ extern DECLSPEC
 int
 session_solve_collision(member_state_t * member, uint32 ssrc);
 
-/* Notify the session a rtp arrival and schedule the process */
+/* Notify the session a rtp arrival and schedule the process 
 int session_rtp_arrived(xrtp_session_t * session, session_connect_t * connect);
+*/
 
 /* Notify the session a rtcp arrival and schedule the process */
 int session_rtcp_arrival_notified(xrtp_session_t * session, session_connect_t * connect, xrtp_lrtime_t ts_arrival);
@@ -877,6 +880,7 @@ int session_notify_delay(xrtp_session_t * session, rtime_t howlate);
  */
 extern DECLSPEC
 int
+
 session_set_callback(xrtp_session_t *session, int type, void* callback, void* user);
 
 int session_set_callbacks(xrtp_session_t *session, session_call_t cbs[], int n);
@@ -899,7 +903,7 @@ int session_cancel_rtp_sending(xrtp_session_t *session, rtime_t ts);
  */
 int session_rtp_send_now(xrtp_session_t *session);
  
-int session_rtp_to_receive(xrtp_session_t *ses);
+int session_receive_rtp(xrtp_session_t *ses, session_connect_t* incoming);
 
 /**
  * Check if the rtp packet is a cancelled one

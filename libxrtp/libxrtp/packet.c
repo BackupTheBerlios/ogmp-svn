@@ -25,8 +25,8 @@
 #include "stdio.h"
 /*
 #define PACKET_LOG
-#define PACKET_DEBUG
 */
+#define PACKET_DEBUG
 #ifdef PACKET_LOG
  #define packet_log(fmtargs)  do{printf fmtargs;}while(0)
 #else
@@ -202,18 +202,15 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t *rtp, xrtp_rtp_payload_t *pay)
  /**
   * See packet.h
   */
- int rtp_packet_validate(xrtp_rtp_packet_t * pac){
-
+ int rtp_packet_validate(xrtp_rtp_packet_t * pac)
+ {
     pac->valid_to_get = 1;
-
-
-
 
     return XRTP_OK;
  }
 
- int rtp_packet_valid(xrtp_rtp_packet_t * pac){
-
+ int rtp_packet_valid(xrtp_rtp_packet_t * pac)
+ {
     return pac->valid_to_get;
  }
 
@@ -222,8 +219,8 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t *rtp, xrtp_rtp_payload_t *pay)
   *
   * param in: value zero means default length.
   */
- int rtp_packet_set_maxlen(xrtp_rtp_packet_t * pac, uint maxlen){
-
+ int rtp_packet_set_maxlen(xrtp_rtp_packet_t * pac, uint maxlen)
+ {
     int ret = OS_OK;
 
 	if(pac->buffer && maxlen != buffer_maxlen(pac->buffer))
@@ -432,7 +429,6 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t *rtp, xrtp_rtp_payload_t *pay)
   */
  int rtp_packet_set_payload(xrtp_rtp_packet_t *rtp, buffer_t *payload_buf)
  {
-
     rtp->$payload.out_buffer = payload_buf;
 
     if(payload_buf == NULL)
@@ -446,32 +442,27 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t *rtp, xrtp_rtp_payload_t *pay)
 	
 	/* Don't need to copy data for performance consider*/
     rtp->$payload.data = buffer_data(payload_buf);
-
 	 rtp->$payload.len = buffer_datalen(payload_buf);
 
     rtp->packet_bytes += rtp->$payload.len;
 
-    packet_log(("_rtp_packet_set_payload: payload %d bytes\n", rtp->$payload.len));
-
-
-    packet_log(("_rtp_packet_set_payload: packet+headext+payload %d bytes\n", rtp->packet_bytes));
+    packet_log(("rtp_packet_set_payload: payload %d bytes\n", rtp->$payload.len));
+    packet_log(("rtp_packet_set_payload: packet+headext+payload %d bytes\n", rtp->packet_bytes));
 
     return XRTP_OK;
  }
 
-
  /**
   * See packet.h
   */
- xrtp_rtp_payload_t * rtp_packet_new_payload(xrtp_rtp_packet_t * pac, int len, char * pay){
-
+ xrtp_rtp_payload_t * rtp_packet_new_payload(xrtp_rtp_packet_t * pac, int len, char * pay)
+ {
     /* Don't need to copy data for performance consider*/
     pac->$payload.data = xmalloc(len);
     
-    if(!pac->$payload.data){
-
+    if(!pac->$payload.data)
+    {
         packet_log(("< rtp_packet_new_payload: Fail to allocate payload memery >\n"));
-
         return NULL;
     }
 
@@ -512,7 +503,8 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t *rtp, xrtp_rtp_payload_t *pay)
 
     if(rtp->direct == RTP_SEND)
     {
-        *r_payload = rtp->$payload.data;
+        *r_payload = NULL;
+        return 0;
     }
     else
     {
@@ -617,6 +609,7 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
 
     return XRTP_OK;
  }
+
 
  xrtp_buffer_t * rtcp_buffer(xrtp_rtcp_compound_t * rtcp)
  {
@@ -923,6 +916,7 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
 
 	xfree(sdes);
 
+
     return XRTP_OK;
  }
  
@@ -998,6 +992,7 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
              packet_log(("rtcp_add_sdes: No room for chunk, need bytes[%d]\n", room));
              return XRTP_EREFUSE;
           }
+
 
           new_chunk = new_item = 1;
        }
@@ -1094,6 +1089,8 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
     if(new_sdes)
     {
        sdes = rtcp_new_sdes(com); /* Create a SDES and add to compound */
+
+
 
        if(!sdes)
        {
@@ -1448,6 +1445,8 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
     int i;
 
     for(i=0; i<com->n_packet; i++){
+
+
 
        if(com->heads[i]->type == RTCP_TYPE_SDES){
 
@@ -1890,6 +1889,8 @@ int rtcp_app(xrtp_rtcp_compound_t *rtcp, uint32 ssrc, uint8 subtype, char name[4
     }
 
     repo->SRC = SRC;
+
+
     repo->frac_lost = frac_lost;
     repo->total_lost = total_lost;
     repo->full_seqn = full_seqn;
@@ -1994,6 +1995,7 @@ int rtcp_app(xrtp_rtcp_compound_t *rtcp, uint32 ssrc, uint8 subtype, char name[4
     return XRTP_OK;
  }
 
+
 int
 rtcp_arrival_time(xrtp_rtcp_compound_t * rtcp, rtime_t *ms, rtime_t *us, rtime_t *ns)
 {
@@ -2054,6 +2056,8 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
              if(repo->SRC == ssrc)
                 break;
           }
+
+
 
           break;
 
@@ -2310,6 +2314,7 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
     }
 
     rtph->padding = (w >> 13) & 0x1;   /* '00100000-00000000' */
+
     
     rtph->ext = (w >> 12) & 0x1;       /* '00010000-00000000' */
     
@@ -2522,6 +2527,7 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
  }
  
  /**
+
   * Display rtcp SDES Packet
   */
  void rtcp_show_sdes(xrtp_rtcp_sdes_t * sdes){
@@ -2763,6 +2769,8 @@ int rtcp_pack_bye(xrtp_rtcp_bye_t * bye, xrtp_buffer_t * buf)
     return ret;
 }
  
+
+
 int rtcp_pack_app(xrtp_rtcp_app_t *app, xrtp_buffer_t * buf)
 {
     int ret = rtcp_pack_head(&app->$head, buf);
@@ -3021,6 +3029,8 @@ xrtp_buffer_t * rtcp_pack(xrtp_rtcp_compound_t * com)
        while(!end)
        {
           /* Unpack an item */
+
+
           if(buffer_next_uint8(buf, &id) != sizeof(uint8))
           {
              ret=XRTP_EFORMAT;
@@ -3037,6 +3047,7 @@ xrtp_buffer_t * rtcp_pack(xrtp_rtcp_compound_t * com)
              
              if(pos % 4)
                 buffer_seek(buf, buffer_position(buf) + chk_pad);
+
                 
              break;
           }
@@ -3352,6 +3363,7 @@ xrtp_buffer_t * rtcp_pack(xrtp_rtcp_compound_t * com)
 
        ret = rtcp_add_report(rtcp, SRC, flost, tlost, fseqn, jitter, lsrstamp, lsrdelay);
        if(ret < XRTP_OK) return ret;
+
     }
 
     /* Unpack Report Extension by Profile Handler */
@@ -3410,6 +3422,7 @@ xrtp_buffer_t * rtcp_pack(xrtp_rtcp_compound_t * com)
        
        i++;
        len_unscaned = buffer_datalen(rtcp->buffer) - buffer_position(rtcp->buffer);
+
     }
     
     return ret;
