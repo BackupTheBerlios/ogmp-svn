@@ -42,8 +42,6 @@
 #define PORTAUDIO_DEBUG
 
 #ifdef PORTAUDIO_LOG
-
-
  #define pa_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pa_log(fmtargs)
@@ -146,6 +144,7 @@ static int pa_input_callback( void *inbuf, void *outbuf, unsigned long npcm_in,
 #if 0
 int pa_input_loop(void *gen)
 {
+
 	rtime_t us_left;
 
    portaudio_device_t* pa = (portaudio_device_t*)gen;
@@ -178,7 +177,7 @@ static int pa_io_callback (void *inbuf, void *outbuf, unsigned long npcm,
       if(inbufw->npcm_write != 0)
 		{
 			/* encoding slower than input */
-			pa_debug(("pa_io_callback: inbuf full\n"));
+			pa_log(("pa_io_callback: inbuf full\n"));
 		}
 		else
 		{
@@ -189,7 +188,7 @@ static int pa_io_callback (void *inbuf, void *outbuf, unsigned long npcm,
 			inbufw->npcm_write = npcm;
 
 			pa->inbuf_w = (pa->inbuf_w+1) % pa->inbuf_n;
-			pa_debug(("\rpa_io_callback: input[%lld]\n", inbufw->stamp));
+			pa_log(("\rpa_io_callback: input[%lld]\n", inbufw->stamp));
 		}
    }
 
@@ -301,7 +300,7 @@ static int pa_io_callback( void *inbuf, void *outbuf, unsigned long npcm, PaTime
       if(inbufw->npcm_write != 0)
 		{
 			/* encoding slower than input */
-			pa_debug(("\rpa_io_callback: inbuf full\n"));
+			pa_log(("\rpa_io_callback: inbuf full\n"));
 		}
 		else
 		{
@@ -316,6 +315,7 @@ static int pa_io_callback( void *inbuf, void *outbuf, unsigned long npcm, PaTime
 
       pa->input_tick++;
    }
+
 
    if(!outbuf)
 	   return 1;

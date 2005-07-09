@@ -34,8 +34,8 @@
 
 /*
 #define SPXSENDER_LOG
-#define SPXSENDER_DEBUG
 */
+#define SPXSENDER_DEBUG
 
 #ifdef SPXSENDER_LOG
  #define spxs_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
@@ -98,6 +98,10 @@ struct speex_sender_s
    int64 chunk_samplestamp;
    char *chunk;
    char *chunk_p;
+
+   int64 last_samplestamp;
+   int receiving_media;
+   int ts_usec_now;
 };
 
 int spxs_set_callback (media_player_t *mp, int type, int (*call)(), void *user)
@@ -206,6 +210,7 @@ const char* spxs_play_type(media_player_t * mp)
 }
 
 
+
 char* spxs_media_type(media_player_t * mp)
 {
    return global_const.media_type;
@@ -256,6 +261,7 @@ capable_descript_t* spxs_capable(media_player_t* mp, void* cap_info)
 
    speex_sender_t *ss = (speex_sender_t *)mp;
    speex_info_t *spxinfo = ss->speex_info;
+
    rtpcap_descript_t *rtpcap;
 
    int ptime_max = 0;
@@ -517,169 +523,79 @@ int spxs_match_type (media_receiver_t *recvr, char *mime, char *fourcc)
 
 }
 
-#if !defined (SPEEX_SENDER_NOREPACK)
-
-int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 samplestamp, int last_packet)
+int spxs_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 samplestamp, int last_packet)
 {
-   media_pipe_t *output = NULL;
-   rtp_frame_t *rtpf = NULL;
-   
+   media_pipe_t * output = NULL;
    media_player_t *mp = (media_player_t*)recvr;
    speex_sender_t *ss = (speex_sender_t *)recvr;
+   rtp_frame_t *repack;
 
-   /* varibles for samples counting */
-   speex_info_t *spxinfo = ss->speex_info;;
+   int sample_rate = ss->speex_info->audioinfo.info.sample_rate;
 
-   /*
-    * packetno from 0,1 is head (maybe more if has extra header), then increase by 1 to last packet
-	 * always granulepos[-1] in same spx file.
-    */
    if (!mp->device)
    {
-      spxs_debug(("spxs_receive_next: No device to send speex voice\n"));
+      spxs_debug(("\rspxp_receive_next: No device to play vorbis audio\n"));
       return MP_FAIL;
    }
 
-   if(samplestamp != ss->recent_samplestamp)
-   {
-      spxs_log(("....................................................\n"));
-	   spxs_log(("spxs_receive_next: samples(%lld)\n", samplestamp));
-
-	   ss->recent_samplestamp = samplestamp;
-	   ss->group_packets = 0;
-   }
-
    {  /* repack */
-      int frame_ms = 1000 * spxf->nraw / spxinfo->audioinfo.info.sample_rate;
-
+      int frame_ms = 1000 * spxf->nraw / ss->speex_info->audioinfo.info.sample_rate;
       memcpy(ss->chunk_p, spxf->raw, spxf->bytes);
       ss->chunk_p += spxf->bytes;
       ss->chunk_ptime += frame_ms;
       ss->chunk_nsample += spxf->nraw;
 
-      if(ss->chunk_ptime < spxinfo->ptime)
+      if(ss->chunk_ptime < ss->speex_info->ptime)
          return MP_OK;
    }
-   
+
    output = mp->device->pipe(mp->device);
 
-   /**
-    * Prepare frame for packet sending
-    * NOTE: DATA IS CLONED!
-   spxs_debug(("spxs_receive_next: output->new_frame@%x\n", (int)output->new_frame));
-    */
-   
-   rtpf = (rtp_frame_t *)output->new_frame(output, (ss->chunk_p - ss->chunk), ss->chunk);
+   repack = (rtp_frame_t *)output->new_frame(output, (ss->chunk_p - ss->chunk), ss->chunk);
 
-   /* repack */
-   rtpf->media_info = ss->speex_info;
-   rtpf->frame.sno = ss->sno++;
-   rtpf->frame.samplestamp = ss->chunk_samplestamp;
-   rtpf->frame.bytes = ss->chunk_p - ss->chunk;
-   rtpf->frame.nraw = ss->chunk_nsample;
-   rtpf->frame.raw = ss->chunk;
-   rtpf->frame.eos = (last_packet == MP_EOS);
-   rtpf->frame.eots = last_packet;
+   {  /* send repack */      
+      repack->frame.sno = ss->sno++;
+      repack->frame.samplestamp = ss->chunk_samplestamp;
+      repack->frame.bytes = ss->chunk_p - ss->chunk;
+      repack->frame.nraw = ss->chunk_nsample;
+      repack->frame.eos = (last_packet == MP_EOS);
+      repack->frame.eots = last_packet;
+      repack->media_info = ss->speex_info;
+   }
 
-   spxinfo->audio_start = 1;
+   if (!ss->receiving_media)
+   {
+      ss->ts_usec_now = 0;
+      ss->last_samplestamp = samplestamp;
+   }
 
-   rtpf->grpno = ++ss->group_packets;
+   if (ss->last_samplestamp != samplestamp)
+   {
+      ss->ts_usec_now += 1000000 / sample_rate * (int)((samplestamp - ss->last_samplestamp));
+      ss->last_samplestamp = samplestamp;
+   }
 
-   spxs_log(("\rspxs_receive_next: frame[%lld#:%lld:%llds] speex[%d]\n", rtpf->frame.sno, rtpf->frame.samplestamp, samplestamp, rtpf->frame.bytes));
-   ss->rtp_media->post(ss->rtp_media, (media_data_t*)rtpf, rtpf->frame.bytes, last_packet);
+   repack->frame.ts = ss->ts_usec_now;
+   spxs_debug(("\rspxp_receive_next: frame[%lld#:%lld:%llds] speex[%d]\n", repack->frame.sno, repack->frame.samplestamp, samplestamp, repack->frame.bytes));
 
    if(last_packet)
-      spxs_log(("spxs_receive_next: last samples(%lld) ", samplestamp));
+	   repack->frame.eots = 1;
+   else
+	   repack->frame.eots = 0;
 
-   {  /* repack */
+   ss->rtp_media->post(ss->rtp_media, (media_data_t*)repack, repack->frame.bytes, last_packet);
+
+   ss->receiving_media = 1;
+
+   {  /* for next repack */
       ss->chunk_samplestamp += ss->chunk_nsample;
       ss->chunk_p = ss->chunk;
       ss->chunk_nsample = 0;
       ss->chunk_ptime = 0;
    }
-   
-   return MP_OK;
-}
-
-#else
-
-int spxs_receive_next(media_receiver_t *recvr, media_frame_t* spxf, int64 samplestamp, int last_packet)
-{
-   media_pipe_t *output = NULL;
-   rtp_frame_t *rtpf = NULL;
-   media_player_t *mp = (media_player_t*)recvr;
-
-   speex_sender_t *ss = (speex_sender_t *)mp;
-
-   media_frame_t* mf = (media_frame_t*)spxf;
-
-   int new_group = 0;
-
-   /* varibles for samples counting */
-   speex_info_t *spxinfo;
-
-   /*
-    * packetno from 0,1 is head (maybe more if has extra header), then increase by 1 to last packet
-	 * always granulepos[-1] in same spx file.
-    */
-   if (!mp->device)
-   {
-      spxs_debug(("spxs_receive_next: No device to send speex voice\n"));
-      return MP_FAIL;
-   }
-
-   if(samplestamp != ss->recent_samplestamp)
-   {
-      spxs_log(("....................................................\n"));
-
-	   spxs_log(("spxs_receive_next: samples(%lld) ", samplestamp));
-
-	   ss->recent_samplestamp = samplestamp;
-	   ss->group_packets = 0;
-
-	   new_group = 1;
-   }
-
-   output = mp->device->pipe(mp->device);
-
-   /**
-    * Prepare frame for packet sending
-    * NOTE: DATA IS CLONED!
-   spxs_debug(("spxs_receive_next: output->new_frame@%x\n", (int)output->new_frame));
-    */
-
-   rtpf = (rtp_frame_t *)output->new_frame(output, mf->bytes, mf->raw);
-
-   rtpf->frame.eos = (last_packet == MP_EOS);
-
-   rtpf->frame.eots = last_packet;
-
-   /* Now samplestamp is 64 bits, for maximum media stamp possible
-	 * All param for sending stored in the frame
-	 */
-   spxinfo = ss->speex_info;
-
-   rtpf->samples = spxinfo->nframe_per_packet * spxinfo->nsample_per_frame;
-
-   rtpf->media_info = ss->speex_info;
-
-   rtpf->samplestamp = samplestamp;
-
-   spxinfo->audio_start = 1;
-
-   rtpf->grpno = ++ss->group_packets;
-
-   spxs_log(("\rspxs_receive_next: frame bytes[%d], samples[%d]\n", rtpf->frame.bytes, rtpf->samples));
-   ss->rtp_media->post(ss->rtp_media, (media_data_t*)rtpf, rtpf->frame.bytes, last_packet);
-
-   if(last_packet)
-   {
-      spxs_log(("spxs_receive_next: last samples(%lld) ", samplestamp));
-   }
 
    return MP_OK;
 }
-#endif
 
 /**************************************************************/
 

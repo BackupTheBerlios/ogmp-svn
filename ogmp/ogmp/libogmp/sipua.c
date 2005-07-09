@@ -282,6 +282,7 @@ int sipua_make_call(sipua_t *sipua, sipua_call_t* call, char* id,
 
 		if(media_bw > 0 && bw_budget > call->bandwidth_need + media_bw)
 
+
 		{
 			call->bandwidth_need += media_bw;
 		}
@@ -750,6 +751,7 @@ int sipua_link_medium(sipua_t* sipua, sipua_call_t* call, media_control_t* contr
 
       /* Detremine the media type */
 
+
       i=0;
 
       while(minfo->mime[i] != '/')
@@ -849,7 +851,7 @@ int sipua_establish_call(sipua_t* sipua, sipua_call_t* call, char *mode, rtpcap_
 	/* create a input source */
 	if(call->status == SIP_STATUS_CODE_OK)
    {
-	   sipua_link_medium(sipua, call, control);    
+	   //sipua_link_medium(sipua, call, control);
    }
    
 	ua_debug(("\rsipua_establish_call: call[%s] established\n", rtpcapset->subject));
@@ -1016,6 +1018,7 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_call_t* call, int bw_budget, media_co
 	sdp_message_to_str (sdp_info.sdp_message, &sdp_body);
 
 	/* if free here, posix dore dump ??? win32 ok !!!
+
     sdp_message_free(sdp_info.sdp_message);
     */
    return sdp_body;

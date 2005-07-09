@@ -455,9 +455,6 @@ int spxrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp)
    }
 
    spxrtp_debug(("\rspxrtp_rtp_out: session[@%x] payload %d bytes\n", (int)profile->session, rtp_packet_bytes(rtp)));
-
-   /* unset after pack into the rtp buffer */
-   rtp_packet_set_payload(rtp, NULL);
    
    return XRTP_OK;
 }
@@ -1124,7 +1121,7 @@ int rtp_speex_send_loop(void *gen)
 			break;
 		}
 
-		if (xlist_size(profile->packets) == 0) 
+      if (xlist_size(profile->packets) == 0)
 		{
 			profile->idle = 1;
 			xthr_cond_wait(profile->pending, profile->packets_lock);
@@ -1153,8 +1150,7 @@ int rtp_speex_send_loop(void *gen)
       /* discard frames when time is late */
       { /*...*/ }
    
-		/* payload */
-		spxrtp_log(("\rrtp_speex_send_loop: frame[%lld] %d bytes\n", rtpf->frame.sno, rtpf->frame.bytes));
+		/* loading payload */
       buffer_clear(profile->payload_buf, 0);
 		buffer_add_data(profile->payload_buf, rtpf->frame.raw, (uint)rtpf->frame.bytes);
 
