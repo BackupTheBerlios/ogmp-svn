@@ -184,7 +184,7 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
       samplestamp -= cache_nsample;
       
 	   /* make speex media frame */      
-      spxf.sno++;
+      spxf.sno = enc->sno++;
       spxf.samplestamp = samplestamp;
 	   spxf.raw = enc->spxcode;
 	   spxf.bytes = spx_nbyte;

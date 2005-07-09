@@ -82,6 +82,7 @@ struct speex_encoder_s
    char* encoding_frame;			/* 20ms frame size */
    char* spxcode;
 
+   int sno;
    int frame_nbyte;
    int frame_nsample;
    int cache_nbyte;

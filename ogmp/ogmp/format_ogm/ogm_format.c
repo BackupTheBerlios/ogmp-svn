@@ -178,7 +178,7 @@ int ogm_new_all_player(media_format_t *mf, media_control_t* ctrl, char* mode, vo
 		if(!cur->player)
 		{
 			cur->playable = -1;
-			ogm_debug(("ogm_new_all_player: No %s player\n", cur->media_info->mime));
+			ogm_debug(("ogm_new_all_player: No %s player\n\n\n", cur->media_info->mime));
 		}
 		else if(cur->player->set_device(cur->player, ctrl, ctrl->modules(ctrl), mode_param) < MP_OK)
 		{

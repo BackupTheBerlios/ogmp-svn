@@ -240,7 +240,8 @@ int pa_input_loop(void *gen)
 			continue;
 		}
 
-		auf.ts = auf.samplestamp = inbufr->stamp;
+		auf.ts = (int32)inbufr->stamp;
+		auf.samplestamp = inbufr->stamp;
 
 		auf.raw = inbufr->pcm;
 		auf.nraw = pa->input_npcm_once;

@@ -454,7 +454,7 @@ int spxrtp_rtp_out(profile_handler_t *handler, xrtp_rtp_packet_t *rtp)
       return XRTP_FAIL;
    }
 
-   spxrtp_debug(("\rspxrtp_rtp_out: session[@%x] payload %d bytes\n", (int)profile->session, rtp_packet_bytes(rtp)));
+   spxrtp_log(("\rspxrtp_rtp_out: session[@%x] payload %d bytes\n", (int)profile->session, rtp_packet_bytes(rtp)));
    
    return XRTP_OK;
 }
@@ -1111,6 +1111,7 @@ int rtp_speex_send_loop(void *gen)
 		speex_info_t *spxinfo;
 
 		rtime_t usec_now;
+		int usec_payload;
 
 		xthr_lock(profile->packets_lock);
 
@@ -1143,7 +1144,7 @@ int rtp_speex_send_loop(void *gen)
 		spxinfo = (speex_info_t*)rtpf->media_info;
 		eos = rtpf->frame.eos;
 
-		int usec_payload = 1000000 / spxinfo->audioinfo.info.sample_rate  * rtpf->frame.nraw;
+		usec_payload = 1000000 / spxinfo->audioinfo.info.sample_rate  * rtpf->frame.nraw;
 
 		xthr_unlock(profile->packets_lock);
 

@@ -85,13 +85,13 @@ int client_call_ringing(void* gen)
 					client->nring--;
 
 					if(client->background_source)
-               {
-			         clie_debug(("\nclient_call_ringing: on hold\n"));
-					   call->status = SIPUA_STATUS_ONHOLD;
+					{
+						clie_debug(("\nclient_call_ringing: on hold\n"));
+						call->status = SIPUA_STATUS_ONHOLD;
 						client_queue(&client->sipua, call);
-               }
-               else
-                  client_answer(&client->sipua, call, SIP_STATUS_CODE_OK, NULL);
+					}
+					else
+						client_answer(&client->sipua, call, SIP_STATUS_CODE_OK, NULL);
 
 					if(client->nring == 0)
 						break;
