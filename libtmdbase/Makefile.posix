@@ -24,15 +24,16 @@ INCINST = $(TOPDIR)/include
 
 CC = gcc
 
-CFLAGS = -fPIC -I$(INCINST)
+CFLAGS = -fPIC -I$(INCINST) -DXMALLOC_DEBUG
 LIBS = -ldl -L$(LIBINST) -lSDL
 
 LIBFILES:= libtmdbase/libtmdbase.so
-INCFILES:= libtmdbase/list.h libtmdbase/buffer.h libtmdbase/md5.h libtmdbase/os.h \
+INCFILES:= libtmdbase/list.h libtmdbase/buffer.h libtmdbase/os.h \
 	   libtmdbase/spinqueue.h libtmdbase/xmap.h libtmdbase/xstring.h	\
 	   libtmdbase/loader.h libtmdbase/catalog.h libtmdbase/config.h \
 	   libtmdbase/socket.h libtmdbase/inet.h libtmdbase/io.h \
-		libtmdbase/ui.h libtmdbase/xmalloc.h libtmdbase/xthread.h
+	   libtmdbase/ui.h libtmdbase/xmalloc.h libtmdbase/xthread.h \
+	   libtmdbase/md5.h libtmdbase/sha1.h libtmdbase/sha256.h 
 
 all: sharedlib
 
@@ -47,6 +48,8 @@ sharedlib:	libtmdbase/*.c
 	$(CC) $(CFLAGS) -c libtmdbase/socket_posix.c -o libtmdbase/socket_posix.o
 	$(CC) $(CFLAGS) -c libtmdbase/buffer.c -o libtmdbase/buffer.o
 	$(CC) $(CFLAGS) -c libtmdbase/md5.c -o libtmdbase/md5.o
+	$(CC) $(CFLAGS) -c libtmdbase/sha1.c -o libtmdbase/sha1.o
+	$(CC) $(CFLAGS) -c libtmdbase/sha256.c -o libtmdbase/sha256.o
 	$(CC) $(CFLAGS) -c libtmdbase/spinqueue.c -o libtmdbase/spinqueue.o
 	$(CC) $(CFLAGS) -c libtmdbase/xmap.c -o libtmdbase/xmap.o
 	$(CC) $(CFLAGS) -c libtmdbase/xstring.c -o libtmdbase/xstring.o
@@ -57,10 +60,12 @@ sharedlib:	libtmdbase/*.c
 	$(CC) $(CFLAGS) -c libtmdbase/libsdl/xthread_sdl.c -o libtmdbase/libsdl/xthread_sdl.o
 	$(CC) $(CFLAGS) -c libtmdbase/ui_stub.c -o libtmdbase/ui_stub.o
 
-	$(CC) -shared libtmdbase/list.o libtmdbase/buffer.o libtmdbase/md5.o libtmdbase/spinqueue.o \
-		libtmdbase/socket_posix.o libtmdbase/xmap.o libtmdbase/xstring.o libtmdbase/loader.o \
-		libtmdbase/catalog.o libtmdbase/config.o libtmdbase/xmalloc.o libtmdbase/libsdl/xthread_sdl.o \
-		libtmdbase/ui_stub.o $(LIBS) -o  libtmdbase/libtmdbase.so
+	$(CC) -shared libtmdbase/list.o libtmdbase/buffer.o libtmdbase/spinqueue.o \
+		libtmdbase/socket_posix.o libtmdbase/xmap.o libtmdbase/xstring.o \
+		libtmdbase/loader.o libtmdbase/catalog.o libtmdbase/config.o \
+		libtmdbase/xmalloc.o libtmdbase/libsdl/xthread_sdl.o libtmdbase/ui_stub.o \
+		libtmdbase/md5.o libtmdbase/sha1.o libtmdbase/sha256.o \
+		$(LIBS) -o  libtmdbase/libtmdbase.so
 
 install:	libtmdbase/libtmdbase.so
 	@cp -f $(INCFILES) $(INCINST)/$(PROJNAME)

@@ -19,9 +19,11 @@
 #include "byteorder.h"
  
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "xmalloc.h"
+
 /*
 #define BUFFER_LOG
 */
@@ -33,13 +35,14 @@
 
 buffer_t * buffer_new(uint size, enum byte_order_e order)
 {
-   buffer_t * buf = (buffer_t *)xmalloc(sizeof(struct buffer_s));
+   buffer_t *buf = (buffer_t *)xmalloc(sizeof(struct buffer_s));
 
    if(!buf || size < 0)
    {
       return NULL;
    }
-   memset(buf, 0, sizeof(*buf));
+   memset(buf, 0, sizeof(buffer_t));
+
 
    buf->byte_order = order;
 
@@ -58,7 +61,7 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
       buf->mounted = 1;
    }
    
-   buffer_log(("buffer_new: Buf@%d, %d bytes Data@%d\n", (int)buf, buf->len, (int)buf->data));
+   printf("\rbuffer_new: Buf[@%d], %d bytes len_data[%d]\n", (int)buf, buf->len, buf->len_data);
    
    return buf;
 }
@@ -111,6 +114,7 @@ int buffer_done(xrtp_buffer_t * buf)
     newbuf->byte_order = buf->byte_order;
     newbuf->len = buf->len;
     newbuf->pos = 0;
+
     newbuf->mounted = 0;
     
     newbuf->len_data = buf->len_data;
@@ -133,6 +137,7 @@ int buffer_done(xrtp_buffer_t * buf)
 		buffer_log(("buffer_newsize: No memory\n"));
 		return OS_EMEM;
     }
+
 
 	xfree(buf->data);
 
@@ -157,17 +162,16 @@ int buffer_done(xrtp_buffer_t * buf)
     return buf->data;
  }
 
- int buffer_clear(buffer_t *buf, int secure){
- 
-	 if(buf->len_data){
-		
+ int buffer_clear(buffer_t *buf, int secure)
+ {
+	 if(buf->len_data)
+    {
 		 if(secure) memset(buf->data, 0, buf->len_data);
 
 		 buf->len_data = buf->pos = 0;
 	 }
 
-
-	 return OS_OK;
+    return OS_OK;
  }
 
  uint buffer_maxlen(xrtp_buffer_t * buf){
@@ -180,12 +184,10 @@ int buffer_done(xrtp_buffer_t * buf)
     return buf->len_data;
  }
 
- int buffer_copy(xrtp_buffer_t * src, uint pos1, uint len1, xrtp_buffer_t * des, uint pos2){
-
-    if((pos1 + len1) > src->len || (pos2 + len1) > des->len){
-
+ int buffer_copy(xrtp_buffer_t * src, uint pos1, uint len1, xrtp_buffer_t * des, uint pos2)
+ {
+    if((pos1 + len1) > src->len || (pos2 + len1) > des->len)
        return OS_EREFUSE;
-    }
 
     memcpy(&(des->data[pos2]), &(src->data[pos1]), len1);
     des->len_data = des->len_data > (pos2 + len1) ? des->len_data : (pos2 + len1);
@@ -193,17 +195,13 @@ int buffer_done(xrtp_buffer_t * buf)
     return OS_OK;
  }
 
- int buffer_add_data(xrtp_buffer_t * buf, char * data, uint len){
-
-    if(buf->len_data + len > buf->len){
-
+ int buffer_add_data(buffer_t* buf, char* data, uint len)
+ {
+    if(buf->len_data + len > buf->len)
        return OS_EREFUSE;
-    }
 
     memcpy((buf->data + buf->len_data), data, len);
     
-    buffer_log(("buffer_add_data: Add %d bytes data to buf[%d-%d]@%d\n", len, buf->len_data, (buf->len_data + len - 1), (int)buf->data));
-
     buf->len_data += len;
     buf->pos += len;
 
@@ -236,6 +234,7 @@ int buffer_done(xrtp_buffer_t * buf)
        return OS_EREFUSE;
     }
 
+
     memcpy((buf->data + buf->len_data), data, len);
 
     buf->len_data += len;
@@ -256,6 +255,7 @@ int buffer_done(xrtp_buffer_t * buf)
     buffer_log(("buffer_add_uint8: Add '%u' to buf[%d]@%d\n", byte, buf->pos, (int)buf->data));
 
     buf->len_data += sizeof(uint8);
+
     buf->pos += sizeof(uint8);
 
     return OS_OK;
