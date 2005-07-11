@@ -42,6 +42,7 @@
 #define PORTAUDIO_DEBUG
 
 #ifdef PORTAUDIO_LOG
+
  #define pa_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pa_log(fmtargs)
@@ -637,7 +638,7 @@ int pa_set_output_media(media_device_t *dev, media_info_t *out_info)
 	return MP_OK;
 }
 
-int pa_set_io(media_device_t *dev, media_info_t *out_info, media_receiver_t* recvr)
+int pa_set_io(media_device_t *dev, media_info_t *minfo, media_receiver_t* recvr)
 {
    portaudio_device_t *pa = (portaudio_device_t *)dev;
 
@@ -648,7 +649,7 @@ int pa_set_io(media_device_t *dev, media_info_t *out_info, media_receiver_t* rec
    PaError err = 0;
    int pa_min_nbuf = 0;
 
-   audio_info_t* ai = (audio_info_t*)out_info;
+   audio_info_t* ai = (audio_info_t*)minfo;
 
    if(!pa->receiver && recvr)
       pa->receiver = recvr;
@@ -983,6 +984,7 @@ module_interface_t* media_new_device ()
 
    if ( pa_online(dev) >= MP_OK) 
 	   pa->online = 1;
+
 
    pa_log(("media_new_device: PortAudio device created, with %dus pulse\n", pa->usec_pulse));
 

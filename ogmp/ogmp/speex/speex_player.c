@@ -141,8 +141,6 @@ int spxp_open_stream (media_player_t *mp, media_info_t *media_info)
    
 	speex_info_t *spxinfo = (speex_info_t *)media_info;
    
-	struct audio_info_s ai;
-   
 	int ret;
    
 	if (!mp->device)
@@ -159,14 +157,12 @@ int spxp_open_stream (media_player_t *mp, media_info_t *media_info)
 	   spxp_debug(("\rspxp_open_stream: invalid sample rate[%d]\n", spxinfo->audioinfo.info.sample_rate));
       return MP_FAIL;
    }
-   
-	ai.info.sample_rate = spxinfo->audioinfo.info.sample_rate;
-	ai.info.sample_bits = SPEEX_SAMPLE_BITS;
-	ai.channels = spxinfo->audioinfo.channels;
-   
-	spxp_log (("spxp_open_stream: rate[%d]; channels[%d]\n", ai.info.sample_rate, ai.channels));
 
-	ret = mp->device->set_io(mp->device, (media_info_t*)&ai, NULL);
+   spxinfo->audioinfo.info.sample_bits = SPEEX_SAMPLE_BITS;
+
+   spxp_log (("spxp_open_stream: rate[%d]; channels[%d]\n", spxinfo->audioinfo.info.sample_rate, spxinfo->audioinfo.channels));
+
+	ret = mp->device->set_io(mp->device, media_info, NULL);
 	if (ret < MP_OK)
 	{
 		spxp_debug(("spxp_open_stream: speex stream fail to open\n"));
@@ -474,7 +470,6 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
          return MP_OK;
    }
 
-   spxp_debug(("\rspxp_receive_next: decode chunk ptime[%d] nraw[%d] rate[%d]\n", dec->chunk_ptime, spxf->nraw, dec->speex_info->audioinfo.info.sample_rate));
    output = mp->device->pipe(mp->device);
 
    {  /* decode repack */
@@ -493,6 +488,8 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
          spxp_log(("spxp_receive_next: No audio samples decoded\n"));
          return MP_FAIL;
       }
+      
+      spxp_debug(("\rspxp_receive_next: decode info[@%x] chunk ptime[%d] nraw[%d] rate[%d]\n", (int)dec->speex_info, dec->chunk_ptime, spxf->nraw, dec->speex_info->audioinfo.info.sample_rate));
    }
 
    if (!dec->receiving_media)

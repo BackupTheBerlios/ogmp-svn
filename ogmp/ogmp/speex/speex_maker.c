@@ -202,6 +202,7 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 
    while(todo_nbyte >= enc->frame_nbyte)
    {
+		spxmk_debug(("\rspxmk_receive_media: encode info[@%x]\n", (int)enc->speex_info));
 	   spx_nbyte = spxc_encode(enc, enc->speex_info, cut, enc->frame_nbyte, enc->spxcode, enc->frame_nbyte);
 
       /* make speex media frame */
