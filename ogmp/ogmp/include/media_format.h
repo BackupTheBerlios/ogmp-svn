@@ -223,6 +223,9 @@ struct audio_info_s
    int channels_bytes;
 };
 
+#define MP_STREAM_STANDBY     0
+#define MP_STREAM_STREAMING   1
+
 struct media_stream_s
 {
 	int (*start)(media_stream_t* stream);
@@ -246,6 +249,8 @@ struct media_stream_s
    
 	//media_receiver_t *player;
 	media_player_t *player;
+
+   int status;
 };
 
 typedef struct media_pipe_s media_pipe_t;

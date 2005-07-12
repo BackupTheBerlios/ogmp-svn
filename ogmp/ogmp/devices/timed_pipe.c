@@ -41,6 +41,7 @@
 #define DEFAULT_USEC_PER_BUF  1000000  /* 1s */
 
 
+
 #define MIN_USEC_BUFFER       10000     /* 10ms */
 
 #define MUTE_VALUE 0
@@ -392,6 +393,7 @@ sample_buffer_t * pout_switch_buffer(timed_pipe_t *pipe)
          pipe->last_played_frame = pipe->frame_read_now;
 
 
+
          pipe->frame_read_now = pipe->frame_read_now->next;
       }
       
@@ -474,6 +476,7 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
    bufr = &(pipe->buffer[pipe->bufn_read]);
 
    if (!pipe->buffered)
+
    {
       /* buffer certain number frames before play back */
       sample_buffer_t * bufw = &(pipe->buffer[pipe->bufn_write]);
@@ -605,9 +608,6 @@ int pout_pick_content(media_pipe_t *mp, media_info_t *mi, char * out, int nraw_o
 
             return 1; /* end */
          }
-       
-
-
 
          /* to next frame */
          pipe->last_played_frame = pipe->frame_read_now;

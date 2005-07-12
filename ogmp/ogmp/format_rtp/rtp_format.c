@@ -285,30 +285,40 @@ int rtp_open (media_format_t *mf, char * fname, media_control_t *ctrl)
 
 int rtp_stream_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
 {
+   media_stream_t *strm = (media_stream_t*)gen;
    rtp_stream_t *rtpstrm = (rtp_stream_t*)gen;
 
    if(strcmp(rtpstrm->source_cname, cn) != 0)
    {
-	   rtp_log(("rtp_stream_on_member_update: Stream Receiver[%s] discovered\n", cn));
+      rtp_log(("rtp_stream_on_member_update: start stream[%s]\n", cn));
+      rtpstrm->source_cname = xstr_clone(cn);
+      strm->start(strm);
+
 	   return MP_OK;
    }
 
-   rtp_log(("rtp_stream_on_member_update: source[%s] connected\n\n\n", cn));   
+   rtp_log(("rtp_stream_on_member_update: stream[%s] ok\n\n\n", cn));   
    return MP_OK;
 }
 
 int rtp_start_stream (media_stream_t* stream)
 {
-   if(!stream->maker || !stream->player)
+   if(stream->status == MP_STREAM_STREAMING)
+      return MP_OK;
+      
+   if(!stream->player)
    {
-      rtp_debug(("\rrtp_start_stream: exit\n"));
-      exit(1);
+      rtp_debug(("\rrtp_start_stream: no player, exit\n"));
       return MP_FAIL;
    }
 
-   stream->maker->start(stream->maker);   
    stream->player->start(stream->player);
-   
+
+   if(stream->maker)
+      stream->maker->start(stream->maker);
+
+   stream->status = MP_STREAM_STREAMING;
+         
    return MP_OK;
 }
 
@@ -589,6 +599,7 @@ int rtp_players(media_format_t * mf, char *type, media_player_t* players[], int 
   int n = 0;
 
   while (cur != NULL)
+
   {
 
     if(cur->player->match_play_type(cur->player, type))
@@ -806,6 +817,7 @@ module_interface_t * media_new_format()
    mf->new_stream_player = rtp_new_stream_player;
    mf->new_mime_player = rtp_new_mime_player;
    mf->set_mime_player = rtp_set_mime_player;
+
 
    mf->players = rtp_players;
 

@@ -284,6 +284,7 @@ int sipua_make_call(sipua_t *sipua, sipua_call_t* call, char* id,
 
 
 
+
 		{
 			call->bandwidth_need += media_bw;
 		}
@@ -410,6 +411,7 @@ sipua_call_t* sipua_make_call(sipua_t *sipua, user_profile_t* user_prof, char* i
 		int pt;
 
 		char mediatype[16];
+
 
 		int rtp_portno = 0;
 		int rtcp_portno = 0;
@@ -748,12 +750,9 @@ int sipua_link_medium(sipua_t* sipua, sipua_call_t* call, media_control_t* contr
    {
       outstream = instream->peer;
 
-      minfo = (media_info_t*)session_mediainfo(((rtp_stream_t*)instream)->session);
+      minfo = instream->media_info;
 
       /* Detremine the media type */
-
-
-
       i=0;
 
       while(minfo->mime[i] != '/')
@@ -771,10 +770,6 @@ int sipua_link_medium(sipua_t* sipua, sipua_call_t* call, media_control_t* contr
       }
       
       sipua_open_stream_input (control, outstream, mediatype, "input");
-      
-		printf("\rsipua_link_medium: stream start\n");
-
-      outstream->start(outstream);
 
       n_input++;
 	   instream = instream->next;

@@ -43,6 +43,7 @@
 
 #ifdef PORTAUDIO_LOG
 
+
  #define pa_log(fmtargs)  do{ui_print_log fmtargs;}while(0)
 #else
  #define pa_log(fmtargs)
@@ -142,75 +143,6 @@ static int pa_input_callback( void *inbuf, void *outbuf, unsigned long npcm_in,
    return 0;
 }
 
-#if 0
-int pa_input_loop(void *gen)
-{
-
-	rtime_t us_left;
-
-   portaudio_device_t* pa = (portaudio_device_t*)gen;
-	while(1)
-	{
-		/* encoding catch up input */
-		time_usec_sleep(pa->clock, pa->input_usec_pulse, &us_left);
-
-      continue;
-	}
-
-	return MP_OK;
-}
-
-static int pa_io_callback (void *inbuf, void *outbuf, unsigned long npcm,
-							      PaTimestamp intime, void *udata)
-{
-   portaudio_device_t* pa = (portaudio_device_t*)udata;
-
-	pa_input_t* inbufr;
-	pa_input_t* inbufw;
-
-   /* Record input data */
-   if(inbuf)
-   {
-		pa->input_samplestamp += npcm;
-
-      inbufw = &pa->inbuf[pa->inbuf_w];
-
-      if(inbufw->npcm_write != 0)
-		{
-			/* encoding slower than input */
-			pa_log(("pa_io_callback: inbuf full\n"));
-		}
-		else
-		{
-			memcpy(inbufw->pcm, inbuf, npcm);
-			memset(inbuf, 0, npcm);
-
-			inbufw->stamp = pa->input_samplestamp;
-			inbufw->npcm_write = npcm;
-
-			pa->inbuf_w = (pa->inbuf_w+1) % pa->inbuf_n;
-			pa_log(("\rpa_io_callback: input[%lld]\n", inbufw->stamp));
-		}
-   }
-
-   if(!outbuf)
-	   return 0;
-
-	inbufr = &pa->inbuf[pa->inbuf_r];
-
-	if(inbufr->npcm_write == 0)
-		return 0;
-
-	memcpy(outbuf, inbufr->pcm, npcm);
-
-	inbufr->npcm_write = 0;
-
-	pa->inbuf_r = (pa->inbuf_r + 1) % pa->inbuf_n;
-      
-   return 0;
-}
-#endif
-
 int pa_input_loop(void *gen)
 {
 	int err;
@@ -237,7 +169,7 @@ int pa_input_loop(void *gen)
 		if(inbufr->npcm_write == 0)
 		{
 			/* encoding catch up input */
-			time_usec_sleep(pa->clock, (pa->input_usec_pulse / 2), &us_left);
+			time_usec_sleep(pa->clock, (pa->usec_pulse / 2), &us_left);
 			continue;
 		}
 
@@ -984,6 +916,7 @@ module_interface_t* media_new_device ()
 
    if ( pa_online(dev) >= MP_OK) 
 	   pa->online = 1;
+
 
 
    pa_log(("media_new_device: PortAudio device created, with %dus pulse\n", pa->usec_pulse));

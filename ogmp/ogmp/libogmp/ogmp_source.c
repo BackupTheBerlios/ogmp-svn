@@ -227,6 +227,7 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
       return NULL;
    }
 
+
    osource = xmalloc(sizeof(ogmp_source_t));
 	if(!osource)
    {
@@ -288,7 +289,6 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
 	{
 		if(0 == format->new_all_player(format, osource->control, "playback", mode_param))
 		{
-
 			source_done(msrc);
 			return NULL;
 		}
