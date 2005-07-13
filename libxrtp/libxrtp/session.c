@@ -660,6 +660,7 @@ double session_determistic_interval(int members,
 
 
 
+
         * Minimum average time between RTCP packets from this site (in
         * seconds).  This time prevents the reports from `clumping' when
         * sessions are small and the law of large numbers isn't helping
@@ -820,6 +821,14 @@ int session_match_cname(void *tar, void *pat)
 	return strncmp(mem->cname, cn, mem->cname_len);
 }
 
+int session_match_connect(void *tar, void *pat)
+{
+   session_connect_t *conn = (session_connect_t*)pat;
+   member_state_t *mem = (member_state_t*)tar;
+
+   return connect_match_teleport(conn, mem->rtcp_port) == 0;
+}
+
 member_state_t * session_new_member(xrtp_session_t * ses, uint32 src, void *user_info)
 {
 	member_state_t * mem;
@@ -896,6 +905,7 @@ int session_delete_cname(xrtp_session_t * ses, char *cname, int cnlen)
     }
 
 	session_log(("session_delete_cname: Member[%s] deleted, %d members now\n", cname, nmem));
+
 
     return nmem;
 
@@ -1218,6 +1228,7 @@ int session_member_set_connects(member_state_t * mem, session_connect_t *rtp_con
 int session_member_connects(member_state_t * mem, session_connect_t **rtp_conn, session_connect_t **rtcp_conn)
 {
     *rtp_conn = mem->rtp_connect;
+
     *rtcp_conn = mem->rtcp_connect;
 
     return XRTP_OK;
@@ -2014,12 +2025,22 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 	mem = session_member_state(ses, ssrc);
 	if(!mem)
 	{
-		/* search by cname */
 		xlist_user_t lu;
+      
+		/* search by connect */            
+		mem = xlist_find(ses->members, rtcp_conn, session_match_connect, &lu);
+      if(mem && mem->ssrc == 0)
+      {
+         /* correct the cname */
+         if(mem->cname)
+            xfree(mem->cname);
 
-		session_log(("session_update_member_by_rtcp: search by cname[%s]\n", cname));
+         mem->ssrc = ssrc;
+         mem->cname = xstr_nclone(cname, cname_len);
+         mem->cname_len = cname_len;
 
-		mem = xlist_find(ses->members, cname, session_match_cname, &lu);
+         session_debug(("session_update_member_by_rtcp: found mem[%s] by connect\n", mem->cname));
+      }
 	}
 
    if(!mem)
@@ -2043,6 +2064,7 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
             session_debug(("session_update_member_by_rtcp: SSRC[%d]'s member application refused\n", ssrc));
                
 			   return NULL;
+
          }
       }   
 
@@ -2086,6 +2108,7 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
 				connect_done(rtp_conn);
 			if(rtcp_conn) 
 				connect_done(rtcp_conn);
+
         
          session_debug(("session_update_member_by_rtcp: No cname yet to validate member[%u]\n", ssrc));
 
@@ -2209,6 +2232,7 @@ member_state_t * session_update_member_by_rtcp(xrtp_session_t * ses, xrtp_rtcp_c
             
 		/* callback when the member is valid */
 		session_debug(("session_update_member_by_rtcp: ses->$callbacks.member_update@%x(2)\n", (int)ses->$callbacks.member_update));
+
 		
 
 		if(ses->$callbacks.member_update)
@@ -2765,6 +2789,7 @@ profile_handler_t * session_add_handler(xrtp_session_t *ses, char *id)
     
    return hand;
 }
+
 
  /**
   * Get the packet process of the session
@@ -3515,6 +3540,7 @@ int session_report(xrtp_session_t *ses, xrtp_rtcp_compound_t * rtcp, uint32 time
          }
       }
         
+
       start_report_ssrc = ses->next_report_ssrc;
     
 
