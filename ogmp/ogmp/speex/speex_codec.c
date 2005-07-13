@@ -35,7 +35,7 @@
  #define spxc_debug(fmtargs)
 #endif
 
-media_frame_t* spxc_decode(speex_info_t *spxinfo, media_frame_t *ptimef, media_pipe_t *output)
+media_frame_t* spxc_decode(speex_decoder_t *dec, speex_info_t *spxinfo, media_frame_t *ptimef, media_pipe_t *output)
 {
 	int i;
 
@@ -57,8 +57,10 @@ media_frame_t* spxc_decode(speex_info_t *spxinfo, media_frame_t *ptimef, media_p
 	nchannel = spxinfo->audioinfo.channels;
 	frame_bytes = nchannel * frame_size * SPEEX_SAMPLE_BYTES;
    
+	spxc_debug(("spxc_decode: frame_size[%d], nsample[%d] nframe[%d]\n", frame_size, nsample, nframes));
+   
 	/*Copy Ogg packet to Speex bitstream*/
-	speex_bits_read_from(&spxinfo->decbits, (char*)ptimef->raw, ptimef->bytes);
+	speex_bits_read_from(&dec->decbits, (char*)ptimef->raw, ptimef->bytes);
 
 	auf = (media_frame_t*)output->new_frame(output, nframes * frame_bytes, NULL);
 	if (!auf)
@@ -75,11 +77,11 @@ media_frame_t* spxc_decode(speex_info_t *spxinfo, media_frame_t *ptimef, media_p
 
 		/*Decode frame*/
 		if (!lost)
-			ret = speex_decode_int(spxinfo->dst, &spxinfo->decbits, (int16*)pcm);
+			ret = speex_decode_int(dec->dst, &dec->decbits, (int16*)pcm);
 		else
-			ret = speex_decode_int(spxinfo->dst, NULL, (int16*)pcm);
+			ret = speex_decode_int(dec->dst, NULL, (int16*)pcm);
 		
-		speex_decoder_ctl(spxinfo->dst, SPEEX_GET_BITRATE, &(spxinfo->bitrate_now));
+		speex_decoder_ctl(dec->dst, SPEEX_GET_BITRATE, &(spxinfo->bitrate_now));
 
 		if (ret==-1)
 			break;
@@ -91,7 +93,7 @@ media_frame_t* spxc_decode(speex_info_t *spxinfo, media_frame_t *ptimef, media_p
 			break;
 		}
 
-		if (speex_bits_remaining(&spxinfo->decbits)<0)
+		if (speex_bits_remaining(&dec->decbits)<0)
 		{
 			spxc_log(("speex_decode: Decoding overflow: corrupted stream?\n"));
 			output->recycle_frame(output, auf);
@@ -100,7 +102,7 @@ media_frame_t* spxc_decode(speex_info_t *spxinfo, media_frame_t *ptimef, media_p
 
 		/* frame bytes will double after decode stereo, samples stored as left,right,left,right,... */
 		if (nchannel==2)
-			speex_decode_stereo_int((int16*)pcm, frame_size, &spxinfo->decstereo);
+			speex_decode_stereo_int((int16*)pcm, frame_size, &dec->decstereo);
 		
 		pcm += frame_bytes;
 	}
@@ -117,24 +119,25 @@ int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcm_
 	int frame_size = spxinfo->nsample_per_frame;
    
 	/*Flush all the bits in the struct so we can encode a new frame*/
-	speex_bits_reset(&spxinfo->encbits);
+	speex_bits_reset(&enc->encbits);
 
 	if (nchannel==2)
    {
 		spxc_debug(("\rspeex_encode: encode stereo\n"));
-		speex_encode_stereo_int((short*)pcm, frame_size, &spxinfo->encbits);
+		speex_encode_stereo_int((short*)pcm, frame_size, &enc->encbits);
 	}
    	
 	if (spxinfo->agc || spxinfo->denoise)
    {
 		spxc_debug(("\rspeex_encode: agc or denoise perprocess\n"));
-		speex_preprocess(spxinfo->encpreprocess, (short*)pcm, NULL);
+
+		speex_preprocess(enc->encpreprocess, (short*)pcm, NULL);
    }
    
 	/*Encode the frame*/
-	speex_encode_int(spxinfo->est, (short*)pcm, &spxinfo->encbits);
+	speex_encode_int(enc->est, (short*)pcm, &enc->encbits);
 
-	speex_bits_insert_terminator(&spxinfo->encbits);
+	speex_bits_insert_terminator(&enc->encbits);
 
-	return speex_bits_write(&spxinfo->encbits, spx, spx_maxbytes);
+	return speex_bits_write(&enc->encbits, spx, spx_maxbytes);
 }

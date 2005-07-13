@@ -30,6 +30,12 @@ struct speex_decoder_s
 
    speex_info_t *speex_info;
 
+	/* decoding parameters */
+	SpeexBits decbits;
+	SpeexStereoState decstereo;
+	const SpeexMode *spxmode;   
+	void *dst;		/* decode state */
+
    int receiving_media;
 
    int stream_opened;
@@ -59,6 +65,7 @@ struct speex_decoder_s
    xthr_lock_t *pending_lock;
 
    /* thread running condiftion */
+
    xthr_cond_t *packet_pending;
 
    /* repack to ptime, consider in seperate struct */
@@ -76,6 +83,13 @@ struct speex_encoder_s
    struct media_maker_s maker;
 
    speex_info_t *speex_info;
+
+	/* encoding parameters */
+	SpeexBits encbits;
+	SpeexStereoState encstereo;
+	SpeexPreprocessState *encpreprocess;
+	const SpeexMode *spxmode;
+	void *est;		/* encode state */
 
    xclock_t* clock;
 
@@ -114,5 +128,6 @@ struct speex_encoder_s
    xthr_cond_t *packet_pending;
 };
 
-media_frame_t* spxc_decode(speex_info_t* spxinfo, media_frame_t *spxf, media_pipe_t* output);
+media_frame_t* spxc_decode(speex_decoder_t* dec, speex_info_t* spxinfo, media_frame_t *spxf, media_pipe_t* output);
+
 int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcmnbyte, char* spx, int spxnbyte);

@@ -7,7 +7,7 @@
  ***************************************************************************/
 
 /***************************************************************************
- *                                                                         *
+ *                                                                        *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
@@ -171,22 +171,22 @@ int spxp_open_stream (media_player_t *mp, media_info_t *media_info)
 
 	/* Create mode */
    if(spxinfo->audioinfo.info.sample_rate <= 12500)
-		spxinfo->spxmode = speex_lib_get_mode(SPEEX_MODEID_NB);
+		dec->spxmode = speex_lib_get_mode(SPEEX_MODEID_NB);
 	else if(spxinfo->audioinfo.info.sample_rate <= 25000)
-		spxinfo->spxmode = speex_lib_get_mode(SPEEX_MODEID_WB);
+		dec->spxmode = speex_lib_get_mode(SPEEX_MODEID_WB);
 	else if(spxinfo->audioinfo.info.sample_rate <= 48000)
-		spxinfo->spxmode = speex_lib_get_mode(SPEEX_MODEID_UWB);
+		dec->spxmode = speex_lib_get_mode(SPEEX_MODEID_UWB);
 
-	spxinfo->dst = speex_decoder_init(spxinfo->spxmode);
-	if (!spxinfo->dst)
+	dec->dst = speex_decoder_init(dec->spxmode);
+	if (!dec->dst)
 	{
 		spxp_debug(("speex_open_header: Decoder initialization failed.\n"));
 		return MP_FAIL;
 	}
 			
-	speex_decoder_ctl(spxinfo->dst, SPEEX_SET_SAMPLING_RATE, &(spxinfo->audioinfo.info.sample_rate));
-	speex_decoder_ctl(spxinfo->dst, SPEEX_GET_FRAME_SIZE, &(spxinfo->nsample_per_frame));
-	speex_decoder_ctl(spxinfo->dst, SPEEX_SET_ENH, &spxinfo->penh);
+	speex_decoder_ctl(dec->dst, SPEEX_SET_SAMPLING_RATE, &(spxinfo->audioinfo.info.sample_rate));
+	speex_decoder_ctl(dec->dst, SPEEX_GET_FRAME_SIZE, &(spxinfo->nsample_per_frame));
+	speex_decoder_ctl(dec->dst, SPEEX_SET_ENH, &spxinfo->penh);
 
 	/* thread start */
 	dec->pending_queue = xlist_new();
@@ -194,7 +194,7 @@ int spxp_open_stream (media_player_t *mp, media_info_t *media_info)
 	dec->packet_pending = xthr_new_cond(XTHREAD_NONEFLAGS);
 
 	/* Initialization of the structure that holds the bits */
-	speex_bits_init(&spxinfo->decbits);
+	speex_bits_init(&dec->decbits);
    
 	dec->thread = xthr_new(spxp_loop, dec, XTHREAD_NONEFLAGS);
    
@@ -229,16 +229,16 @@ int spxp_close_stream (media_player_t * mp)
    xthr_wait(dec->thread, &loop_ret);
 
 	/*Destroy the decoder state */
-	speex_decoder_destroy(dec->speex_info->dst);
+	speex_decoder_destroy(dec->dst);
 
 	/*Destroy the bit-packing struct */
-	speex_bits_destroy(&dec->speex_info->decbits);
+	speex_bits_destroy(&dec->decbits);
 
    xlist_done(dec->pending_queue, NULL);
 
    xthr_done_lock(dec->pending_lock);
    xthr_done_cond(dec->packet_pending);
-
+   
    xfree(dec->chunk);
    
    return MP_OK;
@@ -482,7 +482,7 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
       repack.eots = last_packet;
    
       /* decode and submit */
-      auf = spxc_decode(dec->speex_info, &repack, output);
+      auf = spxc_decode(dec, dec->speex_info, &repack, output);
       if(!auf)
       {
          spxp_log(("spxp_receive_next: No audio samples decoded\n"));

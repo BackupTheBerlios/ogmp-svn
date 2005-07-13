@@ -40,10 +40,6 @@ struct speex_info_s
 	struct audio_info_s audioinfo;
    
 	/* decoding parameters */
-	SpeexBits decbits;   
-	SpeexStereoState decstereo;
-
-	const SpeexMode *spxmode;
 	int mode;
 
 	int version;
@@ -61,15 +57,7 @@ struct speex_info_s
 	int cng;		/* comfortable noise generation */
 	int penh;		/* perceptual enhancement */
 
-	void *dst;		/* decode state */
-
 	/* encoding parameters */
-	SpeexBits encbits;
-	SpeexStereoState encstereo;
-	SpeexPreprocessState *encpreprocess;
-   
-	void *est;		/* encode state */
-
 	float vbr_quality;	/* 1-10 */
 	int cbr_quality;	/* 1-10 */
 
@@ -180,6 +168,7 @@ struct speex_info_s
    the new value. 
 
    Care must be taken when setting the value of ptime so that the 
+
    RTP packet size does not exceed the path MTU. 
 */
 

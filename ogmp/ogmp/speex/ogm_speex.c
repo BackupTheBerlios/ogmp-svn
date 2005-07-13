@@ -61,10 +61,11 @@ int ogm_detect_speex(ogg_packet * packet)
 
 int speex_open_header(ogg_packet *op, speex_info_t *spxinfo)
 {
+	const SpeexMode *spxmode;
    SpeexHeader *header;
-
+   /*
    SpeexStereoState stereo = SPEEX_STEREO_STATE_INIT;
-
+   */
    audio_info_t *ainfo = (audio_info_t*)spxinfo;
 
    header = speex_packet_to_header((char*)op->packet, op->bytes);
@@ -90,20 +91,20 @@ int speex_open_header(ogg_packet *op, speex_info_t *spxinfo)
    spxinfo->bitstream_version = header->mode_bitstream_version;
    spxinfo->mode = header->mode;
 
-   /* only in svn recently*/ 
-   spxinfo->spxmode = speex_lib_get_mode(header->mode);
+   /* only in svn recently */
+   spxmode = speex_lib_get_mode(header->mode);
 
    /* in released version, not work on speex v1.1.6
 	spxinfo->spxmode = speex_mode_list[header->mode];
    */
 	
-   if (spxinfo->spxmode->bitstream_version < header->mode_bitstream_version)
+   if (spxmode->bitstream_version < header->mode_bitstream_version)
    {
       ogm_speex_log(("speex_open_header: Cannot decode newer version speex source\n"));
       return MP_FAIL;
    }
 
-   if (spxinfo->spxmode->bitstream_version > header->mode_bitstream_version) 
+   if (spxmode->bitstream_version > header->mode_bitstream_version) 
    {
       ogm_speex_log(("speex_open_header: Cannot decode older version speex source\n"));
       return MP_FAIL;
@@ -122,10 +123,10 @@ int speex_open_header(ogg_packet *op, speex_info_t *spxinfo)
 
    ainfo->channels = header->nb_channels;
    ainfo->info.coding_parameter = ainfo->channels;
-
+   /*
    if(header->nb_channels == 2)
 	   memcpy(&spxinfo->decstereo, &stereo, sizeof(stereo));
-
+   */
    spxinfo->nheader = 2 + header->extra_headers;
 
    free(header);
@@ -233,9 +234,9 @@ media_stream_t* ogm_open_speex(ogm_media_t * handler, ogm_format_t *ogm, media_c
 			ogm_strm->sno = mf->nastreams;
 			ogm_strm->stype = 'a';
 			ogm_strm->instate = sstate;
-
+         /*
 	      speex_bits_init(&spxinfo->decbits);
-
+         */
          ogm_speex_log(("ogm_open_speex: version[%d]\n", spxinfo->version));
          ogm_speex_log(("ogm_open_speex: bitstream version[%d]\n", spxinfo->bitstream_version));
 
@@ -301,6 +302,7 @@ int ogm_process_speex(ogm_format_t * ogm, ogm_stream_t *ogm_strm, ogg_page *page
 	frame.sno = pack->packetno;
    
 	/* send speex packet */
+
 	if (last_packet && stream_end)
 	{   
 		/* ogg_page_eos(page) */

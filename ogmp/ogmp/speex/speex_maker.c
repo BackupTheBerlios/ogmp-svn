@@ -239,10 +239,10 @@ int spxmk_done(media_maker_t *maker)
 	speex_encoder_t *enc = (speex_encoder_t *)maker;
 
 	/*Destroy the encoder state */
-	speex_encoder_destroy(enc->speex_info->est);
+	speex_encoder_destroy(enc->est);
 
 	/*Destroy the bit-packing struct */
-	speex_bits_destroy(&enc->speex_info->encbits);
+	speex_bits_destroy(&enc->encbits);
 
 	xfree(enc->encoding_frame);
 	xfree(enc->spxcode);
@@ -307,11 +307,11 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
 	if(spxinfo->audioinfo.info.sample_rate < 6000)
 		return MP_FAIL;
 	else if(spxinfo->audioinfo.info.sample_rate <= 12500)
-		spxinfo->spxmode = speex_lib_get_mode(SPEEX_MODEID_NB);
+		enc->spxmode = speex_lib_get_mode(SPEEX_MODEID_NB);
 	else if(spxinfo->audioinfo.info.sample_rate <= 25000)
-		spxinfo->spxmode = speex_lib_get_mode(SPEEX_MODEID_WB);
+		enc->spxmode = speex_lib_get_mode(SPEEX_MODEID_WB);
 	else if(spxinfo->audioinfo.info.sample_rate <= 48000)
-		spxinfo->spxmode = speex_lib_get_mode(SPEEX_MODEID_UWB);
+		enc->spxmode = speex_lib_get_mode(SPEEX_MODEID_UWB);
 	else
 		return MP_FAIL;
 
@@ -332,9 +332,9 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
    
    enc->clock = control->clock(control);
 
-   spxinfo->est = speex_encoder_init(spxinfo->spxmode);
+   enc->est = speex_encoder_init(enc->spxmode);
    
-   speex_encoder_ctl(spxinfo->est, SPEEX_SET_SAMPLING_RATE, &spxinfo->audioinfo.info.sample_rate);
+   speex_encoder_ctl(enc->est, SPEEX_SET_SAMPLING_RATE, &spxinfo->audioinfo.info.sample_rate);
  
 	/* Set the quality to 8 (15 kbps) 
 	 * spxinfo->quality=8;
@@ -356,11 +356,11 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
 	*/
    {
       int cbr_quality = 8;
-	   speex_encoder_ctl(spxinfo->est, SPEEX_SET_QUALITY, &cbr_quality);
+	   speex_encoder_ctl(enc->est, SPEEX_SET_QUALITY, &cbr_quality);
    }            
    
 	/* Initialization of the structure that holds the bits */
-	speex_bits_init(&spxinfo->encbits);
+	speex_bits_init(&enc->encbits);
 
    rate = enc->speex_info->audioinfo.info.sample_rate;
 	enc->frame_nsample = enc->speex_info->nsample_per_frame;
@@ -374,9 +374,9 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
    
 	if (enc->speex_info->denoise || enc->speex_info->agc)
 	{
-		spxinfo->encpreprocess = speex_preprocess_state_init(enc->frame_nsample, rate);
-		speex_preprocess_ctl(spxinfo->encpreprocess, SPEEX_PREPROCESS_SET_DENOISE, &enc->speex_info->denoise);
-		speex_preprocess_ctl(spxinfo->encpreprocess, SPEEX_PREPROCESS_SET_AGC, &enc->speex_info->agc);
+		enc->encpreprocess = speex_preprocess_state_init(enc->frame_nsample, rate);
+		speex_preprocess_ctl(enc->encpreprocess, SPEEX_PREPROCESS_SET_DENOISE, &enc->speex_info->denoise);
+		speex_preprocess_ctl(enc->encpreprocess, SPEEX_PREPROCESS_SET_AGC, &enc->speex_info->agc);
       enc->lookahead += enc->frame_nsample;
 	}
 
