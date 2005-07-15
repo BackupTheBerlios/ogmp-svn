@@ -513,6 +513,7 @@ int rtp_packet_done_payload(xrtp_rtp_packet_t *rtp, xrtp_rtp_payload_t *pay)
         {
             *r_payload = NULL;
             return 0;
+
         }
 
         memcpy(*r_payload, rtp->$payload.data, len);
@@ -1290,6 +1291,7 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
        packet_log(("rtcp_add_priv_sdes: New Item=%dB:chunk(%d)\n", RTCP_SDES_ID_BYTE + RTCP_SDES_LEN_BYTE + item->len, chunk->SRC));
     }
 
+
     if(!new_sdes && new_chunk)
 
        sdes->chunks[sdes->$head.count++] = chunk;
@@ -1475,6 +1477,7 @@ int rtp_packet_arrival_time(xrtp_rtp_packet_t * rtp, rtime_t *ms, rtime_t *us, r
             return 0;  /* zero length means no found */
 
        }else{
+
 
           xrtp_rtcp_sdes_item_t * _item;
 
@@ -1696,6 +1699,7 @@ xrtp_rtcp_app_t* rtcp_new_app(xrtp_rtcp_compound_t * com, uint32 SSRC, uint8 sub
 
     com->heads[com->n_packet++] = (xrtp_rtcp_head_t *)app;
 
+
     return app;
 }
  
@@ -1910,7 +1914,6 @@ int rtcp_app(xrtp_rtcp_compound_t *rtcp, uint32 ssrc, uint8 subtype, char name[4
                      uint8 frac_lost, uint32 total_lost, uint32 full_seqn,
                      uint32 jitter, uint32 stamp_lsr, uint32 delay_lsr)
  {
-
     int ret;
     xrtp_rtcp_sr_t * sr;
     xrtp_rtcp_rr_t * rr;
@@ -2014,8 +2017,7 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
 
     if(com->first_head->type != RTCP_TYPE_SR)
     {
-        packet_debug(("rtcp_sender_info: Receiver Report\n"));
-
+        packet_log(("rtcp_sender_info: Receiver Report\n"));
 
         return XRTP_EFORMAT;
     }
@@ -2035,8 +2037,8 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
  int rtcp_report(xrtp_rtcp_compound_t * com, uint32 ssrc,
                      uint8 * ret_flost, uint32 * ret_tlost,
                      uint32 * ret_seqn, uint32 * ret_jit,
-                     uint32 * ret_ts, uint32 * ret_delay){
-                     
+                     uint32 * ret_ts, uint32 * ret_delay)
+ {
     int i = 0;
     xrtp_rtcp_sr_t * sr;
     xrtp_rtcp_rr_t * rr;
@@ -2056,8 +2058,6 @@ int rtcp_sender_info(xrtp_rtcp_compound_t * com, uint32 * r_SRC,
              if(repo->SRC == ssrc)
                 break;
           }
-
-
 
           break;
 
@@ -3162,6 +3162,7 @@ xrtp_buffer_t * rtcp_pack(xrtp_rtcp_compound_t * com)
        if(buffer_next_uint8(buf, &wlen) != sizeof(uint32)){ ret=XRTP_EFORMAT; }
        
        why = (char *)xmalloc(sizeof(char)*wlen);
+
        if(!why) return XRTP_EMEM;
 
        ret = buffer_next_data(buf, why, wlen);

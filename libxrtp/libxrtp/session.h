@@ -470,6 +470,8 @@ struct xrtp_session_s
    int thread_run;
 
 	xrtp_set_t* set;
+   
+   void* rtp_capable;  /* rtp capable */
 };
 
 /* Interface of the Session class */
@@ -675,6 +677,7 @@ member_state_t *
 session_new_member(xrtp_session_t * session, uint32 src, void * extra_info);
 
 int session_active_members(xrtp_session_t * session, uint32 srcs[], uint n_src);
+
 
 extern DECLSPEC
 member_state_t * 
@@ -932,6 +935,7 @@ int session_rtcp_to_receive(xrtp_session_t *session);
 /**
  * Need a scheduler to schedule the packet piping according timer
  */
+
 extern DECLSPEC
 int 
 session_set_scheduler(xrtp_session_t *session, session_sched_t *sched);

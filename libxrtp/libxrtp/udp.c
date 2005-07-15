@@ -183,7 +183,7 @@ int connect_send(session_connect_t * conn, char *data, int datalen)
 	  if(n<0)
 		   udp_debug(("connect_send: sending fail\n"));
 
-     udp_debug(("\rconnect_send: port[%d] send %d bytes to [%s:%d]\n\n", conn->port->portno, datalen, inet_ntoa(conn->remote_addr.sin_addr), ntohs(conn->remote_addr.sin_port)));
+     udp_log(("\rconnect_send: port[%d] send %d bytes to [%s:%d]\n\n", conn->port->portno, datalen, inet_ntoa(conn->remote_addr.sin_addr), ntohs(conn->remote_addr.sin_port)));
 
      return n;
 }
@@ -216,6 +216,7 @@ session_connect_t * connect_rtp_to_rtcp(session_connect_t * rtp_conn)
 
       udp_log(("connect_rtp_to_rtcp: rtp connect is ip[%s:%u] at socket[%d]\n", inet_ntoa(rtp_conn->remote_addr.sin_addr), ntohs(rtp_conn->remote_addr.sin_port), rtp_conn->port->socket));
       udp_log(("connect_rtp_to_rtcp: rtcp connect is ip[%s:%u] at socket[%d]\n", inet_ntoa(rtcp_conn->remote_addr.sin_addr), ntohs(rtcp_conn->remote_addr.sin_port), rtcp_conn->port->socket));
+
 
 
       return rtcp_conn;
@@ -455,7 +456,7 @@ session_connect_t* port_incoming(xrtp_port_t * port)
 
      time_rightnow(session_clock(port->session), &(conn->msec_arrival), &(conn->usec_arrival), &(conn->nsec_arrival));
      
-     udp_debug(("\rport_incoming: received %d bytes from [%s:%d] on @%dms/%dus/%dns\n", datalen, inet_ntoa(conn->remote_addr.sin_addr), ntohs(conn->remote_addr.sin_port), conn->msec_arrival, conn->usec_arrival, conn->nsec_arrival));
+     udp_log(("\rport_incoming: received %d bytes from [%s:%d] on @%dms/%dus/%dns\n", datalen, inet_ntoa(conn->remote_addr.sin_addr), ntohs(conn->remote_addr.sin_port), conn->msec_arrival, conn->usec_arrival, conn->nsec_arrival));
 
      if(port->type == RTP_PORT)
 	  {
