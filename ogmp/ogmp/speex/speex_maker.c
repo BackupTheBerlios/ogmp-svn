@@ -20,8 +20,9 @@
 #include <timedia/xmalloc.h>
 #include <string.h>
 #include <stdlib.h>
-
+/*
 #define SPXMK_LOG
+*/
 #define SPXMK_DEBUG
 
 #ifdef SPXMK_LOG

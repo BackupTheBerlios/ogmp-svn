@@ -46,6 +46,7 @@ int rtp_done_setting(control_setting_t *gen){
 
 
 
+
 control_setting_t* rtp_new_setting(media_device_t *dev)
 {
    rtp_setting_t * set = xmalloc(sizeof(struct rtp_setting_s));
@@ -233,7 +234,7 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
    }
 
    ses->self->mediainfo = rtp_media->info(rtp_media, rtpcap);
-   ses->rtp_cacable = rtpcap;
+   ses->rtp_capable = rtpcap;
 
    return ses;
 }

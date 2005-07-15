@@ -20,8 +20,8 @@
 #include <timedia/ui.h>
 #include <string.h>
 /*
-*/
 #define SPEEX_CODEC_LOG
+*/
 #define SPEEX_CODEC_DEBUG
 
 #ifdef SPEEX_CODEC_LOG
@@ -115,7 +115,7 @@ media_frame_t* spxc_decode(speex_decoder_t *dec, speex_info_t *spxinfo, media_fr
 	auf->nraw = nsample;
 	auf->usec = 1000000 / ((media_info_t*)spxinfo)->sample_rate * nsample ;  /* microsecond unit */
 
-   spxc_debug(("\rspxc_decode: info[@%x], frame bytes[%d] size[%d] nsample[%d] nframe[%d] channels[%d] bitrate[%d]\n", (int)spxinfo, ptimef->bytes, frame_size, nsample, nframes, nchannel, spxinfo->bitrate_now));
+   spxc_log(("\rspxc_decode: info[@%x], frame bytes[%d] size[%d] nsample[%d] nframe[%d] channels[%d] bitrate[%d]\n", (int)spxinfo, ptimef->bytes, frame_size, nsample, nframes, nchannel, spxinfo->bitrate_now));
 
 	return auf;
 }
@@ -148,7 +148,7 @@ int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcm_
 
 	spx_nbyte = speex_bits_write(&enc->encbits, spx, spx_maxbytes);
    
-	spxc_debug(("\rspxc_encode: info[@%x], frame[%d]..speex[%d]\n", (int)spxinfo, pcm_nbyte, spx_nbyte));
+	spxc_log(("\rspxc_encode: info[@%x], frame[%d]..speex[%d]\n", (int)spxinfo, pcm_nbyte, spx_nbyte));
 
    return spx_nbyte;
 }
