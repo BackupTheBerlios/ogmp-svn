@@ -286,6 +286,8 @@ int sipua_make_call(sipua_t *sipua, sipua_call_t* call, char* id,
 
 
 
+
+
 		{
 			call->bandwidth_need += media_bw;
 		}
@@ -389,6 +391,7 @@ sipua_call_t* sipua_make_call(sipua_t *sipua, user_profile_t* user_prof, char* i
 									xstr_clone(nettype), /* IN */
 
 
+
 									xstr_clone(addrtype), /* IP4 */
 									xstr_clone(netaddr),
 									NULL, /* multicast_ttl */
@@ -447,6 +450,7 @@ sipua_call_t* sipua_make_call(sipua_t *sipua, user_profile_t* user_prof, char* i
 				break;
 			}
 		}
+
 
 		media_bw = session_new_sdp(cata, nettype, addrtype, netaddr, &rtp_portno, &rtcp_portno, pt, codings[i].mime, codings[i].clockrate, codings[i].param, bw_budget, control, &sdp_info);
 
@@ -764,7 +768,7 @@ int sipua_link_medium(sipua_t* sipua, sipua_call_t* call, media_control_t* contr
 
       mediatype[i] = '\0';
 
-      if(sipua_open_stream_output (control, call, (media_stream_t*)rtpstrm, mediatype, "netcast") < MP_OK)
+      if(sipua_open_stream_output (control, call, (media_stream_t*)rtpstrm, mediatype, "playback") < MP_OK)
       {
          rtpstrm = (rtp_stream_t*)rtpstrm->stream.next;
          continue;
@@ -899,6 +903,7 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_call_t* call, int bw_budget, media_co
 	sdp_message_init(&sdp_info.sdp_message);
 
 	sdp_message_v_version_set(sdp_info.sdp_message, xstr_clone(SDP_VERSION));
+
 
 	/* those fields MUST be set */
 	sdp_message_o_origin_set (sdp_info.sdp_message,
@@ -1138,6 +1143,7 @@ int sipua_unregist(sipua_t *sipua, user_profile_t *user)
 		return UA_FAIL;
 
 	strcpy(p, "sip:");
+
 	p += 4;
 	strcpy(p, user->cname);
 

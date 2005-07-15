@@ -36,8 +36,9 @@
 #define MP_EOF        -6
 #define MP_EUNSUP     -7  /* Not support */
 #define MP_EIMPL      -8  /* Not implemented */
-#define MP_NOP		  -9  /* NULL OPERATE */
+#define MP_NOP		    -9  /* NULL OPERATE */
 #define MP_INVALID   -11
+#define MP_EAGAIN    -12  /* temporary fail, try again. */
 
 #define MP_AUDIO 'a'
 #define MP_VIDEO 'v'

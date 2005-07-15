@@ -187,6 +187,7 @@ int client_place_call(sipua_t *sipua, sipua_call_t *call)
 				client->nring++;
 				client->thread_ringing = xthr_new(client_call_ringing, client, XTHREAD_NONEFLAGS);
 	      }
+
 	      else
 	      {
 				xthr_lock(client->nring_lock);
@@ -415,6 +416,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
          if(sdp_message)
             rtpcapset = rtp_capable_from_sdp(sdp_message);
          
+
          /* Retrieve call info */
          call = sipua_new_call(sipua, client->sipua.user_profile, call_e->remote_uri,
                         call_e->subject, call_e->sbytes, rtpcapset->info, rtpcapset->ibytes);
@@ -587,6 +589,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				break;
 			}
 
+
          /**
           * Find sessions in the format which match cname and mimetype in source
           * Move_member_from_session_of(call->rtp_format) to_session_of(source->players);
@@ -684,6 +687,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 int sipua_done_sip_session(void* gen)
 {
+
 	sipua_call_t *call = (sipua_call_t*)gen;
 
    if(!call)
@@ -1200,6 +1204,7 @@ int client_detach_source(sipua_t* sipua, sipua_call_t* call, transmit_source_t* 
 /* switch current call session */
 sipua_call_t* client_pick(sipua_t* sipua, int line)
 {
+
    sipua_call_t *current;
    ogmp_client_t *client = (ogmp_client_t*)sipua;
 
@@ -1326,6 +1331,7 @@ int client_queue(sipua_t *sipua, sipua_call_t* call)
 int client_set_register_callback (sipua_t *sipua, int(*callback)(void*callback_user,int result,char*reason,int isreg), void* callback_user)
 {
     ogmp_client_t *client = (ogmp_client_t*)sipua;
+
 
     client->on_register = callback;
     client->user_on_register = callback_user;
@@ -1505,6 +1511,7 @@ sipua_t* client_new(char *uitype, sipua_uas_t* uas, char* proxy_realm, module_ca
 	sipua->unregist = client_unregist;
 
 	sipua->register_profile = client_register_profile;
+
 	sipua->unregister_profile = client_unregister_profile;
 
 	sipua->make_call = client_make_call;

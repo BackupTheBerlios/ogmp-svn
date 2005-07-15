@@ -65,8 +65,9 @@ struct speex_decoder_s
    xthr_lock_t *pending_lock;
 
    /* thread running condiftion */
-
    xthr_cond_t *packet_pending;
+   media_frame_t *delayed_frame;
+   xclock_t *clock;
 
    /* repack to ptime, consider in seperate struct */
    int sno;

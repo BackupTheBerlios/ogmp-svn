@@ -85,7 +85,9 @@ int spxp_match_play_type (media_player_t * mp, char *play)
 
 int spxp_loop(void *gen)
 {
-	speex_decoder_t *dec = (speex_decoder_t*)gen;
+   rtime_t usec_delay, usec_remain;
+   
+   speex_decoder_t *dec = (speex_decoder_t*)gen;
 	media_player_t *mp = (media_player_t*)dec;
 
 	media_frame_t * auf = NULL;
@@ -96,33 +98,44 @@ int spxp_loop(void *gen)
 	dec->stop = 0;
 	while(1)
 	{
-		xthr_lock(dec->pending_lock);
+      if(dec->delayed_frame == NULL)
+      {         
+         xthr_lock(dec->pending_lock);
 
-		if (dec->stop)
-		{
-			xthr_unlock(dec->pending_lock);
-			break;
-		}
+		   if (dec->stop)
+		   {
+			   xthr_unlock(dec->pending_lock);
+			   break;
+		   }
 
-		if (xlist_size(dec->pending_queue) == 0)
-		{
-			//spxp_debug(("spxp_loop: no packet waiting, sleep!\n"));
-			xthr_cond_wait(dec->packet_pending, dec->pending_lock);
-			//spxp_debug(("spxp_loop: wakeup! %d packets pending\n", xlist_size(vs->pending_queue)));
-		}
+		   if (xlist_size(dec->pending_queue) == 0)
+		   {
+			   //spxp_debug(("spxp_loop: no packet waiting, sleep!\n"));
+			   xthr_cond_wait(dec->packet_pending, dec->pending_lock);
+			   //spxp_debug(("spxp_loop: wakeup! %d packets pending\n", xlist_size(vs->pending_queue)));
+		   }
 
-		/* sometime it's still empty, weired? */
-		if (xlist_size(dec->pending_queue) == 0)
-		{
-			xthr_unlock(dec->pending_lock);
-			continue;
-		}
+		   /* sometime it's still empty, weired? */
+		   if (xlist_size(dec->pending_queue) == 0)
+		   {
+			   xthr_unlock(dec->pending_lock);
+			   continue;
+		   }
 
-		auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
+		   auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
 
-		xthr_unlock(dec->pending_lock);
-
-		output->put_frame(output, auf, auf->eots);
+		   xthr_unlock(dec->pending_lock);
+      }
+      
+      usec_delay = output->put_frame(output, auf, auf->eots);
+      
+      if(usec_delay == 0)
+         dec->delayed_frame = NULL;
+      else
+      {
+         dec->delayed_frame = auf;
+         time_usec_sleep(dec->clock, usec_delay, &usec_remain);
+      }
 	}
 
 	auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
@@ -319,8 +332,8 @@ int spxp_set_device(media_player_t* mp, media_control_t* cont, module_catalog_t*
 	/* extra is Not used for audio_out device */
    control_setting_t *setting = NULL;
    module_catalog_t* modules = NULL;
-
    media_device_t *dev = NULL;
+   speex_decoder_t *dec = (speex_decoder_t *)mp;
   
    spxp_log(("spxp_set_device: need audio device\n"));
 
@@ -339,6 +352,9 @@ int spxp_set_device(media_player_t* mp, media_control_t* cont, module_catalog_t*
       dev->setting(dev, setting, modules);     
    }
    
+   dec->clock = cont->clock(cont);
+   dec->delayed_frame = NULL;
+   
    mp->device = dev;
 
    return MP_OK;
@@ -348,8 +364,10 @@ int spxp_link_stream(media_player_t *mp, media_stream_t* strm, media_control_t *
 {
 	/* extra is Not used for audio_out device */
    media_device_t *dev = NULL;
+   speex_decoder_t *dec = (speex_decoder_t *)mp;
 
    spxp_debug(("spxp_link_stream: need audio device\n"));
+   dec->clock = cont->clock(cont);
 
    dev = cont->find_device(cont, "audio", "output");
 
@@ -466,6 +484,7 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
       dec->chunk_ptime += frame_ms;
       dec->chunk_nsample += spxf->nraw;
       
+      spxp_debug(("\rspxp_receive_next: chunk ptime[%d]\n\r", dec->chunk_ptime));
       if(dec->chunk_ptime < dec->speex_info->ptime)
          return MP_OK;
    }
@@ -480,6 +499,8 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
       repack.raw = dec->chunk;
       repack.eos = (last_packet == MP_EOS);
       repack.eots = last_packet;
+
+      spxp_debug(("\rspxp_receive_next: decode info[@%x] dec->dst[@%x]\n\r", (int)dec->speex_info, (int)dec->dst));
    
       /* decode and submit */
       auf = spxc_decode(dec, dec->speex_info, &repack, output);
@@ -488,8 +509,6 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
          spxp_log(("spxp_receive_next: No audio samples decoded\n"));
          return MP_FAIL;
       }
-      
-      spxp_debug(("\rspxp_receive_next: decode info[@%x] chunk ptime[%d] nraw[%d] rate[%d]\n", (int)dec->speex_info, dec->chunk_ptime, spxf->nraw, dec->speex_info->audioinfo.info.sample_rate));
    }
 
    if (!dec->receiving_media)
@@ -505,7 +524,7 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
    }
    
    auf->ts = dec->ts_usec_now;
-   spxp_debug(("\rspxp_receive_next: frame[%lld#:%lld:%llds] speex[%d]...raw[%d]\n", repack.sno, repack.samplestamp, samplestamp, repack.bytes, auf->bytes));
+   spxp_log(("\rspxp_receive_next: frame[%lld#:%lld:%llds] speex[%d]...raw[%d]\n", repack.sno, repack.samplestamp, samplestamp, repack.bytes, auf->bytes));
 
    if(last_packet)
 	   auf->eots = 1;
@@ -533,73 +552,8 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
 }
 #endif
 
-#if 0
-/* No ptime repack */
-int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 samplestamp, int last_packet)
-{
-   media_pipe_t * output = NULL;
-   media_frame_t * auf = NULL;
-   media_player_t *mp = (media_player_t*)recvr;
-
-   speex_decoder_t *dec = (speex_decoder_t *)mp;
-   int sample_rate;
-
-   sample_rate = dec->speex_info->audioinfo.info.sample_rate;
-
-   if (!mp->device)
-   {
-      spxp_debug(("spxp_receive_next: No device to play vorbis audio\n"));
-      return MP_FAIL;
-   }
-
-   output = mp->device->pipe(mp->device);
-
-   /* decode and submit */
-   auf = spxc_decode(dec->speex_info, spxf, output);
-   if(!auf)
-   {
-      spxp_log(("spxp_receive_next: No audio samples decoded\n"));
-      return MP_FAIL;
-   }
-
-   if (!dec->receiving_media)
-   {
-      dec->ts_usec_now = 0;
-      dec->last_samplestamp = samplestamp;
-   }
-
-   if (dec->last_samplestamp != samplestamp)
-   {
-      dec->ts_usec_now += (int)((samplestamp - dec->last_samplestamp) / (double)sample_rate * 1000000);
-      dec->last_samplestamp = samplestamp;
-   }
-
-   auf->ts = dec->ts_usec_now;
-   spxp_debug(("\rspxp_receive_next: frame[%lld#:%lld:%llds] speex[%d]...raw[%d]\n", spxf->sno, spxf->samplestamp, samplestamp, spxf->bytes, auf->bytes));
-
-   if(last_packet)
-	   auf->eots = 1;
-   else
-	   auf->eots = 0;
-
-   xthr_lock(dec->pending_lock);
-
-	xlist_addto_last(dec->pending_queue, auf);
-
-	xthr_unlock(dec->pending_lock);
-
-   xthr_cond_signal(dec->packet_pending);
-
-   dec->receiving_media = 1;
-
-   return MP_OK;
-}
-
-#endif
-
 module_interface_t * media_new_player()
 {
-
    media_player_t *mp = NULL;
 
    speex_decoder_t *dec = xmalloc(sizeof(struct speex_decoder_s));

@@ -57,7 +57,7 @@ media_frame_t* spxc_decode(speex_decoder_t *dec, speex_info_t *spxinfo, media_fr
 	nchannel = spxinfo->audioinfo.channels;
 	frame_bytes = nchannel * frame_size * SPEEX_SAMPLE_BYTES;
    
-	spxc_debug(("spxc_decode: frame_size[%d], nsample[%d] nframe[%d]\n", frame_size, nsample, nframes));
+	spxc_log(("\rspxc_decode: frame_size[%d], nsample[%d] nframe[%d]\n", frame_size, nsample, nframes));
    
 	/*Copy Ogg packet to Speex bitstream*/
 	speex_bits_read_from(&dec->decbits, (char*)ptimef->raw, ptimef->bytes);
@@ -130,7 +130,6 @@ int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcm_
 	if (spxinfo->agc || spxinfo->denoise)
    {
 		spxc_debug(("\rspeex_encode: agc or denoise perprocess\n"));
-
 		speex_preprocess(enc->encpreprocess, (short*)pcm, NULL);
    }
    

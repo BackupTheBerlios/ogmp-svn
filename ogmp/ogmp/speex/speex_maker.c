@@ -202,7 +202,7 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 
    while(todo_nbyte >= enc->frame_nbyte)
    {
-		spxmk_debug(("\rspxmk_receive_media: encode info[@%x]\n", (int)enc->speex_info));
+		spxmk_debug(("\rspxmk_receive_media: encode info[@%x], enc->est[@%x]\n\r", (int)enc->speex_info, (int)enc->est));
 	   spx_nbyte = spxc_encode(enc, enc->speex_info, cut, enc->frame_nbyte, enc->spxcode, enc->frame_nbyte);
 
       /* make speex media frame */
@@ -280,6 +280,7 @@ int speex_start_stream (media_stream_t* stream)
    
    return MP_OK;
 }
+
 
 int speex_stop_stream (media_stream_t* stream)
 {

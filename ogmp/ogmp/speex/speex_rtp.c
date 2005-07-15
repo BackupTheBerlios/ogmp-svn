@@ -572,7 +572,7 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 				media_player_t *player, *explayer = NULL;
 				media_control_t *ctrl;
 
-				speex_info_t *spxinfo = (speex_info_t*)session_member_mediainfo(sender, &rtpts_mi, &signum);
+				speex_info_t *spxinfo = (speex_info_t*)myself->mediainfo;
 	   
 				if(!spxinfo)
 				{
@@ -764,6 +764,7 @@ int rtp_speex_set_parameter(xrtp_media_t* media, char* key, void* val)
 		spxrtp_log(("rtp_speex_set_parameter: penh[%d]\n", profile->penh));
 	
 		return XRTP_OK;
+
 	}
 	
 	return XRTP_INVALID;
@@ -1068,6 +1069,7 @@ int rtp_speex_done_frame(void *gen)
 }
 
 /**
+
  * Make rtp packet payload
  */
 int rtp_speex_send_loop(void *gen)
@@ -1334,6 +1336,7 @@ int rtp_speex_send_loop(void *gen)
 		rtpf->frame.owner->recycle_frame(rtpf->frame.owner, (media_frame_t*)rtpf);
 
 		if(first_payload)
+
       {
 			first_payload = 0;
          usec_stream_payload = usec_now;
@@ -1696,6 +1699,7 @@ int spxrtp_done_handler(profile_handler_t * h)
 
 	return XRTP_OK;
 }
+
 
 
 /**
