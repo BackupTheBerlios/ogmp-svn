@@ -61,8 +61,8 @@ buffer_t * buffer_new(uint size, enum byte_order_e order)
       buf->mounted = 1;
    }
    
-   printf("\rbuffer_new: Buf[@%d], %d bytes len_data[%d]\n", (int)buf, buf->len, buf->len_data);
-   
+   buffer_log(("\rbuffer_new: Buf[@%d], %d bytes len_data[%d]\n", (int)buf, buf->len, buf->len_data));
+
    return buf;
 }
 
