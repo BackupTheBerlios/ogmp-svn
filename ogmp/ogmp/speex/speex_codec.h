@@ -33,7 +33,7 @@ struct speex_decoder_s
 	/* decoding parameters */
 	SpeexBits decbits;
 	SpeexStereoState decstereo;
-	const SpeexMode *spxmode;   
+	const SpeexMode *spxmode;
 	void *dst;		/* decode state */
 
    int receiving_media;
@@ -65,6 +65,7 @@ struct speex_decoder_s
    xthr_lock_t *pending_lock;
 
    /* thread running condiftion */
+
    xthr_cond_t *packet_pending;
    media_frame_t *delayed_frame;
    xclock_t *clock;

@@ -45,6 +45,7 @@ int rtp_done_setting(control_setting_t *gen){
 }
 
 
+
 control_setting_t* rtp_new_setting(media_device_t *dev)
 {
    rtp_setting_t * set = xmalloc(sizeof(struct rtp_setting_s));
@@ -65,6 +66,7 @@ control_setting_t* rtp_new_setting(media_device_t *dev)
  * this pipe ONLY make and destroy frame, not for delivery
  */
 media_frame_t* rtp_new_frame (media_pipe_t *pipe, int bytes, char *init_data)
+
 {
    /* better recycle to garrantee */
    rtp_frame_t * rtpf;
@@ -211,6 +213,7 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
    {
 		ses = session_new(rtp->session_set, cname, cnlen, netaddr, rtp_portno, rtcp_portno, cata, ctrl, SESSION_DUPLEX);
 		if(!ses)
+
 		{
 			return NULL;
 		}
@@ -230,6 +233,7 @@ xrtp_session_t* rtp_session(dev_rtp_t *rtp,
    }
 
    ses->self->mediainfo = rtp_media->info(rtp_media, rtpcap);
+   ses->rtp_cacable = rtpcap;
 
    return ses;
 }

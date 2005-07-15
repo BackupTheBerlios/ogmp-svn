@@ -100,8 +100,11 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
       done_nbyte = delta_nbyte;
       todo_nbyte -= delta_nbyte;
 
-	   /* make speex media frame */
+      samplestamp -= cache_nsample;
 
+	   /* make speex media frame */
+      spxf.sno = enc->sno++;
+      spxf.samplestamp = samplestamp;
 	   spxf.raw = enc->encoding_frame;
 	   spxf.bytes = enc->frame_nbyte;
 	   spxf.nraw = enc->frame_nsample;
@@ -166,7 +169,7 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
    int spx_nbyte;
 
    char *cut = auf->raw;
-
+   
    /* finish last remain */
    if(enc->cache_nbyte > 0)
    {
@@ -202,7 +205,6 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 
    while(todo_nbyte >= enc->frame_nbyte)
    {
-		spxmk_debug(("\rspxmk_receive_media: encode info[@%x], enc->est[@%x]\n\r", (int)enc->speex_info, (int)enc->est));
 	   spx_nbyte = spxc_encode(enc, enc->speex_info, cut, enc->frame_nbyte, enc->spxcode, enc->frame_nbyte);
 
       /* make speex media frame */
@@ -224,6 +226,7 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
    }
 
    /* samples left for next */
+
    if(todo_nbyte > 0)
       memcpy(enc->encoding_frame, &auf->raw[done_nbyte], todo_nbyte);
 
@@ -255,7 +258,6 @@ int spxmk_done(media_maker_t *maker)
 int spxmk_start(media_maker_t *maker)
 {
 	speex_encoder_t *enc = (speex_encoder_t *)maker;
-
 
    enc->input_device->start(enc->input_device, DEVICE_INPUT);
 
@@ -336,8 +338,8 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
    enc->est = speex_encoder_init(enc->spxmode);
    
    speex_encoder_ctl(enc->est, SPEEX_SET_SAMPLING_RATE, &spxinfo->audioinfo.info.sample_rate);
- 
-	/* Set the quality to 8 (15 kbps) 
+
+   /* Set the quality to 8 (15 kbps) 
 	 * spxinfo->quality=8;
 	if(spxinfo->vbr && spxinfo->vbr_quality >= 0.0 && spxinfo->vbr_quality <= 10.0)
 	{     
@@ -351,14 +353,14 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
 		else if(spxinfo->cbr_quality >= 0 && spxinfo->cbr_quality <= 10)
 			speex_encoder_ctl(spxinfo->est, SPEEX_SET_QUALITY, &spxinfo->cbr_quality);
 	}
-
+ 
 	if(spxinfo->complexity)
 		speex_encoder_ctl(spxinfo->est, SPEEX_SET_COMPLEXITY, &spxinfo->complexity);
-	*/
+   */
    {
-      int cbr_quality = 8;
-	   speex_encoder_ctl(enc->est, SPEEX_SET_QUALITY, &cbr_quality);
-   }            
+      int quality = 4;
+      speex_encoder_ctl(enc->est, SPEEX_SET_QUALITY, &quality);
+   }
    
 	/* Initialization of the structure that holds the bits */
 	speex_bits_init(&enc->encbits);

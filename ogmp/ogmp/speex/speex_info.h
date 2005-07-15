@@ -169,6 +169,7 @@ struct speex_info_s
 
    Care must be taken when setting the value of ptime so that the 
 
+
    RTP packet size does not exceed the path MTU. 
 */
 

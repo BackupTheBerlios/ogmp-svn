@@ -22,10 +22,6 @@
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  *
-
-
-
-
  * Any person wishing to distribute modifications to the Software is
  * requested to send the modifications to the original developer so that
  * they can be incorporated into the canonical version.
@@ -42,7 +38,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <portaudio.h>
-
+ 
 #include <timedia/os.h>
 #include <string.h>
 
@@ -257,6 +253,7 @@ static int ioCallback (void *inputBuffer, void *outputBuffer,
          PlayData = &padev->Samples[padev->PlayData];
          
 		   PlayData->frameIndex = 0;
+
         	padev->record = 1;
        }
     }

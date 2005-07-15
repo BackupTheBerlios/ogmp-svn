@@ -18,6 +18,7 @@
 #include <timedia/xmalloc.h>
 #include "speex_codec.h"
 #include <timedia/ui.h>
+#include <string.h>
 /*
 */
 #define SPEEX_CODEC_LOG
@@ -57,7 +58,7 @@ media_frame_t* spxc_decode(speex_decoder_t *dec, speex_info_t *spxinfo, media_fr
 	nchannel = spxinfo->audioinfo.channels;
 	frame_bytes = nchannel * frame_size * SPEEX_SAMPLE_BYTES;
    
-	spxc_log(("\rspxc_decode: frame_size[%d], nsample[%d] nframe[%d]\n", frame_size, nsample, nframes));
+	speex_bits_reset(&dec->decbits);
    
 	/*Copy Ogg packet to Speex bitstream*/
 	speex_bits_read_from(&dec->decbits, (char*)ptimef->raw, ptimef->bytes);
@@ -81,24 +82,28 @@ media_frame_t* spxc_decode(speex_decoder_t *dec, speex_info_t *spxinfo, media_fr
 		else
 			ret = speex_decode_int(dec->dst, NULL, (int16*)pcm);
 		
-		speex_decoder_ctl(dec->dst, SPEEX_GET_BITRATE, &(spxinfo->bitrate_now));
-
 		if (ret==-1)
+      {
+			spxc_debug(("\rspeex_decode: end of stream\n"));
+         memset(auf->raw, 0, auf->bytes);
 			break;
+      }
 
 		if (ret==-2)
 		{
-			spxc_log(("speex_decode: Decoding error: corrupted stream?\n"));
-			output->recycle_frame(output, auf);
+			spxc_debug(("\rspeex_decode: Decoding error: corrupted stream?\n"));
+         memset(auf->raw, 0, auf->bytes);
 			break;
 		}
 
 		if (speex_bits_remaining(&dec->decbits)<0)
 		{
-			spxc_log(("speex_decode: Decoding overflow: corrupted stream?\n"));
-			output->recycle_frame(output, auf);
+			spxc_debug(("\rspeex_decode: Decoding overflow: corrupted stream?\n"));
+         memset(auf->raw, 0, auf->bytes);
 			break;
 		}
+
+		speex_decoder_ctl(dec->dst, SPEEX_GET_BITRATE, &(spxinfo->bitrate_now));
 
 		/* frame bytes will double after decode stereo, samples stored as left,right,left,right,... */
 		if (nchannel==2)
@@ -108,16 +113,19 @@ media_frame_t* spxc_decode(speex_decoder_t *dec, speex_info_t *spxinfo, media_fr
 	}
 
 	auf->nraw = nsample;
-	auf->usec = 1000000 * nsample / ((media_info_t*)spxinfo)->sample_rate;  /* microsecond unit */
+	auf->usec = 1000000 / ((media_info_t*)spxinfo)->sample_rate * nsample ;  /* microsecond unit */
+
+   spxc_debug(("\rspxc_decode: info[@%x], frame bytes[%d] size[%d] nsample[%d] nframe[%d] channels[%d] bitrate[%d]\n", (int)spxinfo, ptimef->bytes, frame_size, nsample, nframes, nchannel, spxinfo->bitrate_now));
 
 	return auf;
 }
 
-int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcm_bytes, char* spx, int spx_maxbytes)
+int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcm_nbyte, char* spx, int spx_maxbytes)
 {
-	int nchannel = spxinfo->audioinfo.channels;
+   int spx_nbyte;
+   int nchannel = spxinfo->audioinfo.channels;
 	int frame_size = spxinfo->nsample_per_frame;
-   
+
 	/*Flush all the bits in the struct so we can encode a new frame*/
 	speex_bits_reset(&enc->encbits);
 
@@ -136,7 +144,11 @@ int spxc_encode(speex_encoder_t* enc, speex_info_t* spxinfo, char* pcm, int pcm_
 	/*Encode the frame*/
 	speex_encode_int(enc->est, (short*)pcm, &enc->encbits);
 
-	speex_bits_insert_terminator(&enc->encbits);
+	/*speex_bits_insert_terminator(&enc->encbits);*/
 
-	return speex_bits_write(&enc->encbits, spx, spx_maxbytes);
+	spx_nbyte = speex_bits_write(&enc->encbits, spx, spx_maxbytes);
+   
+	spxc_debug(("\rspxc_encode: info[@%x], frame[%d]..speex[%d]\n", (int)spxinfo, pcm_nbyte, spx_nbyte));
+
+   return spx_nbyte;
 }

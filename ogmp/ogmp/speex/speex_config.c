@@ -39,8 +39,8 @@ speex_setting_t spx_setting =
 	4,		/*cbr_quality*/
 
 	3,		/*complexity*/
-	1,		/*denoise*/
-	1		/*agc*/
+	0,		/*denoise*/
+	0		/*agc*/
 };
 
 speex_setting_t* speex_setting(media_control_t *control)

@@ -572,6 +572,7 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 				media_player_t *player, *explayer = NULL;
 				media_control_t *ctrl;
 
+				/*speex_info_t *spxinfo = (speex_info_t*)rtp_media->info(rtp_media, ses->rtp_capable);*/
 				speex_info_t *spxinfo = (speex_info_t*)myself->mediainfo;
 	   
 				if(!spxinfo)
@@ -769,6 +770,7 @@ int rtp_speex_set_parameter(xrtp_media_t* media, char* key, void* val)
 	
 	return XRTP_INVALID;
 }
+
 
 int rtp_speex_parameter(xrtp_media_t *media, char* key, void* value)
 {
@@ -1096,6 +1098,7 @@ int rtp_speex_send_loop(void *gen)
 
 		rtime_t usec_now;
 		int usec_payload;
+
 
 		xthr_lock(profile->packets_lock);
 
