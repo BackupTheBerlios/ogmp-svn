@@ -292,12 +292,13 @@ int rtp_stream_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
    {
       rtp_log(("rtp_stream_on_member_update: start stream[%s]\n", cn));
       rtpstrm->source_cname = xstr_clone(cn);
-      strm->start(strm);
 
 	   return MP_OK;
    }
 
-   rtp_log(("rtp_stream_on_member_update: stream[%s] ok\n\n\n", cn));   
+   rtp_debug(("\rrtp_stream_on_member_update: stream[%s] ok\n\n\n", cn));   
+   strm->start(strm);
+   
    return MP_OK;
 }
 

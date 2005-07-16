@@ -188,6 +188,7 @@ int client_place_call(sipua_t *sipua, sipua_call_t *call)
 				client->thread_ringing = xthr_new(client_call_ringing, client, XTHREAD_NONEFLAGS);
 	      }
 
+
 	      else
 	      {
 				xthr_lock(client->nring_lock);
@@ -416,7 +417,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
          if(sdp_message)
             rtpcapset = rtp_capable_from_sdp(sdp_message);
          
-
          /* Retrieve call info */
          call = sipua_new_call(sipua, client->sipua.user_profile, call_e->remote_uri,
                         call_e->subject, call_e->sbytes, rtpcapset->info, rtpcapset->ibytes);
@@ -515,6 +515,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		case(SIPUA_EVENT_ANSWERED):
 		{
 			/* Caller establishs call when callee is answered */
+			clie_debug(("\nclient_sipua_event: Answered\n"));
 
 			sipua_call_t *call;
 			rtpcap_set_t* rtpcapset;
@@ -570,13 +571,16 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 		   call = e->call_info;
             
+			clie_debug(("\nclient_sipua_event: Answer acked\n"));
+         
          if(call->status == SIPUA_STATUS_ONHOLD)
 			{
             exit(1);
             client->sipua.attach_source(&client->sipua, call, (transmit_source_t*)client->background_source);
 				break;
 			}
-
+         
+         call->status == SIP_STATUS_CODE_OK;
 			call->rtpcapset->rtpcap_selection = RTPCAP_ALL_CAPABLES;
 
 			/* Now create rtp sessions of the call */
@@ -588,7 +592,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				sipua_answer(&client->sipua, call, SIP_STATUS_CODE_TEMPORARILYUNAVAILABLE, NULL);
 				break;
 			}
-
 
          /**
           * Find sessions in the format which match cname and mimetype in source
@@ -619,6 +622,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			if(call_e->status_code == SIPUA_STATUS_UNKNOWN)
 				call->status = SIPUA_EVENT_REQUESTFAILURE;
+
 			else
 				call->status = call_e->status_code;
 
@@ -927,6 +931,7 @@ int client_regist(sipua_t *sipua, user_profile_t *prof, char *userloc)
 		
 	return ret;
 }
+
 
 int client_unregist(sipua_t *sipua, user_profile_t *user)
 {
@@ -1250,6 +1255,7 @@ int client_hold(sipua_t* sipua)
    client->lines[0] = NULL;
 
    xthr_unlock(client->lines_lock);
+
 
 	/* FIXME: Howto transfer call to waiting session */
 

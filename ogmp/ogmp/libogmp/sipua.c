@@ -288,6 +288,8 @@ int sipua_make_call(sipua_t *sipua, sipua_call_t* call, char* id,
 
 
 
+
+
 		{
 			call->bandwidth_need += media_bw;
 		}
@@ -663,7 +665,10 @@ int sipua_open_stream_output(media_control_t* control, sipua_call_t* call, media
    outplayer = control->find_player(control, playmode, minfo->mime, minfo->fourcc);
 
    if(!outplayer)
+   {
+      ua_debug (("source_open_device: on %s player\n", mediatype));
 	   return MP_FAIL;
+   }
 
    ret = outplayer->link_stream(outplayer, outstream, control, call->rtpcapset);
    if(ret < MP_OK)
@@ -759,24 +764,22 @@ int sipua_link_medium(sipua_t* sipua, sipua_call_t* call, media_control_t* contr
 
       /* Detremine the media type */
       i=0;
-
       while(minfo->mime[i] != '/')
       {
          mediatype[i] = minfo->mime[i];
          i++;
       }
-
       mediatype[i] = '\0';
 
-      if(sipua_open_stream_output (control, call, (media_stream_t*)rtpstrm, mediatype, "playback") < MP_OK)
+      if(sipua_open_stream_output (control, call, (media_stream_t*)rtpstrm, mediatype, "netcast") < MP_OK)
       {
          rtpstrm = (rtp_stream_t*)rtpstrm->stream.next;
          continue;
       }
       
       sipua_open_stream_input (control, (media_stream_t*)rtpstrm, mediatype, "input");
-
       n_input++;
+      
       rtpstrm = (rtp_stream_t*)rtpstrm->stream.next;
    }
 
@@ -850,14 +853,10 @@ int sipua_establish_call(sipua_t* sipua, sipua_call_t* call, char *mode, rtpcap_
 	call->bandwidth_need = bw;
    call->rtpcapset = rtpcapset;
 
-	/* create a input source */
-	if(call->status == SIP_STATUS_CODE_OK)
-   {
-	   sipua_link_medium(sipua, call, control);
-   }
+	/* create a input source */ 
+	sipua_link_medium(sipua, call, control);
    
-	ua_debug(("\rsipua_establish_call: call[%s] established\n", rtpcapset->subject));
-
+	ua_log(("\rsipua_establish_call: call[%s] established, exit\n", rtpcapset->subject));
 	return bw;
 }
 
@@ -865,6 +864,7 @@ int sipua_receive(sipua_t *ua, sipua_call_event_t *call_e, char **from, char **s
 {
    *subject = call_e->subject;
    *sbytes = strlen(call_e->subject)+1;
+
    
    *info = call_e->textinfo;
    *ibytes = strlen(call_e->textinfo)+1;
@@ -1071,6 +1071,7 @@ int sipua_session_sdp(sipua_t *sipua, sipua_call_t* call, char** sdp_body)
 								xstr_clone(call->user_prof->username),
 								xstr_clone(call->setid.id),
 								xstr_clone(call->version),
+
 								xstr_clone(nettype),
 								xstr_clone(addrtype),
 								xstr_clone(netaddr));
@@ -1188,6 +1189,7 @@ int sipua_call(sipua_t *sipua, sipua_call_t* call, const char *callee, char *sdp
 }
 
 int sipua_answer(sipua_t *ua, sipua_call_t* call, int reply, char *sdp_body)
+
 {
 	return ua->uas->answer(ua->uas, call, reply, "application/sdp", sdp_body);
 }
@@ -1207,6 +1209,7 @@ int sipua_info_call(sipua_t *ua, sipua_call_t* call, char *type, char *info)
 int sipua_bye(sipua_t *sipua, sipua_call_t* call)
 {
 	ua_log(("sipua_disconnect: FIXME - yet to implement\n"));
+
 
 	return UA_OK;
 }

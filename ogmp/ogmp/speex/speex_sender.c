@@ -325,7 +325,6 @@ int spxs_set_device(media_player_t *mp, media_control_t *cont, module_catalog_t 
 
    media_device_t *dev = NULL;
 
-
 	dev_rtp_t * dev_rtp = NULL;
 	rtp_setting_t *rtpset = NULL;
 	speex_setting_t *spxset = NULL;

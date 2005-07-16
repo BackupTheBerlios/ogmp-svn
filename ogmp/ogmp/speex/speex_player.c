@@ -524,7 +524,7 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
 
    auf->ts = dec->ts_usec_now;
 
-   spxp_debug(("\rspxp_receive_next: frame[%lld#:%lld:%llds] speex[%d]...raw[%d]\n", repack.sno, repack.samplestamp, samplestamp, repack.bytes, auf->bytes));
+   spxp_log(("\rspxp_receive_next: frame[%lld#:%lld:%llds] speex[%d]...raw[%d]\n", repack.sno, repack.samplestamp, samplestamp, repack.bytes, auf->bytes));
 
    if(last_packet)
 	   auf->eots = 1;
