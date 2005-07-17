@@ -88,8 +88,12 @@ int port_portno(xrtp_port_t* port);
 
 int port_is_multicast(xrtp_port_t * port);
 
-session_connect_t* port_poll(xrtp_port_t * port, rtime_t timeout_usec);
+session_connect_t* 
+port_poll(xrtp_port_t * port, rtime_t timeout_usec);
   
+session_connect_t* 
+port_incoming(xrtp_port_t * port);
+
 extern DECLSPEC 
 xrtp_teleport_t*
 teleport_new(char * addr, uint16 portno);

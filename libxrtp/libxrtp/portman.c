@@ -188,7 +188,7 @@ int portman_poll(portman_t * man)
       io = port_io(port);
       if(FD_ISSET(io, &io_mask))
 	  {
-         if(port_incoming(port) >= XRTP_OK)
+         if(port_incoming(port))
 			 c++;
       }
 

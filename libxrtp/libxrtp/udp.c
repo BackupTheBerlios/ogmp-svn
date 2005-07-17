@@ -380,7 +380,6 @@ int port_portno(xrtp_port_t* port)
 	return port->portno;
 }
 
-session_connect_t* port_incoming(xrtp_port_t * port);
 session_connect_t* port_poll(xrtp_port_t * port, rtime_t timeout_usec)
 {
      fd_set io_set;
@@ -395,6 +394,7 @@ session_connect_t* port_poll(xrtp_port_t * port, rtime_t timeout_usec)
      FD_SET(port->socket, &io_set);
 
      n = select(port->socket+1, &io_set, NULL, NULL, &tout);
+
      udp_log(("\rport_poll: port[%d]@%x incoming[%d]\n", port->portno, (int)port, n));
 
      if(n == 1)
