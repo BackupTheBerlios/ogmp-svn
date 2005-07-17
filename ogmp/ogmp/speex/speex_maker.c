@@ -228,6 +228,7 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 
    /* samples left for next */
 
+
    if(todo_nbyte > 0)
       memcpy(enc->encoding_frame, &auf->raw[done_nbyte], todo_nbyte);
 
@@ -322,6 +323,7 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
 	spxinfo->audioinfo.info.sample_bits = SPEEX_SAMPLE_BITS;
    spxinfo->nframe_per_packet = 1;
 
+
 	ret = dev->set_io(dev, minfo, &maker->receiver);
 	if (ret < MP_OK)
 	{
@@ -359,8 +361,8 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
 		speex_encoder_ctl(spxinfo->est, SPEEX_SET_COMPLEXITY, &spxinfo->complexity);
    */
    {
-      int quality = 4;
-      speex_encoder_ctl(enc->est, SPEEX_SET_QUALITY, &quality);
+      int bitrate = 8000;
+		speex_encoder_ctl(enc->est, SPEEX_SET_BITRATE, &bitrate);
    }
    
 	/* Initialization of the structure that holds the bits */
@@ -379,8 +381,12 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
 	if (enc->speex_info->denoise || enc->speex_info->agc)
 	{
 		enc->encpreprocess = speex_preprocess_state_init(enc->frame_nsample, rate);
-		speex_preprocess_ctl(enc->encpreprocess, SPEEX_PREPROCESS_SET_DENOISE, &enc->speex_info->denoise);
-		speex_preprocess_ctl(enc->encpreprocess, SPEEX_PREPROCESS_SET_AGC, &enc->speex_info->agc);
+      
+	   if (enc->speex_info->denoise)
+		   speex_preprocess_ctl(enc->encpreprocess, SPEEX_PREPROCESS_SET_DENOISE, &enc->speex_info->denoise);
+	   if (enc->speex_info->agc)
+		   speex_preprocess_ctl(enc->encpreprocess, SPEEX_PREPROCESS_SET_AGC, &enc->speex_info->agc);
+
       enc->lookahead += enc->frame_nsample;
 	}
 

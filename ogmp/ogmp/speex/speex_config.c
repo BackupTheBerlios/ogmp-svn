@@ -35,11 +35,11 @@ speex_setting_t spx_setting =
 	0.0,	/*vbr_quality*/
 	0,		/*abr*/
 
-	0,		/*cbr*/
+	8000,		/*cbr*/
 	4,		/*cbr_quality*/
 
 	3,		/*complexity*/
-	0,		/*denoise*/
+	1,		/*denoise*/
 	0		/*agc*/
 };
 

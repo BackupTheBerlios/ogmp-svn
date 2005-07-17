@@ -774,7 +774,7 @@ int sipua_link_medium(sipua_t* sipua, sipua_call_t* call, media_control_t* contr
       }
       mediatype[i] = '\0';
 
-      if(sipua_open_stream_output (control, call, (media_stream_t*)rtpstrm, mediatype, "netcast") < MP_OK)
+      if(sipua_open_stream_output (control, call, (media_stream_t*)rtpstrm, mediatype, "playback") < MP_OK)
       {
          rtpstrm = (rtp_stream_t*)rtpstrm->stream.next;
          continue;
