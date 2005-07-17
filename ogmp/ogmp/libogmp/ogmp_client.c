@@ -515,8 +515,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 		case(SIPUA_EVENT_ANSWERED):
 		{
 			/* Caller establishs call when callee is answered */
-			clie_debug(("\nclient_sipua_event: Answered\n"));
-
 			sipua_call_t *call;
 			rtpcap_set_t* rtpcapset;
 			sdp_message_t *sdp_message;
@@ -580,7 +578,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				break;
 			}
          
-         call->status == SIP_STATUS_CODE_OK;
 			call->rtpcapset->rtpcap_selection = RTPCAP_ALL_CAPABLES;
 
 			/* Now create rtp sessions of the call */
