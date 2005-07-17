@@ -160,58 +160,43 @@ int pout_recycle_frame(media_pipe_t * mo, media_frame_t * used)
  */
 int pout_put_frame (media_pipe_t *mp, media_frame_t *mf, int last)
 {
-   int nbyte_fill;
+   int nbyte_tofill, nbyte_toread;
 
    pa_pipe_t *pp = (pa_pipe_t*)mp;
    portaudio_device_t *pa = pp->pa;
    
-   pa_output_t *outbufw = &pa->outbuf[pa->inbuf_w];
+   pa_output_t *outbufw = &pa->outbuf[pa->outbuf_w];
 
    if(outbufw->nbyte_wrote == pa->io_nbyte_once)
       return pa->usec_pulse / 2;
 
-   if(outbufw->nbyte_wrote == 0 || pa->outbuf_nbyte_cache > 0)
+   while(pa->outbuf_nbyte_read < mf->bytes)
    {
-      memcpy(outbufw->pcm, pa->outbuf_cache, pa->outbuf_nbyte_cache);
-      
-      nbyte_fill = pa->io_nbyte_once - pa->outbuf_nbyte_cache;
-      outbufw->nbyte_wrote = pa->outbuf_nbyte_cache;
-   }
-   else
-      nbyte_fill = pa->io_nbyte_once - outbufw->nbyte_wrote;
+      nbyte_toread = mf->bytes - pa->outbuf_nbyte_read;
+      nbyte_tofill = pa->io_nbyte_once - outbufw->nbyte_wrote;
 
-   pa->outbuf_nbyte_cache = 0;
-   
-   if(nbyte_fill < mf->bytes)
-      pa->outbuf_nbyte_cache = mf->bytes - nbyte_fill;
-   else
-   {
-      nbyte_fill = mf->bytes;
-      pa->outbuf_nbyte_cache = 0;
-   }
+      if(nbyte_tofill > nbyte_toread)
+         nbyte_tofill = nbyte_toread;
 
-   memcpy(&outbufw->pcm[outbufw->nbyte_wrote], mf->raw, nbyte_fill);
-   outbufw->nbyte_wrote += nbyte_fill;
-   
-   if(outbufw->nbyte_wrote == pa->io_nbyte_once)
-   {
-      pa->outbuf_w = (pa->outbuf_w+1) % pa->outbuf_n;
-      outbufw = &pa->outbuf[pa->inbuf_w];
-      
-      if(pa->outbuf_nbyte_cache > 0)
+      memcpy(&outbufw->pcm[outbufw->nbyte_wrote], &mf->raw[pa->outbuf_nbyte_read], nbyte_tofill);
+
+      outbufw->nbyte_wrote += nbyte_tofill;
+      pa->outbuf_nbyte_read += nbyte_tofill;
+
+      if(outbufw->nbyte_wrote == pa->io_nbyte_once)
       {
-         if(outbufw->nbyte_wrote != 0)
-            memcpy(pa->outbuf_cache, &mf->raw[nbyte_fill], pa->outbuf_nbyte_cache);
-         else
-         {
-            memcpy(outbufw->pcm, &mf->raw[nbyte_fill], pa->outbuf_nbyte_cache);
-            outbufw->nbyte_wrote = pa->outbuf_nbyte_cache;
-            pa->outbuf_nbyte_cache = 0;
-         }
+         outbufw->last = mf->eos;
+
+         pa->outbuf_w = (pa->outbuf_w+1) % pa->outbuf_n;
+         outbufw = &pa->outbuf[pa->inbuf_w];
+
+         if(pa->outbuf_nbyte_read < mf->bytes)
+            return pa->usec_pulse;
       }
    }
-   
+
    mf->owner->recycle_frame(mf->owner, mf);
+   pa->outbuf_nbyte_read = 0;
 
    return 0;
 }
@@ -256,6 +241,7 @@ int pout_done (media_pipe_t * mp)
  * - usec_pulse: samples are sent by group, named pulse within certain usecond.
  * - ms_min, ms_max: buffered/delayed samples are limited.
  */
+
 media_pipe_t * pa_pipe_new(portaudio_device_t* pa)
 {
    media_pipe_t * mout = NULL;

@@ -160,10 +160,11 @@ static int pa_io_callback( void *inbuf, void *outbuf, unsigned long npcm, PaTime
       if(inbufw->npcm_write != 0)
 		{
 			/* encoding slower than input */
-			pa_log(("\rpa_io_callback: inbuf full\n"));
+			pa_log(("\rpa_io_callback: inbuf#%d ... input full\n", pa->inbuf_w));
 		}
 		else
 		{
+		   pa_debug(("\rpa_io_callback: inbuf#%d ... record\n", pa->inbuf_w));
 			memcpy(inbufw->pcm, inbuf, pa->io_nbyte_once);
 
          inbufw->stamp = pa->input_samplestamp;
@@ -178,18 +179,18 @@ static int pa_io_callback( void *inbuf, void *outbuf, unsigned long npcm, PaTime
 
    if(outbuf)
    {
-		pa_log(("\rpa_io_callback: output buf#%d\n", pa->inbuf_r));
-      outbufr = &pa->outbuf[pa->inbuf_r];
+      outbufr = &pa->outbuf[pa->outbuf_r];
 
       if(outbufr->nbyte_wrote != pa->io_nbyte_once)
 		{
 			/* encoding slower than input */
-			pa_debug(("\rpa_io_callback: outbuf#%d empty\n", pa->inbuf_r));
+			pa_debug(("\rpa_io_callback: outbuf#%d ... output empty\n", pa->outbuf_r));
 			memset(outbuf, PA_MUTE, pa->io_nbyte_once);
          end = 0;
 		}
 		else
 		{
+		   pa_debug(("\rpa_io_callback: outbuf#%d ... play\n", pa->outbuf_r));
 			memcpy(outbuf, outbufr->pcm, pa->io_nbyte_once);
 
 			outbufr->nbyte_wrote = 0;
@@ -321,8 +322,7 @@ int pa_make_outbuf(portaudio_device_t *pa, audio_info_t *ai_output, int outbuf_n
       memset(pa->outbuf[i].pcm, 0, pa->io_nbyte_once);
    }
 
-   pa->outbuf_cache = xmalloc(pa->io_nbyte_once);
-   pa->outbuf_nbyte_cache = 0;
+   pa->outbuf_nbyte_read = 0;
    
    return MP_OK;
 }
@@ -334,7 +334,6 @@ int pa_done_outbuf(portaudio_device_t *pa)
    for(i=0; i<pa->outbuf_n; i++)
       xfree(pa->outbuf[i].pcm);
 
-   xfree(pa->outbuf_cache);
    xfree(pa->outbuf);
 
    return MP_OK;
@@ -374,6 +373,7 @@ int pa_set_input_media(media_device_t *dev, media_receiver_t* recvr, media_info_
    if(pa->ai_input.info.sample_rate > nsample_pulse)
       pa->input_usec_pulse = (int)(1000000 / (pa->ai_input.info.sample_rate / (double)nsample_pulse));
    else
+
       pa->input_usec_pulse = (int)((double)nsample_pulse / pa->ai_input.info.sample_rate * 1000000);
       
    pa_log(("pa_set_input_media: %d channels, %d rate, %d sample per pulse (%dus)\n", 
@@ -793,6 +793,7 @@ module_interface_t* media_new_device ()
    portaudio_device_t * pa = xmalloc (sizeof(struct portaudio_device_s));
    if (!pa)
    {
+
       pa_debug(("media_new_device: No enough memory\n"));
 
       return NULL;

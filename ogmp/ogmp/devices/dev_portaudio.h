@@ -81,8 +81,7 @@ typedef struct portaudio_device_s
    int outbuf_n;
    int outbuf_r;
    int outbuf_w;
-   int outbuf_nbyte_cache;
-   char *outbuf_cache;
+   int outbuf_nbyte_read;
    pa_output_t *outbuf;
 
    media_pipe_t * out;

@@ -290,6 +290,7 @@ int sipua_make_call(sipua_t *sipua, sipua_call_t* call, char* id,
 
 
 
+
 		{
 			call->bandwidth_need += media_bw;
 		}
@@ -493,6 +494,7 @@ int sipua_negotiate_call(sipua_t *sipua, sipua_call_t *call,
 
 	int bw_budget;
 	int call_bw;
+
 
 	module_catalog_t *cata = control->modules(control);
 
@@ -763,6 +765,7 @@ int sipua_link_medium(sipua_t* sipua, sipua_call_t* call, media_control_t* contr
       minfo = rtpstrm->stream.media_info;
 
       /* Detremine the media type */
+
       i=0;
       while(minfo->mime[i] != '/')
       {
