@@ -372,6 +372,7 @@ struct xrtp_session_s
    /* NOTE: The Redundancy is not implemented yet */
    xrtp_media_t * media;
    profile_handler_t* media_handler;
+   void* media_stream;
 
    session_mode_t mode_trans;
 
