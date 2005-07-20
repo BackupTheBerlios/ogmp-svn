@@ -114,7 +114,7 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 	   stream->player->receiver.receive_media(&stream->player->receiver, &spxf, (samplestamp - cache_nsample), last_packet);
 
 	   /* for next group */
-	   samplestamp = samplestamp + delta_nsample;
+	   samplestamp = samplestamp + enc->frame_nbyte;;
 
       cut += delta_nbyte;
       enc->cache_nbyte = 0;
@@ -137,7 +137,7 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 
       done_nbyte += enc->frame_nbyte;
       todo_nbyte -= enc->frame_nbyte;
-      cut += enc->frame_nbyte;;
+      cut += enc->frame_nbyte;
 
       samplestamp += enc->frame_nsample;
    }
@@ -227,8 +227,6 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
    }
 
    /* samples left for next */
-
-
    if(todo_nbyte > 0)
       memcpy(enc->encoding_frame, &auf->raw[done_nbyte], todo_nbyte);
 
@@ -263,6 +261,8 @@ int spxmk_start(media_maker_t *maker)
 
    enc->input_device->start(enc->input_device, DEVICE_INPUT);
 
+   spxmk_debug(("\rspxmk_start: speex maker started\n"));
+   
    return MP_OK;
 }
 
@@ -284,7 +284,6 @@ int speex_start_stream (media_stream_t* stream)
    
    return MP_OK;
 }
-
 
 int speex_stop_stream (media_stream_t* stream)
 {
@@ -322,7 +321,6 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
 
 	spxinfo->audioinfo.info.sample_bits = SPEEX_SAMPLE_BITS;
    spxinfo->nframe_per_packet = 1;
-
 
 	ret = dev->set_io(dev, minfo, &maker->receiver);
 	if (ret < MP_OK)

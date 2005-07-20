@@ -142,7 +142,7 @@ int spxs_match_play_type (media_player_t * mp, char *play)
 	return 0;
 }
 
-int spxs_open_stream (media_player_t *mp, media_info_t *media_info)
+int spxs_open_stream (media_player_t *mp, media_stream_t* stream, media_info_t *media_info)
 {
    speex_sender_t *ss = NULL;
    
@@ -168,16 +168,16 @@ int spxs_open_stream (media_player_t *mp, media_info_t *media_info)
       int chunk_nbyte, frame_ms;
 
       speex_setting_t* setting = speex_setting(NULL);
-      
+
       frame_ms = 1000 * spxinfo->nsample_per_frame / spxinfo->audioinfo.info.sample_rate;
-      spxinfo->ptime = setting->ptime_max / frame_ms * frame_ms;
       
       if(spxinfo->ptime == 0)
       {
-	      spxs_debug(("spxs_open_stream: ptime can't be ZERO, exit!\n"));
-         exit(1);
+	      spxs_debug(("spxs_open_stream: ptime can't be ZERO, set to 20ms!\n"));
+         spxinfo->ptime = 20;
       }
       
+      spxinfo->ptime = setting->ptime_max / frame_ms * frame_ms;
       chunk_nbyte = spxinfo->audioinfo.info.sample_rate / 1000 * spxinfo->ptime * spxinfo->audioinfo.channels * 4;
 
       ss->chunk = xmalloc(chunk_nbyte);
@@ -303,12 +303,12 @@ int spxs_done_device ( void *gen )
 
 int spxs_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
 {
-   speex_sender_t *vs = (speex_sender_t*)gen;
+   speex_sender_t *ss = (speex_sender_t*)gen;
 
-   spxs_debug(("spxs_on_member_update: dest[%s] connected\n\n\n", cn));
+   spxs_debug(("spxs_on_member_update: stream@%x dest[%s] connected\n\n\n", (int)ss->rtp_session->media_stream, cn));
 
-   if(vs->callback_on_ready)
-      vs->callback_on_ready(vs->callback_on_ready_user, (media_player_t*)vs);
+   if(ss->callback_on_ready)
+      ss->callback_on_ready(ss->callback_on_ready_user, (media_player_t*)ss, ss->rtp_session->media_stream);
 
    return MP_OK;
 }
@@ -474,7 +474,7 @@ int spxs_link_stream(media_player_t *mp, media_stream_t* strm, media_control_t *
 
 	strm->player = mp;
 
-   spxs_open_stream (mp, strm->media_info);
+   spxs_open_stream (mp, strm, strm->media_info);
 
 	return MP_OK;
 }
@@ -500,7 +500,6 @@ int spxs_start (media_player_t *mp)
    mp->device->start(mp->device, DEVICE_OUTPUT);
 
    return MP_OK;
-
 }
 
 int spxs_stop (media_player_t *mp)

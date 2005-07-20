@@ -292,8 +292,6 @@ int rtp_stream_on_member_update(void *gen, uint32 ssrc, char *cn, int cnlen)
    {
       rtp_log(("rtp_stream_on_member_update: start stream[%s]\n", cn));
       rtpstrm->source_cname = xstr_clone(cn);
-
-	   return MP_OK;
    }
 
    rtp_debug(("\rrtp_stream_on_member_update: stream[%s] ok\n\n\n", cn));   
@@ -309,7 +307,7 @@ int rtp_start_stream (media_stream_t* stream)
       
    if(!stream->player)
    {
-      rtp_debug(("\rrtp_start_stream: no player, exit\n"));
+      rtp_debug(("\rrtp_start_stream: no player\n"));
       return MP_FAIL;
    }
 
@@ -319,6 +317,7 @@ int rtp_start_stream (media_stream_t* stream)
       stream->maker->start(stream->maker);
 
    stream->status = MP_STREAM_STREAMING;
+   rtp_debug(("\rrtp_start_stream: stream started\n"));
          
    return MP_OK;
 }
@@ -423,6 +422,9 @@ rtp_stream_t* rtp_open_stream(rtp_format_t *rtp_format, int sno, rtpcap_descript
 		return NULL;
 	}
 
+   strm->session->media_stream = strm;
+	rtp_debug(("\rrtp_open_stream: strm@%x\n", (int)strm));
+
 	/* get real portno and payload type */
 	session_portno(strm->session, &rtp_portno, &rtcp_portno);
 	rtpcap->profile_no = session_payload_type(strm->session);
@@ -490,6 +492,7 @@ capable_descript_t* rtp_stream_capable(rtp_stream_t *strm)
 
 /**
  * return used bandwidth
+
  */
 int rtp_open_capables(media_format_t *mf, rtpcap_set_t *rtpcapset, media_control_t *ctrl, char *mode, int bandwidth)
 {
@@ -666,7 +669,7 @@ int rtp_new_all_player(media_format_t *mf, media_control_t* ctrl, char* mode, vo
 
 			rtp_log(("rtp_new_all_player: No %s player\n", cur->media_info->mime));
 		}
-		else if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
+		else if( cur->player->open_stream(cur->player, cur, cur->media_info) < MP_OK)
 		{
 			cur->playable = -1;
 
@@ -709,7 +712,7 @@ media_player_t* rtp_new_stream_player(media_format_t *mf, int strmno, media_cont
 
 			}
 
-			if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
+			if( cur->player->open_stream(cur->player, cur, cur->media_info) < MP_OK)
 			{
 				cur->playable = -1;
 				return NULL;
@@ -749,7 +752,7 @@ media_player_t * rtp_new_mime_player(media_format_t * mf, char * mime, media_con
 				return NULL;
 			}
 
-			if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
+			if( cur->player->open_stream(cur->player, cur, cur->media_info) < MP_OK)
 			{
 				cur->playable = -1;
 				return NULL;
@@ -762,6 +765,7 @@ media_player_t * rtp_new_mime_player(media_format_t * mf, char * mime, media_con
 
 		cur = cur->next;
 	}
+
 
 	return NULL;
 }
@@ -776,7 +780,6 @@ module_interface_t * media_new_format()
       rtp_log(("rtp_new_rtp_group: No memery to allocate\n"));
       return NULL;
    }
-
 
    memset(rtp, 0, sizeof(struct rtp_format_s));
 
@@ -829,6 +832,7 @@ module_interface_t * media_new_format()
    mf->demux_next = rtp_demux_next;
 
    return mf;
+
 }
 
 /**

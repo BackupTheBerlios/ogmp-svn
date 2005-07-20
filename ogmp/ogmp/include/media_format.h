@@ -92,7 +92,7 @@ struct media_control_s
    int (*set_format) (media_control_t * cont, char *format_id, media_format_t * format);
    int (*seek_millisec) (media_control_t * cont, int msec);
 
-   int (*demux_next) (media_control_t * cont, int strm_end);
+   int (*demux_next) (media_control_t * cont, media_format_t * format, int strm_end);
 
    int (*config)(media_control_t *cont, config_t *conf, module_catalog_t *cata);
    module_catalog_t* (*modules)(media_control_t *cont);
@@ -190,6 +190,9 @@ struct media_format_s
    /* return available capable number */
    int (*players)(media_format_t * mf, char *type, media_player_t *caps[], int nmax);
 
+   int (*start)(media_format_t * mf);
+   int (*stop)(media_format_t * mf);
+   
    /* Seek the media by time */
    int (*seek_millisecond) (media_format_t *mf, int milli);
 
@@ -211,6 +214,8 @@ struct media_info_s
 
 	int coding_parameter;
     
+
+
 	char fourcc[4];
 	char* mime;
 };
@@ -264,6 +269,7 @@ struct media_frame_s
    int bytes;			/* frame raw size >= nraw */
    int nraw;			/* samples */
 
+
    int eos;				/* last frame of the stream */
    int eots;			/* end of frames with same timestamp */
 
@@ -313,7 +319,7 @@ struct media_device_s
 
    media_stream_t* (*new_media_stream) (media_device_t* dev, media_receiver_t *mr, media_info_t *media_info);
 
-   int (*set_input_media)(media_device_t *dev, media_receiver_t* recvr, media_info_t *in_info);
+   int (*set_input_media)(media_device_t *dev, media_info_t *in_info, media_receiver_t* recvr);
    int (*set_output_media)(media_device_t *dev, media_info_t *out_info);
 
    int (*set_io)(media_device_t *dev, media_info_t *minfo, media_receiver_t *receiver);
@@ -379,7 +385,7 @@ struct media_player_s
 
    media_pipe_t* (*pipe) (media_player_t * playa);
 
-   int (*open_stream) (media_player_t *playa, media_info_t *media_info);
+   int (*open_stream) (media_player_t *playa, media_stream_t *stream, media_info_t *media_info);
    int (*close_stream) (media_player_t *playa);
    
    void* (*media)(media_player_t *playa);

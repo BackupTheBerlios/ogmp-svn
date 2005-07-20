@@ -195,7 +195,8 @@ struct ogmp_source_s
    xthr_cond_t *wait_request;
 
    int nstream;
-   media_player_t* players[MAX_NCAP];
+   media_player_t *players[MAX_NCAP];
+   media_format_t *format;
 };
 
 typedef struct netcast_parameter_s netcast_parameter_t;

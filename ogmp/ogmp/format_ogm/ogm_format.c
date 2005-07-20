@@ -45,7 +45,6 @@ int done_stream_handler(void *gen)
    handler->done(handler);
 
 
-
    return MP_OK;
 }
 
@@ -187,7 +186,7 @@ int ogm_new_all_player(media_format_t *mf, media_control_t* ctrl, char* mode, vo
 			cur->playable = -1;
 			ogm_debug(("ogm_new_all_player: %s stream fail to set device\n", cur->media_info->mime));
 		}
-      else if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
+      else if (cur->player->open_stream(cur->player, cur, cur->media_info) < MP_OK)
 		{      
 			cur->playable = -1;
 			ogm_debug(("ogm_new_all_player: open %s stream fail!\n", cur->media_info->mime));
@@ -232,7 +231,7 @@ media_player_t* ogm_new_stream_player(media_format_t *mf, int strmno, media_cont
 			   ogm_debug(("ogm_new_stream_player: %s stream fail to set device\n", cur->media_info->mime));
          }
 
-			if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
+			if( cur->player->open_stream(cur->player, cur, cur->media_info) < MP_OK)
 			{
 				cur->playable = -1;
 				return NULL;
@@ -253,7 +252,6 @@ media_player_t* ogm_new_stream_player(media_format_t *mf, int strmno, media_cont
 
 media_player_t * ogm_new_mime_player(media_format_t * mf, char * mime, media_control_t* ctrl, char* mode, void* mode_param)
 {
-
 	media_stream_t *cur = mf->first;
 
 	while (cur != NULL)
@@ -276,7 +274,7 @@ media_player_t * ogm_new_mime_player(media_format_t * mf, char * mime, media_con
 			   ogm_debug(("ogm_new_mime_player: %s stream fail to set device\n", cur->media_info->mime));
 				return NULL;
          }
-			else if( cur->player->open_stream(cur->player, cur->media_info) < MP_OK)
+			else if( cur->player->open_stream(cur->player, cur, cur->media_info) < MP_OK)
 			{
 				cur->playable = -1;
 				return NULL;
@@ -301,7 +299,7 @@ int ogm_set_mime_player(media_format_t *mf, char *mime, media_player_t* player)
 	{
 		if (!strcmp(cur->mime, mime))
 		{
-			int ret = player->open_stream(player, cur->media_info);
+			int ret = player->open_stream(player, cur, cur->media_info);
 			if(ret < MP_OK)
 				return ret;
 
@@ -541,12 +539,10 @@ int ogm_open_stream(ogm_format_t *ogm, media_control_t *ctrl, int sno, ogg_strea
    while (handler)
    {
       if (handler->detect_media(packet) != 0)
-	  {            
+	   {            
          stream = handler->open_media(handler, ogm, ctrl, sstate, sno, (stream_header *)&(ogm->packet.packet[0]));
          if(stream)
-         {
             break;
-         }
       }
       
       handler = (ogm_media_t*) xlist_next (mf->stream_handlers, &$u);     
@@ -608,8 +604,8 @@ int ogm_open(media_format_t *mf, char *fname, media_control_t *ctrl)
       {
          ogg_stream_state *sstate = xmalloc(sizeof(ogg_stream_state));
          if(!sstate)
-
          {
+
             ogm_log(("ogm_open_file: No memery for stream allocation\n"));
             return MP_EMEM;
          }
@@ -626,10 +622,8 @@ int ogm_open(media_format_t *mf, char *fname, media_control_t *ctrl)
          ogg_stream_pagein(sstate, &ogm->page);
 
          while(ogg_stream_packetout(sstate, &ogm->packet) == 1)
-
          {
             n_pack++;
-
 
             if (head_parsed)
             {
@@ -646,7 +640,7 @@ int ogm_open(media_format_t *mf, char *fname, media_control_t *ctrl)
             }
 	  
             if(ogm_open_stream(ogm, ctrl, sno, sstate, &ogm->packet) >= MP_OK)
-				n++;
+				   n++;
          }
 
          ogm_log(("ogm_open: %d packet(s) found in the page\n", n_pack));
@@ -784,6 +778,7 @@ int ogm_seek_millisecond (media_format_t *mf, int millis) {
           */
 
          start_pos = start_sec * current_pos / current_sec ;
+
 
       } 
 	  else
@@ -1004,9 +999,7 @@ int ogm_demux_next (media_format_t *mf, int stream_end)
          n_pack = 1;
          
          while (ogg_stream_packetout(ogm_strm->instate, dual_pack[recv]) == 1)
-		 {
-
-
+		   {
             n_pack++;
 
             ret = demux_ogm_process_packet(ogm, ogm_strm, &(ogm->page), dual_pack[send], page_granul, 0, stream_end);
@@ -1015,7 +1008,7 @@ int ogm_demux_next (media_format_t *mf, int stream_end)
             recv = send;
             send = (send + 1) % 2;
 
-			page_bytes += dual_pack[send]->bytes;
+			   page_bytes += dual_pack[send]->bytes;
          }
          
          /* last packet of the page */          
@@ -1026,36 +1019,33 @@ int ogm_demux_next (media_format_t *mf, int stream_end)
             return ret;
          }
 
-		 page_bytes += dual_pack[send]->bytes;
-
+		   page_bytes += dual_pack[send]->bytes;
 
          ogm->packet_ready = 0;
          
          ogm_log(("ogm_demux_next: %d packet(s) %d bytes found in the #%d:Page[%lld]\n", n_pack, page_bytes, sno, page_granul));
 
-		 if( !ogm_read_page (ogm) )
-		 {
+		   if( !ogm_read_page (ogm) )
+		   {
             ogm->page_ready = 0;
             return 0;
          }
 
-		 if ( mf->time_ref == sno )
-		 {
+		   if ( mf->time_ref == sno )
+		   {
+			   ogg_int64_t delta_granu = page_granul - ogm_strm->last_granulepos;
+			   ogg_int64_t us_interval = 1000000 * delta_granu / stream->sample_rate;
 
-			 ogg_int64_t delta_granu = page_granul - ogm_strm->last_granulepos;
-			 ogg_int64_t us_interval = 1000000 * delta_granu / stream->sample_rate;
+			   ogm_log(("............................................................................\n"));
+			   ogm_log(("(ogm_demux_next: %lld samples in the page)\n", delta_granu));
 
-			 ogm_log(("............................................................................\n"));
-			 ogm_log(("(ogm_demux_next: %lld samples in the page)\n", delta_granu));
-
-			 ogm_strm->last_granulepos = page_granul;
-			 ogm_strm->last_microsec += (int)us_interval;
+			   ogm_strm->last_granulepos = page_granul;
+			   ogm_strm->last_microsec += (int)us_interval;
 			
-			 return (int)us_interval;
-		 }
+			   return (int)us_interval;
+		   }
       }
    }          
-
 
    /* never reach here */
    return 0;
@@ -1109,11 +1099,40 @@ int ogm_players(media_format_t * mf, char *play_type, media_player_t* players[],
 
 	ogm_log (("ogm_players: %d '%s' players in ogm format\n", n, play_type));
 
-
-
-	return n;
+   return n;
 }
 
+int ogm_start(media_format_t * mf)
+{
+	int n = 0;
+	media_stream_t *cur = mf->first;
+
+	while (cur)
+	{
+		if(cur->player && cur->player->start(cur->player) >= MP_OK)
+         n++;
+
+		cur = cur->next;
+	}
+
+   return n;
+}
+
+int ogm_stop(media_format_t * mf)
+{
+	int n = 0;
+	media_stream_t *cur = mf->first;
+
+	while (cur)
+	{
+		if(cur->player && cur->player->stop(cur->player) >= MP_OK)
+         n++;
+
+		cur = cur->next;
+	}
+
+   return n;
+}
 
 int ogm_set_control (media_format_t * mf, media_control_t * control)
 {
@@ -1155,7 +1174,6 @@ module_interface_t * media_new_format()
    {
       ogm_log(("ogm_new_rtp_group: No memery to allocate\n"));
       return NULL;
-
    }
 
    memset(ogm, 0, sizeof(struct ogm_format_s));
@@ -1173,7 +1191,6 @@ module_interface_t * media_new_format()
    
    /* Stream management */
    mf->add_stream = ogm_add_stream;
-
 
    mf->find_stream = ogm_find_stream;
    mf->find_mime = ogm_find_mime;
@@ -1198,6 +1215,8 @@ module_interface_t * media_new_format()
    mf->set_mime_player = ogm_set_mime_player;
 
    mf->players = ogm_players;
+   mf->start = ogm_start;
+   mf->stop = ogm_stop;
 
    /* Seek the media by time */
    mf->seek_millisecond = ogm_seek_millisecond;

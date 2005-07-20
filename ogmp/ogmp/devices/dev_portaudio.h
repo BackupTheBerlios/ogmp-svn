@@ -57,11 +57,11 @@ typedef struct portaudio_device_s
 {
    struct media_device_s dev;
 
-   PortAudioStream *pa_iostream;
+   PaStream *pa_iostream;
    int io_ready;
 
    /* Input */
-   audio_info_t ai_input;
+   audio_info_t *ai_input;
    media_receiver_t* receiver;
 
    int inbuf_n;
@@ -73,7 +73,7 @@ typedef struct portaudio_device_s
 
    int input_stop;
    xthread_t *input_thread;
-   PortAudioStream *pa_instream;
+   PaStream *pa_instream;
 
    int input_usec_pulse;
 
@@ -85,9 +85,9 @@ typedef struct portaudio_device_s
    pa_output_t *outbuf;
 
    media_pipe_t * out;
-   audio_info_t ai_output;
+   audio_info_t *ai_output;
 
-   PortAudioStream *pa_outstream;
+   PaStream *pa_outstream;
 
    xclock_t *clock;
    int nbuf_internal;   /* PortAudio Internal Buffer number, for performance tuning */

@@ -163,18 +163,19 @@ int pout_put_frame (media_pipe_t *mp, media_frame_t *mf, int last)
    int nbyte_tofill, nbyte_toread;
 
    pa_pipe_t *pp = (pa_pipe_t*)mp;
+
    portaudio_device_t *pa = pp->pa;
    
    pa_output_t *outbufw = &pa->outbuf[pa->outbuf_w];
 
    if(outbufw->nbyte_wrote == pa->io_nbyte_once)
       return pa->usec_pulse / 2;
-
+      
    while(pa->outbuf_nbyte_read < mf->bytes)
    {
       nbyte_toread = mf->bytes - pa->outbuf_nbyte_read;
       nbyte_tofill = pa->io_nbyte_once - outbufw->nbyte_wrote;
-
+      
       if(nbyte_tofill > nbyte_toread)
          nbyte_tofill = nbyte_toread;
 
@@ -239,6 +240,7 @@ int pout_done (media_pipe_t * mp)
  *
  * - sample_rate: how many samples go through the pipe per second
  * - usec_pulse: samples are sent by group, named pulse within certain usecond.
+
  * - ms_min, ms_max: buffered/delayed samples are limited.
  */
 
@@ -255,11 +257,11 @@ media_pipe_t * pa_pipe_new(portaudio_device_t* pa)
    memset(pout, 0, sizeof(struct pa_pipe_s));
 
    pout->pa = pa;
+   pout_debug (("\rtimed_outpipe_new: pout@%x\n", (int)pout));
    
    mout = (media_pipe_t *)pout;
    
-   mout->done = pout_done;
-      
+   mout->done = pout_done;      
    mout->new_frame = pout_new_frame;
    mout->recycle_frame = pout_recycle_frame;   
    mout->put_frame = pout_put_frame;

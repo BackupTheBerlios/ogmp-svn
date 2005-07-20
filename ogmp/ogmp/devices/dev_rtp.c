@@ -47,6 +47,7 @@ int rtp_done_setting(control_setting_t *gen){
 
 
 
+
 control_setting_t* rtp_new_setting(media_device_t *dev)
 {
    rtp_setting_t * set = xmalloc(sizeof(struct rtp_setting_s));
@@ -292,7 +293,7 @@ int rtp_stop (media_device_t * dev, int mode)
 	return MP_OK;
 }
 
-int rtp_set_input_media (media_device_t *dev, media_receiver_t* recvr, media_info_t *info)
+int rtp_set_input_media (media_device_t *dev, media_info_t *info, media_receiver_t* recvr)
 {
    /* media info is retrieved from rtp format */
    return MP_FAIL;

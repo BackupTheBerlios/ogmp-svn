@@ -53,8 +53,6 @@ typedef struct control_impl_s
 {
    struct media_control_s control;
    
-   media_format_t * format;
-   
    char *name;
    
    int namelen;
@@ -118,6 +116,7 @@ int cont_done (media_control_t * cont)
    return MP_OK;
 }
 
+#if 0
 int cont_set_format (media_control_t * cont, char *name, media_format_t * format)
 {
    control_impl_t *impl = (control_impl_t *)cont;
@@ -141,6 +140,7 @@ int cont_set_format (media_control_t * cont, char *name, media_format_t * format
 
    return MP_OK;
 }
+#endif
 
 int cont_done_player(void * gen)
 {
@@ -427,6 +427,7 @@ media_player_t * cont_new_player (media_control_t *cont, char *mode, char *mime,
    return player; 
 }
 
+
 media_maker_t* cont_find_creater(media_control_t *cont, char *mime, media_info_t* minfo)
 {
 	media_maker_t* maker;
@@ -472,17 +473,18 @@ media_maker_t* cont_find_creater(media_control_t *cont, char *mime, media_info_t
 	return maker;
 }
 
+#if 0
 int cont_seek_millisec (media_control_t * cont, int msec)
 {
    control_impl_t *impl = (control_impl_t *)cont;
-
 
    impl->demuxing = 0;
    
    return impl->format->seek_millisecond(impl->format, msec);
 }
+#endif
 
-int cont_demux_next (media_control_t * cont, int strm_end)
+int cont_demux_next (media_control_t * cont, media_format_t *format, int strm_end)
 {
 	rtime_t demux_us;
 	control_impl_t *impl;
@@ -491,10 +493,9 @@ int cont_demux_next (media_control_t * cont, int strm_end)
    
    if(impl->demuxing != 0)
 	{
-	   cont_log(("cont_demux_next: %dus period, last sleep %dus(need catchup %dus)\n", impl->period_us, impl->sleep_us, impl->catchup_us));
+	   cont_debug(("cont_demux_next: %dus period, last sleep %dus(need catchup %dus)\n", impl->period_us, impl->sleep_us, impl->catchup_us));
 
 	   demux_us = time_usec_spent(impl->clock, impl->period_start);
-
 
 	   impl->sleep_us = impl->period_us - demux_us - impl->catchup_us;
 	   
@@ -507,7 +508,7 @@ int cont_demux_next (media_control_t * cont, int strm_end)
 	}
 
 	impl->period_start = time_usec_now(impl->clock);
-	impl->period_us = impl->format->demux_next(impl->format, strm_end);
+	impl->period_us = format->demux_next(format, strm_end);
 
 	if(impl->period_us <= 0)
 		return impl->period_us; /* errno < 0 */
@@ -650,8 +651,8 @@ module_interface_t* new_media_control()
 
    cont->fetch_setting = cont_fetch_setting;
    
-   cont->set_format = cont_set_format;
-   cont->seek_millisec = cont_seek_millisec;
+   //cont->set_format = cont_set_format;
+   //cont->seek_millisec = cont_seek_millisec;
    cont->demux_next = cont_demux_next;
    
    cont->config = cont_config;

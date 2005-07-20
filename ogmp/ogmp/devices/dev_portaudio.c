@@ -25,8 +25,8 @@
 
 #define DEFAULT_SAMPLE_FACTOR  2
 
-#define DEFAULT_OUTPUT_NSAMPLE_PULSE 2048
-#define DEFAULT_INPUT_NSAMPLE_PULSE  2048
+#define DEFAULT_OUTPUT_NSAMPLE_PULSE 512
+#define DEFAULT_INPUT_NSAMPLE_PULSE  512
 
 #define PA_DEFAULT_INBUF_N 2
 #define PA_DEFAULT_OUTBUF_N 2
@@ -48,31 +48,6 @@
  #define pa_debug(fmtargs)
 #endif
 
-static int pa_input_callback( void *inbuf, void *outbuf, unsigned long npcm_in,
-								      PaTimestamp intime, void *udata )
-{
-   int next;
-
-   portaudio_device_t* pa = (portaudio_device_t*)udata;
-
-   pa->input_samplestamp += npcm_in;
-
-   next = (pa->inbuf_w+1) % pa->inbuf_n;
-   if(next == pa->inbuf_r)
-   {
-	   /* encoding slower than input */
-	   return 0;
-   }
-
-   memcpy(pa->inbuf[pa->inbuf_w].pcm, inbuf, npcm_in);
-
-   pa->inbuf[pa->inbuf_w].stamp = pa->input_samplestamp;
-   pa->inbuf[pa->inbuf_w].npcm_write = npcm_in;
-   pa->inbuf_w = next;
-
-   return 0;
-}
-
 int pa_input_loop(void *gen)
 {
 	int err;
@@ -85,7 +60,7 @@ int pa_input_loop(void *gen)
 	if (!pa->receiver)
       return MP_FAIL;
 
-	sample_bytes = pa->ai_input.info.sample_bits / OS_BYTE_BITS;
+	sample_bytes = pa->ai_input->info.sample_bits / OS_BYTE_BITS;
 	pa_debug(("pa_input_loop: PortAudio started, %d bytes/sample\n\n", sample_bytes));
 
 	pa->input_stop = 0;
@@ -141,7 +116,89 @@ int pa_input_loop(void *gen)
 	return MP_OK;
 }
 
-static int pa_io_callback( void *inbuf, void *outbuf, unsigned long npcm, PaTimestamp intime, void *udata )
+static int pa_input_callback (const void *inbuf, void *outbuf,
+                              unsigned long npcm,
+                              const PaStreamCallbackTimeInfo* intime,
+                              PaStreamCallbackFlags statusFlags,
+                              void *udata )
+{
+   portaudio_device_t* pa = (portaudio_device_t*)udata;
+
+	pa_input_t* inbufw;
+
+   /* Record input data */
+   if(inbuf)
+   {
+		pa->input_samplestamp += npcm;
+
+      inbufw = &pa->inbuf[pa->inbuf_w];
+
+      if(inbufw->npcm_write != 0)
+		{
+			/* encoding slower than input */
+			pa_debug(("\rpa_input_callback: inbuf#%d ... input full\n", pa->inbuf_w));
+		}
+		else
+		{
+		   pa_debug(("\rpa_input_callback: inbuf#%d ... record bytes[%ld] at %fs ADC[%fs]\n", pa->inbuf_w, npcm, intime->currentTime, intime->inputBufferAdcTime));
+			memcpy(inbufw->pcm, inbuf, pa->io_nbyte_once);
+
+         inbufw->stamp = pa->input_samplestamp;
+			inbufw->npcm_write = npcm;
+         inbufw->tick = pa->input_tick;
+
+			pa->inbuf_w = (pa->inbuf_w+1) % pa->inbuf_n;
+		}
+
+      pa->input_tick++;
+   }
+
+   return 0;
+}
+
+static int pa_output_callback (const void *inbuf, void *outbuf,
+                              unsigned long npcm,
+                              const PaStreamCallbackTimeInfo* intime,
+                              PaStreamCallbackFlags statusFlags,
+                              void *udata )
+{
+   portaudio_device_t* pa = (portaudio_device_t*)udata;
+
+	pa_output_t* outbufr;
+
+   int end = 1;
+
+   if(outbuf)
+   {
+      outbufr = &pa->outbuf[pa->outbuf_r];
+
+      if(outbufr->nbyte_wrote != pa->io_nbyte_once)
+		{
+			/* encoding slower than input */
+			pa_debug(("\rpa_output_callback: outbuf#%d ... output empty\n", pa->outbuf_r));
+			memset(outbuf, PA_MUTE, pa->io_nbyte_once);
+         end = 0;
+		}
+		else
+		{
+		   pa_debug(("\rpa_output_callback: outbuf#%d ... play\n", pa->outbuf_r));
+			memcpy(outbuf, outbufr->pcm, pa->io_nbyte_once);
+
+			outbufr->nbyte_wrote = 0;
+         end = outbufr->last;
+
+			pa->outbuf_r = (pa->outbuf_r+1) % pa->outbuf_n;
+		}
+   }
+
+   return end;
+}
+
+static int pa_io_callback (const void *inbuf, void *outbuf,
+                           unsigned long npcm,
+                           const PaStreamCallbackTimeInfo* intime,
+                           PaStreamCallbackFlags statusFlags,
+                           void *udata )
 {
    portaudio_device_t* pa = (portaudio_device_t*)udata;
 
@@ -160,7 +217,7 @@ static int pa_io_callback( void *inbuf, void *outbuf, unsigned long npcm, PaTime
       if(inbufw->npcm_write != 0)
 		{
 			/* encoding slower than input */
-			pa_log(("\rpa_io_callback: inbuf#%d ... input full\n", pa->inbuf_w));
+			pa_debug(("\rpa_io_callback: inbuf#%d ... input full\n", pa->inbuf_w));
 		}
 		else
 		{
@@ -339,280 +396,94 @@ int pa_done_outbuf(portaudio_device_t *pa)
    return MP_OK;
 }
 
-int pa_set_input_media(media_device_t *dev, media_receiver_t* recvr, media_info_t *in_info)
+int pa_set_input(media_device_t *dev, media_info_t *minfo, media_receiver_t* recvr)
 {
    portaudio_device_t *pa = (portaudio_device_t *)dev;
-   
-   //int nsp = 0;
-   int nsample_pulse = 0;
-
-   int sample_type = 0;
-
-   PaError err = 0;
-
-   audio_info_t* ai = (audio_info_t*)in_info;
-
-   if(!pa->online && pa_online (dev) < MP_OK)
-   {
-
-      pa_debug (("pa_set_input_media: Can't activate PortAudio device\n"));
-      return MP_FAIL;
-   }
-   
-   pa->ai_input = *ai;
-
-   /*
-   nsp = pa->ai_input.info.sample_rate / pa->sample_factor;
-   nsp = pa->ai_input.info.sample_rate / pa->sample_factor;
-   nsample_pulse = 1;
-   while (nsample_pulse * 2 <= nsp)
-	   nsample_pulse *= 2;
-   */
-   nsample_pulse = DEFAULT_OUTPUT_NSAMPLE_PULSE;
-
-   if(pa->ai_input.info.sample_rate > nsample_pulse)
-      pa->input_usec_pulse = (int)(1000000 / (pa->ai_input.info.sample_rate / (double)nsample_pulse));
-   else
-
-      pa->input_usec_pulse = (int)((double)nsample_pulse / pa->ai_input.info.sample_rate * 1000000);
-      
-   pa_log(("pa_set_input_media: %d channels, %d rate, %d sample per pulse (%dus)\n", 
-			pa->ai_input.channels, pa->ai_input.info.sample_rate, nsample_pulse, pa->usec_pulse));
-   
-   pa->ai_input.channels_bytes = pa->ai_input.channels * pa->ai_input.info.sample_bits / OS_BYTE_BITS;
-
-   pa->io_npcm_once = ai->info.sampling_constant;
-   pa->io_nbyte_once = pa->ai_input.channels_bytes * ai->info.sampling_constant;
-   
-   sample_type = pa_sample_type(pa->ai_input.info.sample_bits);
-   
-   err = Pa_OpenStream 
-					(	&pa->pa_instream,
-						Pa_GetDefaultInputDeviceID(),
-						pa->ai_input.channels,
-						sample_type,
-						NULL,				/* void *inputDriverInfo */
-						paNoDevice,
-						0,					/* int numOutputChannels */
-						sample_type,		/* PaSampleFormat outputSampleFormat */
-						NULL,
-						pa->ai_input.info.sample_rate,
-						nsample_pulse,		/* unsigned long framesPerBuffer */
-						pa->nbuf_internal,	/* unsigned long numberOfBuffers */
-						0,					/* PaStreamFlags streamFlags: paDitherOff */
-						pa_input_callback,
-						pa 
-					);
-
-   if ( err != paNoError )
-   {
-      pa_debug(("pa_set_input_media: %s\n", Pa_GetErrorText(err) ));
-      Pa_Terminate();
-
-      return MP_FAIL;
-   }
-
-   pa->receiver = recvr;
-   
-   pa_make_inbuf(pa, ai, PA_DEFAULT_INBUF_N);
-      
-   pa_log(("\n[pa_set_input_media: PortAudio use %d internal buffers]\n\n", Pa_GetMinNumBuffers (nsample_pulse, pa->ai_input.info.sample_rate)));
-
-   /* Start PortAudio */
-   return MP_OK;
-}
-
-int pa_set_output_media(media_device_t *dev, media_info_t *out_info)
-{
-   portaudio_device_t *pa = (portaudio_device_t *)dev;
-
-
-   /*int nsp = 0;*/
-   int nsample_pulse = 0;
-   int sample_type = 0;
-
-   PaError err = 0;
-   int pa_min_nbuf = 0;
-
-   audio_info_t* ai = (audio_info_t*)out_info;
-
-   if(!pa->online && pa_online (dev) < MP_OK)
-   {
-      pa_debug (("pa_set_input_media: Can't activate PortAudio device\n"));
-
-      return MP_FAIL;
-   }
-
-   pa->ai_output = *ai;
-
-   /*
-   nsp = pa->ai_input.info.sample_rate / pa->sample_factor;
-   nsample_pulse = 1;
-   while (nsample_pulse * 2 <= nsp)
-	   nsample_pulse *= 2;
-   */
-
-   /* *
-    * It looks to set 2048 per pulse will get a more smooth audio out result
-    * for both 16000 and 8000 rate.
-    */
-
-   nsample_pulse = DEFAULT_OUTPUT_NSAMPLE_PULSE;
-
-   if(pa->ai_output.info.sample_rate > nsample_pulse)
-      pa->usec_pulse = (int)(1000000 / (pa->ai_output.info.sample_rate / (double)nsample_pulse));
-   else
-      pa->usec_pulse = (int)((double)nsample_pulse / pa->ai_output.info.sample_rate * 1000000);
-
-   pa_debug(("pa_set_output_media: %d channels, %d rate, %d sample per pulse (%dus)\n",
-			pa->ai_output.channels, pa->ai_output.info.sample_rate, nsample_pulse, pa->usec_pulse));
-
-   pa->ai_output.channels_bytes = pa->ai_output.channels * pa->ai_output.info.sample_bits / OS_BYTE_BITS;
-
-   pa->out = pa_pipe_new(pa);
-
-   sample_type = pa_sample_type(pa->ai_output.info.sample_bits);
-
-   err = Pa_OpenDefaultStream
-                  (  &pa->pa_outstream,
-
-                     0,                        /* no input channels */
-                     pa->ai_output.channels,   /* output channels */
-                     sample_type,              /* paInt16: 16 bit integer output, etc */
-                     pa->ai_output.info.sample_rate,  /* sample rate, cd is 44100hz */
-                     nsample_pulse,
-                     pa->nbuf_internal,        /* use default minimum audio buffers in portaudio */
-                     pa_io_callback,
-                     pa
-                  );
-
-   if ( err != paNoError )
-   {
-      pa_debug(("pa_set_output_media: %s\n", Pa_GetErrorText(err) ));
-      Pa_Terminate();
-
-      return MP_FAIL;
-   }
-
-	pa_min_nbuf = Pa_GetMinNumBuffers (nsample_pulse, pa->ai_output.info.sample_rate);
-
-	pa_debug(("\n[pa_set_output_media: stream opened, PortAudio use %d internal buffers]\n\n", pa_min_nbuf));
-
-	err = Pa_StartStream ( pa->pa_outstream );
-
-	if( err != paNoError )
-	{
-		Pa_Terminate();
-		pa_debug(("pa_set_output_media: An error occured while using the portaudio stream\n"));
-
-		pa->online = 0;
-		return MP_FAIL;
-	}
-
-	return MP_OK;
-
-}
-
-int pa_set_io(media_device_t *dev, media_info_t *minfo, media_receiver_t* recvr)
-{
-   portaudio_device_t *pa = (portaudio_device_t *)dev;
-
-   /*int nsp = 0;*/
-   int nsample_pulse = 0;
-   int sample_type = 0;
-
-   PaError err = 0;
-   int pa_min_nbuf = 0;              
 
    audio_info_t* ai = (audio_info_t*)minfo;
 
-   if(!pa->receiver && recvr)
-      pa->receiver = recvr;
-
-   if(pa->io_ready)
+   if(pa->pa_instream)
       return MP_OK;
 
    if(!pa->online && pa_online (dev) < MP_OK)
    {
       pa_debug (("pa_set_io: Can't activate PortAudio device\n"));
-
       return MP_FAIL;
    }
 
-   nsample_pulse = DEFAULT_OUTPUT_NSAMPLE_PULSE;
+   ai->channels_bytes = ai->channels * ai->info.sample_bits / OS_BYTE_BITS;
    ai->info.sampling_constant = DEFAULT_OUTPUT_NSAMPLE_PULSE;
 
-   if(ai->info.sample_rate > nsample_pulse)
-      pa->usec_pulse = (int)(1000000 / (ai->info.sample_rate / (double)nsample_pulse));
-   else
-      pa->usec_pulse = (int)((double)nsample_pulse / ai->info.sample_rate * 1000000);
+   pa->usec_pulse = 1000000 / ai->info.sample_rate * DEFAULT_OUTPUT_NSAMPLE_PULSE;
 
-   pa_debug(("pa_set_io: %d channels, %d rate, %d sample per pulse (%dus)\n",
-			ai->channels, ai->info.sample_rate, nsample_pulse, pa->usec_pulse));
+   pa->io_npcm_once = DEFAULT_OUTPUT_NSAMPLE_PULSE;
+   pa->io_nbyte_once = ai->channels_bytes * DEFAULT_OUTPUT_NSAMPLE_PULSE;
+
+   pa->ai_input = ai;   
+   pa_make_inbuf(pa, ai, PA_DEFAULT_INBUF_N);
+
+   pa->receiver = recvr;
+   
+   return MP_OK;
+}
+
+int pa_set_output(media_device_t *dev, media_info_t *minfo)
+{
+   portaudio_device_t *pa = (portaudio_device_t *)dev;
+
+   audio_info_t* ai = (audio_info_t*)minfo;
+
+   if(pa->pa_outstream)
+      return MP_OK;
+
+   if(!pa->online && pa_online (dev) < MP_OK)
+   {
+      pa_debug (("pa_set_io: Can't activate PortAudio device\n"));
+      return MP_FAIL;
+   }
 
    ai->channels_bytes = ai->channels * ai->info.sample_bits / OS_BYTE_BITS;
+   ai->info.sampling_constant = DEFAULT_OUTPUT_NSAMPLE_PULSE;
 
-   pa->io_npcm_once = nsample_pulse;
-   pa->io_nbyte_once = ai->channels_bytes * nsample_pulse;
+   pa->usec_pulse = 1000000 / ai->info.sample_rate * DEFAULT_OUTPUT_NSAMPLE_PULSE;
 
-	pa_debug(("pa_set_io: %d bytes once\n", pa->io_nbyte_once));
+   pa->io_npcm_once = DEFAULT_OUTPUT_NSAMPLE_PULSE;
+   pa->io_nbyte_once = ai->channels_bytes * DEFAULT_OUTPUT_NSAMPLE_PULSE;
+
+   pa->ai_output = ai;
+   pa_make_outbuf(pa, ai, PA_DEFAULT_OUTBUF_N);
 
    pa->out = pa_pipe_new(pa);
 
-   sample_type = pa_sample_type(ai->info.sample_bits);
+   return MP_OK;
+}
 
-   pa->ai_output = *ai;
-   pa->ai_input = *ai;
-   
-   pa_make_inbuf(pa, &pa->ai_input, PA_DEFAULT_INBUF_N);
-   pa_make_outbuf(pa, &pa->ai_output, PA_DEFAULT_OUTBUF_N);
+int pa_set_io(media_device_t *dev, media_info_t *minfo, media_receiver_t* recvr)
+{
+   portaudio_device_t *pa = (portaudio_device_t *)dev;
+   audio_info_t* ai = (audio_info_t*)minfo;
 
-   err = Pa_OpenDefaultStream
-                  (  &pa->pa_iostream,
-                     ai->channels,   /* input channels */
-                     ai->channels,   /* output channels */
-                     sample_type,              /* paInt16: 16 bit integer output, etc */
-                     ai->info.sample_rate,  /* sample rate, cd is 44100hz */
-                     nsample_pulse,
-                     pa->nbuf_internal,        /* use default minimum audio buffers in portaudio */
-                     pa_io_callback,
-                     pa
-                  );
-#if 0
-   err = Pa_OpenStream 
-					(	&pa->pa_iostream,
-						Pa_GetDefaultInputDeviceID(),
-						pa->ai_input.channels,
-						sample_type,
-						NULL,				/* void *inputDriverInfo */
-						Pa_GetDefaultOutputDeviceID(),
-						pa->ai_output.channels,	/* int numOutputChannels */
-						sample_type,		/* PaSampleFormat outputSampleFormat */
-						NULL,				/* void *outputDriverInfo */
-						pa->ai_input.info.sample_rate,
-						nsample_pulse,		/* unsigned long framesPerBuffer */
-						pa->nbuf_internal,	/* unsigned long numberOfBuffers */
-						0,					/* PaStreamFlags streamFlags: paDitherOff */
-
-						pa_io_callback,
-						pa 
-
-					);
-#endif
-
-   if ( err != paNoError )
+   if(!pa->ai_input && !pa->ai_output)
    {
-      pa_debug(("pa_set_io: %s\n", Pa_GetErrorText(err) ));
-      Pa_Terminate();
+      ai->info.sampling_constant = DEFAULT_OUTPUT_NSAMPLE_PULSE;
+      ai->channels_bytes = ai->channels * ai->info.sample_bits / OS_BYTE_BITS;
 
-      return MP_FAIL;
+      pa->usec_pulse = 1000000 / ai->info.sample_rate * DEFAULT_OUTPUT_NSAMPLE_PULSE;
+      pa->io_npcm_once = DEFAULT_OUTPUT_NSAMPLE_PULSE;
+      pa->io_nbyte_once = ai->channels_bytes * DEFAULT_OUTPUT_NSAMPLE_PULSE;
+      
+      pa->out = pa_pipe_new(pa);
+      
+      pa_make_inbuf(pa, ai, PA_DEFAULT_INBUF_N);
+      pa_make_outbuf(pa, ai, PA_DEFAULT_OUTBUF_N);
+
+      pa->ai_input = ai;
+      pa->ai_output = ai;
+
+      pa_debug(("pa_set_io: %d channels, %d rate, pulse[%dus]\n", ai->channels, ai->info.sample_rate, pa->usec_pulse));
    }
 
-	pa_min_nbuf = Pa_GetMinNumBuffers (nsample_pulse, ai->info.sample_rate);
-
-   pa->io_ready = 1;
-
-	pa_debug(("\n[pa_set_io: stream opened, PortAudio use %d internal buffers]\n\n", pa_min_nbuf));
+   if(recvr) pa->receiver = recvr;
 
    return MP_OK;
 }
@@ -622,48 +493,173 @@ int pa_init(media_device_t * dev, media_control_t *ctrl)
    return MP_OK;
 }
 
+#if defined (FULL_DUPLEX)
+
 int pa_start_io(media_device_t * dev, int mode)
 {
 	int err;
-
+   PaStreamParameters  inputParameters, *in=NULL;
+   PaStreamParameters  outputParameters, *out=NULL;
+   
 	portaudio_device_t *pa = (portaudio_device_t *)dev;
 
-   if((mode & DEVICE_INPUT) && pa->input_thread)
+   if(pa->pa_iostream && Pa_IsStreamActive(pa->pa_iostream))
       return MP_OK;
-
-   if((mode & DEVICE_INPUT) && dev->running)
-      mode = DEVICE_INPUT;
    
-	if (!pa->pa_iostream)
-	{
-		pa_debug(("pa_start_io: No Audio I/O\n"));
-		return MP_FAIL;
-	}
+   if(pa->ai_input)
+   {
+      inputParameters.device = Pa_GetDefaultInputDevice(); /* default input device */
+      inputParameters.channelCount = pa->ai_input->channels;
+      inputParameters.sampleFormat = PA_SAMPLE_TYPE;
+      inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultLowInputLatency;
+      inputParameters.hostApiSpecificStreamInfo = NULL;
+
+      in = &inputParameters;
+   }
+
+   if(pa->ai_output)
+   {
+      outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
+      outputParameters.channelCount = pa->ai_output->channels;
+      outputParameters.sampleFormat =  PA_SAMPLE_TYPE;
+      outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultLowOutputLatency;
+      outputParameters.hostApiSpecificStreamInfo = NULL;
+
+      out = &outputParameters;
+   }
+
+   err = Pa_OpenStream
+					(	&pa->pa_iostream,
+                  in,
+                  out,
+						pa->ai_input->info.sample_rate * 1.0,
+						DEFAULT_OUTPUT_NSAMPLE_PULSE, /* unsigned long framesPerBuffer */
+						paDitherOff,                  /* PaStreamFlags streamFlags: paDitherOff */
+						pa_io_callback,
+						pa
+					);
+
+   if ( err != paNoError )
+   {
+      pa_debug(("pa_start_io: %s\n", Pa_GetErrorText(err) ));
+      return MP_FAIL;
+   }
 
 	err = Pa_StartStream (pa->pa_iostream);
 
-
 	if( err != paNoError )
 	{
-	   Pa_Terminate();
 	   pa_debug(("pa_start_io: An error occured while using the portaudio stream\n"));
-
-	   pa->online = 0;
 	   return MP_FAIL;
 	}
       
 	pa_debug(("pa_start_io: PortAudio io started\n"));
 
 	/* Start Audio Input */
-	if((mode & DEVICE_INPUT) && pa->receiver)
-   {
+	if(pa->receiver)
 		pa->input_thread = xthr_new (pa_input_loop, pa, XTHREAD_NONEFLAGS);
-   }
 
    dev->running = 1;
 
 	return MP_OK;
 }
+
+#else
+
+int pa_start_io(media_device_t * dev, int mode)
+{
+	int err;
+   PaStreamParameters  inputParameters, *in=NULL;
+   PaStreamParameters  outputParameters, *out=NULL;
+
+	portaudio_device_t *pa = (portaudio_device_t *)dev;
+
+   if(pa->pa_iostream && Pa_IsStreamActive(pa->pa_iostream))
+      return MP_OK;
+
+   if(0)//pa->ai_input)
+   {
+      inputParameters.device = Pa_GetDefaultInputDevice(); /* default input device */
+      inputParameters.channelCount = pa->ai_input->channels;
+      inputParameters.sampleFormat = PA_SAMPLE_TYPE;
+      inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultLowInputLatency;
+      inputParameters.hostApiSpecificStreamInfo = NULL;
+
+      in = &inputParameters;
+
+      err = Pa_OpenStream
+					(	&pa->pa_iostream,
+                  in,
+                  NULL,
+						pa->ai_input->info.sample_rate * 1.0,
+						DEFAULT_INPUT_NSAMPLE_PULSE, /* unsigned long framesPerBuffer */
+						paDitherOff,                  /* PaStreamFlags streamFlags: paDitherOff */
+						pa_input_callback,
+						pa
+					);
+               
+      if ( err != paNoError )
+      {
+         pa_debug(("pa_start_io: %s\n", Pa_GetErrorText(err) ));
+         return MP_FAIL;
+      }
+
+      err = Pa_StartStream (pa->pa_iostream);
+
+	   if( err != paNoError )
+	   {
+	      pa_debug(("pa_start_io: An error occured while using the portaudio stream\n"));
+	      return MP_FAIL;
+	   }
+   }
+
+   if(pa->ai_output)
+   {
+      outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
+      outputParameters.channelCount = pa->ai_output->channels;
+      outputParameters.sampleFormat =  PA_SAMPLE_TYPE;
+      outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultLowOutputLatency;
+      outputParameters.hostApiSpecificStreamInfo = NULL;
+
+      out = &outputParameters;
+      
+      err = Pa_OpenStream
+					(	&pa->pa_iostream,
+                  NULL,
+                  out,
+						pa->ai_input->info.sample_rate * 1.0,
+						DEFAULT_OUTPUT_NSAMPLE_PULSE, /* unsigned long framesPerBuffer */
+						paDitherOff,                  /* PaStreamFlags streamFlags: paDitherOff */
+						pa_output_callback,
+						pa
+					);
+               
+      if ( err != paNoError )
+      {
+         pa_debug(("pa_start_io: %s\n", Pa_GetErrorText(err) ));
+         return MP_FAIL;
+      }
+	   err = Pa_StartStream (pa->pa_iostream);
+
+	   if( err != paNoError )
+	   {
+	      pa_debug(("pa_start_io: An error occured while using the portaudio stream\n"));
+	      return MP_FAIL;
+	   }
+   }
+
+	pa_debug(("pa_start_io: PortAudio io started\n"));
+
+	/* Start Audio Input */
+	if(pa->receiver)
+		pa->input_thread = xthr_new (pa_input_loop, pa, XTHREAD_NONEFLAGS);
+
+   dev->running = 1;
+
+	return MP_OK;
+}
+
+#endif
 
 int pa_stop_io(media_device_t * dev, int mode)
 {
@@ -743,7 +739,6 @@ int pa_done (media_device_t * dev)
       time_end(pa_dev->clock);
 
    pa_done_inbuf(pa_dev);
-
    
    xfree(pa_dev);
    
@@ -815,8 +810,8 @@ module_interface_t* media_new_device ()
    dev->done = pa_done;
 
    dev->set_io = pa_set_io;
-   dev->set_input_media = pa_set_input_media;
-   dev->set_output_media = pa_set_output_media;
+   dev->set_input_media = pa_set_input;
+   dev->set_output_media = pa_set_output;
    
    dev->new_setting = pa_new_setting;
    dev->setting = pa_setting;

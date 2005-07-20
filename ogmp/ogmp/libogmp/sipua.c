@@ -291,6 +291,8 @@ int sipua_make_call(sipua_t *sipua, sipua_call_t* call, char* id,
 
 
 
+
+
 		{
 			call->bandwidth_need += media_bw;
 		}
@@ -496,6 +498,7 @@ int sipua_negotiate_call(sipua_t *sipua, sipua_call_t *call,
 	int call_bw;
 
 
+
 	module_catalog_t *cata = control->modules(control);
 
 	bw_budget = control->book_bandwidth(control, call_max_bw);
@@ -592,6 +595,7 @@ int sipua_negotiate_call(sipua_t *sipua, sipua_call_t *call,
 				rtpcap->local_rtcp_portno = rtcp_ports[j];
 
 				break;
+
 			}
 		}
 

@@ -55,11 +55,11 @@ int source_loop(void * gen)
       if (osource->finish)
       {
          src_log (("\nogmplyer: Last demux and quit\n"));
-         osource->control->demux_next(osource->control, 1);         
+         osource->control->demux_next(osource->control, osource->format, 1);         
          break;
       }
 
-      itv = osource->control->demux_next(osource->control, 0);
+      itv = osource->control->demux_next(osource->control, osource->format, 0);
             
       if( itv < 0 && itv == MP_EOF)
       {
@@ -81,26 +81,18 @@ int source_loop(void * gen)
 
 int source_start (media_source_t *msrc)
 {
-	ogmp_source_t *osource = (ogmp_source_t*)msrc;
+	ogmp_source_t *osrc = (ogmp_source_t*)msrc;
 
-	if(osource->demuxing)
+	if(osrc->demuxing)
 	{
 		src_log (("source_start: source already running\n"));
-
 		return MP_OK;
 	}
 		
-	/* start thread */
-	if(osource->nstream == 0)
-	{
-		src_debug (("source_start: no source stream available\n"));
-
-		return MP_FAIL;
-	}
-
 	src_debug (("source_start: start\n"));
+   osrc->format->start(osrc->format);
 
-	osource->demuxer = xthr_new(source_loop, osource, XTHREAD_NONEFLAGS);
+	osrc->demuxer = xthr_new(source_loop, osrc, XTHREAD_NONEFLAGS);
    
 	return MP_OK;
 }
@@ -152,11 +144,12 @@ int source_done_format_handler(void *gen)
    return MP_OK;
 }
 
-int source_cb_on_player_ready(void *gen, media_player_t *player)
+int source_cb_on_player_ready(void *gen, media_player_t *player, media_stream_t *stream)
 {
 	ogmp_source_t *src = (ogmp_source_t*)gen;
 
 	source_start(&src->tsource.source);
+   stream->start(stream);
 
 	return MP_OK;
 }
@@ -227,7 +220,6 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
       return NULL;
    }
 
-
    osource = xmalloc(sizeof(ogmp_source_t));
 	if(!osource)
    {
@@ -277,7 +269,8 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
 	}
 
 	/* set audio source */
-	osource->control->set_format (osource->control, "av", format);
+	/* osource->control->set_format (osource->control, "av", format); */
+   osource->format = format;
 
 	msrc = (media_source_t*)osource;
 
@@ -321,14 +314,13 @@ media_source_t* source_open(char* name, media_control_t* control, char* mode, vo
          osource->players[i]->set_callback(osource->players[i], CALLBACK_PLAYER_READY, source_cb_on_player_ready, osource);
       }
    }
-    
+
    osource->lock = xthr_new_lock();
    osource->wait_request = xthr_new_cond(XTHREAD_NONEFLAGS);
    
-   /*test
-   osource->control->demux_next(osource->control, 0);
+   /* test 
+   osource->control->demux_next (osource->control, osource->format, 0);
    */
-   
    return msrc;
 }
 

@@ -362,7 +362,7 @@ int spxrtp_rtp_in(profile_handler_t *h, xrtp_rtp_packet_t *rtp)
 
 		   player = ctrl->find_player(ctrl, "playback", SPEEX_MIME, "");
 
-		   ret = player->open_stream(player, (media_info_t*)spxinfo);
+		   ret = player->open_stream(player, (media_stream_t*)spxh->session->media_stream, (media_info_t*)spxinfo);
 		   if( ret < MP_OK)
 		   {
 				sender->media_playable = -1;
@@ -595,7 +595,7 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 					return XRTP_CONSUMED;
 				}
 
-				ret = player->open_stream(player, (media_info_t*)spxinfo);
+				ret = player->open_stream(player, ses->media_stream, (media_info_t*)spxinfo);
 				if( ret < MP_OK)
 				{
 					sender->media_playable = -1;
@@ -605,7 +605,9 @@ int spxrtp_rtcp_in(profile_handler_t *handler, xrtp_rtcp_compound_t *rtcp)
 					rtcp_compound_done(rtcp);
 
 					return XRTP_CONSUMED;
-				}         
+				}
+
+            player->start(player);         
 
 				explayer = (media_player_t*)session_member_set_player(sender, player);
 
@@ -839,6 +841,7 @@ void* rtp_speex_info(xrtp_media_t* media, void* rtp_cap)
 
    spxinfo->audioinfo.info.mime = xstr_clone("audio/speex");
 
+
 	nextpos = speex_info_from_sdp((media_info_t*)spxinfo, rtpcap->profile_no, rtpcap->sdp_message, 0);
    if(nextpos < 0)
    {
@@ -882,6 +885,7 @@ int rtp_speex_sdp(xrtp_media_t* media, void* sdp_info)
 	char *ipaddr;
 
 	int clockrate, coding_param;
+
 	int ret;
 
 	speex_info_t *spxinfo;
@@ -932,6 +936,7 @@ int rtp_speex_sdp(xrtp_media_t* media, void* sdp_info)
 
 	if(ret < MP_OK)
 	   return XRTP_FAIL;
+
 	   
 	sdp->sdp_media_pos++;
 
@@ -953,8 +958,6 @@ int rtp_speex_new_sdp(xrtp_media_t *media, char* nettype, char* addrtype, char* 
 	spxset = speex_setting(mctrl);
 
 	/* override default port */
-
-
 	if(spxset->rtp_setting.rtp_portno > 0)
 		*rtp_portno = spxset->rtp_setting.rtp_portno;
 
@@ -1254,6 +1257,7 @@ xrtp_media_t* rtp_speex(profile_handler_t *handler, int clockrate, int coding_pa
 
 		profile->rtp_portno = spxset->rtp_setting.rtp_portno;
 		profile->rtcp_portno = spxset->rtp_setting.rtcp_portno;
+
 
 		spxinfo = (speex_info_t*)xmalloc(sizeof(speex_info_t));
 		if(!spxinfo)
