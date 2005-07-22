@@ -131,6 +131,7 @@ int spxp_loop(void *gen)
 		   xthr_unlock(dec->pending_lock);
       }
       
+      spxp_debug (("\rspxp_loop: frame#%lld[%lld] bytes[%d]\n", auf->sno, auf->samplestamp, auf->bytes));
       usec_delay = output->put_frame(output, auf, auf->eots);
 
       if(usec_delay == 0)
@@ -581,7 +582,6 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
 
    {  /* decode repack */
       repack.samplestamp = dec->chunk_samplestamp;
-      repack.sno = dec->sno++;
       repack.bytes = dec->chunk_p - dec->chunk;
       repack.nraw = dec->chunk_nsample;
       repack.raw = dec->chunk;
@@ -609,19 +609,14 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
       dec->last_samplestamp = samplestamp;
    }
 
+   auf->samplestamp = dec->chunk_samplestamp;
+   auf->sno = dec->sno++;
+   auf->eos = (last_packet == MP_EOS);
+   auf->eots = last_packet;
    auf->ts = dec->ts_usec_now;
 
-   spxp_log(("\rspxp_receive_next: frame[%lld#:%lld:%llds] speex[%d]...raw[%d]\n", repack.sno, repack.samplestamp, samplestamp, repack.bytes, auf->bytes));
-
-   if(last_packet)
-	   auf->eots = 1;
-   else
-	   auf->eots = 0;
-
    xthr_lock(dec->pending_lock);
-
 	xlist_addto_last(dec->pending_queue, auf);
-
 	xthr_unlock(dec->pending_lock);
 
    xthr_cond_signal(dec->packet_pending);

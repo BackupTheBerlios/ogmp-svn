@@ -293,6 +293,7 @@ int sipua_make_call(sipua_t *sipua, sipua_call_t* call, char* id,
 
 
 
+
 		{
 			call->bandwidth_need += media_bw;
 		}
@@ -517,6 +518,7 @@ int sipua_negotiate_call(sipua_t *sipua, sipua_call_t *call,
 
    /* call owner identification */
 	call->setid.id = xstr_clone(rtpcapset->callid);
+
 	call->setid.username = rtpcapset->username;
 	call->setid.nettype = xstr_clone(rtpcapset->nettype);
 	call->setid.addrtype = xstr_clone(rtpcapset->addrtype);
@@ -776,7 +778,7 @@ int sipua_link_medium(sipua_t* sipua, sipua_call_t* call, media_control_t* contr
          mediatype[i] = minfo->mime[i];
          i++;
       }
-      mediatype[i] = '\0';
+      mediatype[i] = '\0';                                                          
 
       if(sipua_open_stream_output (control, call, (media_stream_t*)rtpstrm, mediatype, "netcast") < MP_OK)
       {

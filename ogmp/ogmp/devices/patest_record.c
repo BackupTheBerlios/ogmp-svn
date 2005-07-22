@@ -21,7 +21,6 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- *
  * Any person wishing to distribute modifications to the Software is
  * requested to send the modifications to the original developer so that
  * they can be incorporated into the canonical version.
@@ -71,29 +70,10 @@
 
 typedef struct
 {
-   int64 stamp;
-   int npcm_write;
-   int npcm_read;
-   int nbyte_read;
-   
-   int tick;
-   
-   int frameIndex;  /* Index into sample array. */
-   int byteIndex;  /* Index into sample array. */
-}
-paSampleOnce;
-
-typedef struct
-{
-    int          nwriter;
-    int          nreader;
-    
     int          frameIndex;  /* Index into sample array. */
-    int          maxFrameIndex;
-    
-    paSampleOnce **once;
-    
-    SAMPLE      *pcm;
+    int          maxFrameIndex;    
+    char      *pcm;
+    int        nbyte;
 }
 paSampleData;
 
@@ -115,9 +95,11 @@ paDevice;
 ** It may be called at interrupt level on some machines so don't do anything
 ** that could mess up the system like calling malloc() or free().
 */
-int recordCallback( void *inputBuffer,
-                    unsigned long framesPerBuffer,
-                    PaTimestamp outTime, void *userData )
+static int recordCallback (const void *inputBuffer, void *outputBuffer,
+                           unsigned long framesPerBuffer,
+                           const PaStreamCallbackTimeInfo* timeInfo,
+                           PaStreamCallbackFlags statusFlags,
+                           void *userData )
 {
     paDevice *padev = (paDevice*)userData;
 	 paSampleData *RecData = &padev->Samples[padev->RecData];
@@ -132,7 +114,7 @@ int recordCallback( void *inputBuffer,
     unsigned long framesLeft = RecData->maxFrameIndex - RecData->frameIndex;
     int samplesToRecord;
 
-    (void) outTime;
+    (void) timeInfo;
 
     if( framesLeft < framesPerBuffer )
     {
@@ -140,25 +122,19 @@ int recordCallback( void *inputBuffer,
         buffer_full = 1;
     }
     else
-    {
         framesToRecord = framesPerBuffer;
-    }
     
     samplesToRecord = framesToRecord * NUM_CHANNELS;
     
     if( inputBuffer == NULL )
     {
         for( i=0; i<samplesToRecord; i++ )
-        {
             *wptr++ = SAMPLE_SILENCE;
-        }
     }
     else
     {
         for( i=0; i<samplesToRecord; i++ )
-        {
             *wptr++ = *rptr++;
-        }
     }
     
     RecData->frameIndex += framesToRecord;
@@ -170,9 +146,11 @@ int recordCallback( void *inputBuffer,
 ** It may be called at interrupt level on some machines so don't do anything
 ** that could mess up the system like calling malloc() or free().
 */
-int playCallback (void *outputBuffer,
-                  unsigned long framesPerBuffer,
-                  PaTimestamp outTime, void *userData)
+static int playCallback (const void *inputBufferr, void *outputBuffer,
+                         unsigned long framesPerBuffer,
+                         const PaStreamCallbackTimeInfo* timeInfo,
+                         PaStreamCallbackFlags statusFlags,
+                         void *userData )
 {
     paDevice *padev = (paDevice*)userData;
 
@@ -184,7 +162,7 @@ int playCallback (void *outputBuffer,
     int buffer_empty = 0;
     
     unsigned int framesLeft = PlayData->maxFrameIndex - PlayData->frameIndex;
-    (void) outTime;
+    (void) timeInfo;
     
     int framesToPlay, samplesToPlay, samplesPerBuffer;
 
@@ -194,9 +172,7 @@ int playCallback (void *outputBuffer,
         buffer_empty = 1;
     }
     else
-    {
         framesToPlay = framesPerBuffer;
-    }
     
     samplesToPlay = framesToPlay * NUM_CHANNELS;
     samplesPerBuffer = framesPerBuffer * NUM_CHANNELS;
@@ -216,9 +192,11 @@ int playCallback (void *outputBuffer,
     return buffer_empty;
 }
 
-static int ioCallback (void *inputBuffer, void *outputBuffer,
+static int ioCallback (const void *inputBuffer, void *outputBuffer,
                        unsigned long framesPerBuffer,
-                       PaTimestamp stamp, void *userData)
+                       const PaStreamCallbackTimeInfo* timeInfo,
+                       PaStreamCallbackFlags statusFlags,
+                       void *userData )
 {
     paDevice *padev = (paDevice*)userData;
 
@@ -227,7 +205,7 @@ static int ioCallback (void *inputBuffer, void *outputBuffer,
        /* Record */
 	    paSampleData *RecData = &padev->Samples[padev->RecData];
       
-       int full = recordCallback(inputBuffer, framesPerBuffer, stamp, userData);
+       int full = recordCallback(inputBuffer, outputBuffer, framesPerBuffer, timeInfo, statusFlags, userData);
        if(full)
        {
 		   padev->RecData = (padev->RecData+1)%2;
@@ -246,7 +224,7 @@ static int ioCallback (void *inputBuffer, void *outputBuffer,
        /* Playback */
        paSampleData *PlayData = &padev->Samples[padev->PlayData];
        
-       int empty = playCallback(outputBuffer, framesPerBuffer, stamp, userData);
+       int empty = playCallback(inputBuffer, outputBuffer, framesPerBuffer, timeInfo, statusFlags, userData);
        if(empty)
        {
 		   padev->PlayData = (padev->PlayData+1)%2;
@@ -261,10 +239,98 @@ static int ioCallback (void *inputBuffer, void *outputBuffer,
     return padev->finish;
 }
 
+void padev_list_devices()
+{
+   int hdi;
+   PaDeviceIndex di;
+   const PaDeviceInfo *devinfo;
+   
+   PaHostApiIndex hi;
+   PaHostApiIndex hosts = Pa_GetHostApiCount ();
+   PaHostApiIndex thehost = Pa_GetDefaultHostApi();
+   
+   const PaHostApiInfo *hostinfo;
+   
+   printf("\nSystem: %d hostapi\n\r", hosts); fflush(stdout);
+   printf("Default host: #%d\n\r", thehost); fflush(stdout);
+   printf("Default device: I[#%d] O[#%d]\n\r", Pa_GetDefaultInputDevice(), Pa_GetDefaultOutputDevice()); fflush(stdout);
+   printf("=====================================\n\r"); fflush(stdout);
+   
+   for(hi=0; hi<hosts; hi++)
+   {
+      hostinfo = Pa_GetHostApiInfo (hi);
+
+      printf("Host#%d: %s, %d devices\n\r", hi, hostinfo->name, hostinfo->deviceCount); fflush(stdout);
+      printf("default device:I[#%d], O[#%d]\n\r", hostinfo->defaultInputDevice, hostinfo->defaultOutputDevice); fflush(stdout);
+
+      for(hdi=0; hdi<hostinfo->deviceCount; hdi++)
+      {
+            di = Pa_HostApiDeviceIndexToDeviceIndex (hi, hdi);
+            devinfo = Pa_GetDeviceInfo (di);
+
+            printf("\nDevice#%d: %s, rate %f\n\r", hdi, devinfo->name, devinfo->defaultSampleRate); fflush(stdout);
+            printf("max channels: I[%d] O[%d]\n\r", devinfo->maxInputChannels, devinfo->maxOutputChannels); fflush(stdout);
+            printf("default low latency: I[%f] O[%f]\n\r", devinfo->defaultLowInputLatency, devinfo->defaultLowOutputLatency); fflush(stdout);
+            printf("default high latency: I[%f] O[%f]\n\r", devinfo->defaultHighInputLatency, devinfo->defaultHighOutputLatency); fflush(stdout);
+      }
+      
+      printf("--------------------------------------\n\r"); fflush(stdout);
+   }
+}
+
+const PaHostApiInfo* padev_find_io(PaHostApiTypeId hostType, PaDeviceIndex *inputDevice, PaDeviceIndex *outputDevice)
+{
+    PaHostApiIndex hostapi = -1;
+    const PaHostApiInfo *hostinfo;
+
+    hostapi = Pa_HostApiTypeIdToHostApiIndex (hostType);
+    if(hostapi >= 0)
+    {
+       int hdi;
+       PaDeviceIndex di;
+       const PaDeviceInfo *devinfo;
+
+       hostinfo = Pa_GetHostApiInfo (hostapi);
+
+
+       for(hdi=0; hdi<hostinfo->deviceCount; hdi++)
+       {
+          di = Pa_HostApiDeviceIndexToDeviceIndex (hostapi, hdi);
+          devinfo = Pa_GetDeviceInfo (di);
+
+          printf("\nDevice#%d: %s, rate %f\n\r", hdi, devinfo->name, devinfo->defaultSampleRate); fflush(stdout);
+          printf("max channels: I[%d] O[%d]\n\r", devinfo->maxInputChannels, devinfo->maxOutputChannels); fflush(stdout);
+          printf("default low latency: I[%f] O[%f]\n\r", devinfo->defaultLowInputLatency, devinfo->defaultLowOutputLatency); fflush(stdout);
+          printf("default high latency: I[%f] O[%f]\n\r", devinfo->defaultHighInputLatency, devinfo->defaultHighOutputLatency); fflush(stdout);
+
+          if(devinfo->maxInputChannels > 0 && devinfo->maxOutputChannels > 0)
+          {
+            printf("Select Audio I/O device#%d: %s\n\r", hdi, devinfo->name); fflush(stdout);
+            *inputDevice = hdi;
+            *outputDevice = hdi;
+             return hostinfo;
+          }
+       }
+    }
+
+    *inputDevice = -1;
+    *outputDevice = -1;
+
+    printf("No Audio I/O device available, quit\n\r"); fflush(stdout);
+    
+    return NULL;
+}
+
 /*******************************************************************/
 int main(void)
 {
-    PortAudioStream *stream;
+    const PaHostApiInfo *hostinfo;
+
+    PaDeviceIndex inputDevice = -1;
+    PaDeviceIndex outputDevice = -1;
+    
+    PaStreamParameters  inputParameters, outputParameters;
+    PaStream *stream;
     PaError    err;
     
     int        i;
@@ -295,6 +361,7 @@ int main(void)
       for( i=0; i<numSamples; i++ )
          Data->pcm[i] = 0;
     }
+
     
     padev.RecData = 0;
     padev.PlayData = 1;
@@ -305,21 +372,30 @@ int main(void)
     err = Pa_Initialize();
     if( err != paNoError ) goto error;
 
+    padev_list_devices();
+    
+    hostinfo = padev_find_io(paALSA, &inputDevice, &outputDevice);
+
+    inputParameters.device = inputDevice; /* default input device */
+    inputParameters.channelCount = NUM_CHANNELS;                    /* stereo input */
+    inputParameters.sampleFormat = PA_SAMPLE_TYPE;
+    inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultLowInputLatency;
+    inputParameters.hostApiSpecificStreamInfo = NULL;
+    
+    outputParameters.device = outputDevice; /* default output device */
+    outputParameters.channelCount = NUM_CHANNELS;          /* stereo output */
+    outputParameters.sampleFormat =  PA_SAMPLE_TYPE;
+    outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultLowOutputLatency;
+    outputParameters.hostApiSpecificStreamInfo = NULL;
+
     /* Record some audio. -------------------------------------------- */
     err = Pa_OpenStream(
               &stream,
-              Pa_GetDefaultInputDeviceID(),
-              NUM_CHANNELS,
-              PA_SAMPLE_TYPE,
-              NULL,
-              Pa_GetDefaultOutputDeviceID(),
-              NUM_CHANNELS,
-              PA_SAMPLE_TYPE,
-              NULL,
+              &inputParameters,
+              &outputParameters,
               SAMPLE_RATE,
-              FRAMES_PER_BUFFER,            /* frames per buffer */
-              0,               /* number of buffers, if zero then use default minimum */
-              0, /* paDitherOff, // flags */
+              paFramesPerBufferUnspecified,    /* frames per buffer */
+              paClipOff,                        /* we won't output out of range samples so don't bother clipping them */
               ioCallback,
               &padev );
               
@@ -329,7 +405,7 @@ int main(void)
     if( err != paNoError ) goto error;
     printf("Now recording!!\n"); fflush(stdout);
 
-    while( Pa_StreamActive( stream ) )
+    while( Pa_IsStreamActive( stream ) )
     {
       Pa_Sleep(1000);
 	   if(padev.record)

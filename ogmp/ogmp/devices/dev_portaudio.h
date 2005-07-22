@@ -22,7 +22,7 @@
 #include <timedia/xthread.h>
 #include <timedia/xmalloc.h>
 
-#define PIPE_NBUF 3  /* write-read-recycle */
+#define PIPE_NBUF 2
 
 typedef struct pa_setting_s pa_setting_t;
 struct pa_setting_s
@@ -40,8 +40,9 @@ typedef struct pa_input_s pa_input_t;
 struct pa_input_s
 {
 	int64 stamp;
-	int npcm_write;
+	int nbyte_wrote;
 	char *pcm;
+   
    int tick;
 };
 
@@ -96,9 +97,9 @@ typedef struct portaudio_device_s
 
    int online;
 
-   int io_npcm_once;
-   int io_nbyte_once;
-
+   int input_npcm_once;
+   int input_nbyte_once;
+   
    int64 input_samplestamp;
 
 } portaudio_device_t;
@@ -117,6 +118,14 @@ struct pa_pipe_s
 
    media_frame_t *freed_frame_head; /* The frame to reuse, avoid malloc/free ops */
    int n_freed_frame;   
+
+   /* Output */
+   int outframe_nbyte;
+   
+   int outframe_w;
+   int outframe_r;
+   
+   media_frame_t *outframes[PIPE_NBUF];
 };
 
 media_pipe_t * pa_pipe_new(portaudio_device_t* pa);

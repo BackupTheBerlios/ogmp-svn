@@ -157,7 +157,6 @@ int pout_recycle_frame(media_pipe_t * mo, media_frame_t * used)
 
 /*
  * Return: 0, frame accepted; n>0, frame delayed, try again in n usec.
- */
 int pout_put_frame (media_pipe_t *mp, media_frame_t *mf, int last)
 {
    int nbyte_tofill, nbyte_toread;
@@ -200,6 +199,66 @@ int pout_put_frame (media_pipe_t *mp, media_frame_t *mf, int last)
    pa->outbuf_nbyte_read = 0;
 
    return 0;
+}
+ */
+
+int pout_put_frame (media_pipe_t *mp, media_frame_t *mf, int last)
+{
+   pa_pipe_t *pp = (pa_pipe_t*)mp;
+
+   if(pp->outframes[pp->outframe_w] != NULL)
+      return pp->pa->usec_pulse / 2;
+
+   pout_debug (("\rpout_put_frame: put outbuf[%d] frame#%lld[s%lld] bytes[%d]\n", pp->outframe_w, mf->sno, mf->samplestamp, mf->bytes));
+   
+   pp->outframes[pp->outframe_w] = mf;
+   pp->outframe_w = (pp->outframe_w+1) % PIPE_NBUF;
+
+   return 0;
+}
+
+int pout_pick_content (media_pipe_t *pipe, media_info_t *media_info, char* pcm, int npcm)
+{
+   int nbyte_done = 0;
+   int nbyte_todo = 0;
+   
+   pa_pipe_t *pp = (pa_pipe_t*)pipe;
+   int pcm_nbyte = npcm * (media_info->sample_bits / OS_BYTE_BITS);
+   
+   media_frame_t *outf = pp->outframes[pp->outframe_r];
+
+   if(pp->outframes[pp->outframe_r] == NULL)
+      return 0;
+   
+   while(pcm_nbyte)
+   {
+      if(pp->outframe_nbyte == 0)
+      {
+         pp->outframes[pp->outframe_r] = NULL;
+         outf->owner->recycle_frame(outf->owner, outf);
+      
+         pp->outframe_r = (pp->outframe_r + 1) % PIPE_NBUF;
+         outf = pp->outframes[pp->outframe_r];
+      
+         if(!outf)
+            return nbyte_done;
+         
+         pp->outframe_nbyte = outf->bytes;
+      }
+
+      if(pcm_nbyte > pp->outframe_nbyte)
+         nbyte_todo = pp->outframe_nbyte;
+      else
+         nbyte_todo = pcm_nbyte;
+
+      memcpy (&pcm[nbyte_done], &outf->raw[outf->bytes - pp->outframe_nbyte], nbyte_todo);
+
+      pcm_nbyte -= nbyte_todo;
+      pp->outframe_nbyte -= nbyte_todo;
+      nbyte_done += nbyte_todo;
+   }
+
+   return nbyte_done / (media_info->sample_bits / OS_BYTE_BITS);
 }
 
 int pout_done (media_pipe_t * mp)
@@ -265,6 +324,7 @@ media_pipe_t * pa_pipe_new(portaudio_device_t* pa)
    mout->new_frame = pout_new_frame;
    mout->recycle_frame = pout_recycle_frame;   
    mout->put_frame = pout_put_frame;
+   mout->pick_content = pout_pick_content;
 
    return mout;
 }
