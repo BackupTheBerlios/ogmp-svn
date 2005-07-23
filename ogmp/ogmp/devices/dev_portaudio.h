@@ -40,10 +40,10 @@ typedef struct pa_input_s pa_input_t;
 struct pa_input_s
 {
 	int64 stamp;
-	int nbyte_wrote;
-	char *pcm;
+	int npcm_wrote;
+	short *pcm;
    
-   int tick;
+    int tick;
 };
 
 typedef struct pa_output_s pa_output_t;
@@ -120,10 +120,10 @@ struct pa_pipe_s
    int n_freed_frame;   
 
    /* Output */
-   int outframe_nbyte;
-   
+   int outframe_npcm_done;
    int outframe_w;
    int outframe_r;
+   int picking;
    
    media_frame_t *outframes[PIPE_NBUF];
 };

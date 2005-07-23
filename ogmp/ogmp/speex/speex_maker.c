@@ -59,7 +59,7 @@ int spxmk_match_type(media_receiver_t * mr, char *mime, char *fourcc)
 	return 0;
 }
 
-#if defined (LOCAL_RECORD_TEST) && defined (NO_CHUNK_TEST)
+#if defined (OGMP_RECORD_TEST) && defined (OGMP_NO_CHUNK)
 
 int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samplestamp, int last_packet)
 {
@@ -69,7 +69,7 @@ int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samples
 	return stream->player->receiver.receive_media(&stream->player->receiver, auf, samplestamp, last_packet);
 }
 
-#elif defined (LOCAL_RECORD_TEST)
+#elif defined (OGMP_RECORD_TEST)
 
 // test: none encode
 int spxmk_receive_media (media_receiver_t *mr, media_frame_t *auf, int64 samplestamp, int last_packet)

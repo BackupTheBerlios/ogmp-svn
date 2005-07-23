@@ -131,7 +131,6 @@ int spxp_loop(void *gen)
 		   xthr_unlock(dec->pending_lock);
       }
       
-      spxp_debug (("\rspxp_loop: frame#%lld[%lld] bytes[%d]\n", auf->sno, auf->samplestamp, auf->bytes));
       usec_delay = output->put_frame(output, auf, auf->eots);
 
       if(usec_delay == 0)
@@ -403,8 +402,9 @@ int spxp_match_type(media_receiver_t *recvr, char *mime, char *fourcc)
 	return 0;
 }
 
-#if defined (NO_CHUNK_TEST)
+#if defined (OGMP_NO_CHUNK)
 
+// local test, no decode, no chunk
 int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 samplestamp, int last_packet)
 {
    media_pipe_t * output = NULL;
@@ -451,8 +451,6 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
       dec->last_samplestamp = samplestamp;
    }
 
-   spxp_debug(("\r________spxp_receive_next: frame#%lld(%llds) bytes[%d]--\n", auf->sno, auf->samplestamp, auf->bytes));
-
    xthr_lock(dec->pending_lock);
 
 	xlist_addto_last(dec->pending_queue, auf);
@@ -466,9 +464,9 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
    return MP_OK;
 }
 
-#elif defined (LOCAL_RECORD_TEST)
+#elif defined (OGMP_RECORD_TEST)
 
-// test, none decode
+// local test, none decode
 int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 samplestamp, int last_packet)
 {
    media_pipe_t * output = NULL;

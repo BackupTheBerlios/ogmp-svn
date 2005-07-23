@@ -71,36 +71,35 @@ int pa_input_loop(void *gen)
 
 		inbufr = &pa->inbuf[pa->inbuf_r];
 
-		if(inbufr->nbyte_wrote != pa->input_nbyte_once)
+		if(inbufr->npcm_wrote < pa->input_npcm_once)
 		{
 			/* encoding catch up input */
+			pa_log(("\rpa_input_loop: in[%d] sleep\n", pa->inbuf_r));
 			time_usec_sleep(pa->clock, (pa->usec_pulse / 2), &us_left);
 			continue;
 		}
 
 		auf.ts = (int32)inbufr->stamp;
 		auf.samplestamp = inbufr->stamp;
-
-		auf.raw = inbufr->pcm;
+		auf.raw = (char*)inbufr->pcm;
 		auf.nraw = pa->input_npcm_once;
 		auf.bytes = pa->input_nbyte_once;
       
 		auf.eots = 1;
-      auf.sno = inbufr->tick;
+		auf.sno = inbufr->tick;
 
-	   pa_debug(("\rpa_input_loop: in[%d] - frame#%lld[%lld] bytes[%d]\n", pa->inbuf_r, auf.sno, auf.samplestamp, auf.bytes));
+		pa_log(("\rpa_input_loop: in[%d] bytes[%d] frame#%lld ... ", pa->inbuf_r, auf.bytes, auf.sno));
 		pa->receiver->receive_media(pa->receiver, &auf, (int64)(auf.samplestamp), 0);
-	   pa_debug(("\rpa_input_loop: in[%d] ========================= done\n", pa->inbuf_r));
+		pa_log(("done\n", pa->inbuf_r));
 
-		memset(inbufr->pcm, 0, pa->input_nbyte_once);      
-		inbufr->nbyte_wrote = 0;
+		inbufr->npcm_wrote = 0;
 
 		pa->inbuf_r = (pa->inbuf_r + 1) % pa->inbuf_n;
 	}
 
 	auf.bytes = 0;
 	auf.nraw = 0;
-	auf.raw = pa->inbuf[pa->inbuf_r].pcm;
+	auf.raw = (char*)pa->inbuf[pa->inbuf_r].pcm;
 
 	pa->receiver->receive_media(pa->receiver, &auf, (int64)(pa->inbuf[pa->inbuf_r].stamp * 1000000), MP_EOS);
 
@@ -117,7 +116,7 @@ int pa_input_loop(void *gen)
 	return MP_OK;
 }
 
-static int pa_io_callback (const void *inbuf, void *outbuf,
+static int pa_io_callback (const void *in, void *out,
                            unsigned long npcm,
                            const PaStreamCallbackTimeInfo* intime,
                            PaStreamCallbackFlags statusFlags,
@@ -126,13 +125,16 @@ static int pa_io_callback (const void *inbuf, void *outbuf,
    portaudio_device_t* pa = (portaudio_device_t*)udata;
 
    pa_input_t* inbufw;
-   int nbyte_tofill;
+   unsigned int npcm_tofill, i;
+   unsigned int npcm_filled;
+   const short *inbuf;
+   short *pcmw;
 
    int pcm_nbyte = pa->ai_input->info.sample_bits / OS_BYTE_BITS;
    int nbyte_npcm = npcm * pcm_nbyte;
 
    /* Record input data */
-   if(!inbuf)
+   if(!in)
    	pa_debug(("\rpa_io_callback: no input\n"));
    else if(0 != (statusFlags & paInputUnderflow))
    	pa_debug(("\rpa_io_callback: inbuf#%d input underflow\n", pa->inbuf_w));
@@ -140,50 +142,52 @@ static int pa_io_callback (const void *inbuf, void *outbuf,
    	pa_debug(("\rpa_io_callback: inbuf#%d input overflow\n", pa->inbuf_w));
    else
    {
-      while(nbyte_npcm)
+	  inbuf = in;
+      npcm_filled=0; 
+	  while(npcm_filled < npcm)
       {
          inbufw = &pa->inbuf[pa->inbuf_w];
+		 pcmw = inbufw->pcm;
 
-         if(inbufw->nbyte_wrote == pa->input_nbyte_once)
+         if(inbufw->npcm_wrote == pa->input_npcm_once)
          {
-			   pa_log(("\rpa_io_callback: inbuf#%d ... input overflow, discard\n", pa->inbuf_w));
+			pa_debug(("\rpa_io_callback: inbuf#%d ... input overflow, discard\n", pa->inbuf_w));
             break;
          }
          else
          {
-            nbyte_tofill = pa->input_nbyte_once - inbufw->nbyte_wrote;
-            
-            if(nbyte_tofill > nbyte_npcm)
-               nbyte_tofill = nbyte_npcm;
+            npcm_tofill = pa->input_npcm_once - inbufw->npcm_wrote;
+            npcm_tofill = npcm_tofill < npcm ? npcm_tofill : npcm;
 
-            memcpy(&inbufw->pcm[inbufw->nbyte_wrote], inbuf, nbyte_tofill);
+            for(i=0; i<npcm_tofill; i++)
+				pcmw[inbufw->npcm_wrote+i] = inbuf[npcm_filled+i];
 
-            inbufw->nbyte_wrote += nbyte_tofill;
-            nbyte_npcm -= nbyte_npcm;
+            inbufw->npcm_wrote += npcm_tofill;
+            npcm_filled += npcm_tofill;
             
-            if(inbufw->nbyte_wrote == pa->input_nbyte_once)
+            if(inbufw->npcm_wrote == pa->input_npcm_once)
             {
                inbufw->tick = pa->input_tick++;
                pa->inbuf_w = (pa->inbuf_w+1) % pa->inbuf_n;
 
                inbufw = &pa->inbuf[pa->inbuf_w];
 
-		         pa->input_samplestamp += pa->input_npcm_once;
+		       pa->input_samplestamp += pa->input_npcm_once;
                inbufw->stamp = pa->input_samplestamp;
             }
          }
       }
    }
    
-   if(!outbuf)
+   if(!out)
    	pa_debug(("\rpa_io_callback: no output\n"));
    else if(0 != (statusFlags & paOutputUnderflow))
    	pa_debug(("\rpa_io_callback: output underflow\n"));
    else if(0 != (statusFlags & paOutputOverflow))
    	pa_debug(("\rpa_io_callback: output overflow\n"));
    else
-      pa->out->pick_content(pa->out, (media_info_t*)pa->ai_output, outbuf, (int)npcm);
-
+	  pa->out->pick_content(pa->out, (media_info_t*)pa->ai_output, out, (int)npcm);
+   
    return 0;
 }
 
@@ -410,7 +414,7 @@ int pa_start_io(media_device_t * dev, int mode)
                   out,
 						pa->ai_input->info.sample_rate * 1.0,
 						paFramesPerBufferUnspecified,    /* default framesPerBuffer */
-						(paDitherOff),                   /* PaStreamFlags streamFlags: paDitherOff */
+						(paDitherOff|paNeverDropInput),                   /* PaStreamFlags streamFlags: paDitherOff */
 						pa_io_callback,
 						pa
 					);

@@ -209,30 +209,36 @@ int pout_put_frame (media_pipe_t *mp, media_frame_t *mf, int last)
    if(pp->outframes[pp->outframe_w] != NULL)
       return pp->pa->usec_pulse / 2;
 
-   pout_debug (("\rpout_put_frame: put outbuf[%d] frame#%lld[s%lld] bytes[%d]\n", pp->outframe_w, mf->sno, mf->samplestamp, mf->bytes));
-   
    pp->outframes[pp->outframe_w] = mf;
    pp->outframe_w = (pp->outframe_w+1) % PIPE_NBUF;
 
    return 0;
 }
 
-int pout_pick_content (media_pipe_t *pipe, media_info_t *media_info, char* pcm, int npcm)
+int pout_pick_content (media_pipe_t *pipe, media_info_t *media_info, char* out, int npcm)
 {
-   int nbyte_done = 0;
-   int nbyte_todo = 0;
+   int npcm_ready = 0;
+   int npcm_tofill, npcm_filled, i;
+
+   short *rpcm;
+   short *wpcm = (short*)out;
    
    pa_pipe_t *pp = (pa_pipe_t*)pipe;
-   int pcm_nbyte = npcm * (media_info->sample_bits / OS_BYTE_BITS);
    
    media_frame_t *outf = pp->outframes[pp->outframe_r];
 
-   if(pp->outframes[pp->outframe_r] == NULL)
-      return 0;
-   
-   while(pcm_nbyte)
+   if(outf == NULL)
    {
-      if(pp->outframe_nbyte == 0)
+	  pout_log (("\rpout_pick_content: outbuf[%d] empty\n", pp->outframe_r));
+      return 0;
+   }
+
+	npcm_filled = 0;
+   while(npcm_filled < npcm)
+   {
+      npcm_tofill = npcm - npcm_filled;
+
+	  if(pp->outframe_npcm_done == outf->nraw)
       {
          pp->outframes[pp->outframe_r] = NULL;
          outf->owner->recycle_frame(outf->owner, outf);
@@ -241,24 +247,27 @@ int pout_pick_content (media_pipe_t *pipe, media_info_t *media_info, char* pcm, 
          outf = pp->outframes[pp->outframe_r];
       
          if(!outf)
-            return nbyte_done;
-         
-         pp->outframe_nbyte = outf->bytes;
+		 {
+			pp->outframe_npcm_done = 0;
+			return npcm_filled;
+         }
+
+         pp->outframe_npcm_done = 0;
       }
 
-      if(pcm_nbyte > pp->outframe_nbyte)
-         nbyte_todo = pp->outframe_nbyte;
-      else
-         nbyte_todo = pcm_nbyte;
+	  rpcm = (short*)outf->raw;
 
-      memcpy (&pcm[nbyte_done], &outf->raw[outf->bytes - pp->outframe_nbyte], nbyte_todo);
+	  npcm_ready = outf->nraw - pp->outframe_npcm_done;
+      npcm_tofill = npcm_tofill < npcm_ready ? npcm_tofill : npcm_ready;
 
-      pcm_nbyte -= nbyte_todo;
-      pp->outframe_nbyte -= nbyte_todo;
-      nbyte_done += nbyte_todo;
+      for(i=0; i<npcm_tofill; i++)
+		  wpcm[npcm_filled+i] = rpcm[pp->outframe_npcm_done+i];
+
+      npcm_filled += npcm_tofill;
+	  pp->outframe_npcm_done += npcm_tofill;
    }
 
-   return nbyte_done / (media_info->sample_bits / OS_BYTE_BITS);
+	return npcm_filled;
 }
 
 int pout_done (media_pipe_t * mp)
@@ -268,8 +277,6 @@ int pout_done (media_pipe_t * mp)
 
    pa_pipe_t * pipe = (pa_pipe_t *)mp;
 
-   //time_end(pipe->clock);
-   
    pipe->bytes_freed = 0;
 
    /* free spare frames */
@@ -286,8 +293,7 @@ int pout_done (media_pipe_t * mp)
    }
 
    /*if(pipe->fillgap) xfree(pipe->fillgap);*/
-   
-   pout_log(("vorbis_done_player: player done, %d bytes buffers freed\n", pipe->bytes_freed));
+   pout_log(("pout_done: %d bytes buffers freed\n", pipe->bytes_freed));
 
    xfree(pipe);
 
