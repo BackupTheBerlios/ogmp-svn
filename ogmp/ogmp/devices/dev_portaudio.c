@@ -130,9 +130,6 @@ static int pa_io_callback (const void *in, void *out,
    const short *inbuf;
    short *pcmw;
 
-   int pcm_nbyte = pa->ai_input->info.sample_bits / OS_BYTE_BITS;
-   int nbyte_npcm = npcm * pcm_nbyte;
-
    /* Record input data */
    if(!in)
    	pa_debug(("\rpa_io_callback: no input\n"));
@@ -348,6 +345,7 @@ int pa_set_io(media_device_t *dev, media_info_t *minfo, media_receiver_t* recvr)
       ai->info.sampling_constant = DEFAULT_OUTPUT_NSAMPLE_PULSE;
       ai->channels_bytes = ai->channels * ai->info.sample_bits / OS_BYTE_BITS;
 
+
       pa->usec_pulse = 1000000 / ai->info.sample_rate * DEFAULT_OUTPUT_NSAMPLE_PULSE;
 
       pa->input_npcm_once = DEFAULT_INPUT_NSAMPLE_PULSE;
@@ -384,6 +382,7 @@ int pa_start_io(media_device_t * dev, int mode)
 	portaudio_device_t *pa = (portaudio_device_t *)dev;
 
    if(pa->pa_iostream && Pa_IsStreamActive(pa->pa_iostream))
+
       return MP_OK;
    
    if(pa->ai_input)
@@ -483,6 +482,7 @@ int pa_start_io(media_device_t * dev, int mode)
       {
          pa_debug(("pa_start_io: %s\n", Pa_GetErrorText(err) ));
          return MP_FAIL;
+
       }
 
       err = Pa_StartStream (pa->pa_instream);
@@ -655,9 +655,10 @@ int pa_match_mode(media_device_t *dev, char *mode)
 
 int pa_match_type(media_device_t *dev, char *type)
 {
-   pa_log(("portaudio.pa_match_type: I am audio device\n"));
+   pa_log(("portaudio.pa_match_type: I am portaudio device\n"));
 
-   if( !strcmp("audio", type) ) return 1;
+   if (strcmp("portaudio", type) == 0)
+      return 1;
 
    return 0;
 }

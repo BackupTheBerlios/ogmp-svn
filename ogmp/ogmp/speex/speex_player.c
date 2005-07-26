@@ -103,6 +103,7 @@ int spxp_loop(void *gen)
 	while(1)
 	{
       if(dec->delayed_frame == NULL)
+
       {         
          xthr_lock(dec->pending_lock);
 
@@ -223,6 +224,7 @@ int spxp_open_stream (media_player_t *mp, media_stream_t *stream, media_info_t *
 
       dec->chunk = xmalloc(chunk_nbyte);
       memset(dec->chunk, 0, chunk_nbyte);
+
       
       dec->chunk_p = dec->chunk;
       dec->chunk_nsample = 0;
@@ -346,9 +348,10 @@ int spxp_set_device(media_player_t* mp, media_control_t* cont, module_catalog_t*
   
    spxp_log(("spxp_set_device: need audio device\n"));
 
-   dev = cont->find_device(cont, "audio", "output");
+   dev = cont->find_device(cont, "alsa", "output");
    
    if(!dev) return MP_FAIL;
+
 
    setting = cont->fetch_setting(cont, "audio_out", dev);
    if(!setting)
@@ -378,7 +381,7 @@ int spxp_link_stream(media_player_t *mp, media_stream_t* strm, media_control_t *
    spxp_debug(("spxp_link_stream: need audio device\n"));
    dec->clock = cont->clock(cont);
 
-   dev = cont->find_device(cont, "audio", "output");
+   dev = cont->find_device (cont, "alsa", "output");
 
    if(!dev) return MP_FAIL;
 

@@ -294,6 +294,7 @@ int sipua_make_call(sipua_t *sipua, sipua_call_t* call, char* id,
 
 
 
+
 		{
 			call->bandwidth_need += media_bw;
 		}
@@ -639,6 +640,7 @@ int sipua_negotiate_call(sipua_t *sipua, sipua_call_t *call,
     * But why?
 	sdp_message_free(sdp_info.sdp_message);
     */
+
     
     /*
 	printf("sipua_negotiate_call:\n");
@@ -693,44 +695,17 @@ int sipua_open_stream_output(media_control_t* control, sipua_call_t* call, media
  */
 int sipua_open_stream_input(media_control_t* control, media_stream_t* outstream, char* mediatype, char* iomode)
 {
-    media_maker_t* maker = NULL;
+   module_catalog_t * mod_cata;
+   media_maker_t* maker = NULL;
+   xlist_t* maker_mods;
+   xlist_user_t $lu;
+   int num;
 
-	 xlist_t* maker_mods;
-
-	 int num;
-
-	 module_catalog_t * mod_cata = NULL;
-
-    control_setting_t *setting = NULL;
-    media_device_t *dev = NULL;
-
-	 xlist_user_t $lu;
-
-    media_info_t *minfo = outstream->media_info;
-
-    ua_log(("source_open_device: need media device\n"));
-    dev = control->find_device(control, mediatype, iomode);
-
-   if(!dev)
-   {
-      ua_debug(("source_open_device: No %s found\n\n", mediatype));
-	   return UA_FAIL;
-   }
-
-   setting = control->fetch_setting(control, mediatype, dev);
-   if(!setting)
-   {
-      ua_log(("source_open_device: use default setting for '%s' device\n", mediatype));
-   }
-   else
-   {
-      dev->setting(dev, setting, mod_cata);
-   }
-
-	mod_cata = control->modules(control);
+   media_info_t *minfo = outstream->media_info;
 
    maker_mods = xlist_new();
 
+	mod_cata = control->modules(control);
 	num = catalog_create_modules (mod_cata, "create", maker_mods);
 
 	maker = (media_maker_t *) xlist_first (maker_mods, &$lu);
@@ -739,7 +714,7 @@ int sipua_open_stream_input(media_control_t* control, media_stream_t* outstream,
 		if(maker->receiver.match_type(&maker->receiver, minfo->mime, minfo->fourcc))
 		{
 			xlist_remove_item(maker_mods, maker);
-         maker->link_stream(maker, outstream, control, dev, minfo);
+         maker->link_stream(maker, outstream, control, minfo);
          
          break;
 		}

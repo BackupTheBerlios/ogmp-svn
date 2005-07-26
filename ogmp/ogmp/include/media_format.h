@@ -320,6 +320,7 @@ struct media_device_s
    media_stream_t* (*new_media_stream) (media_device_t* dev, media_receiver_t *mr, media_info_t *media_info);
 
    int (*set_input_media)(media_device_t *dev, media_info_t *in_info, media_receiver_t* recvr);
+
    int (*set_output_media)(media_device_t *dev, media_info_t *out_info);
 
    int (*set_io)(media_device_t *dev, media_info_t *minfo, media_receiver_t *receiver);
@@ -354,7 +355,7 @@ struct media_maker_s
    int (*stop) (media_maker_t *mm);
    
    media_stream_t* (*new_media_stream) (media_maker_t *mm, media_control_t* control, media_device_t* dev, media_receiver_t* player, media_info_t *media_info);
-   int (*link_stream) (media_maker_t *mm, media_stream_t* stream, media_control_t* control, media_device_t* dev, media_info_t *media_info);
+   int (*link_stream) (media_maker_t *mm, media_stream_t* stream, media_control_t* control, media_info_t *media_info);
 };
 
 struct media_player_s
@@ -367,6 +368,7 @@ struct media_player_s
    char* (*media_type) (media_player_t * playa);
    char* (*codec_type) (media_player_t * playa);
    
+
    #define CALLBACK_PLAYER_READY  1
    #define CALLBACK_MEDIA_STOP  2
    

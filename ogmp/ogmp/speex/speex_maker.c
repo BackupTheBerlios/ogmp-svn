@@ -296,16 +296,31 @@ int speex_stop_stream (media_stream_t* stream)
    return MP_OK;
 }
    
-int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_control_t* control, media_device_t* dev, media_info_t* minfo)
+int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_control_t* control, media_info_t* minfo)
 {
 	int ret;
- 
-	speex_encoder_t *enc = (speex_encoder_t *)maker;
-
 	int rate;
 	int nchannel;
+   control_setting_t *setting = NULL;
+
+	speex_encoder_t *enc = (speex_encoder_t *)maker;
 
 	speex_info_t* spxinfo= (speex_info_t*)minfo;
+
+   media_device_t* dev = control->find_device (control, "portaudio", "input");
+   if(!dev)
+      return MP_FAIL;
+
+   setting = control->fetch_setting(control, "audio", dev);
+   if(!setting)
+   {
+      spxmk_log(("source_open_device: use default setting for '%s' device\n", mediatype));
+   }
+   else
+   {
+	   module_catalog_t * mod_cata = control->modules(control);
+      dev->setting(dev, setting, mod_cata);
+   }
 
 	/* Create mode */
 	if(spxinfo->audioinfo.info.sample_rate < 6000)
@@ -332,10 +347,8 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
    stream->maker = maker;
 
    enc->media_stream = stream;
-	enc->speex_info = spxinfo;
-   
+   enc->speex_info = spxinfo;
    enc->clock = control->clock(control);
-
    enc->est = speex_encoder_init(enc->spxmode);
    
    speex_encoder_ctl(enc->est, SPEEX_SET_SAMPLING_RATE, &spxinfo->audioinfo.info.sample_rate);

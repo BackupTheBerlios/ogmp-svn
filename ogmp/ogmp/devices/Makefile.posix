@@ -10,16 +10,19 @@ INCLUDES = -I$(PREFIX)/include -I.. -I../include
 
 INSTDIR = $(PREFIX)/lib/$(PROGNAME)
 
-AULIBS = -shared -L$(PREFIX)/lib -lrtime -lportaudio -logmp
+PALIBS = -shared -L$(PREFIX)/lib -lrtime -lportaudio -logmp
+PAFILES = timed_pipe.c dev_portaudio.c
+PAOBJ = timed_pipe.o dev_portaudio.o
 
-AUFILES = timed_pipe.c dev_portaudio.c
-AUOBJ = timed_pipe.o dev_portaudio.o
+ALSALIBS = -shared -L$(PREFIX)/lib -lasound -logmp
+ALSAFILES = alsa_pipe.c dev_alsa.c
+ALSAOBJ = alsa_pipe.o dev_alsa.o
 
 RTPLIBS = -shared -L$(PREFIX)/lib -lrtime -lxrtp -logmp
 RTPFILES = dev_rtp.c
 RTPOBJ = dev_rtp.o
 
-LIBFILES = dev_portaudio.so dev_rtp.so
+LIBFILES = dev_portaudio.so dev_rtp.so dev_alsa.so
 
 TESTSRC = patest_record.c
 TEST = parecord
@@ -31,8 +34,9 @@ all:	 libs install
 .c.o:
 	-$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $*.o
 
-libs: $(AUFILES:.c=.o) $(RTPFILES:.c=.o)
-	-$(CC) $(AULIBS) $(AUOBJ) -o dev_portaudio.so
+libs: $(PAFILES:.c=.o) $(ALSAFILES:.c=.o) $(RTPFILES:.c=.o)
+	-$(CC) $(PALIBS) $(PAOBJ) -o dev_portaudio.so
+	-$(CC) $(ALSALIBS) $(ALSAOBJ) -o dev_alsa.so
 	-$(CC) $(RTPLIBS) $(RTPOBJ) -o dev_rtp.so
 
 install: $(LIBFILES)
@@ -40,6 +44,7 @@ install: $(LIBFILES)
 
 uninstall:
 	-@rm -f $(INSTDIR)/dev_portaudio.so
+	-@rm -f $(INSTDIR)/dev_alsa.so
 	-@rm -f $(INSTDIR)/dev_rtp.so
 
 test:
