@@ -25,6 +25,8 @@
 #include "media_format.h"
 #include "sndcard.h"
 
+#define PIPE_NBUF 2
+
 #define ALSA_PCM_NEW_HW_PARAMS_API
 typedef struct _AlsaCard
 {
@@ -60,6 +62,8 @@ typedef struct alsa_device_s
    SndCard *sndcard;
    int devid;
 
+   int usec_pulse;
+   
    /* Input */
    audio_info_t *ai_input;
    
@@ -69,18 +73,23 @@ typedef struct alsa_device_s
    char *pcm_input;
 
    int input_stop;
+   
    xthread_t *input_thread;
    media_receiver_t* receiver;
 
    /* Output */
    audio_info_t *ai_output;
-   
    int output_npcm_once;
    int output_nbyte_once;
-   int npcm_output;
-   char* pcm_output;
    
-   media_pipe_t * out;
+   int outframe_npcm_done;
+   int outframe_w;
+   int outframe_r;
+   int picking;
+   
+   media_frame_t *outframes[PIPE_NBUF];
+   
+   media_pipe_t * src_pipe;
 
 } alsa_device_t;
 

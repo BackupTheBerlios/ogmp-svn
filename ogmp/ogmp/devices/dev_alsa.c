@@ -830,7 +830,7 @@ void alsa_card_manager_set_default_pcm_device (char *pcmdev)
 }
 
 /***************************************************************************/
-int alsa_input_loop(void *gen)
+int alsa_io_loop(void *gen)
 {
 	int rc;
 	int sample_bytes;
@@ -841,56 +841,80 @@ int alsa_input_loop(void *gen)
    media_frame_t auf;
 	alsa_device_t* alsa = (alsa_device_t*)gen;
    short *pcm_w;
+   
    int npcm_need;
+
+   char *outbuf = xmalloc(alsa->output_nbyte_once);
+   if(!outbuf)
+   {
+      return MP_FAIL;
+   }
    
 	sample_bytes = alsa->ai_input->info.sample_bits / OS_BYTE_BITS;
-	alsa_log(("pa_input_loop: PortAudio started, %d bytes/sample\n\n", sample_bytes));
+	alsa_log(("alsa_input_loop: ALSA started, %d bytes/sample\n\n", sample_bytes));
 
    alsa->npcm_input = 0;
    
 	alsa->input_stop = 0;
 	while(!alsa->input_stop)
 	{
-      pcm_w = (short*)&alsa->pcm_input[alsa->npcm_input];
-      npcm_need = alsa->input_npcm_once - alsa->npcm_input;
+      if(alsa->src_pipe)
+      {
+         int npcm_output = alsa->src_pipe->pick_content(alsa->src_pipe, (media_info_t*)alsa->ai_output, outbuf, alsa->output_nbyte_once);
+
+         if(npcm_output <= 0)
+         {
+	         alsa_debug (("\ralsa_io_loop: output underrun\n"));
+            memset(outbuf, 0, alsa->output_npcm_once/2);
+            npcm_output = alsa->output_npcm_once/2;
+         }
+         
+         rc = snd_pcm_writei(((AlsaCard*)alsa->sndcard)->write_handle, outbuf, npcm_output);
+      }
       
-      rc = snd_pcm_readi(((AlsaCard*)alsa->sndcard)->read_handle, pcm_w, npcm_need);
-      if (rc == -EPIPE)
+      if(alsa->receiver)
       {
-         /* EPIPE means overrun */
-         fprintf(stderr, "overrun occurred\n");
-         snd_pcm_prepare(((AlsaCard*)alsa->sndcard)->read_handle);
-      }
-      else if (rc < 0)
-      {
-         fprintf(stderr, "error from read: %s\n", snd_strerror(rc));
-      }
-      else if (rc != (int)alsa->input_npcm_once)
-      {
-         fprintf(stderr, "short read, read %d frames\n", rc);
-         alsa->npcm_input += rc;
-      }
-      else
-         alsa->npcm_input += rc;
+         pcm_w = (short*)&alsa->pcm_input[alsa->npcm_input];
+         npcm_need = alsa->input_npcm_once - alsa->npcm_input;
+      
+         rc = snd_pcm_readi(((AlsaCard*)alsa->sndcard)->read_handle, pcm_w, npcm_need);
+         if (rc == -EPIPE)
+         {
+            /* EPIPE means overrun */
+            fprintf(stderr, "overrun occurred\n");
+            snd_pcm_prepare(((AlsaCard*)alsa->sndcard)->read_handle);
+         }
+         else if (rc < 0)
+         {
+            fprintf(stderr, "error from read: %s\n", snd_strerror(rc));
+         }
+         else if (rc != (int)alsa->input_npcm_once)
+         {
+               fprintf(stderr, "short read, read %d frames\n", rc);
+            alsa->npcm_input += rc;
+         }
+         else
+            alsa->npcm_input += rc;
 
-      if(alsa->input_npcm_once == alsa->npcm_input)
-      {
-		   auf.ts = stamp;
-		   auf.samplestamp = stamp;
-		   auf.raw = alsa->pcm_input;
-		   auf.nraw = alsa->input_npcm_once;
-		   auf.bytes = alsa->input_nbyte_once;
-		   auf.eots = 1;
-		   auf.sno = tick;
+         if(alsa->input_npcm_once == alsa->npcm_input)
+         {
+		      auf.ts = stamp;
+		      auf.samplestamp = stamp;
+		      auf.raw = alsa->pcm_input;
+		      auf.nraw = alsa->input_npcm_once;
+		      auf.bytes = alsa->input_nbyte_once;
+		      auf.eots = 1;
+		      auf.sno = tick;
 
-		   alsa_log(("\rpa_input_loop: in[%d] bytes[%d] frame#%lld ... ", pa->inbuf_r, auf.bytes, auf.sno));
-		   alsa->receiver->receive_media(alsa->receiver, &auf, (int64)(auf.samplestamp), 0);
-		   alsa_log(("done\n", pa->inbuf_r));
+		      alsa_log(("\rpa_input_loop: in[%d] bytes[%d] frame#%lld ... ", pa->inbuf_r, auf.bytes, auf.sno));
+		      alsa->receiver->receive_media(alsa->receiver, &auf, (int64)(auf.samplestamp), 0);
+		      alsa_log(("done\n", pa->inbuf_r));
 
-         memset(alsa->pcm_input, 0, alsa->input_nbyte_once);
-         alsa->npcm_input = 0;
-         stamp += alsa->input_npcm_once;
-         tick++;
+            memset(alsa->pcm_input, 0, alsa->input_nbyte_once);
+            alsa->npcm_input = 0;
+            stamp += alsa->input_npcm_once;
+            tick++;
+         }
       }
 	}
 
@@ -907,13 +931,15 @@ int alsa_input_loop(void *gen)
    alsa->npcm_input = 0;
    stamp += alsa->input_npcm_once;
    tick++;
+
+   xfree(outbuf);
    
 	return MP_OK;
 }
 
 media_pipe_t * alsa_pipe (media_device_t *dev)
 {
-   return ((alsa_device_t *)dev)->out;
+   return ((alsa_device_t *)dev)->src_pipe;
 }
 
 int alsa_init (media_device_t * dev, media_control_t *ctrl)
@@ -961,13 +987,12 @@ int alsa_set_io (media_device_t *dev, media_info_t *minfo, media_receiver_t* rec
       alsa->output_npcm_once = DEFAULT_INPUT_NSAMPLE_PULSE;
       alsa->output_nbyte_once = ai->channels_bytes * DEFAULT_INPUT_NSAMPLE_PULSE;
       
-      alsa->pcm_output = xmalloc(alsa->output_nbyte_once);
-      memset(alsa->pcm_output, 0, alsa->output_nbyte_once);
-
-      alsa->out = alsa_new_pipe (alsa);
+      alsa->src_pipe = alsa_new_pipe (alsa);
 
       alsa_debug(("\ralsa_set_io: %d channels, %d rate, input bytes[%d]\n", ai->channels, ai->info.sample_rate, alsa->input_nbyte_once));
    }
+
+   alsa->usec_pulse = 1000000 / ai->info.sample_rate * DEFAULT_OUTPUT_NSAMPLE_PULSE;
 
    return MP_OK;
 }
@@ -987,8 +1012,12 @@ int alsa_start(media_device_t *dev, int mode)
    
    alsa_device_t *alsa = (alsa_device_t*)dev;
    
+   if(alsa->input_thread)
+      return MP_OK;
+      
    alsa->sndcard = alsa_card_new (alsa->devid);
-   if(!alsa->sndcard) return MP_FAIL;
+   if(!alsa->sndcard)
+      return MP_FAIL;
    
    if(alsa->ai_input && alsa->receiver)
    {
@@ -1001,11 +1030,10 @@ int alsa_start(media_device_t *dev, int mode)
       ai = alsa->ai_output;
       alsa_card_open_w((AlsaCard*)alsa->sndcard, ai->info.sample_bits, ai->channels, ai->info.sample_rate);
    }
-   /*   
-   if(alsa->receiver)
-		alsa->input_thread = xthr_new (alsa_input_loop, alsa, XTHREAD_NONEFLAGS);
-   */
-	return MP_OK;
+
+   alsa->input_thread = xthr_new (alsa_io_loop, alsa, XTHREAD_NONEFLAGS);
+
+   return MP_OK;
 }
 
 int alsa_stop(media_device_t * dev, int mode)

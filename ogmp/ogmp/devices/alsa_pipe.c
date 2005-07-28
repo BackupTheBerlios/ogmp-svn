@@ -157,66 +157,70 @@ int alsap_recycle_frame(media_pipe_t * mo, media_frame_t * used)
 
 int alsap_put_frame (media_pipe_t *mp, media_frame_t *mf, int last)
 {
-   int rc;
-   int npcm_ready, npcm_tofill;
-   int frame_npcm_doned = 0;
-   
    alsa_pipe_t *ap = (alsa_pipe_t*)mp;
    alsa_device_t *alsa = ap->alsa;
 
-   while (frame_npcm_doned < mf->nraw)
-   {
-      npcm_ready = mf->nraw - frame_npcm_doned;
-      
-      npcm_tofill = alsa->output_npcm_once - alsa->npcm_output;
-      npcm_tofill = npcm_tofill < npcm_ready ? npcm_tofill : npcm_ready;
+   if(alsa->outframes[alsa->outframe_w] != NULL)
+      return alsa->usec_pulse / 2;
 
-      if(npcm_tofill > 0)
-      {
-          int i;
-          short *pcm_r, *pcm_w;
+   alsa->outframes[alsa->outframe_w] = mf;
+   alsa->outframe_w = (alsa->outframe_w+1) % PIPE_NBUF;
 
-          pcm_r = (short*)mf->raw;
-          pcm_w = (short*)alsa->pcm_output;
-          
-          for(i=0; i<npcm_tofill; i++)
-             pcm_w[alsa->npcm_output+i] = pcm_r[frame_npcm_doned+i];
-      }
-
-      alsa->npcm_output += npcm_tofill;
-      frame_npcm_doned += npcm_tofill;
-      
-      if(alsa->npcm_output == alsa->output_npcm_once)
-      {
-         rc = snd_pcm_writei(((AlsaCard*)alsa->sndcard)->write_handle, alsa->pcm_output, alsa->output_npcm_once);
-
-         if (rc == -EPIPE)
-         {
-            /* EPIPE means underrun */
-            alsap_debug (("\ralsap_put_frame: underrun occurred\n"));
-            snd_pcm_prepare(((AlsaCard*)alsa->sndcard)->write_handle);
-         }
-         else if (rc < 0)
-         {
-            alsap_debug (("\ralsap_put_frame: error from writei: %s\n", snd_strerror(rc)));
-         }
-         else if (rc != alsa->output_npcm_once)
-         {
-            alsap_debug (("\ralsap_put_frame: short write, write %d frames\n", rc));
-         }
-      
-         alsa->npcm_output = 0;
-      }
-   }
-
-   mf->owner->recycle_frame(mf->owner, mf);
-   
    return 0;
 }
 
 int alsap_pick_content (media_pipe_t *pipe, media_info_t *media_info, char* out, int npcm)
 {
-   return 0;
+   int npcm_ready = 0;
+   int npcm_tofill, npcm_filled, i;
+
+   short *rpcm;
+   short *wpcm = (short*)out;
+
+   alsa_pipe_t *ap = (alsa_pipe_t*)pipe;
+   alsa_device_t *alsa = ap->alsa;
+
+   media_frame_t *outf = alsa->outframes[alsa->outframe_r];
+
+   if(outf == NULL)
+      return 0;
+
+	npcm_filled = 0;
+   while(npcm_filled < npcm)
+   {
+      npcm_tofill = npcm - npcm_filled;
+
+	   if(alsa->outframe_npcm_done == outf->nraw)
+      {
+         alsa->outframes[alsa->outframe_r] = NULL;
+         outf->owner->recycle_frame(outf->owner, outf);
+
+         alsa->outframe_r = (alsa->outframe_r + 1) % PIPE_NBUF;
+         outf = alsa->outframes[alsa->outframe_r];
+
+         if(!outf)
+		   {
+			   alsa->outframe_npcm_done = 0;
+            
+			   return npcm_filled;
+         }
+
+         alsa->outframe_npcm_done = 0;
+      }
+
+	   rpcm = (short*)outf->raw;
+
+	   npcm_ready = outf->nraw - alsa->outframe_npcm_done;
+      npcm_tofill = npcm_tofill < npcm_ready ? npcm_tofill : npcm_ready;
+
+      for(i=0; i<npcm_tofill; i++)
+		  wpcm[npcm_filled+i] = rpcm[alsa->outframe_npcm_done+i];
+
+      npcm_filled += npcm_tofill;
+	   alsa->outframe_npcm_done += npcm_tofill;
+   }
+
+	return npcm_filled;
 }
 
 int alsap_done (media_pipe_t * mp)
