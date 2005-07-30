@@ -295,6 +295,7 @@ int sipua_make_call(sipua_t *sipua, sipua_call_t* call, char* id,
 
 
 
+
 		{
 			call->bandwidth_need += media_bw;
 		}
@@ -749,13 +750,14 @@ int sipua_link_medium(sipua_t* sipua, sipua_call_t* call, media_control_t* contr
 
       i=0;
       while(minfo->mime[i] != '/')
+
       {
          mediatype[i] = minfo->mime[i];
          i++;
       }
       mediatype[i] = '\0';                                                          
 
-      if(sipua_open_stream_output (control, call, (media_stream_t*)rtpstrm, mediatype, "netcast") < MP_OK)
+      if(sipua_open_stream_output (control, call, (media_stream_t*)rtpstrm, mediatype, "playback") < MP_OK)
       {
          rtpstrm = (rtp_stream_t*)rtpstrm->stream.next;
          continue;

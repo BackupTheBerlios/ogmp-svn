@@ -69,7 +69,7 @@ typedef struct alsa_device_s
    
    int input_npcm_once;
    int input_nbyte_once;
-   int npcm_input;
+   //int npcm_input;
    char *pcm_input;
 
    int input_stop;

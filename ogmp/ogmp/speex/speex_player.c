@@ -103,7 +103,6 @@ int spxp_loop(void *gen)
 	while(1)
 	{
       if(dec->delayed_frame == NULL)
-
       {         
          xthr_lock(dec->pending_lock);
 
@@ -113,21 +112,15 @@ int spxp_loop(void *gen)
 			   break;
 		   }     
 
-		   if (xlist_size(dec->pending_queue) == 0)
-		   {
-			   //spxp_debug(("spxp_loop: no packet waiting, sleep!\n"));
-			   xthr_cond_wait(dec->packet_pending, dec->pending_lock);
-			   //spxp_debug(("spxp_loop: wakeup! %d packets pending\n", xlist_size(vs->pending_queue)));
-		   }
-
-		   /* sometime it's still empty, weired? */
-		   if (xlist_size(dec->pending_queue) == 0)
-		   {
-			   xthr_unlock(dec->pending_lock);
-			   continue;
-		   }
-
 		   auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
+         if(!auf)
+		   {
+			   spxp_log (("\rspxp_loop: no packet waiting, sleep!\n"));
+			   xthr_cond_wait(dec->packet_pending, dec->pending_lock);
+			   spxp_log (("\rspxp_loop: wakeup! %d packets pending\n", xlist_size(dec->pending_queue)));
+
+            auf = (media_frame_t*)xlist_remove_first(dec->pending_queue);
+		   }
 
 		   xthr_unlock(dec->pending_lock);
       }
@@ -224,7 +217,6 @@ int spxp_open_stream (media_player_t *mp, media_stream_t *stream, media_info_t *
 
       dec->chunk = xmalloc(chunk_nbyte);
       memset(dec->chunk, 0, chunk_nbyte);
-
       
       dec->chunk_p = dec->chunk;
       dec->chunk_nsample = 0;
@@ -272,9 +264,12 @@ int spxp_start (media_player_t *mp)
    if(!mp->device)
       return MP_FAIL;
       
-   mp->device->start(mp->device, DEVICE_OUTPUT);
-	dec->thread = xthr_new(spxp_loop, dec, XTHREAD_NONEFLAGS);
-
+   if(dec->thread == NULL)
+   {
+      mp->device->start(mp->device, DEVICE_OUTPUT);
+	   dec->thread = xthr_new(spxp_loop, dec, XTHREAD_NONEFLAGS);
+   }
+   
    return MP_OK;
 }
 
@@ -429,6 +424,7 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
 
    {  /* copy */
 	   auf = (media_frame_t*)output->new_frame(output, spxf->bytes, NULL);
+
       auf->bytes = spxf->bytes;
       
       memcpy(auf->raw, spxf->raw, spxf->bytes);
@@ -455,15 +451,13 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
    }
 
    xthr_lock(dec->pending_lock);
-
 	xlist_addto_last(dec->pending_queue, auf);
-
 	xthr_unlock(dec->pending_lock);
 
    xthr_cond_signal(dec->packet_pending);
 
    dec->receiving_media = 1;
-
+   
    return MP_OK;
 }
 
@@ -501,6 +495,7 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
    output = mp->device->pipe(mp->device);
 
    {  /* repack */
+
 	   auf = (media_frame_t*)output->new_frame(output, (dec->chunk_p - dec->chunk), NULL);
       auf->bytes = dec->chunk_p - dec->chunk;
       memcpy(auf->raw, dec->chunk, auf->bytes);
@@ -523,10 +518,9 @@ int spxp_receive_next (media_receiver_t *recvr, media_frame_t *spxf, int64 sampl
    if (dec->last_samplestamp != samplestamp)
    {
       dec->ts_usec_now += (int)((samplestamp - dec->last_samplestamp) / (double)sample_rate * 1000000);
+
       dec->last_samplestamp = samplestamp;
    }
-
-   spxp_debug(("\r________spxp_receive_next: frame#%lld(%llds) bytes[%d]--\n", auf->sno, auf->samplestamp, auf->bytes));
 
    xthr_lock(dec->pending_lock);
 

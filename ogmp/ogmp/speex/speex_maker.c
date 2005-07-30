@@ -307,7 +307,7 @@ int spxmk_link_stream(media_maker_t* maker, media_stream_t* stream, media_contro
 
 	speex_info_t* spxinfo= (speex_info_t*)minfo;
 
-   media_device_t* dev = control->find_device (control, "portaudio", "input");
+   media_device_t* dev = control->find_device (control, "alsa", "input");
    if(!dev)
       return MP_FAIL;
 

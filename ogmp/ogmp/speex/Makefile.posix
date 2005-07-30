@@ -17,7 +17,7 @@ FILES = speex_player.c speex_config.c speex_codec.c ogm_speex.c speex_sender.c \
 
 LIBFILES = ogm_speex.so speex_player.so speex_sender.so speex_rtp.so speex_maker.so
 
-CFLAGS = -Wall -fPIC #-DLOCAL_RECORD_TEST -DNO_CHUNK_TEST
+CFLAGS = -Wall -fPIC #-DOGMP_RECORD_TEST -DOGMP_NO_CHUNK
 
 all:	 libs install
 
