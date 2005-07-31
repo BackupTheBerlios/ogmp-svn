@@ -296,6 +296,9 @@ int sipua_make_call(sipua_t *sipua, sipua_call_t* call, char* id,
 
 
 
+
+
+
 		{
 			call->bandwidth_need += media_bw;
 		}
@@ -363,6 +366,7 @@ sipua_call_t* sipua_make_call(sipua_t *sipua, user_profile_t* user_prof, char* i
 	{
 		/* conference identification */
 		call->setid.id = xstr_clone(id);
+
 		call->setid.username = user_prof->username;
 
 		call->setid.nettype = nettype;
@@ -598,6 +602,7 @@ int sipua_negotiate_call(sipua_t *sipua, sipua_call_t *call,
 				rtpcap->local_rtp_portno = rtp_ports[j];
 				rtpcap->local_rtcp_portno = rtcp_ports[j];
 
+
 				break;
 
 			}
@@ -640,6 +645,7 @@ int sipua_negotiate_call(sipua_t *sipua, sipua_call_t *call,
    /* FIXME: If free here, lead to segment fault on linux(POSIX)
     * But why?
 	sdp_message_free(sdp_info.sdp_message);
+
     */
 
     
@@ -757,7 +763,7 @@ int sipua_link_medium(sipua_t* sipua, sipua_call_t* call, media_control_t* contr
       }
       mediatype[i] = '\0';                                                          
 
-      if(sipua_open_stream_output (control, call, (media_stream_t*)rtpstrm, mediatype, "playback") < MP_OK)
+      if(sipua_open_stream_output (control, call, (media_stream_t*)rtpstrm, mediatype, "netcast") < MP_OK)
       {
          rtpstrm = (rtp_stream_t*)rtpstrm->stream.next;
          continue;
@@ -790,6 +796,7 @@ int sipua_establish_call(sipua_t* sipua, sipua_call_t* call, char *mode, rtpcap_
 	sipua->uas->address(sipua->uas, &nettype, &addrtype, &netaddr);
 
 	
+
 	cata = control->modules(control);
 
 	/* create default rtp session */
@@ -904,6 +911,7 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_call_t* call, int bw_budget, media_co
 
 	sdp_message_i_info_set (sdp_info.sdp_message, -1, xstr_clone(call->info));
 
+
 	sdp_message_c_connection_add (sdp_info.sdp_message,
 									-1, /* media_pos */
 									xstr_clone(nettype), /* IN */
@@ -1010,6 +1018,7 @@ char* sipua_call_sdp(sipua_t *sipua, sipua_call_t* call, int bw_budget, media_co
 
     sdp_message_free(sdp_info.sdp_message);
     */
+
    return sdp_body;
 }
 

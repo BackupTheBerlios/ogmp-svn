@@ -54,6 +54,8 @@ int pa_input_loop(void *gen)
 	int sample_bytes;
 	pa_input_t* inbufr;
 
+   rtime_t usec_sync, usec_wait;
+
    media_frame_t auf;
 	portaudio_device_t* pa = (portaudio_device_t*)gen;
 
@@ -67,7 +69,7 @@ int pa_input_loop(void *gen)
 
 	while(!pa->input_stop)
 	{
-		rtime_t us_left;
+		usec_sync = time_usec_now (pa->clock);
 
 		inbufr = &pa->inbuf[pa->inbuf_r];
 
@@ -75,7 +77,7 @@ int pa_input_loop(void *gen)
 		{
 			/* encoding catch up input */
 			pa_log(("\rpa_input_loop: in[%d] sleep\n", pa->inbuf_r));
-			time_usec_sleep(pa->clock, (pa->usec_pulse / 2), &us_left);
+			time_usec_sleep(pa->clock, (pa->usec_pulse / 4), NULL);
 			continue;
 		}
 
@@ -95,6 +97,10 @@ int pa_input_loop(void *gen)
 		inbufr->npcm_wrote = 0;
 
 		pa->inbuf_r = (pa->inbuf_r + 1) % pa->inbuf_n;
+
+      usec_wait = pa->usec_pulse - time_usec_spent(pa->clock, usec_sync);
+
+      time_usec_sleep (pa->clock, usec_wait, NULL);
 	}
 
 	auf.bytes = 0;

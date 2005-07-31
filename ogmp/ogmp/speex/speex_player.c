@@ -103,6 +103,7 @@ int spxp_loop(void *gen)
 	while(1)
 	{
       if(dec->delayed_frame == NULL)
+
       {         
          xthr_lock(dec->pending_lock);
 
@@ -205,6 +206,7 @@ int spxp_open_stream (media_player_t *mp, media_stream_t *stream, media_info_t *
 	dec->packet_pending = xthr_new_cond(XTHREAD_NONEFLAGS);
 
 	/* Initialization of the structure that holds the bits */
+
 	speex_bits_init(&dec->decbits);
    
 	spxp_debug(("spxp_open_stream: speex stream opened\n"));
@@ -343,7 +345,7 @@ int spxp_set_device(media_player_t* mp, media_control_t* cont, module_catalog_t*
   
    spxp_log(("spxp_set_device: need audio device\n"));
 
-   dev = cont->find_device(cont, "alsa", "output");
+   dev = cont->find_device(cont, "portaudio", "output");
    
    if(!dev) return MP_FAIL;
 
@@ -376,7 +378,7 @@ int spxp_link_stream(media_player_t *mp, media_stream_t* strm, media_control_t *
    spxp_debug(("spxp_link_stream: need audio device\n"));
    dec->clock = cont->clock(cont);
 
-   dev = cont->find_device (cont, "alsa", "output");
+   dev = cont->find_device (cont, "portaudio", "output");
 
    if(!dev) return MP_FAIL;
 
@@ -683,6 +685,7 @@ extern DECLSPEC module_loadin_t mediaformat =
    000001,         /* Maximum version of lib API supportted by the module */
 
    media_new_player   /* Module initializer */
+
 };
                    
 
