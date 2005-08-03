@@ -69,11 +69,10 @@ typedef struct ogmp_source_s ogmp_source_t;
 typedef struct ogmp_ui_s ogmp_ui_t;
 struct ogmp_ui_s
 {
-	struct ui_s ui;
+   struct ui_s ui;
     
-    int (*set_sipua)(ogmp_ui_t *ogui, sipua_t* sipua);
-
-	ogmp_command_t*(*wait_command)(ogmp_ui_t *ui);
+   int (*set_sipua)(ogmp_ui_t *ogui, sipua_t* sipua);
+   ogmp_command_t*(*wait_command)(ogmp_ui_t *ui);
 };
 
 struct ogmp_command_s

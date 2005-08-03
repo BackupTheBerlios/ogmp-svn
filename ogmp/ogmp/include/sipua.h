@@ -160,7 +160,7 @@ typedef struct sipua_auth_s sipua_auth_t;
 
 struct sipua_auth_s
 {
-   char* username;
+   char* regid;
    char* realm;
    char* authid;    /* Due to libeXosip v1 cannot delete single auth */
    char* password;  /* I have to cache all of them for re-adding. */

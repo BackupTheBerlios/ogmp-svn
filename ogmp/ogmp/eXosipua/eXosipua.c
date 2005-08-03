@@ -238,8 +238,6 @@ int jua_process_event(eXosipua_t *jua)
                   reg_e.seconds_expires = strtol(expires->gvalue, NULL, 10);
             }
 
-
-
             osip_message_free(message);
          }                                                                
          else
@@ -405,6 +403,7 @@ int jua_process_event(eXosipua_t *jua)
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
+
 	  
             josua_printf(buf);
             */
@@ -596,6 +595,7 @@ int jua_loop(void *gen)
 	return UA_OK;
 }
 
+
 int uas_start(sipua_uas_t *sipuas)
 {
 	eXosipua_t *jua = (eXosipua_t*)sipuas;
@@ -702,17 +702,18 @@ int uas_clear_coding(sipua_uas_t* sipuas)
 	return UA_OK;
 }
 
-sipua_auth_t *uas_new_auth(char* username, char *realm, char *authid, char *password)
+sipua_auth_t *uas_new_auth(char* regid, char *realm, char *authid, char *password)
 {
    sipua_auth_t *auth = xmalloc(sizeof(sipua_auth_t));
    if(auth)
    {              
-      auth->username = xstr_clone(username);
+      auth->regid = xstr_clone(regid);
       auth->realm = xstr_clone(realm);
       auth->authid = xstr_clone(authid);
       auth->password = xstr_clone(password);
    }
 
+	jua_debug(("\ruas_new_auth: regid[%s] realm[%s] authid[%s] pwd[%s]\n", regid, realm, authid, password));
    return auth;
 }
 
@@ -720,11 +721,10 @@ int uas_done_auth(void* gen)
 {
    sipua_auth_t *auth = (sipua_auth_t*)gen;
    
-   xfree(auth->username);
+   xfree(auth->regid);
    xfree(auth->realm);
    xfree(auth->authid);
-   xfree(auth->password);
-   
+   xfree(auth->password);   
    xfree(auth);
 
    return UA_OK;
@@ -735,29 +735,49 @@ int uas_match_auth(void *pat, void *tar)
    sipua_auth_t *p_auth = (sipua_auth_t *)pat;
    sipua_auth_t *t_auth = (sipua_auth_t *)tar;
 
-   if(0==strcmp(p_auth->username, t_auth->username) && 0==strcmp(p_auth->realm, t_auth->realm))
+   if(0==strcmp(p_auth->regid, t_auth->regid) && 0==strcmp(p_auth->realm, t_auth->realm))
+   {
+	   jua_debug(("\ruas_match_auth: match %s/%s\n", t_auth->regid, t_auth->realm));
       return 0;
-
+   }
+   
    return -1;
 }
 
-int uas_set_authentication_info(sipua_uas_t *sipuas, char *username, char *userid, char*passwd, char *realm)
+int uas_set_authentication_info(sipua_uas_t *sipuas, char *regid, char *userid, char*passwd, char *realm)
 {
    xlist_user_t lu;
+   char username[256];
+   int i;
    
    sipua_auth_t *new_auth;
-   sipua_auth_t auth = {username, realm};
+   sipua_auth_t auth = {regid, realm, NULL, NULL};
+
+	jua_debug(("\ruas_set_authentication_info: regid[%s] realm[%s]\n", regid, realm));
 
    if(xlist_find(sipuas->auth_list, &auth, uas_match_auth, &lu))
+   {
       return UA_OK;
-
-   new_auth = uas_new_auth(username, realm, userid, passwd);
+   }
+   
+   new_auth = uas_new_auth(regid, realm, userid, passwd);
    if(new_auth)
    {
       xlist_addto_first(sipuas->auth_list, new_auth);
-      
+
+      i=0;
+      while(regid[i] != '@' && i < (256-1))
+      {
+         username[i] = regid[i];
+         i++;
+      }
+      username[i] = '\0';
+
       if(eXosip_add_authentication_info(username, userid, passwd, NULL, realm) == 0)
+      {
+	      jua_debug(("\ruas_set_authentication_info: ok\n"));
          return UA_OK;
+      }
    }
    
    return UA_FAIL;
@@ -767,26 +787,29 @@ int uas_set_authentication_info(sipua_uas_t *sipuas, char *username, char *useri
  * libeXosip cannot delete single authentication info, so I clear and re-add all rest auth,
  * libeXosip2 can change its api, so I don't need store all passwords.
  */
-int uas_clear_authentication_info(sipua_uas_t *sipuas, char *username, char *realm)
+int uas_clear_authentication_info(sipua_uas_t *sipuas, char *regid, char *realm)
 {
    xlist_user_t lu;
-   int n;
+   int nauth;
 
    sipua_auth_t *auth;
-   sipua_auth_t search_auth = {username, realm};
+   sipua_auth_t search_auth = {regid, realm};
 
-   n = xlist_size(sipuas->auth_list);
+   nauth = xlist_size(sipuas->auth_list);
+	jua_debug(("\ruas_clear_authentication_info: ok\n"));
+   
    xlist_delete_if(sipuas->auth_list, &search_auth, uas_match_auth, uas_done_auth);
-   if(n == xlist_size(sipuas->auth_list))
+   if(nauth == xlist_size(sipuas->auth_list))
+   {
       return UA_FAIL;
+   }
       
    eXosip_clear_authentication_info();
 
    auth = (sipua_auth_t*)xlist_first(sipuas->auth_list, &lu);
    while(auth)
    {
-      eXosip_add_authentication_info(auth->username, auth->authid, auth->password, NULL, auth->realm);
-      
+      eXosip_add_authentication_info(auth->regid, auth->authid, auth->password, NULL, auth->realm);
       auth = (sipua_auth_t*)xlist_next(sipuas->auth_list, &lu);
    }
 
@@ -882,6 +905,7 @@ int uas_unregist(sipua_uas_t *sipuas, char *userloc, char *registrar, char *id)
 
 	ret = eXosip_register(regno, 0);
 
+
 	eXosip_unlock();
 
 	if(ret != 0)
@@ -916,6 +940,7 @@ char* uas_check_route(const char *url)
 	  	if (lr_param==NULL)
       {
 			osip_uri_uparam_add(rt->url,osip_strdup("lr"),NULL);
+
 			osip_route_to_str(rt,&route);
          
          return route;
@@ -942,6 +967,7 @@ int uas_invite(sipua_uas_t *sipuas, const char *to, sipua_call_t* call_info, cha
     
 	osip_message_t *invite;
 	char sdp_size[8];
+
 	char* proxy = NULL;
 
 	int ret;
@@ -1221,7 +1247,8 @@ int uas_init(sipua_uas_t* uas, int sip_port, const char* nettype, const char* ad
 
 int uas_done(sipua_uas_t *sipuas)
 {
-	xfree(sipuas);
+   xlist_done (sipuas->auth_list, uas_done_auth);
+   xfree(sipuas);
 
 	return UA_OK;
 }
@@ -1229,7 +1256,6 @@ int uas_done(sipua_uas_t *sipuas)
 module_interface_t* sipua_new_server()
 {
 	eXosipua_t *jua;
-
 	sipua_uas_t *uas;
 
 	jua = xmalloc(sizeof(eXosipua_t));
@@ -1246,10 +1272,11 @@ module_interface_t* sipua_new_server()
    {
       xfree(jua);
       jua_debug(("sipua_new_server: No memory for Authorization list\n"));
+      
       return NULL;
    }
 
-	uas->match_type = uas_match_type;
+   uas->match_type = uas_match_type;
 
    uas->init = uas_init;
 	uas->done = uas_done;

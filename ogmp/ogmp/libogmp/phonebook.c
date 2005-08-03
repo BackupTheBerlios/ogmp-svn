@@ -198,6 +198,7 @@ int sipua_next_name (sipua_phonebook_t* book, FILE* f, sipua_contact_t* c)
 
 
 
+
 	sipua_read_nchar(book, f, c->name, c->nbytes);
 
 	return UA_OK;
@@ -1089,8 +1090,12 @@ user_t* sipua_load_user_file_v0(FILE* f, const char* uid, const char* tok, int t
 
 			u->regname = xstr_clone(start);
 
-         u->realm = u->regname;
+         u->regid = u->regname;
+         while(*u->regid != ':')
+            u->regid++;
+         u->regid++;
 
+         u->realm = u->regname;
          while(*u->realm != '@')
             u->realm++;
          u->realm++;
@@ -1234,6 +1239,11 @@ user_t* sipua_load_user_file_v1(FILE* f, const char* uid, char* buf, int *bsize,
 			start = pc+1;
 
 			u->regname = xstr_clone(start);
+
+         u->regid = u->regname;
+         while(*u->regid != ':')
+            u->regid++;
+         u->regid++;
 
          u->realm = u->regname;
          while(*u->realm != '@')
@@ -1412,6 +1422,11 @@ user_t* sipua_load_user_file_v2(FILE* f, const char* uid, char* buf, int *bsize,
 			start = pc+1;
 
 			u->regname = xstr_clone(start);
+
+         u->regid = u->regname;
+         while(*u->regid != ':')
+            u->regid++;
+         u->regid++;
 
          u->realm = u->regname;
          while(*u->realm != '@')

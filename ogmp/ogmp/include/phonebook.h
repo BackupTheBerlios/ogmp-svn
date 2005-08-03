@@ -94,11 +94,12 @@ struct user_profile_s
 {
 	char* username;
 
-	char* fullname;		/* could be multibytes char */
+	char* fullname;	/* could be multibytes char */
 	int fbyte;
 
-	char* regname;		/* sip name notation */
-   char* realm;      /* pointer to regname realm part */
+   char* regname;		/* sip:username@domain */
+   char* regid;      /* pointer to username@domain */
+   char* realm;      /* pointer to regname domain part */
 
 	int seconds;		/* lifetime */
 	

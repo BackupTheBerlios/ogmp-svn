@@ -143,10 +143,14 @@ int sdp_parse_rtpmap(char *rtpmap, int *rtpmapno, char *coding_type, int *clockr
 	*clockrate = (int)strtol(token, NULL, 10);
 
 	end = strchr(token, '/');
-	token = ++end;
-
-	*coding_param = (int)strtol(token, NULL, 10);
-	
+   if(end)
+   {
+	   token = ++end;
+	   *coding_param = (int)strtol(token, NULL, 10);
+	}
+   else
+	   *coding_param = 0;
+   
 	return MP_OK;
 }
 
@@ -255,6 +259,7 @@ int rtp_capable_to_sdp (rtpcap_descript_t* rtpcap, sdp_message_t *sdp, int pos)
 	sdp_message_a_attribute_add (sdp, pos, xstr_clone("rtpmap"), xstr_clone(rtpmap));
 
 	return MP_OK;
+
 }
 
 rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
@@ -262,7 +267,7 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 	/* Retrieve capable from the sdp message */
 	char *media_type; /* "audio"; "video"; etc */
 
-	char *protocol; /* "RTP/AVP" */
+	char *proto; /* "RTP/AVP" */
 
 	char *rtpmap = NULL;
 
@@ -314,14 +319,12 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 		jua_parse_ipv6(addr, media_ip, ...);
 #endif
 
-	rtpcap_log(("rtp_capable_to_sdp: media_ip[%s] ttl[%d]\n", media_ip, ttl));
+	rtpcap_log(("rtp_capable_to_sdp: main ip[%s] ttl[%d]\n", media_ip, ttl));
 
 	rtpcapset->netaddr = xstr_clone(media_ip);
 	{
 		char *p = rtpcapset->cname;
 		char *username;
-
-
 
       username = sdp_message_o_username_get(sdp);
 		if(username)
@@ -340,12 +343,14 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 
 	while (!sdp_message_endof_media (sdp, pos_media))
 	{
-		uint media_port = 0;
+      char *media_port_str = NULL;      
+      uint media_port = 0;
 		uint control_port = 0;
+      
+      char *nport_str = NULL;
 		int nport = 0;
 
 		char *attr = NULL;
-
 		int pos_attr = 0;
 
 		sdp_media_t *sdp_media;
@@ -359,14 +364,20 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 		char m_media_ip[MAX_IP_BYTES] = "";
 
 		media_type = sdp_message_m_media_get (sdp, pos_media);
-		media_port = (uint)strtol(sdp_message_m_port_get (sdp, pos_media), NULL, 10);
-
-		/*nport = atoi(sdp_message_m_number_of_port_get (sdp, pos_media));*/
-		nport = strtol(sdp_message_m_number_of_port_get (sdp, pos_media), NULL, 10);
       
-		protocol = sdp_message_m_proto_get (sdp, pos_media);
+      media_port_str = sdp_message_m_port_get (sdp, pos_media);
+      if(media_port_str)
+         media_port = (uint)strtol(media_port_str, NULL, 10);
 
-		rtpcap_log(("rtp_capable_to_sdp: media[%s] port[%d]\n", media_type, media_port));
+      nport_str = sdp_message_m_number_of_port_get (sdp, pos_media);
+      if(nport_str)
+		   nport = strtol(nport_str, NULL, 10);
+      else if(media_port > 0)
+		   nport = 1;
+         
+		proto = sdp_message_m_proto_get (sdp, pos_media);
+
+		rtpcap_log(("rtp_capable_to_sdp: media[%s] port[%d] nport[%d] proto[%s]\n", media_type, media_port, nport, proto));
 
 		sdp_media = osip_list_get(sdp->m_medias, pos_media);
 
@@ -382,7 +393,7 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 			jua_parse_ipv6(addr, media_ip, ...);
 #endif
 
-		rtpcap_log(("rtp_capable_to_sdp: media_ip[%s] ttl[%d]\n", media_ip, ttl));
+		rtpcap_log(("rtp_capable_to_sdp: media ip[%s] ttl[%d]\n", media_ip, ttl));
 
 		/* find rtpmap attribute */
 		rtpmap_ok = rtcp_ok = 0;
@@ -393,8 +404,8 @@ rtpcap_set_t* rtp_capable_from_sdp(sdp_message_t *sdp)
 			{
 				rtpmap = sdp_message_a_att_value_get(sdp, pos_media, pos_attr);
 				sdp_parse_rtpmap(rtpmap, &rtpmapno, coding_type, &clockrate, &coding_param);
-					
-				rtpcap_log(("rtp_capable_to_sdp: rtpmap[%d]; coding[%s]; clockrate[%d]; param[%d]\n", rtpmapno, coding_type, clockrate, coding_param));
+
+            rtpcap_log(("rtp_capable_to_sdp: rtpmap[%d]; coding[%s]; clockrate[%d]; param[%d]\n", rtpmapno, coding_type, clockrate, coding_param));
 
 				rtpmap_ok = 1;
 				if(rtcp_ok)
@@ -487,6 +498,7 @@ rtpcap_set_t* rtp_capable_from_format(media_format_t *format,
 
 	strm = format->first;
 
+
 	while (strm)
 	{
 		rtpcap_descript_t *rtpcap;
@@ -538,6 +550,7 @@ int rtp_capable_cname(rtpcap_set_t* set, char *cn, int bytes)
 	}
 
 	strcpy(cn, set->username);
+
 	cn += ub;
 
 	*cn = '@';
@@ -567,6 +580,7 @@ int rtp_capable_done_set(rtpcap_set_t* rtpcapset)
 
 	if(rtpcapset->rtpcaps)
 		xlist_done(rtpcapset->rtpcaps, rtpcap_done);
+
 
     if(rtpcapset->sdp_message)
         free(rtpcapset->sdp_message);
