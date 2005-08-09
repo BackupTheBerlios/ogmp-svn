@@ -2,7 +2,7 @@ AC_INIT(configure.in)
 
 dnl Checks for Programs.
 
-AM_CONFIG_HEADER(xstring.h)
+AM_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE(libtmdbase, 0.1)
 AM_MAINTAINER_MODE
 
@@ -128,5 +128,8 @@ from http://www.libsdl.org/, or configure with --disable-sdl. Have a nice day.
     ])
   fi
 fi
+
+CFLAGS="$CFLAGS -fPIC"
+LDFLAGS="$LDFLAGS -shared"
 
 AC_OUTPUT(Makefile libtmdbase/Makefile libtmdbase/libsdl/Makefile libtmdbase/memwatch/Makefile)

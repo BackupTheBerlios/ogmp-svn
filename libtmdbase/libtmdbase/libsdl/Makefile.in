@@ -10,6 +10,8 @@
 # even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 # PARTICULAR PURPOSE.
 
+# Process this file with automake to produce Makefile.in
+
 
 SHELL = @SHELL@
 
@@ -90,20 +92,22 @@ SDL_CONFIG = @SDL_CONFIG@
 STRIP = @STRIP@
 VERSION = @VERSION@
 
-lib_LIBRARIES = libsdlthread.a
-libsdlthread_a_SOURCES = xthread_sdl.c
+noinst_LTLIBRARIES = libxth.la
+libxth_la_SOURCES = xthread_sdl.c
+libxth_la_LIBADD = -lSDL
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
-CONFIG_HEADER = ../../xstring.h
+CONFIG_HEADER = ../../config.h
 CONFIG_CLEAN_FILES = 
-LIBRARIES =  $(lib_LIBRARIES)
+LTLIBRARIES =  $(noinst_LTLIBRARIES)
 
 
 DEFS = @DEFS@ -I. -I$(srcdir) -I../..
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
-libsdlthread_a_LIBADD = 
-libsdlthread_a_OBJECTS =  xthread_sdl.$(OBJEXT)
+libxth_la_LDFLAGS = 
+libxth_la_DEPENDENCIES = 
+libxth_la_OBJECTS =  xthread_sdl.lo
 CFLAGS = @CFLAGS@
 COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 LTCOMPILE = $(LIBTOOL) --mode=compile $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -117,8 +121,8 @@ DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 TAR = tar
 GZIP_ENV = --best
 DEP_FILES =  .deps/xthread_sdl.P
-SOURCES = $(libsdlthread_a_SOURCES)
-OBJECTS = $(libsdlthread_a_OBJECTS)
+SOURCES = $(libxth_la_SOURCES)
+OBJECTS = $(libxth_la_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
@@ -131,37 +135,14 @@ Makefile: $(srcdir)/Makefile.in  $(top_builddir)/config.status $(BUILT_SOURCES)
 	  && CONFIG_FILES=$(subdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
 
 
-mostlyclean-libLIBRARIES:
+mostlyclean-noinstLTLIBRARIES:
 
-clean-libLIBRARIES:
-	-test -z "$(lib_LIBRARIES)" || rm -f $(lib_LIBRARIES)
+clean-noinstLTLIBRARIES:
+	-test -z "$(noinst_LTLIBRARIES)" || rm -f $(noinst_LTLIBRARIES)
 
-distclean-libLIBRARIES:
+distclean-noinstLTLIBRARIES:
 
-maintainer-clean-libLIBRARIES:
-
-install-libLIBRARIES: $(lib_LIBRARIES)
-	@$(NORMAL_INSTALL)
-	$(mkinstalldirs) $(DESTDIR)$(libdir)
-	@list='$(lib_LIBRARIES)'; for p in $$list; do \
-	  if test -f $$p; then \
-	    echo " $(INSTALL_DATA) $$p $(DESTDIR)$(libdir)/$$p"; \
-	    $(INSTALL_DATA) $$p $(DESTDIR)$(libdir)/$$p; \
-	  else :; fi; \
-	done
-	@$(POST_INSTALL)
-	@list='$(lib_LIBRARIES)'; for p in $$list; do \
-	  if test -f $$p; then \
-	    echo " $(RANLIB) $(DESTDIR)$(libdir)/$$p"; \
-	    $(RANLIB) $(DESTDIR)$(libdir)/$$p; \
-	  else :; fi; \
-	done
-
-uninstall-libLIBRARIES:
-	@$(NORMAL_UNINSTALL)
-	list='$(lib_LIBRARIES)'; for p in $$list; do \
-	  rm -f $(DESTDIR)$(libdir)/$$p; \
-	done
+maintainer-clean-noinstLTLIBRARIES:
 
 # FIXME: We should only use cygpath when building on Windows,
 # and only if it is available.
@@ -201,10 +182,8 @@ distclean-libtool:
 
 maintainer-clean-libtool:
 
-libsdlthread.a: $(libsdlthread_a_OBJECTS) $(libsdlthread_a_DEPENDENCIES)
-	-rm -f libsdlthread.a
-	$(AR) cru libsdlthread.a $(libsdlthread_a_OBJECTS) $(libsdlthread_a_LIBADD)
-	$(RANLIB) libsdlthread.a
+libxth.la: $(libxth_la_OBJECTS) $(libxth_la_DEPENDENCIES)
+	$(LINK)  $(libxth_la_LDFLAGS) $(libxth_la_OBJECTS) $(libxth_la_LIBADD) $(LIBS)
 
 tags: TAGS
 
@@ -295,7 +274,7 @@ check-am: all-am
 check: check-am
 installcheck-am:
 installcheck: installcheck-am
-install-exec-am: install-libLIBRARIES
+install-exec-am:
 install-exec: install-exec-am
 
 install-data-am:
@@ -304,14 +283,13 @@ install-data: install-data-am
 install-am: all-am
 	@$(MAKE) $(AM_MAKEFLAGS) install-exec-am install-data-am
 install: install-am
-uninstall-am: uninstall-libLIBRARIES
+uninstall-am:
 uninstall: uninstall-am
-all-am: Makefile $(LIBRARIES)
+all-am: Makefile $(LTLIBRARIES)
 all-redirect: all-am
 install-strip:
 	$(MAKE) $(AM_MAKEFLAGS) AM_INSTALL_PROGRAM_FLAGS=-s install
 installdirs:
-	$(mkinstalldirs)  $(DESTDIR)$(libdir)
 
 
 mostlyclean-generic:
@@ -323,25 +301,25 @@ distclean-generic:
 	-rm -f config.cache config.log stamp-h stamp-h[0-9]*
 
 maintainer-clean-generic:
-mostlyclean-am:  mostlyclean-libLIBRARIES mostlyclean-compile \
+mostlyclean-am:  mostlyclean-noinstLTLIBRARIES mostlyclean-compile \
 		mostlyclean-libtool mostlyclean-tags mostlyclean-depend \
 		mostlyclean-generic
 
 mostlyclean: mostlyclean-am
 
-clean-am:  clean-libLIBRARIES clean-compile clean-libtool clean-tags \
-		clean-depend clean-generic mostlyclean-am
+clean-am:  clean-noinstLTLIBRARIES clean-compile clean-libtool \
+		clean-tags clean-depend clean-generic mostlyclean-am
 
 clean: clean-am
 
-distclean-am:  distclean-libLIBRARIES distclean-compile \
+distclean-am:  distclean-noinstLTLIBRARIES distclean-compile \
 		distclean-libtool distclean-tags distclean-depend \
 		distclean-generic clean-am
 	-rm -f libtool
 
 distclean: distclean-am
 
-maintainer-clean-am:  maintainer-clean-libLIBRARIES \
+maintainer-clean-am:  maintainer-clean-noinstLTLIBRARIES \
 		maintainer-clean-compile maintainer-clean-libtool \
 		maintainer-clean-tags maintainer-clean-depend \
 		maintainer-clean-generic distclean-am
@@ -350,13 +328,13 @@ maintainer-clean-am:  maintainer-clean-libLIBRARIES \
 
 maintainer-clean: maintainer-clean-am
 
-.PHONY: mostlyclean-libLIBRARIES distclean-libLIBRARIES \
-clean-libLIBRARIES maintainer-clean-libLIBRARIES uninstall-libLIBRARIES \
-install-libLIBRARIES mostlyclean-compile distclean-compile \
-clean-compile maintainer-clean-compile mostlyclean-libtool \
-distclean-libtool clean-libtool maintainer-clean-libtool tags \
-mostlyclean-tags distclean-tags clean-tags maintainer-clean-tags \
-distdir mostlyclean-depend distclean-depend clean-depend \
+.PHONY: mostlyclean-noinstLTLIBRARIES distclean-noinstLTLIBRARIES \
+clean-noinstLTLIBRARIES maintainer-clean-noinstLTLIBRARIES \
+mostlyclean-compile distclean-compile clean-compile \
+maintainer-clean-compile mostlyclean-libtool distclean-libtool \
+clean-libtool maintainer-clean-libtool tags mostlyclean-tags \
+distclean-tags clean-tags maintainer-clean-tags distdir \
+mostlyclean-depend distclean-depend clean-depend \
 maintainer-clean-depend info-am info dvi-am dvi check check-am \
 installcheck-am installcheck install-exec-am install-exec \
 install-data-am install-data install-am install uninstall-am uninstall \

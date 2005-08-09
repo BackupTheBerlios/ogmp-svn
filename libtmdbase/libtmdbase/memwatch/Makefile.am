@@ -1,4 +1,4 @@
-INCLUDES = 
-METASOURCES = AUTO
-lib_LIBRARIES = libmemwatch.a
-libmemwatch_a_SOURCES = memwatch.c memwatch.h
+# Process this file with automake to produce Makefile.in
+
+noinst_LTLIBRARIES = libmemwatch.la
+libmemwatch_la_SOURCES = memwatch.c memwatch.h
