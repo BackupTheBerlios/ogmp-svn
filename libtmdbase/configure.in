@@ -1,0 +1,132 @@
+AC_INIT(configure.in)
+
+dnl Checks for Programs.
+
+AM_CONFIG_HEADER(xstring.h)
+AM_INIT_AUTOMAKE(libtmdbase, 0.1)
+AM_MAINTAINER_MODE
+
+dnl
+dnl Check for tools
+dnl
+AC_LANG_C
+AC_PROG_CC
+AC_PROG_MAKE_SET
+AC_PROG_INSTALL
+AM_PROG_LIBTOOL
+
+dnl
+dnl Find the right ranlib, even when cross-compiling
+dnl
+AC_CHECK_TOOL(RANLIB, ranlib, :)
+AC_CHECK_TOOL(STRIP, strip, :)
+AC_CHECK_TOOL(AR, ar, :)
+AC_CHECK_TOOL(LD, ld, :)
+
+dnl
+dnl functions
+dnl
+AC_DEFUN([TMD_ADD_CFLAGS], [
+  for element in [$1]; do
+    eval "CFLAGS_${element}="'"$'"{CFLAGS_${element}} $2"'"'
+    am_modules_with_cflags="${am_modules_with_cflags} ${element}"
+  done
+])
+
+AC_DEFUN([TMD_ADD_LDFLAGS], [
+  for element in [$1]; do
+    eval "LDFLAGS_${element}="'"'"$2 "'$'"{LDFLAGS_${element}} "'"'
+    am_modules_with_ldflags="${am_modules_with_ldflags} ${element}"
+  done
+])
+
+dnl
+dnl  Set default values
+dnl
+LDFLAGS_tmd="${LDFLAGS}"
+
+dnl
+dnl Check for dlopen, dlsym, dlclose
+dnl
+AC_CHECK_HEADERS(dlfcn.h sys/dl.h)
+ac_cv_my_have_dlopen=no
+AC_CHECK_FUNC(dlopen,
+  ac_cv_my_have_dlopen=yes,
+  AC_CHECK_LIB(dl, dlopen,
+    ac_cv_my_have_dlopen=yes
+    TMD_ADD_LDFLAGS([tmd],[-ldl]),
+    AC_CHECK_LIB(svld, dlopen,
+      ac_cv_my_have_dlopen=yes
+      TMD_ADD_LDFLAGS([tmd],[-lsvld]))))
+if test "${ac_cv_my_have_dlopen}" = "yes"; then
+  AC_DEFINE(HAVE_DL_DLOPEN, 1, [Define if you have the dlopen API])
+  ac_cv_have_plugins=yes
+fi
+
+dnl
+dnl  SDL module
+dnl
+AC_ARG_ENABLE(sdl,
+  [  --enable-sdl            SDL support (default enabled)])
+if test "${enable_sdl}" != "no"
+then
+  SDL_PATH="${PATH}"
+  AC_ARG_WITH(sdl-config-path,
+    [    --with-sdl-config-path=PATH sdl-config path (default search in \$PATH)],
+    [ if test "${with_sdl_config_path}" != "no"
+      then
+        SDL_PATH="${with_sdl_config_path}:${PATH}"
+      fi ])
+  AC_PATH_PROG(SDL12_CONFIG, sdl12-config, no, ${SDL_PATH})
+  SDL_CONFIG="${SDL12_CONFIG}"
+  SDL_HEADER="SDL12/SDL.h"
+  if test "${SDL_CONFIG}" = "no"
+  then
+    AC_PATH_PROG(SDL11_CONFIG, sdl11-config, no, ${SDL_PATH})
+    SDL_CONFIG=${SDL11_CONFIG}
+    SDL_HEADER="SDL11/SDL.h"
+  fi
+  if test "${SDL_CONFIG}" = "no"
+  then
+    AC_PATH_PROG(SDL_CONFIG, sdl-config, no, ${SDL_PATH})
+    SDL_HEADER="SDL/SDL.h"
+  fi
+  # check for cross-compiling
+  SDL_PREFIX=
+  AC_ARG_WITH(sdl-prefix,
+    [    --with-sdl-prefix=PATH path to libsdl (needed for cross-compiling),
+                               e.g use as:
+                               --with-sdl-prefix=/usr/local/arm/2.95.3/arm-linux/usr)],[],[])
+  if test "${with_sdl_prefix}" != "no" -a -n "${with_sdl_prefix}"
+  then
+    SDL_PREFIX="--prefix=${with_sdl_prefix}"
+  fi
+  if test "${SDL_CONFIG}" != "no"
+  then
+    TMD_ADD_CFLAGS([xthread_sdl],[`${SDL_CONFIG} ${SDL_PREFIX} --cflags | sed 's,SDL,,'`])
+    TMD_ADD_LDFLAGS([xthread_sdl],[`${SDL_CONFIG} ${SDL_PREFIX} --libs | sed 's,-rdynamic,,'`])
+    CPPFLAGS="${CPPFLAGS_save} ${CFLAGS_xthread_sdl}"
+    AC_CHECK_HEADERS(${SDL_HEADER}, AC_DEFINE_UNQUOTED(SDL_INCLUDE_FILE,
+      <${SDL_HEADER}>, Indicate whether we should use SDL/SDL.h or SDL11/SDL.h),
+      [ AC_CHECK_HEADERS(SDL.h, AC_DEFINE(SDL_INCLUDE_FILE, <SDL.h>,
+          As a last resort we also test for SDL.h presence),
+      [ AC_MSG_ERROR([The development package for SDL is not installed.
+Please install it and try again. Alternatively you can also configure with
+--disable-sdl.])
+      ])])
+    CPPFLAGS="${CPPFLAGS_save}"
+    if expr 1.1.5 \> `${SDL_CONFIG} --version` >/dev/null
+    then
+      AC_MSG_ERROR([The development package for SDL is not installed.
+Please install it and try again. Alternatively you can also configure with
+--disable-sdl.])
+    fi
+  elif test "${enable_sdl}" =  "yes"
+  then
+    AC_MSG_ERROR([I couldn't find the SDL package. You can download libSDL
+from http://www.libsdl.org/, or configure with --disable-sdl. Have a nice day.
+    ])
+  fi
+fi
+
+AC_OUTPUT(Makefile libtmdbase/Makefile libtmdbase/libsdl/Makefile libtmdbase/memwatch/Makefile)
