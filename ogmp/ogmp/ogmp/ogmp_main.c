@@ -17,10 +17,6 @@
  
 #include "ogmp.h"
 
-#ifndef MOD_DIR
- #define MOD_DIR "ogmp"
-#endif
-
 /* For standalone sipua */
 int main(int argc, char** argv)
 {
@@ -47,11 +43,11 @@ int main(int argc, char** argv)
 
 	printf("main: sip port is %d\n", sip_port);
 
-	printf("main: modules in dir:'%s'\n", MOD_DIR);
+	printf("main: modules in dir:'%s'\n", OGMP_MODULEDIR);
 
 	mod_cata = catalog_new( "mediaformat" );
 
-	catalog_scan_modules ( mod_cata, OGMP_VERSION, MOD_DIR );
+	catalog_scan_modules (mod_cata, OGMP_VERSION, OGMP_MODULEDIR);
 
 	uas = client_new_uas(mod_cata, "eXosipua");
 	if(!uas)

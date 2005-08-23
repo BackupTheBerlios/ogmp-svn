@@ -1,0 +1,124 @@
+AC_INIT(configure.in)
+
+dnl ---------------------------------------------
+dnl Making releases:
+dnl   OGMP_SUB += 1; continue with OGMP_LT_* values below
+dnl ---------------------------------------------
+OGMP_MAJOR=0
+OGMP_MINOR=1
+OGMP_SUB=0
+
+AC_SUBST(OGMP_MAJOR)
+AC_SUBST(OGMP_MINOR)
+AC_SUBST(OGMP_SUB)
+
+dnl ---------------------------------------------
+dnl    libname.so.(OGMP_LT_CURRENT - OGMP_LT_AGE).OGMP_LT_AGE.OGMP_LT_REVISION
+dnl ---------------------------------------------
+OGMP_LT_CURRENT=1
+OGMP_LT_REVISION=0
+OGMP_LT_AGE=0
+
+dnl ---------------------------------------------
+dnl Libtool
+dnl ---------------------------------------------
+AC_DISABLE_STATIC
+
+dnl ---------------------------------------------
+dnl Checks for Programs.
+dnl ---------------------------------------------
+AM_CONFIG_HEADER(config.h)
+AM_INIT_AUTOMAKE(ogmp, 0.1)
+AM_MAINTAINER_MODE
+
+dnl ---------------------------------------------
+dnl Check for tools
+dnl ---------------------------------------------
+AC_LANG_C
+AC_PROG_CC
+AC_PROG_MAKE_SET
+AC_PROG_INSTALL
+AM_PROG_LIBTOOL
+
+dnl ---------------------------------------------
+dnl Find the right ranlib, even when cross-compiling
+dnl ---------------------------------------------
+AC_CHECK_TOOL(RANLIB, ranlib, :)
+AC_CHECK_TOOL(STRIP, strip, :)
+AC_CHECK_TOOL(AR, ar, :)
+AC_CHECK_TOOL(LD, ld, :)
+
+dnl
+dnl  Prefix
+dnl
+if test "x$prefix" = xNONE; then
+   prefix="${ac_default_prefix}"
+fi
+if test "x$exec_prefix" = xNONE; then
+   exec_prefix='${prefix}'
+fi
+
+OGMP_CONFIG_PREFIX="${prefix}"
+AC_SUBST(OGMP_CONFIG_PREFIX)
+
+dnl
+dnl functions
+dnl
+AC_DEFUN([OGMP_ADD_CFLAGS], [
+  for element in [$1]; do
+    eval "CFLAGS_${element}="'"$'"{CFLAGS_${element}} $2"'"'
+    am_modules_with_cflags="${am_modules_with_cflags} ${element}"
+  done
+])
+
+AC_DEFUN([OGMP_ADD_LDFLAGS], [
+  for element in [$1]; do
+    eval "LDFLAGS_${element}="'"'"$2 "'$'"{LDFLAGS_${element}} "'"'
+    am_modules_with_ldflags="${am_modules_with_ldflags} ${element}"
+  done
+])
+
+dnl ---------------------------------------------
+dnl Check for librtime, libxrtp
+dnl ---------------------------------------------
+AC_CHECK_HEADERS(timedia/timer.h)
+AC_CHECK_HEADERS(xrtp/xrtp.h, 
+[
+	OGMP_ADD_CFLAGS([xrtp],[`xrtp-config --cflags | sed 's,SDL,,'`])
+	OGMP_ADD_LDFLAGS([xrtp],[`xrtp-config --libs | sed 's,-rdynamic,,'`])
+	XRTP_CFLAGS="${CFLAGS_xrtp}"
+	XRTP_LDFLAGS="${LDFLAGS_xrtp}"
+	AC_SUBST(XRTP_CFLAGS)
+	AC_SUBST(XRTP_LDFLAGS)
+])
+
+AC_CHECK_HEADERS(osip2/osip.h)
+AC_CHECK_HEADERS(eXosip2/eXosip.h)
+
+dnl ---------------------------------------------
+dnl some include paths ( !!! DO NOT REMOVE !!! )
+dnl ---------------------------------------------
+INCLUDES='-I$(top_srcdir)/include -I$(top_srcdir)/libogmp'
+AC_SUBST(INCLUDES)
+
+CFLAGS="$CFLAGS -fPIC -DOGMP_COMPILE"
+LDFLAGS="$LDFLAGS -shared"
+
+OGMP_MODULEDIR="$libdir/ogmp/modules/$OGMP_MAJOR.$OGMP_MINOR.$OGMP_SUB"
+AC_SUBST(OGMP_MODULEDIR)
+
+AC_OUTPUT(Makefile \
+	include/Makefile \
+	libogmp/Makefile \
+	ogmp/Makefile \
+	ogmp/devices/Makefile \
+	ogmp/eXosipua/Makefile \
+	ogmp/eXosipua2/Makefile \
+	ogmp/format_ogm/Makefile \
+	ogmp/format_rtp/Makefile \
+	ogmp/speex/Makefile \
+	ogmp/ogmp/Makefile \
+	ogmp/ui_dummy/Makefile \
+	misc/Makefile \
+	misc/ogmp-config
+)

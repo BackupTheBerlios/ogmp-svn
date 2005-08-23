@@ -19,15 +19,15 @@
  */
 
 #if OGMP_COMPILE
-#include "sipua.h"
-#include "rtp_cap.h"
+ #include "sipua.h"
+ #include "rtp_cap.h"
 #else
-#include <ogmp/sipua.h>
-#include <ogmp/rtp_cap.h>
+ #include <ogmp/sipua.h>
+ #include <ogmp/rtp_cap.h>
 #endif
 
 #include <timedia/ui.h>
-#include <eXosip/eXosip.h>
+#include <eXosip2/eXosip.h>
 
 typedef struct eXosipua_s eXosipua_t;
 
@@ -53,7 +53,7 @@ struct jcall
   int  payload;
   char payload_name[50];
   */
-  
+
 #if defined(XRTP_SUPPORT)
 
   /* rtp capable */
@@ -181,9 +181,7 @@ int jinsubscription_redirected(eXosipua_t *jua, eXosip_event_t *je);
 int jinsubscription_requestfailure(eXosipua_t *jua, eXosip_event_t *je);
 int jinsubscription_serverfailure(eXosipua_t *jua, eXosip_event_t *je);
 int jinsubscription_globalfailure(eXosipua_t *jua, eXosip_event_t *je);
-
 int jinsubscription_closed(eXosipua_t *jua, eXosip_event_t *je);
-
 int jinsubscription_remove(eXosipua_t *jua, jinsubscription_t *ca);
 /* End of jinsubscriptions.h*/
 
@@ -211,8 +209,6 @@ struct eXosipua_s
 	int online_status;
 	int registration_status;
 
-
-
 	char registration_server[100];
 	char registration_reason_phrase[100];
 
@@ -232,8 +228,4 @@ struct eXosipua_s
 	xclock_t *clock;
 };
 
-/* Create new SDP message from SDP body, need to free after used. */
-osip_message_t *eXosipua_extract_message(eXosipua_t *jua, eXosip_event_t *je);
 
-/* Pick exist SDP message without create a new one */
-osip_message_t *eXosipua_receive_message(eXosipua_t *jua, eXosip_event_t *je);
