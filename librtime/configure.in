@@ -1,0 +1,87 @@
+AC_INIT(configure.in)
+
+dnl Checks for Programs.
+
+AM_CONFIG_HEADER(config.h)
+AM_INIT_AUTOMAKE(librtime, 0.1)
+AM_MAINTAINER_MODE
+
+dnl
+dnl Check for tools
+dnl
+AC_LANG_C
+AC_PROG_CC
+AC_PROG_MAKE_SET
+AC_PROG_INSTALL
+AM_PROG_LIBTOOL
+
+dnl
+dnl Find the right ranlib, even when cross-compiling
+dnl
+AC_CHECK_TOOL(RANLIB, ranlib, :)
+AC_CHECK_TOOL(STRIP, strip, :)
+AC_CHECK_TOOL(AR, ar, :)
+AC_CHECK_TOOL(LD, ld, :)
+
+dnl
+dnl functions
+dnl
+AC_DEFUN([TMD_ADD_CFLAGS], [
+  for element in [$1]; do
+    eval "CFLAGS_${element}="'"$'"{CFLAGS_${element}} $2"'"'
+    am_modules_with_cflags="${am_modules_with_cflags} ${element}"
+  done
+])
+
+AC_DEFUN([TMD_ADD_LDFLAGS], [
+  for element in [$1]; do
+    eval "LDFLAGS_${element}="'"'"$2 "'$'"{LDFLAGS_${element}} "'"'
+    am_modules_with_ldflags="${am_modules_with_ldflags} ${element}"
+  done
+])
+
+dnl
+dnl  Set default values
+dnl
+LDFLAGS_tmd="${LDFLAGS}"
+
+if test "x$prefix" = xNONE; then
+   prefix="${ac_default_prefix}"
+fi
+if test "x$exec_prefix" = xNONE; then
+   exec_prefix='${prefix}'
+fi
+
+dnl
+dnl Check for timedia library
+dnl
+AC_CHECK_HEADERS(timedia/os.h, 
+[
+	TMD_ADD_CFLAGS([tmd],[`timedia-config --cflags | sed 's,SDL,,'`])
+	TMD_ADD_LDFLAGS([tmd],[`timedia-config --libs | sed 's,-rdynamic,,'`])
+	TMD_CFLAGS="${CFLAGS_tmd}"
+	TMD_LDFLAGS="${LDFLAGS_tmd}"
+	AC_SUBST(TMD_CFLAGS)
+	AC_SUBST(TMD_LDFLAGS)
+])
+
+dnl
+dnl Check for dlopen, dlsym, dlclose
+dnl
+AC_CHECK_FUNC(dlopen,
+  ac_cv_my_have_dlopen=yes,
+  AC_CHECK_LIB(dl, dlopen,
+    ac_cv_my_have_dlopen=yes
+    TMD_ADD_LDFLAGS([tmd],[-ldl]),
+    AC_CHECK_LIB(svld, dlopen,
+      ac_cv_my_have_dlopen=yes
+      TMD_ADD_LDFLAGS([tmd],[-lsvld]))))
+if test "${ac_cv_my_have_dlopen}" = "yes"; then
+  AC_DEFINE(HAVE_DL_DLOPEN, 1, [Define if you have the dlopen API])
+  ac_cv_have_plugins=yes
+fi
+
+CFLAGS="$CFLAGS -fPIC"
+LDFLAGS="$LDFLAGS -shared"
+
+AC_OUTPUT(Makefile librtime/Makefile)
