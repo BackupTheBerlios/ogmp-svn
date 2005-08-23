@@ -1,0 +1,94 @@
+AC_INIT(configure.in)
+
+dnl Making releases:
+dnl   XRTP_SUB += 1; continue with XRTP_LT_* values below
+dnl
+XRTP_MAJOR=0
+XRTP_MINOR=1
+XRTP_SUB=0
+
+AC_SUBST(XRTP_MAJOR)
+AC_SUBST(XRTP_MINOR)
+AC_SUBST(XRTP_SUB)
+
+dnl
+dnl Checks for Programs.
+dnl
+AM_CONFIG_HEADER(config.h)
+AM_INIT_AUTOMAKE(libxrtp, 0.1)
+AM_MAINTAINER_MODE
+
+dnl
+dnl Check for tools
+dnl
+AC_LANG_C
+AC_PROG_CC
+AC_PROG_MAKE_SET
+AC_PROG_INSTALL
+AM_PROG_LIBTOOL
+
+dnl
+dnl Find the right ranlib, even when cross-compiling
+dnl
+AC_CHECK_TOOL(RANLIB, ranlib, :)
+AC_CHECK_TOOL(STRIP, strip, :)
+AC_CHECK_TOOL(AR, ar, :)
+AC_CHECK_TOOL(LD, ld, :)
+
+dnl ---------------------------------------------
+dnl Check for libtmdbase, libxrtp
+dnl ---------------------------------------------
+AC_CHECK_HEADERS(timedia/timer.h)
+
+dnl
+dnl functions
+dnl
+AC_DEFUN([TMD_ADD_CFLAGS], [
+  for element in [$1]; do
+    eval "CFLAGS_${element}="'"$'"{CFLAGS_${element}} $2"'"'
+    am_modules_with_cflags="${am_modules_with_cflags} ${element}"
+  done
+])
+
+AC_DEFUN([TMD_ADD_LDFLAGS], [
+  for element in [$1]; do
+    eval "LDFLAGS_${element}="'"'"$2 "'$'"{LDFLAGS_${element}} "'"'
+    am_modules_with_ldflags="${am_modules_with_ldflags} ${element}"
+  done
+])
+
+dnl
+dnl  Set default values
+dnl
+LDFLAGS_tmd="${LDFLAGS}"
+
+dnl
+dnl  Prefix
+dnl
+if test "x$prefix" = xNONE; then
+   prefix="${ac_default_prefix}"
+fi
+if test "x$exec_prefix" = xNONE; then
+   exec_prefix='${prefix}'
+fi
+
+XRTP_CONFIG_PREFIX="${prefix}"
+AC_SUBST(XRTP_CONFIG_PREFIX)
+
+dnl
+dnl Check for rtime library
+dnl
+AC_CHECK_HEADERS(timedia/timer.h, 
+[
+	TMD_ADD_CFLAGS([tmd],[`timedia-config --cflags | sed 's,SDL,,'`])
+	TMD_ADD_LDFLAGS([tmd],[`timedia-config --libs | sed 's,-rdynamic,,'`])
+	TMD_CFLAGS="${CFLAGS_tmd}"
+	TMD_LDFLAGS="${LDFLAGS_tmd} -lrtime"
+	AC_SUBST(TMD_CFLAGS)
+	AC_SUBST(TMD_LDFLAGS)
+])
+
+CFLAGS="$CFLAGS -fPIC"
+LDFLAGS="$LDFLAGS -shared"
+
+AC_OUTPUT(Makefile libxrtp/Makefile misc/Makefile misc/xrtp-config)
