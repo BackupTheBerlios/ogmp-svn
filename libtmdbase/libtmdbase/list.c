@@ -198,31 +198,31 @@ int xlist_size(xlist_t * list){
    return list->num;
 }
 
-xrtp_list_node_t * _xrtp_list_newnode(){
-
+xrtp_list_node_t * _xrtp_list_newnode()
+{
    xrtp_list_node_t * node;
 
    node = (xrtp_list_node_t *)xmalloc(sizeof(xrtp_list_node_t));
 
-   if(!node){
-
+   if(!node)
+   {
       xlist_log(("< _xrtp_list_newnode: Fail to allocate list node memery >\n"));
       return NULL;
    }
-  
+
    memset(node, 0, sizeof(xrtp_list_node_t));
-  
+
    return node;
 }
 
-int _xrtp_list_freenode(xrtp_list_node_t * node){
-
-   xfree(node);
+int _xrtp_list_freenode(xrtp_list_node_t * node)
+{
+	xfree(node);
 	return OS_OK;
 }
 
-int xlist_addto_first(xlist_t * list, void * item){
-  
+int xlist_addto_first(xlist_t * list, void * item)
+{
    xrtp_list_node_t * node;
 
    if(!list) return OS_EPARAM;
@@ -231,12 +231,11 @@ int xlist_addto_first(xlist_t * list, void * item){
 
    if(!node) return OS_EMEM;
 
-   node->next = list->head;
    node->data = item;
 
-
+   node->next = list->head;
    list->head = node;
-   
+
    list->num++;
 
    return OS_OK;
@@ -254,14 +253,14 @@ int xlist_addto_last(xlist_t * list, void * data){
 
    node->data = data;
   
-   if(list->num == 0){
-
-	   list->head = list->end = node;
-
-   }else{
-	   
-	   list->end->next = node;
-	   list->end = node;
+   if(list->num == 0)
+   {
+	list->head = list->end = node;
+   }
+   else
+   {
+	list->end->next = node;
+	list->end = node;
    }
   
    list->num++;
@@ -466,37 +465,41 @@ int xlist_remove_item (xlist_t *list, void *data) {
    return OS_INVALID;
 }
 
-void * xlist_remove(xrtp_list_t * list, void *data, int (*match)(void*, void*)){
+void* xlist_remove(xrtp_list_t * list, void *data, int (*match)(void*, void*))
+{
+   void* tmp;
 
    xrtp_list_node_t * curr = NULL;
    xrtp_list_node_t * prev = NULL;
-   
-   if(!list || list->num == 0) return NULL;
+
+   if(!list || list->num == 0 || !data) 
+	return NULL;
 
    curr = list->head;
    prev = NULL;
-   
-   while(curr){
-     
-      if( match(curr->data, data) == 0 ){/* match */
 
-         data = curr->data;
-         
-         if(prev){
-           
+   while(curr)
+   {
+      if( match(curr->data, data) == 0 )
+      {
+	 /* match */
+         tmp = curr->data;
+
+         if(prev)
+	 {
             prev->next = curr->next;
-            
-         }else{
-           
+         }
+	 else
+	 {
             list->head = curr->next;
          }
-         
+
          list->num--;
          _xrtp_list_freenode(curr);
-         
-         return data;
+
+         return tmp;
       }
-     
+
       prev = curr;
       curr = curr->next;
    }
@@ -518,25 +521,25 @@ int xlist_delete_at(xlist_t *list, int index, int(*freer)(void*))
    {
       list->head = node->next;
       list->num--;
-      
-      freer(node->data);      
+
+      freer(node->data);
       xfree(node);
       return OS_OK;
    }
-   
+
    while(node)
    {
       if(n == index)
       {
          prev->next = node->next;
          list->num--;
-         
+
          freer(node->data);
          xfree(node);
-         
+
          return OS_OK;
       }
-      
+
       n++;
 
       prev = node;
@@ -546,61 +549,61 @@ int xlist_delete_at(xlist_t *list, int index, int(*freer)(void*))
    return OS_FAIL;
 }
 
-int xlist_delete_if(xlist_t * list, void * cdata, int(*condition)(void*, void*), int(*free_item)(void*)){
+int xlist_delete_if(xlist_t * list, void * cdata, int(*condition)(void*, void*), int(*free_item)(void*))
+{
+	xrtp_list_node_t * curr = NULL;
+	xrtp_list_node_t * prev = NULL;
+	xrtp_list_node_t * next = NULL;
 
-   void * data;
-   
-   xrtp_list_node_t * curr = NULL;
-   xrtp_list_node_t * prev = NULL;
-   
-   if(!list || list->num == 0)
-      return OS_OK;
+	if(!list || list->num == 0 || !cdata)
+		return OS_OK;
 
-   curr = list->head;
-   prev = NULL;
-   
-   while(curr){
-      
-      if( condition(curr->data, cdata) == 0 ){ /* match condition */
+	curr = list->head;
+	prev = NULL;
 
-         data = curr->data;
-         
-         if(prev){
-            
-            prev->next = curr->next;
-            
-         }else{
-            
-            list->head = curr->next;
-         }
-         
-         list->num--;
-         _xrtp_list_freenode(curr);
-         
-         free_item(data);
-      }
-      
-      prev = curr;
-      curr = curr->next;
-   }
+	while(curr)
+	{
+		next = curr->next;
+		
+		if (condition (curr->data, cdata) == 0)
+		{
+			/* match condition */
+			free_item(curr->data);
+			curr->data = NULL;
 
-   return OS_OK;
+			if(prev)
+				prev->next = curr->next;
+			else
+				list->head = curr->next;
+
+			list->num--;
+
+			_xrtp_list_freenode(curr);
+		}
+		else
+		{
+			prev = curr;
+		}
+		
+		curr = next;
+	}
+
+	return OS_OK;
 }
 
 void * xlist_find(xlist_t * list, void * data, int (*match)(void*, void*), xlist_user_t * u)
 {
    if(!list || list->num == 0)
-
       return NULL;
 
    u->prev = NULL;
    u->next = NULL;
    u->curr = list->head;
-  
-   while(u->curr){
 
+   while(u->curr)
+   {
       u->next = u->curr->next;
-     
+
       if( match(u->curr->data, data) == 0 )/* match */
          return u->curr->data;
 
@@ -611,24 +614,23 @@ void * xlist_find(xlist_t * list, void * data, int (*match)(void*, void*), xlist
    return NULL;
 }
 
-int xlist_visit(xlist_t * list, int(*visit)(void*, void*), void *visitor){
-                           
+int xlist_visit(xlist_t * list, int(*visit)(void*, void*), void *visitor)
+{
    int ret = OS_OK;
    xrtp_list_node_t * curr = NULL;
    xrtp_list_node_t * next = NULL;
 
-   
    if(!list || list->num == 0)
       return ret;
 
    curr = list->head;
-   
-   while(curr){
 
+   while(curr)
+   {
       next = curr->next;
 
       ret = visit(curr->data, visitor);  /* visit node */
-      
+
       if(ret < OS_OK) return ret; 
 
       curr = next;
