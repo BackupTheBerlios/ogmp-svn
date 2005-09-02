@@ -22,7 +22,6 @@
 
 #include <timedia/xmalloc.h>
 #include "eXosipua.h"
-//#include "eXosip2.h"
 
 int jcall_init(eXosipua_t *jua)
 {
@@ -145,29 +144,30 @@ int jcall_new(eXosipua_t *jua, eXosip_event_t *je)
 	if(jua->ncall == MAX_SIPUA_LINES-1)
 	{
 		/* All lines are busy */
-		eXosip_answer_call(je->did, SIP_STATUS_CODE_BUSYHERE, 0);
+		eXosip_call_send_answer (je->tid, SIP_STATUS_CODE_BUSYHERE, NULL);
 		return 0;
 	}
 
 	call_e.event.type = SIPUA_EVENT_NEW_CALL;
 	jcall_sdp_body(jua, je, (const char**)&call_e.event.content);
 
+	call_e.tid = je->tid;
 	call_e.cid = je->cid;
 	call_e.did = je->did;
  
 	call_e.sbytes = jcall_osip_subject(jua, je, (const char**)&call_e.subject);
 	call_e.textinfo = je->textinfo;
  
-	call_e.req_uri = je->response->req_uri->string;
-	if(je->request)
-		call_e.local_uri = je->request->req_uri->string;
-	else
-		call_e.local_uri = NULL;
+	call_e.local_uri = NULL;
 
-	jcall_sdp_message(jua, je, &message);
+	message = je->request;
 	if(message)
 	{
-		from = osip_message_get_from(message);      
+		call_e.req_uri = message->req_uri->string;
+		call_e.local_uri = message->req_uri->string;
+		
+		from = osip_message_get_from(message);
+		
 		if(from)
 		{
 			from_uri = osip_from_get_url(from);
@@ -193,6 +193,7 @@ int jcall_closed(eXosipua_t *jua, eXosip_event_t *je)
 
 	memset(&call_e, 0, sizeof(sipua_call_event_t));
 
+	call_e.tid = je->tid;
 	call_e.cid = je->cid;
 	call_e.did = je->did;
 
@@ -296,7 +297,7 @@ int jcall_answered(eXosipua_t *jua, eXosip_event_t *je)
 	call_e.event.call_info = (sipua_call_t*)je->external_reference;
 
 	call_e.event.type = SIPUA_EVENT_ANSWERED;
-	jcall_sdp_message(jua, je, (const char**)&call_e.event.content);
+	jcall_sdp_body(jua, je, (const char**)&call_e.event.content);
 
 	if (je->response->reason_phrase[0]!='\0')
 	{
@@ -453,6 +454,7 @@ int jcall_requestfailure(eXosipua_t *jua, eXosip_event_t *je)
 	call_e.event.type = SIPUA_EVENT_REQUESTFAILURE;
 	call_e.event.call_info = (sipua_call_t*)je->external_reference;
 
+	call_e.tid = je->tid;
 	call_e.cid = je->cid;
 	call_e.did = je->did;
  
@@ -558,5 +560,55 @@ int jcall_globalfailure(eXosipua_t *jua, eXosip_event_t *je)
 	/* event notification */
 	jua->sipuas.notify_event(jua->sipuas.lisener, &call_e.event);
 
+	return 0;
+}
+
+int jsubscription_requestfailure(eXosipua_t *jua, eXosip_event_t *je)
+{
+	return 0;
+}
+
+int jsubscription_serverfailure(eXosipua_t *jua, eXosip_event_t *je)
+{
+	return 0;
+}
+
+int jsubscription_globalfailure(eXosipua_t *jua, eXosip_event_t *je)
+{
+	return 0;
+}
+
+int jsubscription_new(eXosipua_t *jua, eXosip_event_t *je)
+{
+	return 0;
+}
+
+int jsubscription_answered(eXosipua_t *jua, eXosip_event_t *je)
+{
+	return 0;
+}
+
+int jsubscription_proceeding(eXosipua_t *jua, eXosip_event_t *je)
+{
+	return 0;
+}
+
+int jsubscription_notify(eXosipua_t *jua, eXosip_event_t *je)
+{
+	return 0;
+}
+
+int jsubscription_redirected(eXosipua_t *jua, eXosip_event_t *je)
+{
+	return 0;
+}
+
+int jinsubscription_new(eXosipua_t *jua, eXosip_event_t *je)
+{
+	osip_message_t *request;
+	
+	eXosip_insubscription_build_notify(je->did, EXOSIP_SUBCRSTATE_PENDING, EXOSIP_NOTIFY_AWAY, &request);
+	eXosip_insubscription_send_request(je->did, request);
+			
 	return 0;
 }

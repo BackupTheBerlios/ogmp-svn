@@ -1081,9 +1081,9 @@ int sipua_session_sdp(sipua_t *sipua, sipua_call_t* call, char** sdp_body)
 
 int sipua_regist(sipua_t *sipua, user_profile_t *user, char *userloc)
 {
-   int ret;
+	int ret;
 
-   ret = sipua->uas->regist(sipua->uas, &user->regno, userloc, user->registrar, user->regname, user->seconds);
+	ret = sipua->uas->regist(sipua->uas, &user->regno, userloc, user->registrar, user->regname, user->seconds);
 
 	if(ret < UA_OK)
 		user->reg_status = SIPUA_STATUS_REG_FAIL;
@@ -1100,8 +1100,6 @@ int sipua_unregist(sipua_t *sipua, user_profile_t *user)
 {
 	int ret;
 	char* siploc, *p;
-
-	
 
 	p = siploc = xmalloc(strlen(user->cname)+5);
 	if(!siploc)
@@ -1128,7 +1126,7 @@ int sipua_unregist(sipua_t *sipua, user_profile_t *user)
 	return ret;
 }
 
-int sipua_retry_call(sipua_t *ua, sipua_call_t* call)
+int sipua_retry(sipua_t *ua, sipua_call_t* call)
 {
    return ua->uas->retry(ua->uas, call);
 }
@@ -1139,21 +1137,19 @@ int sipua_call(sipua_t *sipua, sipua_call_t* call, const char *callee, char *sdp
 
 	ua_log(("sipua_call: Call from [%s] to [%s]\n", call->user_prof->regname, callee));
 
-   /* NOTE: size of SDP body MUST NOT count in string terminal */
-   ret = sipua->uas->invite(sipua->uas, callee, call, sdp_body, strlen(sdp_body));
+	/* NOTE: size of SDP body MUST NOT count in string terminal */
+	ret = sipua->uas->invite(sipua->uas, callee, call, sdp_body, strlen(sdp_body));
 
-   if(ret < UA_OK)
-   {
-	   ua_debug(("sipua_call: Call from [%s] to [%s] fail\n", call->user_prof->regname, callee));
+	if(ret < UA_OK)
+	{
+		ua_debug(("sipua_call: Call from [%s] to [%s] fail\n", call->user_prof->regname, callee));
 		return ret;
-   }
-
+	}
 
 	return UA_OK;
 }
 
 int sipua_answer(sipua_t *ua, sipua_call_t* call, int reply, char *sdp_body)
-
 {
 	return ua->uas->answer(ua->uas, call, reply, "application/sdp", sdp_body);
 }

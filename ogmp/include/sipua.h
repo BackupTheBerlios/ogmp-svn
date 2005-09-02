@@ -171,6 +171,7 @@ struct sipua_call_s
 	sipua_setid_t setid;
 
 	/* cid, did is ONLY for eXosip to determine local call */
+	int tid;
 	int cid;
 	int did;
 
@@ -241,6 +242,7 @@ struct sipua_call_event_s
 
 	int status_code;
 
+	int tid;
 	int cid;
 	int did;
 
@@ -285,7 +287,8 @@ struct sipua_uas_s
 	char firewall[MAX_IP_BYTES];
 	char proxy[MAX_IP_BYTES];
 
-   xlist_t *auth_list;
+	xlist_t *auth_list;
+	xthr_lock_t *auth_lock;
 
 	void* lisener;
 
@@ -293,10 +296,10 @@ struct sipua_uas_s
 
 	int (*match_type)(sipua_uas_t* uas, char *type);
 
-   int (*init)(sipua_uas_t* uas, int portno, const char* nettype, const char* addrtype, const char* firewall, const char* proxy);
+	int (*init)(sipua_uas_t* uas, int portno, const char* nettype, const char* addrtype, const char* firewall, const char* proxy);
 	int (*done)(sipua_uas_t* uas);
 
-   int (*start)(sipua_uas_t* uas);
+	int (*start)(sipua_uas_t* uas);
 	int (*shutdown)(sipua_uas_t* uas);
 
 	int (*address)(sipua_uas_t* uas, char **nettype, char **addrtype, char **netaddr);
@@ -307,22 +310,21 @@ struct sipua_uas_s
 	
 	int (*clear_coding)(sipua_uas_t* uas);
 	
-   int (*set_authentication_info)(sipua_uas_t* uas, char *username, char *userid, char*passwd, char *realm);
-   int (*clear_authentication_info)(sipua_uas_t* uas, char *username, char *realm);
-   int (*has_authentication_info)(sipua_uas_t* uas, char *username, char *realm);
+	int (*set_authentication_info)(sipua_uas_t* uas, char *username, char *userid, char*passwd, char *realm);
+	int (*clear_authentication_info)(sipua_uas_t* uas, char *username, char *realm);
+	int (*has_authentication_info)(sipua_uas_t* uas, char *username, char *realm);
 
-   /* regno is for re-register the previous one */
-   int (*regist)(sipua_uas_t* uas, int *regno, char *userloc, char *registrar, char *regname, int seconds);
+	/* regno is for re-register the previous one */
+	int (*regist)(sipua_uas_t* uas, int *regno, char *userloc, char *registrar, char *regname, int seconds);
 	
 	int (*unregist)(sipua_uas_t* uas, char *userloc, char *registrar, char *regname);
  	
 	int (*accept)(sipua_uas_t* uas, sipua_call_t *call);
 
-
 	int (*release)(sipua_uas_t* uas);
 
 	int (*invite)(sipua_uas_t* uas, const char *regname, sipua_call_t* call, char* sdp_body, int bytes);
-	int (*answer)(sipua_uas_t* uas, sipua_call_t* call, int reply, char* reply_type, char* reply_body);
+	int (*answer)(sipua_uas_t* uas, sipua_call_t* call, int reply, char* reply_type, char* message);
 	int (*bye)(sipua_uas_t* uas, sipua_call_t* call);
    
 	int (*retry)(sipua_uas_t* uas, sipua_call_t* call);
@@ -515,7 +517,7 @@ sipua_call(sipua_t *ua, sipua_call_t* set, const char *regname, char *sdp_body);
 	
 DECLSPEC
 int
-sipua_retry_call(sipua_t *ua, sipua_call_t* call);
+sipua_retry(sipua_t *ua, sipua_call_t* call);
 
 DECLSPEC
 int 

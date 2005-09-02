@@ -73,7 +73,7 @@ int jua_process_event(eXosipua_t *jua)
 		char buf[100];
 
 		je = eXosip_event_wait(0,50);
-
+		
 		if (je==NULL)
 			break;
 
@@ -139,11 +139,10 @@ int jua_process_event(eXosipua_t *jua)
 			reg_e.event.type = SIPUA_EVENT_REGISTRATION_SUCCEEDED;
 			reg_e.status_code = je->response->status_code;		/* eg: 200*/
 			reg_e.server_info = je->response->reason_phrase;	/* eg: OK */
-			reg_e.server = je->response->req_uri->string;			/* eg: sip:registrar.domain */
-			/*
-			je->remote_uri // eg: regname@domain 
-			*/
-
+			
+			if(je->response->req_uri)
+				reg_e.server = je->response->req_uri->string; /* eg: sip:registrar.domain */
+			
 			/*
 			 * Retrieve exactly returned expiration seconds
 			 */
@@ -165,15 +164,12 @@ int jua_process_event(eXosipua_t *jua)
 
 				osip_message_free(message);
 			}
-
 			/*
 			snprintf(buf, 99, "<- (%i) [%i %s] %s for REGISTER %s",
 					je->rid, je->status_code, je->reason_phrase,
 					je->remote_uri, je->req_uri);
-
 			printf("jua_process_event: reg ok! [%s]\n", buf);
 			*/
-
 			jua->registration_status = je->response->status_code;
 			
 			snprintf(jua->registration_server, 100, "%s", je->response->req_uri->string);
@@ -185,8 +181,9 @@ int jua_process_event(eXosipua_t *jua)
 	
 			reg_e.event.from = jua->registration_server;
 			reg_e.event.content = NULL;
-
-			/* event back to sipuac */
+			/* 
+			event back to sipuac
+			*/
 			jua->sipuas.notify_event(jua->sipuas.lisener, &reg_e.event);
 		}
 		else if (je->type==EXOSIP_REGISTRATION_FAILURE)
@@ -194,22 +191,46 @@ int jua_process_event(eXosipua_t *jua)
 			sipua_reg_event_t reg_e;
 
 			reg_e.event.type = SIPUA_EVENT_REGISTRATION_FAILURE;
-			reg_e.status_code = je->response->status_code;
-			reg_e.server_info = je->response->reason_phrase;
-			reg_e.server = je->response->req_uri->string;
-
-			reg_e.event.from = je->response->req_uri->string;
+			
+			reg_e.status_code = NULL;
+			reg_e.server_info = NULL;				
+			reg_e.server = NULL;
+			reg_e.event.from = NULL;
 			reg_e.event.content = NULL;
 			reg_e.event.call_info = NULL;
-
-			/* event back to sipuac */
+			
+			if(je->response)
+			{
+				reg_e.status_code = je->response->status_code;
+				reg_e.server_info = je->response->reason_phrase;
+				
+				if(je->response->req_uri)
+				{
+					reg_e.server = je->response->req_uri->string;
+					reg_e.event.from = je->response->req_uri->string;
+				}
+			}
+			else if(je->request)
+			{
+				reg_e.status_code = je->request->status_code;
+				reg_e.server_info = je->request->reason_phrase;
+				
+				if(je->request->req_uri)
+				{
+					reg_e.server = je->request->req_uri->string;
+					reg_e.event.from = je->request->req_uri->string;
+				}
+			}
+			
+			/* 
+			event back to sipuac
+			*/
 			jua->sipuas.notify_event(jua->sipuas.lisener, &reg_e.event);
 		}
 #if 0
 		else if (je->type==EXOSIP_OPTIONS_NEW)
 		{
 			int k;
-	  
 			/*
 			snprintf(buf, 99, "<- (%i %i) OPTIONS from: %s",
 					je->cid, je->did, je->remote_uri);
@@ -251,7 +272,6 @@ int jua_process_event(eXosipua_t *jua)
 			/*
 			snprintf(buf, 99, "<- (%i %i) INFO from: %s",
 					je->cid, je->did, je->remote_uri);
-	  
 			josua_printf(buf);
 			*/
 		}
@@ -261,10 +281,8 @@ int jua_process_event(eXosipua_t *jua)
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
-
-	  
-            josua_printf(buf);
-            */
+			josua_printf(buf);
+			*/
 		}
 		else if (je->type==EXOSIP_INFO_PROCEEDING)
 		{
@@ -272,9 +290,8 @@ int jua_process_event(eXosipua_t *jua)
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
-	  
-            josua_printf(buf);
-            */
+			josua_printf(buf);
+			*/
 		}
 		else if (je->type==EXOSIP_INFO_REDIRECTED)
 		{
@@ -282,9 +299,8 @@ int jua_process_event(eXosipua_t *jua)
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
-	  
-            josua_printf(buf);
-            */
+			josua_printf(buf);
+			*/
 		}
 		else if (je->type==EXOSIP_INFO_REQUESTFAILURE)
 		{
@@ -300,9 +316,9 @@ int jua_process_event(eXosipua_t *jua)
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
-	  
-            josua_printf(buf);
-            */
+
+			josua_printf(buf);
+			*/
 		}
 		else if (je->type==EXOSIP_INFO_GLOBALFAILURE)
 		{
@@ -310,9 +326,8 @@ int jua_process_event(eXosipua_t *jua)
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s",
 					je->cid, je->did, je->status_code,
 					je->reason_phrase, je->remote_uri);
-	  
-            josua_printf(buf);
-            */
+			josua_printf(buf);
+			*/
 		}
 #endif
 		else if (je->type==EXOSIP_SUBSCRIPTION_ANSWERED)
@@ -367,11 +382,13 @@ int jua_process_event(eXosipua_t *jua)
 		}
 		else if (je->type==EXOSIP_SUBSCRIPTION_SERVERFAILURE)
 		{
+			/*
 			snprintf(buf, 99, "<- (%i %i) [%i %s] %s for SUBSCRIBE",
 					je->sid, je->did, je->response->status_code,
 					je->response->reason_phrase, je->response->req_uri);
 	  
-			/*josua_printf(buf);*/
+			josua_printf(buf);
+			*/
 			jsubscription_serverfailure(jua, je);
 		}
 		else if (je->type==EXOSIP_SUBSCRIPTION_GLOBALFAILURE)
@@ -399,7 +416,6 @@ int jua_process_event(eXosipua_t *jua)
 
 			josua_printf(buf);
 			*/
-
 			jsubscription_notify(jua, je);
 		}
 		else if (je->type==EXOSIP_IN_SUBSCRIPTION_NEW)
@@ -410,11 +426,6 @@ int jua_process_event(eXosipua_t *jua)
 
 			josua_printf(buf);
 			*/
-
-			/* search for the user to see if he has been
-				previously accepted or not! */
-
-			eXosip_notify(je->did, EXOSIP_SUBCRSTATE_PENDING, EXOSIP_NOTIFY_AWAY);
 			jinsubscription_new(jua, je);
 		}
 		else if (je->textinfo[0]!='\0')
@@ -426,7 +437,7 @@ int jua_process_event(eXosipua_t *jua)
 			*/
 		}
 	
-		eXosip_event_free(je);
+		/*eXosip_event_free(je);*/
 	}
   
 	return(counter);
@@ -454,6 +465,9 @@ int jua_loop(void *gen)
 int uas_start(sipua_uas_t *sipuas)
 {
 	eXosipua_t *jua = (eXosipua_t*)sipuas;
+	
+	if(jua->thread)
+		return UA_OK;
 
 	jua->clock = time_start();
 
@@ -489,7 +503,7 @@ int uas_address(sipua_uas_t* sipuas, char* *nettype, char* *addrtype, char* *net
 {
 	sipua_uas_t* uas = (sipua_uas_t*)sipuas;
 
-   *nettype = xstr_clone(uas->nettype);
+	*nettype = xstr_clone(uas->nettype);
 	*addrtype = xstr_clone(uas->addrtype);
 	*netaddr = xstr_clone(uas->netaddr);
 
@@ -509,6 +523,7 @@ int uas_set_lisener(sipua_uas_t* sipuas, void* lisener, int(*notify_event)(void*
 
 int uas_add_coding(sipua_uas_t* sipuas, int pt, int rtp_portno, int rtcp_portno, char* mime, int clockrate, int param)
 {
+#if 0
 	eXosipua_t* jua = (eXosipua_t*)sipuas;
 
 	char pt_a[4];
@@ -546,14 +561,12 @@ int uas_add_coding(sipua_uas_t* sipuas, int pt, int rtp_portno, int rtcp_portno,
 				   osip_strdup(jua->sipuas.nettype), osip_strdup(jua->sipuas.addrtype), osip_strdup(jua->sipuas.netaddr),
 				   NULL, NULL,
 				   osip_strdup(rtpmap_a));
-
+#endif
 	return UA_OK;
 }
 
 int uas_clear_coding(sipua_uas_t* sipuas)
 {
-	eXosip_sdp_negotiation_remove_audio_payloads();
-
 	return UA_OK;
 }
 
@@ -561,25 +574,28 @@ sipua_auth_t *uas_new_auth(char* regid, char *realm, char *authid, char *passwor
 {
    sipua_auth_t *auth = xmalloc(sizeof(sipua_auth_t));
    if(auth)
-   {              
+   {
       auth->regid = xstr_clone(regid);
       auth->realm = xstr_clone(realm);
       auth->authid = xstr_clone(authid);
       auth->password = xstr_clone(password);
    }
 
-	jua_debug(("\ruas_new_auth: regid[%s] realm[%s] authid[%s] pwd[%s]\n", regid, realm, authid, password));
+   jua_debug(("\ruas_new_auth: regid[%s] realm[%s] authid[%s] pwd[%s]\n", regid, realm, authid, password));
+
    return auth;
 }
 
 int uas_done_auth(void* gen)
 {
    sipua_auth_t *auth = (sipua_auth_t*)gen;
-   
+
+   jua_debug(("\ruas_done_auth: auth[%x]\n", (int)auth));
+
    xfree(auth->regid);
    xfree(auth->realm);
    xfree(auth->authid);
-   xfree(auth->password);   
+   xfree(auth->password);
    xfree(auth);
 
    return UA_OK;
@@ -592,10 +608,9 @@ int uas_match_auth(void *pat, void *tar)
 
    if(0==strcmp(p_auth->regid, t_auth->regid) && 0==strcmp(p_auth->realm, t_auth->realm))
    {
-	   jua_debug(("\ruas_match_auth: match %s/%s\n", t_auth->regid, t_auth->realm));
-      return 0;
+	   return 0;
    }
-   
+
    return -1;
 }
 
@@ -604,88 +619,110 @@ int uas_set_authentication_info(sipua_uas_t *sipuas, char *regid, char *userid, 
    xlist_user_t lu;
    char username[256];
    int i;
-   
+
    sipua_auth_t *new_auth;
    sipua_auth_t auth = {regid, realm, NULL, NULL};
 
-	jua_debug(("\ruas_set_authentication_info: regid[%s] realm[%s]\n", regid, realm));
+   jua_debug(("\ruas_set_authentication_info: regid[%s] realm[%s]\n", regid, realm));
+
+   xthr_lock(sipuas->auth_lock);
 
    if(xlist_find(sipuas->auth_list, &auth, uas_match_auth, &lu))
    {
-      return UA_OK;
+	jua_debug(("\ruas_set_authentication_info: exist\n"));
+
+	xthr_unlock(sipuas->auth_lock);
+	return UA_OK;
    }
-   
+
    new_auth = uas_new_auth(regid, realm, userid, passwd);
    if(new_auth)
    {
-      xlist_addto_first(sipuas->auth_list, new_auth);
+	xlist_addto_first(sipuas->auth_list, new_auth);
 
-      i=0;
-      while(regid[i] != '@' && i < (256-1))
-      {
-         username[i] = regid[i];
-         i++;
-      }
-      username[i] = '\0';
+	i=0;
+	while(regid[i] != '@' && i < (256-1))
+	{
+		username[i] = regid[i];
+		i++;
+	}
+	username[i] = '\0';
 
-      if(eXosip_add_authentication_info(username, userid, passwd, NULL, realm) == 0)
-      {
-	      jua_debug(("\ruas_set_authentication_info: ok\n"));
-         return UA_OK;
-      }
+	if(eXosip_add_authentication_info(username, userid, passwd, NULL, realm) == 0)
+	{
+		jua_debug(("\ruas_set_authentication_info: username[%s] userid[%s] pwd[%s] realm[%s]\n", username, userid, passwd, realm));
+	
+		xthr_unlock(sipuas->auth_lock);
+		return UA_OK;
+	}
    }
-   
+
+   jua_debug(("\ruas_set_authentication_info: fail\n"));
+
+   xthr_unlock(sipuas->auth_lock);
    return UA_FAIL;
 }
 
 /**
  * libeXosip cannot delete single authentication info, so I clear and re-add all rest auth,
- * libeXosip2 can change its api, so I don't need store all passwords.
  */
 int uas_clear_authentication_info(sipua_uas_t *sipuas, char *regid, char *realm)
 {
-   xlist_user_t lu;
-   int nauth;
+	xlist_user_t lu;
+	int nauth;
 
-   sipua_auth_t *auth;
-   sipua_auth_t search_auth = {regid, realm};
+	sipua_auth_t *auth;
+	sipua_auth_t search_auth = {regid, realm, NULL, NULL};
 
-   nauth = xlist_size(sipuas->auth_list);
-	jua_debug(("\ruas_clear_authentication_info: ok\n"));
-   
-   xlist_delete_if(sipuas->auth_list, &search_auth, uas_match_auth, uas_done_auth);
-   if(nauth == xlist_size(sipuas->auth_list))
-   {
-      return UA_FAIL;
-   }
-      
-   eXosip_clear_authentication_info();
+	xthr_lock(sipuas->auth_lock);
+	
+	nauth = xlist_size(sipuas->auth_list);
 
-   auth = (sipua_auth_t*)xlist_first(sipuas->auth_list, &lu);
-   while(auth)
-   {
-      eXosip_add_authentication_info(auth->regid, auth->authid, auth->password, NULL, auth->realm);
-      auth = (sipua_auth_t*)xlist_next(sipuas->auth_list, &lu);
-   }
+	xlist_delete_if(sipuas->auth_list, &search_auth, uas_match_auth, uas_done_auth);
+	
+	if(nauth == xlist_size(sipuas->auth_list))
+	{
+		xthr_unlock(sipuas->auth_lock);
+		return UA_FAIL;
+	}
 
-   return UA_OK;
+	eXosip_clear_authentication_info();
+
+	auth = (sipua_auth_t*)xlist_first(sipuas->auth_list, &lu);
+	while(auth)
+	{
+		eXosip_add_authentication_info(auth->regid, auth->authid, auth->password, NULL, auth->realm);
+		auth = (sipua_auth_t*)xlist_next(sipuas->auth_list, &lu);
+	}
+
+	xthr_unlock(sipuas->auth_lock);
+	
+	return UA_OK;
 }
 
 int uas_has_authentication_info(sipua_uas_t *sipuas, char *username, char *realm)
 {
-   xlist_user_t lu;
-   sipua_auth_t auth = {username, realm, NULL};
+	int ret;
+	
+	xlist_user_t lu;
+	sipua_auth_t auth = {username, realm, NULL};
 
-   if(xlist_find(sipuas->auth_list, &auth, uas_match_auth, &lu))
-      return 1;
+	xthr_lock(sipuas->auth_lock);
+	ret = xlist_find(sipuas->auth_list, &auth, uas_match_auth, &lu);	
+	xthr_unlock(sipuas->auth_lock);
+	
+	if(ret)
+		return 1;
 
-   return 0;
+	return 0;
 }
 
-int uas_regist(sipua_uas_t *sipuas, int *regno, char *loc, char *registrar, char *id, int seconds)
+int uas_regist(sipua_uas_t *sipuas, int *regno, char *loc, char *proxy, char *id, int seconds)
 {
 	int ret;
 
+	osip_message_t *reg = NULL;
+		
 	eXosipua_t *jua = (eXosipua_t*)sipuas;
 
 	char* siploc, *p;
@@ -697,57 +734,102 @@ int uas_regist(sipua_uas_t *sipuas, int *regno, char *loc, char *registrar, char
 	strcpy(p, "sip:");
 	p += 4;
 	strcpy(p, loc);
-   while(*p)
-      p++;
+	
+	while(*p)
+		p++;
 
+	snprintf(p, 12, ":%d", sipuas->portno);
 
-   snprintf(p, 12, ":%d", sipuas->portno);
-
-	jua_debug(("uas_regist: %s on %s within %ds\n", id, registrar, seconds));
+	jua_debug(("uas_regist: %s by %s within %ds\n", id, proxy, seconds));
 
 	eXosip_lock();
 
-   if(*regno < 0)
-   {
-      *regno = eXosip_register_init(id, registrar, siploc);
-	   if (*regno < 0)
-	   {
-		   eXosip_unlock();
-		   return UA_FAIL;
-	   }
-   }
-
-	ret = eXosip_register(*regno, seconds);
-
-	eXosip_unlock();
-
-	xfree(siploc);
-
-	if(ret != 0)
+	*regno = eXosip_register_build_initial_register (id, proxy, siploc, seconds, &reg);
+	if (*regno < 0)
 	{
-		jua_debug(("uas_regist: ret=%d\n", ret));
+		eXosip_unlock();
+		jua_debug(("uas_regist: fail to build register\n"));
+		
 		return UA_FAIL;
 	}
 		
-	if(!jua->thread)
+	ret = eXosip_register_send_register (*regno, reg);
+	if(ret != 0)
 	{
-		jua->thread = xthr_new(jua_loop, jua, XTHREAD_NONEFLAGS);
-
-		if(!jua->thread)
-			return UA_FAIL;
+		eXosip_unlock();
+		jua_debug(("uas_regist: fail to send register\n", ret));
+	
+		return UA_FAIL;
 	}
+		
+	eXosip_unlock();
 
+	xfree(siploc);
+	
+	uas_start(sipuas);
+	
 	return UA_OK;
 }
 
+int uas_unregist(sipua_uas_t *sipuas, char *loc, char *proxy, char *id)
+{
+	int ret, regno;
+
+	osip_message_t *reg = NULL;
+		
+	eXosipua_t *jua = (eXosipua_t*)sipuas;
+
+	char* siploc, *p;
+
+	p = siploc = xmalloc(4+strlen(loc)+1+10+1);
+	if(!siploc)
+		return UA_FAIL;
+
+	strcpy(p, "sip:");
+	p += 4;
+	strcpy(p, loc);
+	
+	while(*p)
+		p++;
+
+	snprintf(p, 12, ":%d", sipuas->portno);
+
+	jua_debug(("uas_unregist: %s by %s\n", id, proxy));
+
+	eXosip_lock();
+
+	regno = eXosip_register_build_initial_register (siploc, proxy, siploc, 0, &reg);
+	if (regno < 0)
+	{
+		eXosip_unlock();
+		jua_debug(("uas_regist: fail to build register\n"));
+		
+		return UA_FAIL;
+	}
+		
+	ret = eXosip_register_send_register (regno, reg);
+	if(ret != 0)
+	{
+		eXosip_unlock();
+		jua_debug(("uas_regist: fail to send register\n", ret));
+	
+		return UA_FAIL;
+	}
+		
+	eXosip_unlock();
+
+	xfree(siploc);
+	
+	return UA_OK;
+}
+
+/*
 int uas_unregist(sipua_uas_t *sipuas, char *userloc, char *registrar, char *id)
 {
 	int ret;
 	int regno = -1;
-    /*
-	eXosipua_t *jua = (eXosipua_t*)sipuas;
-
-	*/
+	//eXosipua_t *jua = (eXosipua_t*)sipuas;
+	
 	eXosip_lock();
 
 	regno = eXosip_register_init(userloc, registrar, id);
@@ -760,7 +842,6 @@ int uas_unregist(sipua_uas_t *sipuas, char *userloc, char *registrar, char *id)
 
 	ret = eXosip_register(regno, 0);
 
-
 	eXosip_unlock();
 
 	if(ret != 0)
@@ -768,7 +849,7 @@ int uas_unregist(sipua_uas_t *sipuas, char *userloc, char *registrar, char *id)
 	
 	return UA_OK;
 }
-
+*/
 /* Set loose route if not set in route url */
 char* uas_check_route(const char *url)
 {
@@ -809,9 +890,9 @@ char* uas_check_route(const char *url)
 int uas_retry_call(sipua_uas_t *sipuas, sipua_call_t* call)
 {
 	eXosip_lock();
-	eXosip_retry_call(call->cid);
+	eXosip_automatic_action ();
 	eXosip_unlock();
-
+	
 	return UA_OK;
 }
                
@@ -891,7 +972,7 @@ int uas_accept(sipua_uas_t* uas, sipua_call_t *call)
 
 	jua->ncall++;
  
-	if(call->did >= 0 && eXosip_set_call_reference(call->did, call) == 0)
+	if(call->did >= 0 && eXosip_call_set_reference(call->did, call) == 0)
 		jua_log(("uas_accept: accepted\n"));
 	
 	return UA_OK;
@@ -910,20 +991,19 @@ int uas_release(sipua_uas_t* uas)
 #if 0
 int eXosip_reinvite_with_authentication (struct eXosip_call_t *jc)
 {
-    struct eXosip_call_t *jcc;
+	struct eXosip_call_t *jcc;
 #ifdef SM
-
-    char *locip;
+	char *locip;
 #else
-    char locip[50];
+	char locip[50];
 #endif
 	osip_message_t * cloneinvite;
-  	osip_event_t *sipevent;
-  	osip_transaction_t *transaction;
+	osip_event_t *sipevent;
+	osip_transaction_t *transaction;
 	int osip_cseq_num,length;
-    osip_via_t *via;
-    char *tmp;
-    int i;
+	osip_via_t *via;
+	char *tmp;
+	int i;
 
 	osip_message_clone (jc->c_out_tr->orig_request, &cloneinvite);
 
@@ -962,58 +1042,73 @@ int eXosip_reinvite_with_authentication (struct eXosip_call_t *jc)
 	sprintf(cloneinvite->cseq->number, "%i", osip_cseq_num);
 
 	eXosip_add_authentication_information(cloneinvite, jc->c_out_tr->last_response);
-    cloneinvite->message_property = 0;
+	cloneinvite->message_property = 0;
 
-    eXosip_call_init(&jcc);
-    i = osip_transaction_init(&transaction,
+	eXosip_call_init(&jcc);
+	i = osip_transaction_init(&transaction,
 		       ICT,
 		       eXosip.j_osip,
 		       cloneinvite);
-    if (i!=0)
-    {
-      eXosip_call_free(jc);
-      osip_message_free(cloneinvite);
-      return -1;
-    }
-    jcc->c_out_tr = transaction;
-    sipevent = osip_new_outgoing_sipmessage(cloneinvite);
-    sipevent->transactionid =  transaction->transactionid;
-    osip_transaction_set_your_instance(transaction, __eXosip_new_jinfo(jcc,
-NULL, NULL, NULL));
-    osip_transaction_add_event(transaction, sipevent);
+	if (i!=0)
+	{
+		eXosip_call_free(jc);
+		osip_message_free(cloneinvite);
+		return -1;
+	}
+	
+	jcc->c_out_tr = transaction;
+	sipevent = osip_new_outgoing_sipmessage(cloneinvite);
+	sipevent->transactionid =  transaction->transactionid;
+	osip_transaction_set_your_instance(transaction, __eXosip_new_jinfo(jcc, NULL, NULL, NULL));
+	osip_transaction_add_event(transaction, sipevent);
 
-    jcc->external_reference = 0;
-    ADD_ELEMENT(eXosip.j_calls, jcc);
+	jcc->external_reference = 0;
+	ADD_ELEMENT(eXosip.j_calls, jcc);
 
-    eXosip_update(); /* fixed? */
-    __eXosip_wakeup();
+	eXosip_update(); /* fixed? */
+	__eXosip_wakeup();
 	return 0;
 }
 #endif
 
-int uas_answer(sipua_uas_t* uas, sipua_call_t* call, int reply, char* reply_type, char* reply_body)
+int uas_answer(sipua_uas_t* uas, sipua_call_t* call, int reply, char* reply_type, char* sdp)
 {
-	if(reply_body)
+	int ret;
+	osip_message_t* answer = NULL;
+	
+	eXosip_lock ();
+	
+	ret = eXosip_call_build_answer (call->tid, reply, &answer);	
+	if (ret != 0)
 	{
-
-		if(eXosip_answer_call_with_body(call->did, reply, reply_type, reply_body) == 0)
-			return UA_OK;
+		reply = SIP_STATUS_CODE_BADREQUEST;
 	}
-	else
+	else if(sdp)
 	{
-		if(eXosip_answer_call(call->did, reply, NULL) == 0)
-			return UA_OK;
+		osip_message_set_body (answer, sdp, strlen (sdp));
+		osip_message_set_content_type (answer, "application/sdp");
 	}
+	
+	ret = eXosip_call_send_answer(call->tid, reply, answer);
 
+	eXosip_unlock ();
+	
+	if(answer)
+		osip_message_free (answer);
+
+	if(ret == 0)
+		return UA_OK;
+	
 	return UA_FAIL;
 }
 
 int uas_bye(sipua_uas_t* uas, sipua_call_t* call)
 {
-   /*
-   eXosipua_t *jua = (eXosipua_t*)uas;
+	/*
+	eXosipua_t *jua = (eXosipua_t*)uas;
 	*/
-	if(eXosip_terminate_call(call->cid, call->did) == 0)
+	
+	if(eXosip_call_terminate(call->cid, call->did) == 0)
 		return UA_OK;
 
 	return UA_FAIL;
@@ -1056,8 +1151,19 @@ int uas_init(sipua_uas_t* uas, int sip_port, const char* nettype, const char* ad
 		jua_log(("sipua_uas: could not initialize eXosip\n"));
 		return UA_FAIL;
 	}
-
-	i = eXosip_listen_to(IPPROTO_UDP, INADDR_ANY, sip_port);
+	
+	/**
+	 * int eXosip_listen_addr(int transport, const char *addr, int port, int family, int secure);
+	 *
+	 * Listen on a specified socket.
+	 * 
+	 * @param transport IPPROTO_UDP for udp. (soon to come: TCP/TLS?)
+	 * @param addr      the address to bind (NULL for all interface)
+	 * @param port      the listening port. (0 for random port)
+	 * @param family    the IP family (AF_INET or AF_INET6).
+	 * @param secure    0 for UDP or TCP, 1 for TLS (with TCP).
+	 */
+	i = eXosip_listen_addr(IPPROTO_UDP, NULL, sip_port, AF_INET, 0);
 	if (i!=0)
 	{
 		eXosip_quit();
@@ -1086,8 +1192,10 @@ int uas_init(sipua_uas_t* uas, int sip_port, const char* nettype, const char* ad
 	if(firewall)
 	{
 		strcpy(uas->firewall, firewall);
+		/*
 		eXosip_set_firewallip(firewall);
-		jua_log(("sipua_uas: firewall[%s]\n", firewall));
+		*/
+		jua_debug(("sipua_uas: firewall currently unawared\n"));
 	}
 
 	if(proxy)
@@ -1111,9 +1219,10 @@ int uas_init(sipua_uas_t* uas, int sip_port, const char* nettype, const char* ad
 int uas_done(sipua_uas_t *sipuas)
 {
    xlist_done (sipuas->auth_list, uas_done_auth);
+   xthr_done_lock (sipuas->auth_lock);
    xfree(sipuas);
 
-	return UA_OK;
+   return UA_OK;
 }
 
 module_interface_t* sipua_new_server()
@@ -1130,23 +1239,25 @@ module_interface_t* sipua_new_server()
 	memset(jua, 0, sizeof(eXosipua_t));
 
 	uas = (sipua_uas_t*)jua;
-   uas->auth_list = xlist_new();
-   if(!uas->auth_list)
-   {
-      xfree(jua);
-      jua_debug(("sipua_new_server: No memory for Authorization list\n"));
-      
-      return NULL;
-   }
+	uas->auth_list = xlist_new();
+	uas->auth_lock = xthr_new_lock();
+	
+	if(!uas->auth_list)
+	{
+		xfree(jua);
+		jua_debug(("sipua_new_server: No memory for Authorization list\n"));
+	
+		return NULL;
+	}
 
-   uas->match_type = uas_match_type;
+	uas->match_type = uas_match_type;
 
-   uas->init = uas_init;
+	uas->init = uas_init;
 	uas->done = uas_done;
-    
+
 	uas->start = uas_start;
 
-   uas->shutdown = uas_shutdown;
+	uas->shutdown = uas_shutdown;
 
 	uas->address = uas_address;
 
@@ -1169,7 +1280,7 @@ module_interface_t* sipua_new_server()
 	uas->answer = uas_answer;
 	uas->bye = uas_bye;
 
-   uas->retry = uas_retry_call;
+	uas->retry = uas_retry_call;
 
 	return uas;
 }

@@ -324,11 +324,17 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				user_prof->auth = 0;
 
 				if(client->on_authenticate)
+				{
 					client->on_authenticate(client->user_on_authenticate, sipua->proxy_realm, user_prof, &userid, &passwd);
-
+				}
+				
 				if(user_prof->auth)
 				{
-					client_regist(sipua, user_prof, client->user->userloc); 
+					clie_log(("client_sipua_event: retry proxy\n"));
+					sipua_retry(sipua, NULL);
+					/*
+					client_regist(sipua, user_prof, client->user->userloc);
+					*/
 					break;
 				}
 			}
@@ -342,11 +348,17 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 				user_prof->auth = 0;
 
 				if(client->on_authenticate)
+				{
 					client->on_authenticate (client->user_on_authenticate, user_prof->realm, user_prof, &userid, &passwd);
-
+				}
+				
 				if(user_prof->auth)
 				{
+					clie_log(("client_sipua_event: retry registary\n"));
+					sipua_retry(sipua, NULL);
+					/*
 					client_regist(sipua, user_prof, client->user->userloc);
+					*/
 					break;
 				}
 			}
@@ -371,7 +383,9 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			user_prof->regno = -1;
 
 			if(client->on_register)
+			{
 				client->on_register(client->user_on_register, reg_e->status_code, user_prof->regname, isreg);
+			}
 
 			break;  
 		}
@@ -635,7 +649,7 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 				if(user_prof->auth)
 				{
-					sipua_retry_call(sipua, call);
+					sipua_retry(sipua, call);
 					break;
 				}
 			}
@@ -788,7 +802,6 @@ sipua_call_t* client_find_call(sipua_t* sipua, char* id, char* username, char* n
 	{
 		sipua_call_t* call = ua->lines[i];
 
-
 		if(call && !strcmp(call->setid.id, id) && 
 			!strcmp(call->setid.username, username) && 
 			!strcmp(call->setid.nettype, nettype) && 
@@ -873,7 +886,6 @@ int client_set_profile(sipua_t* sipua, user_profile_t* prof)
 
 	client->sipua.user_profile = prof; 
 
-
 	return UA_OK;
 }
 
@@ -891,14 +903,15 @@ int client_authenticate(sipua_t *sipua, int profile_no, const char* realm, const
 	if(!prof)
 		return UA_FAIL;
 
-	prof->auth = 0;
 	if(sipua->uas->set_authentication_info(sipua->uas, prof->regid, auth_id, passwd, realm) >= UA_OK)
 		prof->auth = 1;
+	else
+		prof->auth = 0;
 
 	return UA_OK;
 }
 
-int client_regist(sipua_t *sipua, user_profile_t *prof, char *userloc)
+int client_regist (sipua_t *sipua, user_profile_t *prof, char *userloc)
 {
 	int ret;
 	ogmp_client_t *client = (ogmp_client_t*)sipua;
@@ -910,7 +923,6 @@ int client_regist(sipua_t *sipua, user_profile_t *prof, char *userloc)
 	client->reg_profile = prof;
 
 	ret = sipua_regist(sipua, prof, userloc);
-
 
 	if(ret < UA_OK)
 		client->reg_profile = NULL;
