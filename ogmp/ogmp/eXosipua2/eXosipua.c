@@ -76,7 +76,7 @@ int jua_process_event(eXosipua_t *jua)
 		
 		if (je==NULL)
 			break;
-
+		
 		counter++;
 
 		if (je->type==EXOSIP_CALL_INVITE)

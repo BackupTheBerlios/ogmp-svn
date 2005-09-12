@@ -153,6 +153,7 @@ int client_register_loop(void *gen)
 		if(user_prof->seconds_left <= 0)
 		{
 			user_prof->regno = -1;
+			
 			client_regist(&client->sipua, user_prof, user_prof->cname);
 		}
 
@@ -319,18 +320,30 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			{
 				char *userid=NULL, *passwd=NULL;
 
-				sipua->uas->clear_authentication_info (sipua->uas, user_prof->regid, sipua->proxy_realm);
-
-				user_prof->auth = 0;
-
-				if(client->on_authenticate)
+				if(user_prof->reg_status != SIPUA_STATUS_REG_RENEW)
 				{
-					client->on_authenticate(client->user_on_authenticate, sipua->proxy_realm, user_prof, &userid, &passwd);
+					sipua->uas->clear_authentication_info (sipua->uas, user_prof->regid, sipua->proxy_realm);
+
+					user_prof->auth = 0;
+
+					if(client->on_authenticate)
+					{
+						client->on_authenticate(client->user_on_authenticate, sipua->proxy_realm, user_prof, &userid, &passwd);
+					}
+
+					if(user_prof->auth)
+					{
+						clie_log(("client_sipua_event: retry proxy\n"));
+						sipua_retry(sipua, NULL);
+						/*
+						client_regist(sipua, user_prof, client->user->userloc);
+						*/
+						break;
+					}
 				}
-				
-				if(user_prof->auth)
+				else
 				{
-					clie_log(("client_sipua_event: retry proxy\n"));
+					clie_log(("client_sipua_event: renew proxy\n"));
 					sipua_retry(sipua, NULL);
 					/*
 					client_regist(sipua, user_prof, client->user->userloc);
@@ -343,18 +356,30 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 			{
 				char *userid = NULL, *passwd = NULL;
 
-				sipua->uas->clear_authentication_info (sipua->uas, user_prof->regid, user_prof->realm);
-
-				user_prof->auth = 0;
-
-				if(client->on_authenticate)
+				if(user_prof->reg_status != SIPUA_STATUS_REG_RENEW)
 				{
-					client->on_authenticate (client->user_on_authenticate, user_prof->realm, user_prof, &userid, &passwd);
-				}
+					sipua->uas->clear_authentication_info (sipua->uas, user_prof->regid, user_prof->realm);
+
+					user_prof->auth = 0;
+
+					if(client->on_authenticate)
+					{
+						client->on_authenticate (client->user_on_authenticate, user_prof->realm, user_prof, &userid, &passwd);
+					}
 				
-				if(user_prof->auth)
+					if(user_prof->auth)
+					{
+						clie_log(("client_sipua_event: retry registary\n"));
+						sipua_retry(sipua, NULL);
+						/*
+						client_regist(sipua, user_prof, client->user->userloc);
+						*/
+						break;
+					}
+				}
+				else
 				{
-					clie_log(("client_sipua_event: retry registary\n"));
+					clie_log(("client_sipua_event: renew registary\n"));
 					sipua_retry(sipua, NULL);
 					/*
 					client_regist(sipua, user_prof, client->user->userloc);
@@ -433,7 +458,6 @@ int client_sipua_event(void* lisener, sipua_event_t* e)
 
 			/* put in line */
 			lineno = client_place_call(sipua, call);
-
 #if SIPUA_TEST
 			call->status = SIPUA_STATUS_ACCEPT;            
 #else

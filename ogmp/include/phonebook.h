@@ -97,14 +97,14 @@ struct user_profile_s
 	char* fullname;	/* could be multibytes char */
 	int fbyte;
 
-   char* regname;		/* sip:username@domain */
-   char* regid;      /* pointer to username@domain */
-   char* realm;      /* pointer to regname domain part */
+	char* regname;		/* sip:username@domain */	
+	char* regid;      /* pointer to username@domain */
+	char* realm;      /* pointer to regname domain part */
 
 	int seconds;		/* lifetime */
 	
 	char* registrar;
-   int regno;  /* for register fallback */
+	int regno;  /* for register fallback */
 
 	char* cname;		/* username@netaddr */
 

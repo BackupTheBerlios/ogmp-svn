@@ -1086,7 +1086,13 @@ int sipua_regist(sipua_t *sipua, user_profile_t *user, char *userloc)
 	ret = sipua->uas->regist(sipua->uas, &user->regno, userloc, user->registrar, user->regname, user->seconds);
 
 	if(ret < UA_OK)
+	{
 		user->reg_status = SIPUA_STATUS_REG_FAIL;
+	}
+	else if(user->reg_status == SIPUA_STATUS_REG_OK)
+	{
+		user->reg_status = SIPUA_STATUS_REG_RENEW;
+	}
 	else
 	{
 		user->cname = userloc;
